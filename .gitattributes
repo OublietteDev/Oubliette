@@ -1,0 +1,3 @@
+# Normalize line endings: store LF in the repo, regardless of OS checkout.
+# Keeps diffs clean and history easy to follow on Windows + POSIX alike.
+* text=auto eol=lf

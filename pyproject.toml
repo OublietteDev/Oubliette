@@ -1,0 +1,26 @@
+[project]
+name = "oubliette"
+version = "0.0.1"
+description = "Oubliette Table — an AI-DM text RPG where code owns state and the LLM only narrates. Phase 0 walking skeleton."
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.6",
+]
+
+[project.optional-dependencies]
+# Real model play. The skeleton runs fully without this via the scripted client.
+anthropic = ["anthropic>=0.40"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+oubliette = "oubliette.app.repl:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["oubliette*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
