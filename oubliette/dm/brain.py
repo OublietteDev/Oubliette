@@ -35,7 +35,11 @@ ASSESS_SYSTEM = (
     "`allow_exits`.\n"
     "CANON: prefer existing PRESENT entities and RELEVANT CANON; reference them by id and "
     "stay consistent with them. The actual introduction of new world content happens in the "
-    "resolve step (create_entity), not here."
+    "resolve step (create_entity), not here.\n"
+    "TRADE: if the player wants to browse a merchant's wares ('what do you have', 'show me "
+    "your stock', 'let me see your wares', 'I'd like to buy something'), set `trade` with that "
+    "merchant's id from PRESENT. A plainly-stated one-off buy ('I grab a torch and toss a "
+    "coin') does NOT open the window — just resolve it as a normal turn."
 )
 
 RESOLVE_SYSTEM = (

@@ -44,6 +44,7 @@ class Character(BaseModel):
     # OPEN (flavor; not event-sourced — D-OPEN-1) -----------------------------
     description: str = ""
     disposition: str = ""    # NPC demeanor — context for the DM's DC-setting (D8)
+    price_list: dict[str, int] = Field(default_factory=dict)  # merchant asking prices (soft, §11)
 
     @property
     def proficiency_bonus(self) -> int:

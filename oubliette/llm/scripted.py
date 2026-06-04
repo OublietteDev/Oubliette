@@ -14,6 +14,7 @@ from ..combat.schemas import EncounterRequest, EnemyRef, ExitKind, TerrainSpec
 from ..enums import Ability, Skill, Tier, Verb, may_canonize
 from ..schemas import Intent, RollRequest, TurnAssessment, TurnResolution
 from ..tools.schemas import CreateEntity, Transact, ValueEntry
+from ..trade.schemas import TradeRequest
 from .client import Msg
 
 
@@ -43,7 +44,8 @@ class ScriptedLLMClient:
     def _assess(self, text: str) -> TurnAssessment:
         player = _field(text, "PLAYER").lower()
 
-        def assessment(verb, tier, *, skill=None, ooc=False, roll=None, hint="", encounter=None):
+        def assessment(verb, tier, *, skill=None, ooc=False, roll=None, hint="",
+                       encounter=None, trade=None):
             return TurnAssessment(
                 intent=Intent(raw_text=_field(text, "PLAYER"), verb=verb, skill=skill, ooc=ooc),
                 tier=tier,
@@ -51,7 +53,15 @@ class ScriptedLLMClient:
                 requires_roll=roll is not None,
                 roll=roll,
                 encounter=encounter,
+                trade=trade,
             )
+
+        # Trade — browse the merchant's wares (opens the trade window).
+        if any(p in player for p in ("wares", "what do you have", "what are you selling",
+                                     "show me your", "for sale", "your stock", "your goods",
+                                     "browse", "see what you")):
+            return assessment(Verb.TRADE, Tier.AUTHORED, hint="Open the trade window.",
+                              trade=TradeRequest(merchant_id="merchant_thom"))
 
         # Non-combat exit: talk the raiders down (Phase 1 parley exit, §8).
         if (("talk" in player and "down" in player) or "parley" in player

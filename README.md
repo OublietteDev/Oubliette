@@ -43,8 +43,12 @@ rewrites. Everything runs with a **scripted (offline) DM** — no API key requir
 - **Phase 4** (tag `phase-4`): the **web chat UI** above (FastAPI + a
   self-contained page, no build step) — narration, roll/effect/combat chips, and
   the live sheet/inventory/canon, all in the browser.
-- **Next:** the trade window (the last summoned-tool subsystem), streaming
-  responses, and polish.
+- **Phase 5** (tag `phase-5`): the **trade window** (§9) — ask a merchant to see
+  their wares and an in-window popup opens showing their priced stock and gold
+  (which caps what they'll pay). Buying/selling are ordinary code-validated
+  `transact`s at merchant-set prices, so the firewall holds for free. Verified
+  live: the model summons the window on a browse request.
+- **Next:** streaming responses, and polish (markdown, ambient styling).
 
 ## Quickstart
 
@@ -85,6 +89,7 @@ python -m oubliette.app.repl             # interactive REPL — uses the REAL mo
 | `tools/` | the tool surface — the only doors into protected state |
 | `combat/` | the combat boundary: `EncounterRequest` → placeholder engine → `CombatResult` |
 | `canon/` | the canonization lifecycle: `CanonRecord`s + the canon store with keyword retrieval |
+| `trade/` | the trade window (summoned tool): bounded merchant view + buy/sell as validated transacts |
 | `dm/` | the DM brain (assess + resolve) and the per-turn `context` builder (state/scene/canon/recent) |
 | `runtime/` | the turn loop: assess → (combat \| roll → resolve) → apply → render |
 | `app/` | the web server (`server.py` + `static/index.html`) and the terminal REPL |
@@ -92,9 +97,9 @@ python -m oubliette.app.repl             # interactive REPL — uses the REAL mo
 ## What this does NOT do yet
 
 The *tactical* combat internals (only the boundary + an auto-resolve placeholder
-exist), the **trade window**, and a **front-end** (chat UI) — still to come. Canon
-quarantine is modeled (provisional vs confirmed) but quest-dependency auto-promotion
-isn't wired yet. Also note: RNG *state* isn't persisted across reload (past rolls
+exist) and streaming responses are still to come. Canon quarantine is modeled
+(provisional vs confirmed) but quest-dependency auto-promotion isn't wired yet.
+Also note: RNG *state* isn't persisted across reload (past rolls
 are in the log; post-reload rolls restart from the base seed) — fine for
 single-player and it doesn't affect the byte-identical-**state** guarantee, since
 state comes from recorded ops, not rolls.

@@ -19,11 +19,15 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
+from ..record.events import EventKind
 from ..record.store import SqliteEventStore
 from ..record.rng import Rng
 from ..runtime.loop import TurnLoop
 from ..runtime.session import Session
 from ..dm.brain import Brain
+from ..state.repository import StateError
+from ..tools.dispatch import ToolApplyError
+from ..trade.service import build_state, buy_transact, sell_transact
 from .repl import _load_dotenv, _pick_client
 
 STATIC = Path(__file__).parent / "static"
@@ -115,6 +119,7 @@ def _turn_payload(report) -> dict:
         "roll": roll,
         "applied": [_describe_applied(rt) for rt in report.applied],
         "combat": combat,
+        "trade": report.trade_open.model_dump() if report.trade_open is not None else None,
         "meta_notice": report.meta_notice,
         "verb": report.assessment.intent.verb.value,
         "tier": report.assessment.tier.value,
@@ -145,6 +150,37 @@ async def post_turn(body: TurnIn) -> JSONResponse:
     async with GAME.lock:  # serialize turns; combat/state mutation isn't reentrant
         report = await GAME.loop.take_turn(text)
         return JSONResponse(_turn_payload(report))
+
+
+class TradeActionIn(BaseModel):
+    merchant_id: str
+    action: str          # "buy" | "sell"
+    item_id: str
+    qty: int = 1
+
+
+@app.post("/api/trade")
+async def post_trade(body: TradeActionIn) -> JSONResponse:
+    async with GAME.lock:
+        repo = GAME.session.repo
+        try:
+            if body.action == "buy":
+                tx = buy_transact(repo, body.merchant_id, body.item_id, body.qty)
+            elif body.action == "sell":
+                tx = sell_transact(repo, body.merchant_id, body.item_id, body.qty)
+            else:
+                return JSONResponse({"ok": False, "error": "unknown action"}, status_code=400)
+            rt = GAME.loop.dispatcher.resolve(tx)              # validate
+            GAME.session.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
+            ok, error = True, None
+        except (ToolApplyError, StateError) as e:
+            ok, error = False, str(e)
+        # always return a fresh trade view + game state so the UI re-renders
+        try:
+            trade = build_state(repo, body.merchant_id).model_dump()
+        except StateError:
+            trade = None
+        return JSONResponse({"ok": ok, "error": error, "trade": trade, "state": _snapshot()})
 
 
 @app.post("/api/new")

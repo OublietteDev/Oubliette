@@ -1,0 +1,84 @@
+"""Trade service: build the bounded view, and turn a buy/sell into a `transact`.
+
+The transacts go through the normal dispatcher (validated) and session
+(recorded), so trade purchases are just TOOL_APPLIED events — they replay like
+any other state change. Nothing here mutates state directly.
+"""
+
+from __future__ import annotations
+
+from ..state.repository import Repository, StateError
+from ..tools.schemas import Transact, ValueEntry
+from .schemas import BuyOffer, SellOffer, TradeState
+
+
+def buyback_price(repo: Repository, merchant, item_id: str) -> int:
+    """What the merchant offers for a player's item. Half their asking price if
+    they stock it, else the item's advisory base value. Placeholder for the soft/
+    haggle economy (§11) — big-ticket deals still happen via a chat haggle roll."""
+    ask = merchant.price_list.get(item_id)
+    if ask:
+        return max(1, ask // 2)
+    item = repo.get_item(item_id)
+    return max(1, item.base_value or 1)
+
+
+def build_state(repo: Repository, merchant_id: str) -> TradeState:
+    merchant = repo.get_character(merchant_id)
+    pc = repo.pc()
+    buy = [
+        BuyOffer(item_id=s.item_id, name=repo.get_item(s.item_id).name,
+                 price=merchant.price_list[s.item_id], qty=s.qty)
+        for s in merchant.inventory
+        if s.item_id in merchant.price_list and s.qty > 0
+    ]
+    sell = []
+    for s in pc.inventory:
+        offer = buyback_price(repo, merchant, s.item_id)
+        sell.append(SellOffer(
+            item_id=s.item_id, name=repo.get_item(s.item_id).name,
+            offer=offer, qty=s.qty, affordable=merchant.gold >= offer,
+        ))
+    return TradeState(
+        merchant_id=merchant.id, merchant_name=merchant.name,
+        merchant_gold=merchant.gold, player_gold=pc.gold, buy=buy, sell=sell,
+    )
+
+
+def has_stock(repo: Repository, merchant_id: str) -> bool:
+    """True if there's anything to browse — priced stock or sellable player goods."""
+    try:
+        state = build_state(repo, merchant_id)
+    except StateError:
+        return False
+    return bool(state.buy or state.sell)
+
+
+def buy_transact(repo: Repository, merchant_id: str, item_id: str, qty: int) -> Transact:
+    merchant = repo.get_character(merchant_id)
+    if item_id not in merchant.price_list:
+        raise StateError(f"{item_id} is not for sale")
+    if qty <= 0:
+        raise StateError("qty must be positive")
+    price = merchant.price_list[item_id]
+    name = repo.get_item(item_id).name
+    return Transact(
+        from_="pc", counterparty=merchant_id,
+        give=[ValueEntry(gold=price * qty)],
+        receive=[ValueEntry(item_id=item_id, qty=qty)],
+        reason=f"Bought {qty}× {name} from {merchant.name} at {price}g each",
+    )
+
+
+def sell_transact(repo: Repository, merchant_id: str, item_id: str, qty: int) -> Transact:
+    merchant = repo.get_character(merchant_id)
+    if qty <= 0:
+        raise StateError("qty must be positive")
+    offer = buyback_price(repo, merchant, item_id)
+    name = repo.get_item(item_id).name
+    return Transact(
+        from_="pc", counterparty=merchant_id,
+        give=[ValueEntry(item_id=item_id, qty=qty)],
+        receive=[ValueEntry(gold=offer * qty)],
+        reason=f"Sold {qty}× {name} to {merchant.name} at {offer}g each",
+    )

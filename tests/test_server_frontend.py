@@ -65,6 +65,22 @@ def test_canon_appears_in_state():
     assert len(canon) == 1 and canon[0]["status"] == "provisional"
 
 
+def test_trade_window_opens_and_buy_updates_state():
+    _new()
+    r = client.post("/api/turn", json={"text": "What do you have for sale?"})
+    d = r.json()
+    assert d["trade"] is not None
+    mid = d["trade"]["merchant_id"]
+    assert any(o["item_id"] == "waterskin" for o in d["trade"]["buy"])
+
+    r2 = client.post("/api/trade", json={
+        "merchant_id": mid, "action": "buy", "item_id": "waterskin", "qty": 1})
+    d2 = r2.json()
+    assert d2["ok"] is True
+    assert d2["state"]["pc"]["gold"] == 11  # 15 - 4
+    assert any(i["id"] == "waterskin" for i in d2["state"]["pc"]["inventory"])
+
+
 def test_empty_message_rejected():
     _new()
     r = client.post("/api/turn", json={"text": "   "})

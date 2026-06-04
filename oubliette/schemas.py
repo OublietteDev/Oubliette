@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from .combat.schemas import EncounterRequest
 from .enums import Ability, Skill, Tier, Verb
 from .tools.schemas import ToolCall
+from .trade.schemas import TradeRequest
 
 
 class Intent(BaseModel):
@@ -50,6 +51,9 @@ class TurnAssessment(BaseModel):
     # When the narrator detects hostility it emits a declarative encounter (§8).
     # If set, the runtime summons combat instead of the normal resolve path (§12).
     encounter: EncounterRequest | None = None
+    # When the player wants to browse a merchant's wares, the DM summons the trade
+    # window (§9). Set `trade` with the merchant id.
+    trade: TradeRequest | None = None
 
 
 class TurnResolution(BaseModel):

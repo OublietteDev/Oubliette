@@ -115,6 +115,32 @@
   .canon-text { color: var(--muted); font-size: 12px; margin-top: 2px; line-height: 1.45; }
   .scene { font-style: italic; color: var(--muted); font-size: 13px; line-height: 1.5; }
   ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: #2e2722; border-radius: 8px; }
+
+  /* trade window (modal) */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.62); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 50; }
+  .overlay.hidden { display: none; }
+  .trade-modal { width: min(740px, 92vw); max-height: 86vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .trade-head { display: flex; align-items: center; gap: 14px; padding: 15px 18px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(0,0,0,.25), transparent); }
+  .trade-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 18px; }
+  .trade-head .spacer { flex: 1; }
+  .trade-head .tgold { font-size: 13px; color: var(--muted); }
+  .trade-head .tgold b { color: var(--gold); }
+  .trade-msg { padding: 8px 18px 0; color: #e0a99a; font-size: 13px; }
+  .trade-msg:empty { display: none; }
+  .trade-cols { display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
+  .trade-col { padding: 14px 18px; overflow-y: auto; max-height: 64vh; }
+  .trade-col + .trade-col { border-left: 1px solid var(--line); }
+  .trade-col h3 { margin: 0 0 10px; font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+  .trade-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .trade-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; }
+  .trade-row .info { flex: 1; min-width: 0; }
+  .trade-row .nm { font-family: var(--serif); font-size: 14.5px; }
+  .trade-row .meta { font-size: 12px; color: var(--faint); }
+  .trade-row .price { color: var(--gold); font-weight: 600; font-size: 13px; white-space: nowrap; }
+  .trade-row button { font: inherit; font-size: 12.5px; cursor: pointer; border-radius: 7px; padding: 6px 13px; border: 1px solid var(--line); background: #2a231d; color: var(--ink); }
+  .trade-row button:hover:not(:disabled) { border-color: var(--accent); }
+  .trade-row button:disabled { opacity: .35; cursor: default; }
+  .trade-empty { color: var(--faint); font-style: italic; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -169,6 +195,22 @@
     </aside>
   </main>
 
+<div id="trade-overlay" class="overlay hidden">
+  <div class="trade-modal">
+    <div class="trade-head">
+      <h2 id="trade-title">Trading</h2>
+      <div class="spacer"></div>
+      <div class="tgold">Your gold <b id="t-pcgold">0</b> · <span id="t-mname">Merchant</span> <b id="t-mgold">0</b></div>
+      <button class="act" id="trade-done">Done</button>
+    </div>
+    <div class="trade-msg" id="trade-msg"></div>
+    <div class="trade-cols">
+      <div class="trade-col"><h3>For Sale</h3><ul class="trade-list" id="t-buy"></ul></div>
+      <div class="trade-col"><h3>Your Goods</h3><ul class="trade-list" id="t-sell"></ul></div>
+    </div>
+  </div>
+</div>
+
 <script>
 const $ = (id) => document.getElementById(id);
 const log = $("log"), input = $("input"), sendBtn = $("send");
@@ -205,12 +247,62 @@ function addChips(msg, data) {
   if (data.combat) {
     const c = el("div", "chip combat"); c.textContent = `⚔ combat → ${data.combat.outcome}` + (data.combat.xp ? ` (+${data.combat.xp} XP)` : ""); chips.appendChild(c);
   }
+  if (data.trade) {
+    const c = el("div", "chip effect"); c.textContent = "🛒 trading with " + data.trade.merchant_name; chips.appendChild(c);
+  }
   if (data.meta_notice) {
     const c = el("div", "chip meta"); c.textContent = "ⓘ " + data.meta_notice; chips.appendChild(c);
   }
   if (chips.children.length) msg.appendChild(chips);
   scrollDown();
 }
+
+// --- trade window ---------------------------------------------------------
+let tradeMerchant = null;
+function openTrade(t) { tradeMerchant = t.merchant_id; renderTrade(t); $("trade-overlay").classList.remove("hidden"); }
+function closeTrade() { $("trade-overlay").classList.add("hidden"); tradeMerchant = null; $("trade-msg").textContent = ""; }
+
+function tradeRow(o, kind, playerGold) {
+  const li = el("li", "trade-row");
+  const info = el("div", "info");
+  info.appendChild(el("div", "nm", o.name));
+  info.appendChild(el("div", "meta", kind === "buy" ? `${o.qty} in stock` : `you have ${o.qty}`));
+  li.appendChild(info);
+  li.appendChild(el("div", "price", (kind === "buy" ? o.price : o.offer) + "g"));
+  const btn = el("button", null, kind === "buy" ? "Buy" : "Sell");
+  if (kind === "buy" && playerGold < o.price) btn.disabled = true;
+  if (kind === "sell" && !o.affordable) btn.disabled = true;
+  btn.addEventListener("click", () => tradeAction(kind, o.item_id));
+  li.appendChild(btn);
+  return li;
+}
+function renderTrade(t) {
+  $("trade-title").textContent = "Trading with " + t.merchant_name;
+  $("t-pcgold").textContent = t.player_gold;
+  $("t-mname").textContent = t.merchant_name + "'s gold";
+  $("t-mgold").textContent = t.merchant_gold;
+  const buy = $("t-buy"); buy.innerHTML = "";
+  if (!t.buy.length) buy.appendChild(el("div", "trade-empty", "nothing for sale"));
+  t.buy.forEach(o => buy.appendChild(tradeRow(o, "buy", t.player_gold)));
+  const sell = $("t-sell"); sell.innerHTML = "";
+  if (!t.sell.length) sell.appendChild(el("div", "trade-empty", "you have nothing to sell"));
+  t.sell.forEach(o => sell.appendChild(tradeRow(o, "sell", t.player_gold)));
+}
+async function tradeAction(action, item_id) {
+  try {
+    const res = await fetch("/api/trade", {
+      method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({ merchant_id: tradeMerchant, action, item_id, qty: 1 })
+    });
+    const data = await res.json();
+    if (data.trade) renderTrade(data.trade);
+    if (data.state) renderState(data.state);
+    $("trade-msg").textContent = data.ok ? "" : (data.error || "");
+  } catch (e) { $("trade-msg").textContent = "Error: " + e; }
+}
+$("trade-done").addEventListener("click", closeTrade);
+$("trade-overlay").addEventListener("click", (e) => { if (e.target.id === "trade-overlay") closeTrade(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTrade(); });
 
 function renderState(s) {
   $("scene").textContent = s.scene || "";
@@ -281,6 +373,7 @@ async function send() {
       const msg = addMessage("The Phantom", data.narration, "dm");
       addChips(msg, data);
       if (data.state) renderState(data.state);
+      if (data.trade) openTrade(data.trade);
     }
   } catch (e) {
     thinkRow.remove();
@@ -297,6 +390,7 @@ $("new-btn").addEventListener("click", async () => {
   if (!confirm("Start a new game? This erases the current save.")) return;
   const res = await fetch("/api/new", { method: "POST" });
   const data = await res.json();
+  closeTrade();
   log.innerHTML = "";
   addMessage("System", "A new tale begins. Describe what you do.", "system");
   renderState(data.state);

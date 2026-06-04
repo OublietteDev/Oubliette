@@ -21,7 +21,10 @@ from ..record.rng import Rng, RollOutcome
 from ..rules.checks import resolve_check
 from ..schemas import RollRequest, TurnAssessment
 from ..seed import DEFAULT_SCENE
+from ..state.repository import StateError
 from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
+from ..trade.schemas import TradeState
+from ..trade.service import build_state, has_stock
 from .session import Session
 
 MAX_TOOL_RETRIES = 2    # D6: after this, force a narration-only turn.
@@ -39,6 +42,7 @@ class TurnReport:
     applied: list[ResolvedTool] = field(default_factory=list)
     meta_notice: str | None = None         # set when the D6 fallback fires
     combat_result: CombatResult | None = None
+    trade_open: TradeState | None = None   # set when a trade window is summoned
 
 
 class TurnLoop:
@@ -72,11 +76,32 @@ class TurnLoop:
 
         if assessment.encounter is not None:
             report = self._run_combat(player_text, assessment)
+        elif assessment.trade is not None and (report := self._open_trade(assessment)) is not None:
+            pass  # trade window summoned
         else:
             report = await self._resolve_turn(player_text, assessment, context)
 
         self._record_beat(report)
         return report
+
+    def _open_trade(self, assessment: TurnAssessment) -> TurnReport | None:
+        """Summon the trade window for a valid merchant with something to browse.
+        Returns None (→ fall back to a normal turn) if the merchant is unknown or
+        has nothing for sale/buy. No model call — the window is the content."""
+        merchant_id = assessment.trade.merchant_id
+        try:
+            merchant = self.repo.get_character(merchant_id)
+        except StateError:
+            return None
+        if merchant.kind != "npc" or not has_stock(self.repo, merchant_id):
+            return None
+        state = build_state(self.repo, merchant_id)
+        narration = f'{merchant.name} spreads his wares across the counter. "See anything you like?"'
+        self.debug.append("narration", text=narration)
+        return TurnReport(
+            player_text=assessment.intent.raw_text, assessment=assessment,
+            narration=narration, trade_open=state,
+        )
 
     async def _resolve_turn(self, player_text: str, assessment: TurnAssessment,
                             context: str) -> TurnReport:
@@ -176,6 +201,8 @@ class TurnLoop:
                 parts.append(f"effect({rt.tool}): {self._ops_summary(rt.ops)}")
         if report.combat_result is not None:
             parts.append(f"combat → {report.combat_result.outcome}")
+        if report.trade_open is not None:
+            parts.append(f"opened trade with {report.trade_open.merchant_name}")
         narr = " ".join(report.narration.split())
         if narr:
             parts.append(f'DM: "{narr[:140]}"')
