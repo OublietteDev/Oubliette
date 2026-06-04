@@ -16,10 +16,14 @@ from ..state.repository import Repository
 def build_context(repo: Repository, scene: str = "", recent: list[str] | None = None,
                   canon: list[CanonRecord] | None = None) -> str:
     pc = repo.pc()
-    # Show the item id alongside the name — tool calls need the id (gap G2b).
-    inv = ", ".join(
-        f"{s.qty}x {repo.get_item(s.item_id).name} [id: {s.item_id}]" for s in pc.inventory
-    ) or "nothing"
+    # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
+    # the soft economy (the DM asked for a pricing reference; it's not enforced).
+    def _item_label(item_id: str, qty: int) -> str:
+        item = repo.get_item(item_id)
+        worth = f", ~{item.base_value}g" if item.base_value else ""
+        return f"{qty}x {item.name} [id: {item_id}{worth}]"
+
+    inv = ", ".join(_item_label(s.item_id, s.qty) for s in pc.inventory) or "nothing"
     lines: list[str] = []
     if scene:
         lines.append(f"SCENE: {scene}")
