@@ -11,3 +11,7 @@ venv/
 
 # Personal/local Claude Code settings — not shared history
 .claude/settings.local.json
+
+# Secrets — never commit
+APIKey.txt
+*.key
