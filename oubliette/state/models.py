@@ -33,6 +33,12 @@ class Character(BaseModel):
     # PROTECTED ---------------------------------------------------------------
     hp: int = 10
     max_hp: int = 10
+    armor_class: int = 10
+    # Phase-1 placeholder combat profile (real equipment/derivation lands later).
+    attack_bonus: int = 2
+    damage: str = "1d4"
+    xp: int = 0
+    conditions: list[str] = Field(default_factory=list)
     gold: int = 0
     inventory: list[ItemStack] = Field(default_factory=list)
     # OPEN (flavor; not event-sourced — D-OPEN-1) -----------------------------

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
+from ..combat.schemas import EncounterRequest, EnemyRef, ExitKind, TerrainSpec
 from ..enums import Ability, Skill, Tier, Verb, may_canonize
 from ..schemas import Intent, RollRequest, ToolCall, TurnAssessment, TurnResolution
 from .client import Msg
@@ -41,13 +42,43 @@ class ScriptedLLMClient:
     def _assess(self, text: str) -> TurnAssessment:
         player = _field(text, "PLAYER").lower()
 
-        def assessment(verb, tier, *, skill=None, ooc=False, roll=None, hint=""):
+        def assessment(verb, tier, *, skill=None, ooc=False, roll=None, hint="", encounter=None):
             return TurnAssessment(
                 intent=Intent(raw_text=_field(text, "PLAYER"), verb=verb, skill=skill, ooc=ooc),
                 tier=tier,
                 resolution_hint=hint,
                 requires_roll=roll is not None,
                 roll=roll,
+                encounter=encounter,
+            )
+
+        # Non-combat exit: talk the raiders down (Phase 1 parley exit, §8).
+        if (("talk" in player and "down" in player) or "parley" in player
+                or "negotiate" in player or "stand down" in player) and \
+                any(w in player for w in ("bandit", "them", "raider", "wolf")):
+            return assessment(
+                Verb.SKILL_CHECK, Tier.RECOMBINED, skill=Skill.PERSUASION,
+                hint="Player tries to defuse the standoff; resolve via the parley exit.",
+                encounter=EncounterRequest(
+                    kind="standoff", enemies=[EnemyRef(ref="bandit", count=2)],
+                    terrain=TerrainSpec(kind="open"),
+                    allow_exits=[ExitKind.PARLEY, ExitKind.FLEE, ExitKind.BRIBE],
+                    chosen_exit=ExitKind.PARLEY,
+                ),
+            )
+
+        # Hostility: the narrator emits an encounter request (§8/§10).
+        if any(w in player for w in ("attack", "strike", "fight", "swing at", "stab", "kill")) \
+                and any(w in player for w in ("bandit", "them", "raider", "wolf", "enemy")):
+            enemy = "wolf" if "wolf" in player else "bandit"
+            return assessment(
+                Verb.ATTACK, Tier.RECOMBINED,
+                hint="Player initiates combat; stage the encounter from live state.",
+                encounter=EncounterRequest(
+                    kind="brawl", enemies=[EnemyRef(ref=enemy, count=1)],
+                    terrain=TerrainSpec(kind="open"),
+                    allow_exits=[ExitKind.FLEE, ExitKind.PARLEY],
+                ),
             )
 
         # Step 4 — the fiat. No fiction, no roll: a diegetic refusal.

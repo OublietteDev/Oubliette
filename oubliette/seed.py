@@ -22,6 +22,8 @@ def seed_world() -> InMemoryRepository:
         },
         skill_proficiencies={Skill.DECEPTION},                   # +2 proficiency
         hp=24, max_hp=24,
+        armor_class=14,                                          # worn leather + DEX
+        attack_bonus=5, damage="1d8+3",                          # a trusty knife (placeholder)
         gold=15,
         inventory=[],
         description="A traveler with scuffed boots and a silver tongue.",

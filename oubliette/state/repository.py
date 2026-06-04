@@ -24,10 +24,13 @@ class Repository(Protocol):
     def get_character(self, char_id: str) -> Character: ...
     def get_item(self, item_id: str) -> Item: ...
 
-    # --- protected mutators (dispatcher-only) ---
+    # --- protected mutators (dispatcher- and combat-boundary-only) ---
     def adjust_gold(self, char_id: str, delta: int) -> None: ...
     def add_item(self, char_id: str, item_id: str, qty: int) -> None: ...
     def remove_item(self, char_id: str, item_id: str, qty: int) -> None: ...
+    def set_hp(self, char_id: str, value: int) -> None: ...
+    def adjust_xp(self, char_id: str, amount: int) -> None: ...
+    def set_conditions(self, char_id: str, conditions: list[str]) -> None: ...
 
 
 class InMemoryRepository:
@@ -91,3 +94,17 @@ class InMemoryRepository:
                     c.inventory.remove(stack)
                 if remaining == 0:
                     break
+
+    def set_hp(self, char_id: str, value: int) -> None:
+        """Absolute HP write (D7). Clamped to [0, max_hp]."""
+        c = self.get_character(char_id)
+        c.hp = max(0, min(value, c.max_hp))
+
+    def adjust_xp(self, char_id: str, amount: int) -> None:
+        if amount < 0:
+            raise StateError(f"adjust_xp expects a non-negative award, got {amount}")
+        self.get_character(char_id).xp += amount
+
+    def set_conditions(self, char_id: str, conditions: list[str]) -> None:
+        """Absolute condition set (D7)."""
+        self.get_character(char_id).conditions = list(conditions)

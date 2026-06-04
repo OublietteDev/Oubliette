@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ..combat.boundary import CombatError, apply_result, run_encounter
+from ..combat.schemas import CombatResult
 from ..dm.brain import Brain
 from ..enums import SKILL_ABILITY
 from ..record.log import DebugLog
@@ -30,6 +32,7 @@ class TurnReport:
     roll_result: str | None = None         # "success" | "failure" | None
     applied: list[AppliedTool] = field(default_factory=list)
     meta_notice: str | None = None         # set when the D6 fallback fires
+    combat_result: CombatResult | None = None   # set when the turn summoned combat
 
 
 class TurnLoop:
@@ -50,7 +53,12 @@ class TurnLoop:
             skill=assessment.intent.skill.value if assessment.intent.skill else None,
             tier=assessment.tier.value,
             requires_roll=assessment.requires_roll,
+            summons_combat=assessment.encounter is not None,
         )
+
+        # --- combat branch: the narrator detected hostility (§8/§12) -------------
+        if assessment.encounter is not None:
+            return self._run_combat(player_text, assessment)
 
         # --- roll, if the DM called for one. Model sets the DC; code sets the bonus.
         roll_outcome: RollOutcome | None = None
@@ -106,6 +114,28 @@ class TurnLoop:
             roll_result=roll_result,
             applied=applied,
             meta_notice=meta_notice,
+        )
+
+    def _run_combat(self, player_text: str, assessment: TurnAssessment) -> TurnReport:
+        """Summoned-tool branch: live state in → CombatResult out → applied as one
+        recorded result (§8). The engine internals are a Phase 1 placeholder."""
+        try:
+            result = run_encounter(assessment.encounter, self.repo, self.rng, self.log)
+            apply_result(result, self.repo, self.log)
+        except CombatError as e:
+            self.log.append("anomaly", stage="combat", error=str(e))
+            narration = "The threat dissolves into confusion before anything is struck."
+            self.log.append("narration", text=narration)
+            return TurnReport(
+                player_text=player_text, assessment=assessment, narration=narration,
+                meta_notice=f"combat could not be staged: {e}",
+            )
+        # Phase 1: the digest IS the narration; Phase 2 feeds it to the DM for prose.
+        narration = result.narrative_digest
+        self.log.append("narration", text=narration)
+        return TurnReport(
+            player_text=player_text, assessment=assessment, narration=narration,
+            combat_result=result,
         )
 
     def _build_spec(self, roll: RollRequest) -> str:

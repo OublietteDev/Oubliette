@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+import sys
 
 from ..dm.brain import Brain
 from ..record.log import DebugLog
@@ -23,6 +24,12 @@ DEMO_TRANSCRIPT = [
     "I tell the merchant these worn boots are priceless dwarven heirlooms.",
     "Sold.",
     "I now have 10,000 gold.",
+]
+
+# Phase 1: combat boundary — a fight (first-class victory) and a non-combat exit.
+COMBAT_TRANSCRIPT = [
+    "I draw my knife and attack the bandit.",
+    "I try to talk the bandits down.",
 ]
 
 
@@ -40,7 +47,7 @@ def _pick_client(force_scripted: bool):
 def _render_state(repo: InMemoryRepository) -> str:
     pc = repo.pc()
     inv = ", ".join(f"{s.qty}x {repo.get_item(s.item_id).name}" for s in pc.inventory) or "(empty)"
-    return f"  [ {pc.name}: {pc.gold}g | inventory: {inv} ]"
+    return f"  [ {pc.name}: {pc.hp}/{pc.max_hp} HP | {pc.gold}g | {pc.xp} XP | inventory: {inv} ]"
 
 
 def _print_report(report: TurnReport, repo: InMemoryRepository) -> None:
@@ -51,6 +58,10 @@ def _print_report(report: TurnReport, repo: InMemoryRepository) -> None:
     print(f"\nDM: {report.narration}")
     for a in report.applied:
         print(f"  * {a.tool}: {a.reason}")
+    if report.combat_result is not None:
+        cr = report.combat_result
+        extra = f", +{cr.xp_award} XP" if cr.xp_award else ""
+        print(f"  [combat] outcome: {cr.outcome}{extra}")
     if report.meta_notice:
         print(f"  (meta) {report.meta_notice}")
     print(_render_state(repo))
@@ -91,10 +102,23 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Oubliette Table — Phase 0 REPL")
     parser.add_argument("--script", action="store_true",
                         help="auto-run the §14.1 acceptance transcript and exit")
+    parser.add_argument("--combat", action="store_true",
+                        help="auto-run the Phase 1 combat-boundary demo and exit")
     parser.add_argument("--scripted", action="store_true",
                         help="force the scripted demo client even if a key is set")
     args = parser.parse_args()
-    asyncio.run(_run(DEMO_TRANSCRIPT if args.script else None, args.scripted))
+
+    try:  # keep em-dashes etc. from crashing a cp1252 Windows console
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
+    transcript = None
+    if args.script:
+        transcript = DEMO_TRANSCRIPT
+    elif args.combat:
+        transcript = COMBAT_TRANSCRIPT
+    asyncio.run(_run(transcript, args.scripted))
 
 
 if __name__ == "__main__":

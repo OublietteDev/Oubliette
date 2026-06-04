@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from .combat.schemas import EncounterRequest
 from .enums import Ability, Skill, Tier, Verb
 
 
@@ -45,6 +46,9 @@ class TurnAssessment(BaseModel):
     resolution_hint: str = ""
     requires_roll: bool = False
     roll: RollRequest | None = None
+    # When the narrator detects hostility it emits a declarative encounter (§8).
+    # If set, the runtime summons combat instead of the normal resolve path (§12).
+    encounter: EncounterRequest | None = None
 
 
 class ToolCall(BaseModel):
