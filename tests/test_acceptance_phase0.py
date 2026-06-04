@@ -19,8 +19,8 @@ from oubliette.record.rng import Rng
 from oubliette.record.store import InMemoryEventStore
 from oubliette.runtime.loop import TurnLoop
 from oubliette.runtime.session import Session
-from oubliette.schemas import ToolCall
 from oubliette.tools.dispatch import Dispatcher, ToolApplyError
+from oubliette.tools.schemas import Transact, ValueEntry
 
 
 def _make_loop():
@@ -90,12 +90,12 @@ def test_unbacked_tool_call_resolves_to_nothing():
     pc = repo.pc()
     dispatcher = Dispatcher(repo)
 
-    bad = ToolCall(tool="transact", args={
-        "from_": "pc", "counterparty": "merchant_thom",
-        "give": [{"item_id": "boots", "qty": 1}],
-        "receive": [{"gold": 10000}],
-        "reason": "attempted over-payment",
-    })
+    bad = Transact(
+        from_="pc", counterparty="merchant_thom",
+        give=[ValueEntry(item_id="boots", qty=1)],
+        receive=[ValueEntry(gold=10000)],
+        reason="attempted over-payment",
+    )
     with pytest.raises(ToolApplyError):
         dispatcher.resolve(bad)
 

@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from .combat.schemas import EncounterRequest
 from .enums import Ability, Skill, Tier, Verb
+from .tools.schemas import ToolCall
 
 
 class Intent(BaseModel):
@@ -51,16 +52,10 @@ class TurnAssessment(BaseModel):
     encounter: EncounterRequest | None = None
 
 
-class ToolCall(BaseModel):
-    """A request to mutate protected state. The runtime — not the model —
-    decides whether to apply it (spec §5)."""
-
-    tool: str                           # "transact", "give", "take", ...
-    args: dict = Field(default_factory=dict)
-
-
 class TurnResolution(BaseModel):
-    """Second model call of a turn: narrate the outcome and emit 0+ tool calls."""
+    """Second model call of a turn: narrate the outcome and emit 0+ tool calls.
+    `tool_calls` is the typed discriminated union from tools/schemas (gap G1), so
+    the model sees each tool's argument shape."""
 
     narration: str
     tool_calls: list[ToolCall] = Field(default_factory=list)

@@ -12,7 +12,8 @@ from pydantic import BaseModel
 
 from ..combat.schemas import EncounterRequest, EnemyRef, ExitKind, TerrainSpec
 from ..enums import Ability, Skill, Tier, Verb, may_canonize
-from ..schemas import Intent, RollRequest, ToolCall, TurnAssessment, TurnResolution
+from ..schemas import Intent, RollRequest, TurnAssessment, TurnResolution
+from ..tools.schemas import Transact, ValueEntry
 from .client import Msg
 
 
@@ -131,13 +132,12 @@ class ScriptedLLMClient:
                     "Thom counts out the coins one reluctant stack at a time, still "
                     "half-convinced he's been clever. The boots vanish under his counter."
                 ),
-                tool_calls=[ToolCall(tool="transact", args={
-                    "from_": "pc",
-                    "counterparty": "merchant_thom",
-                    "give": [{"item_id": "boots", "qty": 1}],
-                    "receive": [{"gold": 250}],
-                    "reason": "Sold the worn boots to Thom as 'dwarven heirlooms' after a successful con.",
-                })],
+                tool_calls=[Transact(
+                    from_="pc", counterparty="merchant_thom",
+                    give=[ValueEntry(item_id="boots", qty=1)],
+                    receive=[ValueEntry(gold=250)],
+                    reason="Sold the worn boots to Thom as 'dwarven heirlooms' after a successful con.",
+                )],
             )
 
         if verb == Verb.SKILL_CHECK.value and skill == Skill.DECEPTION.value:

@@ -8,8 +8,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Real model play. The skeleton runs fully without this via the scripted client.
-anthropic = ["anthropic>=0.40"]
+# Real model play needs NO extra deps — the Anthropic adapter uses the stdlib
+# (urllib). The scripted client runs fully offline. Just set ANTHROPIC_API_KEY.
 dev = ["pytest>=8.0"]
 
 [project.scripts]

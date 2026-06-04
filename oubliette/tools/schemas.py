@@ -1,7 +1,15 @@
-"""Tool-call schemas. Phase 0 implements `transact` fully; `give`/`take` are the
-one-directional conveniences from §5 (included so the dispatch table is real)."""
+"""Tool-call schemas — a typed, discriminated union so the model sees each tool's
+argument shape (fix for harness gap G1). Phase 0 implemented `transact` fully;
+`give`/`take` are the one-directional conveniences from §5.
+
+The `tool` literal is the discriminator. `TurnResolution.tool_calls` is a list of
+these, so the JSON schema handed to the model carries the full arg shapes — no
+more guessing key names.
+"""
 
 from __future__ import annotations
+
+from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -28,31 +36,35 @@ class ValueEntry(BaseModel):
 
 class Transact(BaseModel):
     """Atomic, BALANCED exchange between two parties (spec §5).
-    `give` moves from_ -> counterparty; `receive` moves counterparty -> from_;
-    all-or-nothing."""
+    `give` moves from_ -> counterparty; `receive` moves counterparty -> from_."""
 
-    from_: str = Field(alias="from_")
-    counterparty: str
-    give: list[ValueEntry] = Field(default_factory=list)
-    receive: list[ValueEntry] = Field(default_factory=list)
-    reason: str
+    tool: Literal["transact"] = "transact"
+    from_: str = Field(description="entity giving `give` and receiving `receive` (usually 'pc')")
+    counterparty: str = Field(description="the other party, e.g. a merchant entity id")
+    give: list[ValueEntry] = Field(default_factory=list, description="what from_ hands over")
+    receive: list[ValueEntry] = Field(default_factory=list, description="what from_ gets back")
+    reason: str = Field(description="the fiction that justifies this exchange")
 
 
 class Give(BaseModel):
+    """Grant items/gold to someone (no counter-exchange)."""
+
+    tool: Literal["give"] = "give"
     to: str
     items: list[ValueEntry]
     reason: str
 
 
 class Take(BaseModel):
-    from_: str = Field(alias="from_")
+    """Remove items/gold from someone (no counter-exchange)."""
+
+    tool: Literal["take"] = "take"
+    from_: str
     items: list[ValueEntry]
     reason: str
 
 
-# The dispatch table: tool name -> schema. The only doors that exist.
-TOOL_SCHEMAS: dict[str, type[BaseModel]] = {
-    "transact": Transact,
-    "give": Give,
-    "take": Take,
-}
+# The only doors into protected state, as a discriminated union (the schema the
+# model fills in). To add a tool: add a model + a `tool` literal, and a resolver
+# branch in tools/dispatch.py.
+ToolCall = Annotated[Union[Transact, Give, Take], Field(discriminator="tool")]

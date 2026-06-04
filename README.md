@@ -37,8 +37,9 @@ pytest                                   # acceptance suite (Phase 0 + 1 + 2 rep
 python -m oubliette.app.repl --script --scripted   # the §14.1 non-combat transcript
 python -m oubliette.app.repl --combat --scripted   # the Phase 1 combat-boundary demo
 python -m oubliette.app.repl --scripted --db save.sqlite   # persist; re-run to reload+replay
-python -m oubliette.app.repl             # interactive REPL (uses a real model if
-                                         # ANTHROPIC_API_KEY is set; install .[anthropic])
+python -m oubliette.app.repl             # interactive REPL — uses the REAL model when
+                                         # ANTHROPIC_API_KEY is set (in env or a .env file);
+                                         # no extra deps, the adapter uses the stdlib
 ```
 
 ## The acceptance transcript (definition of "done" for Phase 0)

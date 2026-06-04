@@ -13,12 +13,14 @@ from dataclasses import dataclass, field
 from ..combat.boundary import CombatError, result_to_ops, run_encounter
 from ..combat.schemas import CombatResult
 from ..dm.brain import Brain
+from ..dm.context import build_context
 from ..enums import SKILL_ABILITY
 from ..record.events import EventKind
 from ..record.log import DebugLog
 from ..record.rng import Rng, RollOutcome
 from ..rules.checks import resolve_check
 from ..schemas import RollRequest, TurnAssessment
+from ..seed import DEFAULT_SCENE
 from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
 from .session import Session
 
@@ -38,16 +40,19 @@ class TurnReport:
 
 
 class TurnLoop:
-    def __init__(self, session: Session, rng: Rng, brain: Brain, debug: DebugLog | None = None) -> None:
+    def __init__(self, session: Session, rng: Rng, brain: Brain,
+                 debug: DebugLog | None = None, scene: str = DEFAULT_SCENE) -> None:
         self.session = session
         self.repo = session.repo
         self.rng = rng
         self.brain = brain
         self.debug = debug or DebugLog()
+        self.scene = scene
         self.dispatcher = Dispatcher(session.repo)
 
     async def take_turn(self, player_text: str) -> TurnReport:
-        assessment = await self.brain.assess(player_text)
+        context = build_context(self.repo, self.scene)
+        assessment = await self.brain.assess(player_text, context)
         # The PLAYER_MESSAGE event carries the raw text + the parsed intent (§4.1).
         self.session.emit_log(
             EventKind.PLAYER_MESSAGE, text=player_text,
@@ -76,7 +81,8 @@ class TurnLoop:
         applied: list[ResolvedTool] = []
         success = False
         for attempt in range(MAX_TOOL_RETRIES + 1):
-            resolution = await self.brain.resolve(player_text, assessment, roll_result, feedback)
+            resolution = await self.brain.resolve(
+                player_text, assessment, roll_result, context, feedback)
             narration = resolution.narration
             try:
                 resolved = [self.dispatcher.resolve(c) for c in resolution.tool_calls]

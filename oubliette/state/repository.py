@@ -23,6 +23,8 @@ class Repository(Protocol):
     def pc(self) -> Character: ...
     def get_character(self, char_id: str) -> Character: ...
     def get_item(self, item_id: str) -> Item: ...
+    def resolve_item_id(self, ref: str) -> str: ...
+    def npcs(self) -> list[Character]: ...
 
     # --- protected mutators (dispatcher- and combat-boundary-only) ---
     def adjust_gold(self, char_id: str, delta: int) -> None: ...
@@ -44,6 +46,9 @@ class InMemoryRepository:
     def pc(self) -> Character:
         return self._chars[self._pc_id]
 
+    def npcs(self) -> list[Character]:
+        return [c for c in self._chars.values() if c.kind == "npc"]
+
     def get_character(self, char_id: str) -> Character:
         try:
             return self._chars[char_id]
@@ -55,6 +60,18 @@ class InMemoryRepository:
             return self._items[item_id]
         except KeyError:
             raise StateError(f"no such item: {item_id!r}")
+
+    def resolve_item_id(self, ref: str) -> str:
+        """Map an item reference (id OR display name, loosely) to its canonical id.
+        Lets the DM name an item by its prose label and still hit the right id
+        (harness robustness — the model can't always know the slug)."""
+        if ref in self._items:
+            return ref
+        norm = ref.strip().lower().replace("_", " ")
+        for item in self._items.values():
+            if item.name.strip().lower() == norm or item.id.replace("_", " ") == norm:
+                return item.id
+        raise StateError(f"no such item: {ref!r}")
 
     # --- protected mutators ---------------------------------------------------
     def adjust_gold(self, char_id: str, delta: int) -> None:

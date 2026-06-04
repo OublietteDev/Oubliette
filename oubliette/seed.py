@@ -41,6 +41,14 @@ def seed_world() -> InMemoryRepository:
         hp=9, max_hp=9,
         gold=500,                                                # caps what he can pay
         description="A leather-goods merchant; cautious, but greedy when flattered.",
+        disposition="cautious and shrewd; greedy when flattered, quick to suspect a hard sell",
     )
 
     return InMemoryRepository(characters=[pc, thom], items=[BOOTS], pc_id="pc")
+
+
+# A simple opening scene for context (OPEN flavor; not event-sourced).
+DEFAULT_SCENE = (
+    "A crowded market square in the town of Brightvale. Thom's leather stall stands nearby, "
+    "hung with belts and boots; a brazier smokes against the morning chill."
+)

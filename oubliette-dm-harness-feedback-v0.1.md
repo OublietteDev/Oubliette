@@ -1,11 +1,53 @@
-# DM Harness — Model's-Eye Feedback (v0.1)
+# DM Harness — Model's-Eye Feedback (v0.1 + live results)
 
-*Status: a **stand-in** for the live-model interview. The deployed model couldn't
-be run (account credit balance too low — the key/model/egress all checked out),
-so this is the operating model's own analysis of the Phase 2 harness: where it
-helps, where it would fight me, and what I'd need to DM effectively. Treat every
-item as a hypothesis to **confirm against a real run** once credits land — the
-"Live-run checklist" at the end is exactly what to watch.*
+*Status: the stand-in analysis below (v0.1) has now been **validated against a live
+run** of `claude-sonnet-4-5` driving the Phase 2.5 harness. See "Live-run results"
+at the top for what actually happened; the original hypotheses follow.*
+
+---
+
+## Live-run results (2026-06-04, after the Phase 2.5 fixes)
+
+Ran the real model through the market arc + a combat turn. Findings:
+
+**Confirmed working:**
+- **G1 (typed tool schemas):** the model emitted a *structurally perfect* `transact`
+  — correct `from_`/`counterparty`/`give`/`receive`/`reason`, gold-vs-item entries
+  right. The discriminated union did its job; no more guessing the envelope.
+- **G2 (state/scene context):** it set **DC 18** for a brazen "300-gold heirloom" lie
+  to a merchant whose context said "cautious and shrewd" — a sensible,
+  disposition-driven DC it could not have picked without the context.
+- **G3 (combat summoning):** on "I draw my dagger and lunge at Thom" it filled an
+  `EncounterRequest` targeting the **real `merchant_thom` entity** instead of
+  narrating the fight. The Tidefall failure, fixed.
+
+**New gap found AND fixed — G2b (item id vs name):**
+- The model put the item's *display name* (`"worn leather boots"` / `"worn_leather_boots"`)
+  in `item_id`, because the context showed the name but not the id. Every sale was
+  rejected: "You lacks 1x worn_leather_boots." This was the actual cause of the
+  Phase-2.5-run D6 fallbacks.
+- **Fix (shipped):** (a) the context now shows `[id: boots]` next to each item; (b)
+  the dispatcher resolves an item reference by id *or* name to the canonical id
+  before building ops (so the event log stays clean). Re-ran live: the `transact`
+  validates and applies — boots sold for 300g, both sides moved correctly.
+
+**Still open (behavioral, not bugs — for prompt tuning / design):**
+- **Outcome authority.** Twice the model *second-guessed a player-asserted outcome*
+  ("Sold! Thom agrees to 250" → it judged the boots not worth it and refused). Open
+  design question: when the player narrates a result, how much may the DM overrule?
+  Likely wants explicit guidance in the resolve prompt.
+- **Trivial-turn classification.** "I look around the market" came back as
+  `verb=meta` (harmless, but it's an in-world look, not table-talk). Minor.
+- **One-turn deal collapse.** The model closed the whole sale on the *pitch* turn
+  (emitted the transact at the claimed 300g) rather than waiting for "Sold." That's
+  arguably fine, but worth deciding whether haggle→accept should be two beats.
+
+---
+
+## Original stand-in analysis (v0.1)
+
+*Status: a **stand-in** for the live-model interview, written before the run above.
+Kept for the record; the items below are now largely confirmed.*
 
 ---
 
