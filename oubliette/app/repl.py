@@ -33,6 +33,21 @@ COMBAT_TRANSCRIPT = [
 ]
 
 
+def _load_dotenv(path: str = ".env") -> None:
+    """Minimal .env loader (no dependency): set vars not already in the environment.
+    Lets `python -m oubliette.app.repl` pick up ANTHROPIC_API_KEY from a gitignored
+    .env file. Never overrides an explicitly-set environment variable."""
+    if not os.path.exists(path):
+        return
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            os.environ.setdefault(key.strip(), value.strip())
+
+
 def _pick_client(force_scripted: bool):
     if not force_scripted and os.environ.get("ANTHROPIC_API_KEY"):
         try:
@@ -113,6 +128,8 @@ def main() -> None:
     parser.add_argument("--db", metavar="PATH", default=None,
                         help="persist the event log to this SQLite file (reloads + replays on start)")
     args = parser.parse_args()
+
+    _load_dotenv()  # pick up ANTHROPIC_API_KEY from a gitignored .env, if present
 
     try:  # keep em-dashes etc. from crashing a cp1252 Windows console
         sys.stdout.reconfigure(encoding="utf-8")
