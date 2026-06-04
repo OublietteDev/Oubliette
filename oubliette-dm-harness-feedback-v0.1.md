@@ -31,16 +31,28 @@ Ran the real model through the market arc + a combat turn. Findings:
   before building ops (so the event log stays clean). Re-ran live: the `transact`
   validates and applies — boots sold for 300g, both sides moved correctly.
 
-**Still open (behavioral, not bugs — for prompt tuning / design):**
-- **Outcome authority.** Twice the model *second-guessed a player-asserted outcome*
-  ("Sold! Thom agrees to 250" → it judged the boots not worth it and refused). Open
-  design question: when the player narrates a result, how much may the DM overrule?
-  Likely wants explicit guidance in the resolve prompt.
-- **Trivial-turn classification.** "I look around the market" came back as
-  `verb=meta` (harmless, but it's an in-world look, not table-talk). Minor.
-- **One-turn deal collapse.** The model closed the whole sale on the *pitch* turn
-  (emitted the transact at the claimed 300g) rather than waiting for "Sold." That's
-  arguably fine, but worth deciding whether haggle→accept should be two beats.
+**Behavioral items — ADDRESSED in the prompt-tuning pass (2026-06-04):**
+
+Root cause for all three: `assess`/`resolve` were *stateless* — the model never saw
+the prior turn, so it re-litigated everything. Fix: a short-term continuity feed
+(last 4 turns: player line, roll outcome, applied effects, DM beat) injected as
+`RECENT` context, plus prompt guidance. Re-verified live:
+- **Outcome authority** — on "Sold!" after a successful deception, the model now
+  reads RECENT, sees the deal already closed, and honors it ("you've already struck
+  the deal — the persuasion rolled") instead of refusing OR double-charging. The
+  resolve prompt now says: honor established fiction + the dice; refuse only true
+  fiat. Confirmed bare fiat ("I now have 10,000 gold") and unbacked demands still
+  produce NO tool / no state change.
+- **Trivial-turn classification** — "I look around" now returns
+  `verb=skill_check, skill=perception` (the prompt distinguishes in-world actions
+  from out-of-character `meta`).
+- **One-turn deal collapse** — left as-is (the model may close a deal in one turn);
+  continuity now makes the *follow-up* "Sold" recognize it's already done, so it no
+  longer double-applies. Acceptable.
+
+*New soft observation (not a bug):* the model's pricing is variable — the same con
+fetched 300g in one run and 12g in another. That's the soft economy working as
+designed (price is model judgment, D8); flag only if play feels swingy.
 
 ---
 

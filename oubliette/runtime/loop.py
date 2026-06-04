@@ -24,7 +24,9 @@ from ..seed import DEFAULT_SCENE
 from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
 from .session import Session
 
-MAX_TOOL_RETRIES = 2  # D6: after this, force a narration-only turn.
+MAX_TOOL_RETRIES = 2    # D6: after this, force a narration-only turn.
+HISTORY_IN_CONTEXT = 4  # recent turns fed back to the DM for continuity (gap G5).
+HISTORY_CAP = 8         # how many beats to retain in memory.
 
 
 @dataclass
@@ -49,9 +51,10 @@ class TurnLoop:
         self.debug = debug or DebugLog()
         self.scene = scene
         self.dispatcher = Dispatcher(session.repo)
+        self.history: list[str] = []   # short-term continuity beats (gap G5)
 
     async def take_turn(self, player_text: str) -> TurnReport:
-        context = build_context(self.repo, self.scene)
+        context = build_context(self.repo, self.scene, self.history[-HISTORY_IN_CONTEXT:])
         assessment = await self.brain.assess(player_text, context)
         # The PLAYER_MESSAGE event carries the raw text + the parsed intent (§4.1).
         self.session.emit_log(
@@ -65,8 +68,15 @@ class TurnLoop:
         )
 
         if assessment.encounter is not None:
-            return self._run_combat(player_text, assessment)
+            report = self._run_combat(player_text, assessment)
+        else:
+            report = await self._resolve_turn(player_text, assessment, context)
 
+        self._record_beat(report)
+        return report
+
+    async def _resolve_turn(self, player_text: str, assessment: TurnAssessment,
+                            context: str) -> TurnReport:
         # --- roll, if the DM called for one. Model sets the DC; code sets the bonus.
         roll_outcome: RollOutcome | None = None
         roll_result: str | None = None
@@ -140,6 +150,40 @@ class TurnLoop:
             player_text=player_text, assessment=assessment, narration=narration,
             combat_result=result,
         )
+
+    def _record_beat(self, report: TurnReport) -> None:
+        """Append a compact, factual summary of the turn for short-term continuity."""
+        parts = [f'Player: "{report.player_text.strip()}"']
+        if report.roll_outcome is not None and report.assessment.roll is not None:
+            parts.append(
+                f"[{report.roll_outcome.purpose}: rolled {report.roll_outcome.total} "
+                f"vs DC {report.assessment.roll.dc} → {report.roll_result}]")
+        for rt in report.applied:
+            parts.append(f"effect({rt.tool}): {self._ops_summary(rt.ops)}")
+        if report.combat_result is not None:
+            parts.append(f"combat → {report.combat_result.outcome}")
+        narr = " ".join(report.narration.split())
+        if narr:
+            parts.append(f'DM: "{narr[:140]}"')
+        self.history.append(" | ".join(parts))
+        if len(self.history) > HISTORY_CAP:
+            self.history = self.history[-HISTORY_CAP:]
+
+    @staticmethod
+    def _ops_summary(ops) -> str:
+        bits = []
+        for o in ops:
+            if o.op == "gold":
+                bits.append(f"{o.char} {o.delta:+d}g")
+            elif o.op == "item":
+                bits.append(f"{o.char} {o.delta:+d} {o.item_id}")
+            elif o.op == "hp_set":
+                bits.append(f"{o.char} hp={o.value}")
+            elif o.op == "xp":
+                bits.append(f"{o.char} +{o.delta}xp")
+            elif o.op == "conditions":
+                bits.append(f"{o.char} conditions={o.conditions}")
+        return ", ".join(bits) or "(none)"
 
     def _build_spec(self, roll: RollRequest) -> str:
         """Code supplies the modifier from the sheet (state-owned); the DM supplied

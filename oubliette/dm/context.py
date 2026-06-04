@@ -12,7 +12,7 @@ from __future__ import annotations
 from ..state.repository import Repository
 
 
-def build_context(repo: Repository, scene: str = "") -> str:
+def build_context(repo: Repository, scene: str = "", recent: list[str] | None = None) -> str:
     pc = repo.pc()
     # Show the item id alongside the name — tool calls need the id (gap G2b).
     inv = ", ".join(
@@ -31,4 +31,10 @@ def build_context(repo: Repository, scene: str = "") -> str:
         for n in npcs:
             note = n.disposition or n.description or "no notes"
             lines.append(f"  - {n.name} (id: {n.id}) — {note}; carries {n.gold}g.")
+    # Short-term continuity: what just happened, so the DM honors established
+    # fiction and successful checks instead of re-litigating each turn (gap G5).
+    if recent:
+        lines.append("RECENT TURNS (oldest first — this already happened, treat as true):")
+        for beat in recent:
+            lines.append(f"  - {beat}")
     return "\n".join(lines)
