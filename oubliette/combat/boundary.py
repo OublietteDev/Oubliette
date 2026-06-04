@@ -8,6 +8,7 @@ state and records ONE combat_result entry (the §8 single-event rule).
 
 from __future__ import annotations
 
+from ..record.events import StateOp
 from ..record.log import DebugLog
 from ..record.rng import Rng
 from ..state.repository import Repository, StateError
@@ -104,7 +105,7 @@ def run_encounter(request: EncounterRequest, repo: Repository, rng: Rng, log: De
     fallen = [e.name for e in enemies if e.hp <= 0]
     if outcome == "victory":
         digest = (f"The fight ends in your favor. Fallen: {', '.join(fallen) or 'none'}. "
-                  f"You take {xp_award} XP" + (f" and {_loot_str(loot)}." if loot else "."))
+                  f"You take {xp_award} XP" + (f" and {loot_str(loot)}." if loot else "."))
     else:
         digest = "You are beaten down and fall. The encounter is lost."
 
@@ -114,32 +115,26 @@ def run_encounter(request: EncounterRequest, repo: Repository, rng: Rng, log: De
     )
 
 
-def apply_result(result: CombatResult, repo: Repository, log: DebugLog) -> None:
-    """The single point where combat's truth lands in authoritative state, recorded
-    as one combat_result entry (Phase 2: this becomes one COMBAT_RESULT event)."""
+def result_to_ops(result: CombatResult) -> list[StateOp]:
+    """Decompose a CombatResult into replayable ops (absolute HP/conditions per D7,
+    XP/loot to the PC). The runtime emits these as ONE COMBAT_RESULT event (§8) and
+    the session applies them — same application path as replay."""
+    ops: list[StateOp] = []
     for entity_id, hp in result.hp_final.items():
-        repo.set_hp(entity_id, hp)
+        ops.append(StateOp.hp_set(entity_id, hp))
     for entity_id, conditions in result.conditions_final.items():
-        repo.set_conditions(entity_id, conditions)
+        ops.append(StateOp.conditions_set(entity_id, conditions))
     if result.xp_award:
-        repo.adjust_xp("pc", result.xp_award)
+        ops.append(StateOp.xp("pc", result.xp_award))
     for entry in result.loot:
         if entry.gold is not None:
-            repo.adjust_gold("pc", entry.gold)
+            ops.append(StateOp.gold("pc", entry.gold))
         else:
-            repo.add_item("pc", entry.item_id, entry.qty)
-
-    log.append("combat_result", outcome=result.outcome, hp_final=result.hp_final,
-               xp_award=result.xp_award, loot=_loot_str(result.loot),
-               digest=result.narrative_digest)
-
-    # D5 promotion hook: surviving ephemerals flagged significant would be promoted
-    # via the canonization path (Phase 3). For now we only surface them.
-    if result.ephemeral_survivors:
-        log.append("note", stage="combat", promotion_candidates=result.ephemeral_survivors)
+            ops.append(StateOp.item("pc", entry.item_id, entry.qty))
+    return ops
 
 
-def _loot_str(loot: list[ValueEntry]) -> str:
+def loot_str(loot: list[ValueEntry]) -> str:
     parts = []
     for e in loot:
         parts.append(f"{e.gold}g" if e.gold is not None else f"{e.qty}x {e.item_id}")

@@ -13,11 +13,11 @@ import os
 import sys
 
 from ..dm.brain import Brain
-from ..record.log import DebugLog
 from ..record.rng import Rng
+from ..record.store import InMemoryEventStore, SqliteEventStore
 from ..runtime.loop import TurnLoop, TurnReport
-from ..seed import seed_world
-from ..state.repository import InMemoryRepository
+from ..runtime.session import Session
+from ..state.repository import Repository
 
 DEMO_TRANSCRIPT = [
     "I look around the market.",
@@ -44,13 +44,13 @@ def _pick_client(force_scripted: bool):
     return ScriptedLLMClient(), "scripted"
 
 
-def _render_state(repo: InMemoryRepository) -> str:
+def _render_state(repo: Repository) -> str:
     pc = repo.pc()
     inv = ", ".join(f"{s.qty}x {repo.get_item(s.item_id).name}" for s in pc.inventory) or "(empty)"
     return f"  [ {pc.name}: {pc.hp}/{pc.max_hp} HP | {pc.gold}g | {pc.xp} XP | inventory: {inv} ]"
 
 
-def _print_report(report: TurnReport, repo: InMemoryRepository) -> None:
+def _print_report(report: TurnReport, repo: Repository) -> None:
     if report.roll_outcome is not None:
         o = report.roll_outcome
         print(f"  ~ roll {o.spec} -> {o.rolls}{o.modifier:+d} = {o.total} "
@@ -67,21 +67,24 @@ def _print_report(report: TurnReport, repo: InMemoryRepository) -> None:
     print(_render_state(repo))
 
 
-async def _run(transcript: list[str] | None, force_scripted: bool) -> None:
-    repo = seed_world()
-    log = DebugLog()
-    rng = Rng(seed=1234, log=log)
-    brain = Brain(_pick_client(force_scripted)[0])
-    loop = TurnLoop(repo, rng, log, brain)
+async def _run(transcript: list[str] | None, force_scripted: bool, db: str | None) -> None:
+    store = SqliteEventStore(db) if db else InMemoryEventStore()
+    session = Session.open(store)
+    repo = session.repo
+    rng = Rng(seed=1234, record=session.emit_log)
+    client, client_name = _pick_client(force_scripted)
+    loop = TurnLoop(session, rng, Brain(client))
 
-    client_name = _pick_client(force_scripted)[1]
-    print(f"=== Oubliette Table (Phase 0) — {client_name} DM ===")
+    where = f"sqlite:{db}" if db else "in-memory"
+    print(f"=== Oubliette Table (Phase 2) — {client_name} DM | log: {where} ===")
+    print(f"  ({len(store.read_all())} events replayed)")
     print(_render_state(repo))
 
     if transcript is not None:
         for line in transcript:
             print(f"\n> {line}")
             _print_report(await loop.take_turn(line), repo)
+        store.close()
         return
 
     print("\n(type 'quit' to exit)")
@@ -96,6 +99,7 @@ async def _run(transcript: list[str] | None, force_scripted: bool) -> None:
         if not line:
             continue
         _print_report(await loop.take_turn(line), repo)
+    store.close()
 
 
 def main() -> None:
@@ -106,6 +110,8 @@ def main() -> None:
                         help="auto-run the Phase 1 combat-boundary demo and exit")
     parser.add_argument("--scripted", action="store_true",
                         help="force the scripted demo client even if a key is set")
+    parser.add_argument("--db", metavar="PATH", default=None,
+                        help="persist the event log to this SQLite file (reloads + replays on start)")
     args = parser.parse_args()
 
     try:  # keep em-dashes etc. from crashing a cp1252 Windows console
@@ -118,7 +124,7 @@ def main() -> None:
         transcript = DEMO_TRANSCRIPT
     elif args.combat:
         transcript = COMBAT_TRANSCRIPT
-    asyncio.run(_run(transcript, args.scripted))
+    asyncio.run(_run(transcript, args.scripted, args.db))
 
 
 if __name__ == "__main__":

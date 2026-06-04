@@ -6,21 +6,25 @@ never holds the pen.** See [`oubliette-table-spec-v0.2.md`](oubliette-table-spec
 for the full design (and [`oubliette-table-design-v0.1.md`](oubliette-table-design-v0.1.md)
 for the original rationale).
 
-## Status: Phase 1 — combat boundary (on top of the Phase 0 skeleton)
+## Status: Phase 2 — event sourcing + SQLite (on Phase 0/1)
 
 Per spec §14, we build *through the seams* so later phases are substitutions, not
-rewrites. Everything runs with **in-memory state** and a **scripted (offline) DM**
-— no API key required.
+rewrites. Everything runs with a **scripted (offline) DM** — no API key required.
 
 - **Phase 0** (tag `phase-0`): the core non-combat loop end to end.
-- **Phase 1** (tag `phase-1`): the combat *boundary* (§8) — a declarative
+- **Phase 1** (tag `phase-1`): the combat *boundary* (§8) — declarative
   `EncounterRequest` in, instantiation from live state + templates (ephemeral
   combatants, D5), a `CombatResult` with absolute values (D7) out, applied as one
-  recorded result; non-combat exits (parley/flee) are first-class. The engine
-  internals are a deliberate placeholder (auto-resolve) the real tactical
-  prototype slots in behind later.
-- **Next (Phase 2):** swap the in-memory store + debug log for SQLite + the real
-  event log/replay, behind the seams that already exist.
+  recorded result; non-combat exits (parley/flee) first-class. Engine internals
+  are a placeholder the real tactical prototype slots in behind later.
+- **Phase 2** (tag `phase-2`): the **event log** is now real. Authoritative state
+  is rebuilt by `seed(authored baseline) + replay(events)`; every protected
+  mutation decomposes into atomic, replayable `StateOp`s applied through one path
+  (live + replay); the RNG emits `ROLL` events (recorded, never re-rolled); the
+  log persists to **SQLite**. Reload is byte-identical for authoritative state
+  (D9). Run with `--db PATH` to persist and reload.
+- **Next (Phase 3):** canonization lifecycle (incl. the D5 ephemeral-survivor
+  promotion hook), the trade window, then a front-end.
 
 ## Quickstart
 
@@ -29,9 +33,10 @@ python -m venv .venv
 # Windows:  .venv\Scripts\activate     # POSIX: source .venv/bin/activate
 pip install -e ".[dev]"
 
-pytest                                   # run the acceptance suite (Phase 0 + Phase 1)
+pytest                                   # acceptance suite (Phase 0 + 1 + 2 replay)
 python -m oubliette.app.repl --script --scripted   # the §14.1 non-combat transcript
 python -m oubliette.app.repl --combat --scripted   # the Phase 1 combat-boundary demo
+python -m oubliette.app.repl --scripted --db save.sqlite   # persist; re-run to reload+replay
 python -m oubliette.app.repl             # interactive REPL (uses a real model if
                                          # ANTHROPIC_API_KEY is set; install .[anthropic])
 ```
@@ -50,7 +55,8 @@ python -m oubliette.app.repl             # interactive REPL (uses a real model i
 |---|---|
 | `state/` | authoritative state; the only writer of protected fields (the firewall) |
 | `rules/` | pure SRD functions (ability mods, checks); no I/O |
-| `record/` | Phase 0 debug log + the single seeded RNG (becomes the event log in Phase 2) |
+| `record/` | the event log (`events.py` ops/replay, `store.py` SQLite/in-memory), the seeded RNG (emits ROLL events), + a non-replayed debug log |
+| `runtime/session.py` | session lifecycle: durable store + materialized state, kept in sync via seed-then-replay |
 | `llm/` | the `LLMClient` seam; `scripted` (offline double) + `anthropic` (real) adapters |
 | `schemas.py` | typed structured-output contracts (Intent, assessment, resolution, tool calls) |
 | `tools/` | the tool surface — the only doors into protected state |
@@ -61,7 +67,9 @@ python -m oubliette.app.repl             # interactive REPL (uses a real model i
 
 ## What this does NOT do yet
 
-Event sourcing / replay, SQLite, the *tactical* combat internals (only the
-boundary + an auto-resolve placeholder exist), canonization persistence, and the
-trade window. Those are Phases 2–3 (spec §14). The seams for all of them already
-exist (`Repository`, `LLMClient`, the `record/` RNG, the combat boundary).
+The *tactical* combat internals (only the boundary + an auto-resolve placeholder
+exist), the canonization lifecycle, and the trade window — Phase 3 (spec §14).
+Also note: RNG *state* isn't persisted across reload (past rolls are in the log;
+post-reload rolls restart from the base seed) — fine for single-player and it
+doesn't affect the byte-identical-**state** guarantee, since state comes from
+recorded ops, not rolls.

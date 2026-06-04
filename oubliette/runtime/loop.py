@@ -1,24 +1,26 @@
 """The turn loop. One public method: `take_turn`.
 
-Flow (spec §12): parse/route (assess) -> roll if the DM called for one ->
-resolve (narrate + emit tools) -> validate & apply each tool, bounded by D6 ->
-record -> return a report the UI renders from authoritative state.
+Flow (spec §12): emit the player message → assess → (combat branch | roll →
+resolve) → record-and-apply via the Session → render. Every state change and
+every roll becomes an event in the session's log; diagnostics (assessment,
+narration, anomalies, swings) go to a separate, non-replayed debug log.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ..combat.boundary import CombatError, apply_result, run_encounter
+from ..combat.boundary import CombatError, result_to_ops, run_encounter
 from ..combat.schemas import CombatResult
 from ..dm.brain import Brain
 from ..enums import SKILL_ABILITY
+from ..record.events import EventKind
 from ..record.log import DebugLog
 from ..record.rng import Rng, RollOutcome
 from ..rules.checks import resolve_check
 from ..schemas import RollRequest, TurnAssessment
-from ..state.repository import Repository
-from ..tools.dispatch import AppliedTool, Dispatcher, ToolApplyError
+from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
+from .session import Session
 
 MAX_TOOL_RETRIES = 2  # D6: after this, force a narration-only turn.
 
@@ -30,33 +32,33 @@ class TurnReport:
     narration: str
     roll_outcome: RollOutcome | None = None
     roll_result: str | None = None         # "success" | "failure" | None
-    applied: list[AppliedTool] = field(default_factory=list)
+    applied: list[ResolvedTool] = field(default_factory=list)
     meta_notice: str | None = None         # set when the D6 fallback fires
-    combat_result: CombatResult | None = None   # set when the turn summoned combat
+    combat_result: CombatResult | None = None
 
 
 class TurnLoop:
-    def __init__(self, repo: Repository, rng: Rng, log: DebugLog, brain: Brain) -> None:
-        self.repo = repo
+    def __init__(self, session: Session, rng: Rng, brain: Brain, debug: DebugLog | None = None) -> None:
+        self.session = session
+        self.repo = session.repo
         self.rng = rng
-        self.log = log
         self.brain = brain
-        self.dispatcher = Dispatcher(repo, log)
+        self.debug = debug or DebugLog()
+        self.dispatcher = Dispatcher(session.repo)
 
     async def take_turn(self, player_text: str) -> TurnReport:
-        self.log.append("player_message", text=player_text)
-
         assessment = await self.brain.assess(player_text)
-        self.log.append(
-            "assessment",
-            verb=assessment.intent.verb.value,
-            skill=assessment.intent.skill.value if assessment.intent.skill else None,
-            tier=assessment.tier.value,
-            requires_roll=assessment.requires_roll,
+        # The PLAYER_MESSAGE event carries the raw text + the parsed intent (§4.1).
+        self.session.emit_log(
+            EventKind.PLAYER_MESSAGE, text=player_text,
+            intent=assessment.intent.model_dump(mode="json"),
+        )
+        self.debug.append(
+            "assessment", verb=assessment.intent.verb.value,
+            tier=assessment.tier.value, requires_roll=assessment.requires_roll,
             summons_combat=assessment.encounter is not None,
         )
 
-        # --- combat branch: the narrator detected hostility (§8/§12) -------------
         if assessment.encounter is not None:
             return self._run_combat(player_text, assessment)
 
@@ -65,74 +67,69 @@ class TurnLoop:
         roll_result: str | None = None
         if assessment.requires_roll and assessment.roll is not None:
             spec = self._build_spec(assessment.roll)
-            roll_outcome = self.rng.roll(spec, assessment.roll.purpose)
+            roll_outcome = self.rng.roll(spec, assessment.roll.purpose)  # emits a ROLL event
             roll_result = resolve_check(roll_outcome.total, assessment.roll.dc)
 
-        # --- resolve + apply tools, bounded by D6 ---------------------------------
+        # --- resolve + apply, bounded by D6. Validate ALL tools before applying any.
         feedback: str | None = None
         narration = ""
-        applied: list[AppliedTool] = []
+        applied: list[ResolvedTool] = []
         success = False
         for attempt in range(MAX_TOOL_RETRIES + 1):
-            resolution = await self.brain.resolve(
-                player_text, assessment, roll_result, feedback
-            )
+            resolution = await self.brain.resolve(player_text, assessment, roll_result, feedback)
             narration = resolution.narration
-            applied = []
-            error: ToolApplyError | None = None
-            for call in resolution.tool_calls:
-                try:
-                    applied.append(self.dispatcher.apply(call))
-                except ToolApplyError as e:
-                    error = e
-                    self.log.append("anomaly", stage="tool_apply", attempt=attempt,
-                                    tool=call.tool, error=str(e))
-                    break
-            if error is None:
-                success = True
-                break
-            feedback = str(error)
-            if applied:
-                # Partial application already happened this turn; retrying would
-                # double-apply. Phase 0 limitation — Phase 2's transactional event
-                # log makes the whole turn atomic. Bail to the fallback.
-                break
+            try:
+                resolved = [self.dispatcher.resolve(c) for c in resolution.tool_calls]
+            except ToolApplyError as e:
+                feedback = str(e)
+                self.debug.append("anomaly", stage="tool_resolve", attempt=attempt, error=str(e))
+                continue
+            # All valid → record-and-apply each as a TOOL_APPLIED event (atomic turn).
+            for rt in resolved:
+                self.session.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
+            applied = resolved
+            success = True
+            break
 
         meta_notice: str | None = None
         if not success:
-            # D6 fallback: narration only, surface an OOC notice to the player.
-            applied = []
             meta_notice = "the DM lost the thread — try rephrasing."
-            self.log.append("anomaly", stage="turn", note="forced narration-only after retries")
+            self.debug.append("anomaly", stage="turn", note="forced narration-only after retries")
 
-        self.log.append("narration", text=narration)
+        self.debug.append("narration", text=narration)
         return TurnReport(
-            player_text=player_text,
-            assessment=assessment,
-            narration=narration,
-            roll_outcome=roll_outcome,
-            roll_result=roll_result,
-            applied=applied,
+            player_text=player_text, assessment=assessment, narration=narration,
+            roll_outcome=roll_outcome, roll_result=roll_result, applied=applied,
             meta_notice=meta_notice,
         )
 
     def _run_combat(self, player_text: str, assessment: TurnAssessment) -> TurnReport:
-        """Summoned-tool branch: live state in → CombatResult out → applied as one
-        recorded result (§8). The engine internals are a Phase 1 placeholder."""
+        """Summoned-tool branch: live state in → CombatResult → ONE COMBAT_RESULT
+        event applied via the session (§8). Engine internals are a placeholder."""
         try:
-            result = run_encounter(assessment.encounter, self.repo, self.rng, self.log)
-            apply_result(result, self.repo, self.log)
+            result = run_encounter(assessment.encounter, self.repo, self.rng, self.debug)
         except CombatError as e:
-            self.log.append("anomaly", stage="combat", error=str(e))
+            self.debug.append("anomaly", stage="combat", error=str(e))
             narration = "The threat dissolves into confusion before anything is struck."
-            self.log.append("narration", text=narration)
+            self.debug.append("narration", text=narration)
             return TurnReport(
                 player_text=player_text, assessment=assessment, narration=narration,
                 meta_notice=f"combat could not be staged: {e}",
             )
-        # Phase 1: the digest IS the narration; Phase 2 feeds it to the DM for prose.
-        narration = result.narrative_digest
-        self.log.append("narration", text=narration)
+
+        ops = result_to_ops(result)
+        self.session.emit_state(
+            EventKind.COMBAT_RESULT, ops, outcome=result.outcome,
+            hp_final=result.hp_final, xp_award=result.xp_award,
+            digest=result.narrative_digest,
+        )
+        # D5 promotion hook: surviving ephemerals flagged significant would be
+        # promoted via the canonization path (Phase 3). For now we only surface them.
+        if result.ephemeral_survivors:
+            self.debug.append("note", stage="combat", promotion_candidates=result.ephemeral_survivors)
+
+        narration = result.narrative_digest  # Phase 1/2: digest IS the narration.
+        self.debug.append("narration", text=narration)
         return TurnReport(
             player_text=player_text, assessment=assessment, narration=narration,
             combat_result=result,

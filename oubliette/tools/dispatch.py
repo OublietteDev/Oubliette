@@ -1,38 +1,41 @@
-"""The dispatcher: validate a tool call, apply it to protected state, record it.
+"""The dispatcher: validate a tool call against current state and RESOLVE it into
+replayable `StateOp`s. It does NOT mutate — the session appends the event and
+applies the ops (one application path for live + replay).
 
-Append-then-commit ordering and the both-parties delta record (spec §5). Any
-failure raises `ToolApplyError` and mutates nothing — the runtime turns that into
-the D6 retry path.
+Because resolution is pure (read-only validation), the runtime can resolve ALL
+of a turn's tool calls before applying any, so a turn is atomic: either every
+tool applies or none does (no partial-application gap).
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from pydantic import ValidationError
 
-from ..record.log import DebugLog
+from ..record.events import StateOp
 from ..schemas import ToolCall
 from ..state.repository import Repository, StateError
 from .schemas import TOOL_SCHEMAS, Give, Take, Transact, ValueEntry
 
 
 class ToolApplyError(Exception):
-    """A tool call that could not be validated or applied. Carries a message the
-    runtime feeds back to the model on retry."""
+    """A tool call that fails validation. Carries a message fed back to the model
+    on retry (D6). Nothing is mutated."""
 
 
-class AppliedTool:
-    def __init__(self, tool: str, deltas: dict, reason: str) -> None:
-        self.tool = tool
-        self.deltas = deltas        # {char_id: {"gold": +n, "items": {item_id: +/-n}}}
-        self.reason = reason
+@dataclass
+class ResolvedTool:
+    tool: str
+    ops: list[StateOp]
+    reason: str
 
 
 class Dispatcher:
-    def __init__(self, repo: Repository, log: DebugLog) -> None:
+    def __init__(self, repo: Repository) -> None:
         self.repo = repo
-        self.log = log
 
-    def apply(self, call: ToolCall) -> AppliedTool:
+    def resolve(self, call: ToolCall) -> ResolvedTool:
         schema = TOOL_SCHEMAS.get(call.tool)
         if schema is None:
             raise ToolApplyError(f"unknown tool {call.tool!r}")
@@ -42,45 +45,31 @@ class Dispatcher:
             raise ToolApplyError(f"invalid args for {call.tool}: {e}") from e
 
         if isinstance(parsed, Transact):
-            applied = self._apply_transact(parsed)
+            ops = self._resolve_transact(parsed)
+            reason = parsed.reason
         elif isinstance(parsed, Give):
-            applied = self._apply_give(parsed)
+            ops = [self._credit_op(parsed.to, e) for e in parsed.items]
+            reason = parsed.reason
         elif isinstance(parsed, Take):
-            applied = self._apply_take(parsed)
+            self._assert_can_cover(parsed.from_, parsed.items)
+            ops = [self._debit_op(parsed.from_, e) for e in parsed.items]
+            reason = parsed.reason
         else:  # pragma: no cover
-            raise ToolApplyError(f"no applier for {call.tool!r}")
+            raise ToolApplyError(f"no resolver for {call.tool!r}")
 
-        # Record AFTER a successful apply (Phase 2: this becomes a TOOL_APPLIED event).
-        self.log.append("tool_applied", tool=applied.tool, deltas=applied.deltas,
-                        reason=applied.reason)
-        return applied
+        return ResolvedTool(tool=call.tool, ops=ops, reason=reason)
 
-    # --- appliers -------------------------------------------------------------
-    def _apply_transact(self, t: Transact) -> AppliedTool:
-        # Validate BOTH sides can cover their half before mutating anything.
+    # --- resolvers ------------------------------------------------------------
+    def _resolve_transact(self, t: Transact) -> list[StateOp]:
+        # Validate BOTH sides can cover their half (transact symmetry, §5).
         self._assert_can_cover(t.from_, t.give)
         self._assert_can_cover(t.counterparty, t.receive)
-
-        deltas: dict = {t.from_: {"gold": 0, "items": {}},
-                        t.counterparty: {"gold": 0, "items": {}}}
-        # from_ gives -> counterparty receives
-        self._move(t.from_, t.counterparty, t.give, deltas)
-        # counterparty gives -> from_ receives
-        self._move(t.counterparty, t.from_, t.receive, deltas)
-        return AppliedTool("transact", deltas, t.reason)
-
-    def _apply_give(self, g: Give) -> AppliedTool:
-        deltas: dict = {g.to: {"gold": 0, "items": {}}}
-        for e in g.items:
-            self._credit(g.to, e, deltas)
-        return AppliedTool("give", deltas, g.reason)
-
-    def _apply_take(self, tk: Take) -> AppliedTool:
-        self._assert_can_cover(tk.from_, tk.items)
-        deltas: dict = {tk.from_: {"gold": 0, "items": {}}}
-        for e in tk.items:
-            self._debit(tk.from_, e, deltas)
-        return AppliedTool("take", deltas, tk.reason)
+        ops: list[StateOp] = []
+        for e in t.give:        # from_ -> counterparty
+            ops += self._move_ops(t.from_, t.counterparty, e)
+        for e in t.receive:     # counterparty -> from_
+            ops += self._move_ops(t.counterparty, t.from_, e)
+        return ops
 
     # --- helpers --------------------------------------------------------------
     def _assert_can_cover(self, char_id: str, entries: list[ValueEntry]) -> None:
@@ -90,39 +79,21 @@ class Dispatcher:
             raise ToolApplyError(str(e)) from e
         need_gold = sum(e.gold for e in entries if e.gold is not None)
         if char.gold < need_gold:
-            raise ToolApplyError(
-                f"{char.name} cannot cover {need_gold}g (has {char.gold}g)")
+            raise ToolApplyError(f"{char.name} cannot cover {need_gold}g (has {char.gold}g)")
         for e in entries:
             if e.item_id is not None and char.item_qty(e.item_id) < e.qty:
                 raise ToolApplyError(
-                    f"{char.name} lacks {e.qty}x {e.item_id} "
-                    f"(has {char.item_qty(e.item_id)})")
+                    f"{char.name} lacks {e.qty}x {e.item_id} (has {char.item_qty(e.item_id)})")
 
-    def _move(self, src: str, dst: str, entries: list[ValueEntry], deltas: dict) -> None:
-        for e in entries:
-            self._debit(src, e, deltas)
-            self._credit(dst, e, deltas)
+    def _move_ops(self, src: str, dst: str, e: ValueEntry) -> list[StateOp]:
+        return [self._debit_op(src, e), self._credit_op(dst, e)]
 
-    def _debit(self, char_id: str, e: ValueEntry, deltas: dict) -> None:
-        d = deltas.setdefault(char_id, {"gold": 0, "items": {}})
-        try:
-            if e.gold is not None:
-                self.repo.adjust_gold(char_id, -e.gold)
-                d["gold"] -= e.gold
-            else:
-                self.repo.remove_item(char_id, e.item_id, e.qty)
-                d["items"][e.item_id] = d["items"].get(e.item_id, 0) - e.qty
-        except StateError as ex:
-            raise ToolApplyError(str(ex)) from ex
+    def _debit_op(self, char_id: str, e: ValueEntry) -> StateOp:
+        if e.gold is not None:
+            return StateOp.gold(char_id, -e.gold)
+        return StateOp.item(char_id, e.item_id, -e.qty)
 
-    def _credit(self, char_id: str, e: ValueEntry, deltas: dict) -> None:
-        d = deltas.setdefault(char_id, {"gold": 0, "items": {}})
-        try:
-            if e.gold is not None:
-                self.repo.adjust_gold(char_id, e.gold)
-                d["gold"] += e.gold
-            else:
-                self.repo.add_item(char_id, e.item_id, e.qty)
-                d["items"][e.item_id] = d["items"].get(e.item_id, 0) + e.qty
-        except StateError as ex:
-            raise ToolApplyError(str(ex)) from ex
+    def _credit_op(self, char_id: str, e: ValueEntry) -> StateOp:
+        if e.gold is not None:
+            return StateOp.gold(char_id, e.gold)
+        return StateOp.item(char_id, e.item_id, e.qty)

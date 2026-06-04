@@ -1,14 +1,19 @@
-"""The single source of dice. Every roll flows through here and is logged, so that
-in Phase 2 these become replayable `ROLL` events and the rules engine stays pure."""
+"""The single source of dice. Every roll flows through here and is emitted as a
+ROLL event (spec §4.3), so the rules engine stays pure and replay never re-rolls.
+
+`record` is the session's event sink (`Session.emit_log`). Replay never builds an
+Rng — past rolls live in the log; future rolls are recorded as they happen.
+"""
 
 from __future__ import annotations
 
 import random
 import re
+from typing import Callable
 
 from pydantic import BaseModel
 
-from .log import DebugLog
+from .events import EventKind
 
 _DICE_RE = re.compile(r"^\s*(\d+)d(\d+)\s*([+-]\s*\d+)?\s*$", re.IGNORECASE)
 
@@ -31,11 +36,12 @@ def _parse(spec: str) -> tuple[int, int, int]:
 
 
 class Rng:
-    """Seeded so Phase 0 play and tests are reproducible (D9 prefigured)."""
+    """Seeded for reproducible live play. `record(kind, **payload)` receives each
+    ROLL (typically `Session.emit_log`); pass None to roll without recording."""
 
-    def __init__(self, seed: int, log: DebugLog) -> None:
+    def __init__(self, seed: int, record: Callable[..., object] | None = None) -> None:
         self._rand = random.Random(seed)
-        self._log = log
+        self._record = record
 
     def roll(self, spec: str, purpose: str) -> RollOutcome:
         count, sides, modifier = _parse(spec)
@@ -44,6 +50,6 @@ class Rng:
         outcome = RollOutcome(
             spec=spec, rolls=rolls, modifier=modifier, total=total, purpose=purpose
         )
-        # In Phase 2 this append becomes a real ROLL event (spec §4.3).
-        self._log.append("roll", **outcome.model_dump())
+        if self._record is not None:
+            self._record(EventKind.ROLL, **outcome.model_dump())
         return outcome
