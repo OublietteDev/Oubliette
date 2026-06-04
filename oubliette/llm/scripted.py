@@ -32,12 +32,17 @@ def _field(text: str, key: str) -> str:
 class ScriptedLLMClient:
     """Implements the `LLMClient` protocol with canned, deterministic output."""
 
-    async def complete(self, *, system: str, messages: list[Msg], schema: type[BaseModel]) -> BaseModel:
+    async def complete(self, *, system: str, messages: list[Msg], schema: type[BaseModel],
+                       on_text=None) -> BaseModel:
         text = _joined(messages)
         if schema is TurnAssessment:
             return self._assess(text)
         if schema is TurnResolution:
-            return self._resolve(text)
+            result = self._resolve(text)
+            if on_text is not None:                      # simulate streaming the narration
+                for i, word in enumerate(result.narration.split(" ")):
+                    on_text((" " if i else "") + word)
+            return result
         raise NotImplementedError(f"ScriptedLLMClient has no script for {schema.__name__}")
 
     # --- first call: classify + decide on a roll -----------------------------

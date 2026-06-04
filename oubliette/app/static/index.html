@@ -33,7 +33,7 @@
   header .brand { display: flex; flex-direction: column; }
   header h1 {
     font-family: var(--serif); font-size: 22px; margin: 0; letter-spacing: .3px;
-    color: var(--gold);
+    color: var(--gold); text-shadow: 0 0 18px rgba(217, 178, 90, .25);
   }
   header .tag { font-size: 12px; color: var(--muted); font-style: italic; }
   header .spacer { flex: 1; }
@@ -63,6 +63,12 @@
   .msg.player { background: var(--player); border: 1px solid #34495c; border-top-right-radius: 4px; }
   .msg.system { background: transparent; border: 1px dashed var(--line); color: var(--muted); font-size: 13px; font-style: italic; max-width: 90%; }
   .who { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--faint); margin-bottom: 5px; }
+  .msg .body strong { color: var(--gold); font-weight: 700; }
+  .msg.dm .body em { color: #e7d9bf; }
+  .cursor { display: inline-block; width: 7px; height: 1.02em; margin-left: 2px; vertical-align: text-bottom; background: var(--gold); border-radius: 1px; opacity: .85; animation: blink 1.05s steps(2, end) infinite; }
+  @keyframes blink { 0%, 50% { opacity: .85; } 50.01%, 100% { opacity: 0; } }
+  .row { animation: fadein .26s ease both; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 
   .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
   .chip {
@@ -227,11 +233,24 @@ function addMessage(who, text, cls) {
   const row = el("div", "row " + cls);
   const msg = el("div", "msg " + cls);
   msg.appendChild(el("div", "who", who));
-  msg.appendChild(el("div", null, text));
+  msg.appendChild(el("div", "body", text));
   row.appendChild(msg);
   log.appendChild(row);
   scrollDown();
   return msg;
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+// tiny markdown: **bold**, *italic* / _italic_, paragraph + line breaks
+function md(s) {
+  let h = escapeHtml(s);
+  h = h.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  h = h.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+  h = h.replace(/_([^_\n]+)_/g, "<em>$1</em>");
+  h = h.replace(/\n{2,}/g, "<br><br>").replace(/\n/g, "<br>");
+  return h;
 }
 
 function addChips(msg, data) {
@@ -361,22 +380,53 @@ async function send() {
   const think = el("div", "msg dm");
   think.innerHTML = `<div class="thinking"><span>The Phantom considers</span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
   thinkRow.appendChild(think); log.appendChild(thinkRow); scrollDown();
+
+  let bubble = null, body = null, acc = "", removedThink = false;
+  function ensureBubble() {
+    if (bubble) return;
+    if (!removedThink) { thinkRow.remove(); removedThink = true; }
+    bubble = addMessage("The Phantom", "", "dm");
+    body = bubble.querySelector(".body");
+  }
+  function handle(data) {
+    if (data.t === "delta") {
+      ensureBubble();
+      acc += data.v;
+      body.innerHTML = md(acc) + '<span class="cursor"></span>';
+      scrollDown();
+    } else if (data.t === "done") {
+      ensureBubble();
+      acc = data.narration || acc;
+      body.innerHTML = md(acc);
+      addChips(bubble, data);
+      if (data.state) renderState(data.state);
+      if (data.trade) openTrade(data.trade);
+    } else if (data.t === "error") {
+      if (!removedThink) { thinkRow.remove(); removedThink = true; }
+      addMessage("System", data.error || "something went wrong", "system");
+    }
+  }
   try {
-    const res = await fetch("/api/turn", {
+    const res = await fetch("/api/turn/stream", {
       method: "POST", headers: {"content-type": "application/json"},
       body: JSON.stringify({ text })
     });
-    const data = await res.json();
-    thinkRow.remove();
-    if (data.error) { addMessage("System", data.error, "system"); }
-    else {
-      const msg = addMessage("The Phantom", data.narration, "dm");
-      addChips(msg, data);
-      if (data.state) renderState(data.state);
-      if (data.trade) openTrade(data.trade);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf("\n\n")) >= 0) {
+        const line = buf.slice(0, idx).trim();
+        buf = buf.slice(idx + 2);
+        if (line.startsWith("data:")) handle(JSON.parse(line.slice(5).trim()));
+      }
     }
   } catch (e) {
-    thinkRow.remove();
+    if (!removedThink) thinkRow.remove();
     addMessage("System", "Connection lost: " + e, "system");
   } finally { setBusy(false); }
 }

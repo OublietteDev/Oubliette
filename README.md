@@ -48,7 +48,10 @@ rewrites. Everything runs with a **scripted (offline) DM** — no API key requir
   (which caps what they'll pay). Buying/selling are ordinary code-validated
   `transact`s at merchant-set prices, so the firewall holds for free. Verified
   live: the model summons the window on a browse request.
-- **Next:** streaming responses, and polish (markdown, ambient styling).
+- **Phase 6** (tag `phase-6`): **streaming + UI polish**. The DM's narration now
+  streams token-by-token over SSE (the `narration` field is pulled out of the
+  partial structured-output JSON as it generates), with a blinking cursor,
+  markdown (bold/italic/paragraphs), and message fade-ins.
 
 ## Quickstart
 

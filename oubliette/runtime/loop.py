@@ -57,7 +57,7 @@ class TurnLoop:
         self.dispatcher = Dispatcher(session.repo, session.canon)
         self.history: list[str] = []   # short-term continuity beats (gap G5)
 
-    async def take_turn(self, player_text: str) -> TurnReport:
+    async def take_turn(self, player_text: str, on_text=None) -> TurnReport:
         # Retrieve world canon relevant to this turn → context (long-term memory, G4).
         canon_hits = self.session.canon.search(player_text)
         context = build_context(
@@ -74,12 +74,18 @@ class TurnLoop:
             summons_combat=assessment.encounter is not None,
         )
 
+        # Combat and trade produce their narration whole (no resolve call) → emit it
+        # to the stream in one shot. The normal path streams token-by-token.
+        report: TurnReport | None = None
         if assessment.encounter is not None:
             report = self._run_combat(player_text, assessment)
-        elif assessment.trade is not None and (report := self._open_trade(assessment)) is not None:
-            pass  # trade window summoned
+        elif assessment.trade is not None:
+            report = self._open_trade(assessment)
+        if report is not None:
+            if on_text is not None:
+                on_text(report.narration)
         else:
-            report = await self._resolve_turn(player_text, assessment, context)
+            report = await self._resolve_turn(player_text, assessment, context, on_text=on_text)
 
         self._record_beat(report)
         return report
@@ -104,7 +110,7 @@ class TurnLoop:
         )
 
     async def _resolve_turn(self, player_text: str, assessment: TurnAssessment,
-                            context: str) -> TurnReport:
+                            context: str, on_text=None) -> TurnReport:
         # --- roll, if the DM called for one. Model sets the DC; code sets the bonus.
         roll_outcome: RollOutcome | None = None
         roll_result: str | None = None
@@ -119,8 +125,10 @@ class TurnLoop:
         applied: list[ResolvedTool] = []
         success = False
         for attempt in range(MAX_TOOL_RETRIES + 1):
+            # Stream only the first attempt; a retry would double-stream narration.
             resolution = await self.brain.resolve(
-                player_text, assessment, roll_result, context, feedback)
+                player_text, assessment, roll_result, context, feedback,
+                on_text=(on_text if attempt == 0 else None))
             narration = resolution.narration
             try:
                 resolved = [self.dispatcher.resolve(c) for c in resolution.tool_calls]

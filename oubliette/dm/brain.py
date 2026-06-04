@@ -89,6 +89,7 @@ class Brain:
         roll_result: str | None,
         context: str = "",
         retry_feedback: str | None = None,
+        on_text=None,
     ) -> TurnResolution:
         intent = assessment.intent
         parts = []
@@ -105,5 +106,5 @@ class Brain:
             parts.append(f"PREVIOUS_ATTEMPT_FAILED: {retry_feedback}")
         return await self.client.complete(
             system=RESOLVE_SYSTEM, messages=[Msg(role="user", content="\n".join(parts))],
-            schema=TurnResolution,
+            schema=TurnResolution, on_text=on_text,
         )

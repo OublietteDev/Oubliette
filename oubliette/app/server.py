@@ -12,11 +12,12 @@ to the chat window. Uses the real model when ANTHROPIC_API_KEY is set (env or
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from ..record.events import EventKind
@@ -150,6 +151,50 @@ async def post_turn(body: TurnIn) -> JSONResponse:
     async with GAME.lock:  # serialize turns; combat/state mutation isn't reentrant
         report = await GAME.loop.take_turn(text)
         return JSONResponse(_turn_payload(report))
+
+
+@app.post("/api/turn/stream", response_model=None)
+async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
+    """Server-Sent Events: stream narration deltas, then a final payload.
+    Events: {"t":"delta","v":"..."} during generation, then {"t":"done", ...}."""
+    text = body.text.strip()
+    if not text:
+        return JSONResponse({"error": "empty message"}, status_code=400)
+
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue = asyncio.Queue()
+
+    def on_text(delta: str) -> None:
+        # Called from the model's worker thread → hop back onto the loop safely.
+        loop.call_soon_threadsafe(queue.put_nowait, {"t": "delta", "v": delta})
+
+    def _emit(item: dict) -> None:
+        # Enqueue via the loop so a final 'done' lands AFTER all delta callbacks
+        # (which on_text scheduled the same way) — preserves stream order.
+        loop.call_soon_threadsafe(queue.put_nowait, item)
+
+    async def run_turn() -> None:
+        async with GAME.lock:
+            try:
+                report = await GAME.loop.take_turn(text, on_text=on_text)
+                payload = _turn_payload(report)
+                payload["t"] = "done"
+                _emit(payload)
+            except Exception as e:  # surface failures to the client, don't hang
+                _emit({"t": "error", "error": str(e)})
+
+    async def events():
+        task = asyncio.create_task(run_turn())
+        try:
+            while True:
+                item = await queue.get()
+                yield f"data: {json.dumps(item)}\n\n"
+                if item.get("t") in ("done", "error"):
+                    break
+        finally:
+            await task
+
+    return StreamingResponse(events(), media_type="text/event-stream")
 
 
 class TradeActionIn(BaseModel):

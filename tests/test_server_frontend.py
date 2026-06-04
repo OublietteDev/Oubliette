@@ -6,6 +6,7 @@ HTTP layer + state serialization are exercised deterministically.
 
 from __future__ import annotations
 
+import json
 import os
 import tempfile
 
@@ -85,6 +86,24 @@ def test_empty_message_rejected():
     _new()
     r = client.post("/api/turn", json={"text": "   "})
     assert r.status_code == 400
+
+
+def test_stream_endpoint_yields_deltas_then_done():
+    _new()
+    events = []
+    with client.stream("POST", "/api/turn/stream",
+                       json={"text": "I look around the market."}) as r:
+        assert r.status_code == 200
+        for line in r.iter_lines():
+            if line.startswith("data:"):
+                events.append(json.loads(line[5:].strip()))
+    types = [e["t"] for e in events]
+    assert "delta" in types and types[-1] == "done"
+    done = events[-1]
+    assert done["narration"] and done["state"]["pc"]["gold"] == 15
+    # the streamed deltas reconstruct the final narration
+    streamed = "".join(e["v"] for e in events if e["t"] == "delta")
+    assert streamed.strip() == done["narration"].strip()
 
 
 def test_index_page_served():

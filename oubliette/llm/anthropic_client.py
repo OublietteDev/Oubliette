@@ -22,7 +22,8 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from .client import Msg
+from .client import Msg, TextSink
+from .streaming import extract_string_field
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -41,7 +42,8 @@ class AnthropicLLMClient:
         self._max_tokens = max_tokens
         self._max_retries = max_retries
 
-    async def complete(self, *, system: str, messages: list[Msg], schema: type[T]) -> T:
+    async def complete(self, *, system: str, messages: list[Msg], schema: type[T],
+                       on_text: TextSink | None = None) -> T:
         payload = {
             "model": self._model,
             "max_tokens": self._max_tokens,
@@ -54,11 +56,58 @@ class AnthropicLLMClient:
             }],
             "tool_choice": {"type": "tool", "name": "emit"},
         }
+        if on_text is not None:
+            payload["stream"] = True
+            inp = await asyncio.to_thread(self._post_stream, payload, on_text)
+            return schema.model_validate(inp)
+
         data = await asyncio.to_thread(self._post, payload)
         for block in data.get("content", []):
             if block.get("type") == "tool_use":
                 return schema.model_validate(block["input"])
         raise RuntimeError("model did not emit the forced structured-output tool call")
+
+    def _post_stream(self, payload: dict, on_text: TextSink) -> dict:
+        """Stream the forced tool_use input, emitting `narration` deltas as they
+        arrive, and return the fully-parsed tool input."""
+        body = json.dumps(payload).encode()
+        headers = {
+            "x-api-key": self._api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "accept": "text/event-stream",
+        }
+        req = urllib.request.Request(_API_URL, data=body, method="POST", headers=headers)
+        acc = ""        # accumulated tool-input JSON
+        emitted = ""    # narration emitted so far
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                for raw in resp:                       # SSE lines, as they arrive
+                    line = raw.decode("utf-8", "replace").strip()
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if not data or data == "[DONE]":
+                        continue
+                    try:
+                        evt = json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+                    if evt.get("type") == "content_block_delta":
+                        delta = evt.get("delta", {})
+                        if delta.get("type") == "input_json_delta":
+                            acc += delta.get("partial_json", "")
+                            val = extract_string_field(acc, "narration")
+                            if len(val) > len(emitted):
+                                on_text(val[len(emitted):])
+                                emitted = val
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode("utf-8", "replace")[:300]
+            raise RuntimeError(f"Anthropic API HTTP {e.code}: {detail}") from e
+        try:
+            return json.loads(acc) if acc else {}
+        except json.JSONDecodeError as e:
+            raise RuntimeError(f"streamed tool input was not valid JSON: {acc[:200]}") from e
 
     def _post(self, payload: dict) -> dict:
         body = json.dumps(payload).encode()
