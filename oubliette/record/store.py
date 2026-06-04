@@ -55,7 +55,9 @@ class InMemoryEventStore:
 
 class SqliteEventStore:
     def __init__(self, path: str) -> None:
-        self._conn = sqlite3.connect(path)
+        # check_same_thread=False: the web server touches the connection from
+        # worker threads; turns are serialized by a lock so this stays safe.
+        self._conn = sqlite3.connect(path, check_same_thread=False)
         self._conn.execute(
             "CREATE TABLE IF NOT EXISTS events ("
             " seq INTEGER PRIMARY KEY,"

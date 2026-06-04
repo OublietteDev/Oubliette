@@ -6,7 +6,15 @@ never holds the pen.** See [`oubliette-table-spec-v0.2.md`](oubliette-table-spec
 for the full design (and [`oubliette-table-design-v0.1.md`](oubliette-table-design-v0.1.md)
 for the original rationale).
 
-## Status: Phase 3 — canonization + retrieval (on Phase 0–2)
+## Status: Phase 4 — web chat UI (on Phase 0–3)
+
+**Play in your browser:** install the web deps once (`pip install -e ".[web]"`),
+then run `oubliette-play` (or double-click `play.bat` on Windows). A chat window
+opens: talk to the DM on the left, watch the live character sheet, inventory, and
+canon on the right. It uses the real model when `ANTHROPIC_API_KEY` is set (env or
+`.env`), else the scripted offline DM.
+
+## Earlier phases
 
 Per spec §14, we build *through the seams* so later phases are substitutions, not
 rewrites. Everything runs with a **scripted (offline) DM** — no API key required.
@@ -32,7 +40,11 @@ rewrites. Everything runs with a **scripted (offline) DM** — no API key requir
   replay; keyword retrieval feeds relevant canon back into context so the DM stays
   consistent (its long-term memory). Verified live: the model named an NPC, then
   reused it by retrieval instead of duplicating.
-- **Next:** the trade window, then a proper front-end (chat UI).
+- **Phase 4** (tag `phase-4`): the **web chat UI** above (FastAPI + a
+  self-contained page, no build step) — narration, roll/effect/combat chips, and
+  the live sheet/inventory/canon, all in the browser.
+- **Next:** the trade window (the last summoned-tool subsystem), streaming
+  responses, and polish.
 
 ## Quickstart
 
@@ -41,7 +53,8 @@ python -m venv .venv
 # Windows:  .venv\Scripts\activate     # POSIX: source .venv/bin/activate
 pip install -e ".[dev]"
 
-pytest                                   # acceptance suite (Phase 0 + 1 + 2 replay)
+pytest                                   # full acceptance suite (incl. front-end API)
+oubliette-play                           # ← the browser chat UI (pip install -e ".[web]")
 python -m oubliette.app.repl --script --scripted   # the §14.1 non-combat transcript
 python -m oubliette.app.repl --combat --scripted   # the Phase 1 combat-boundary demo
 python -m oubliette.app.repl --canon --scripted    # the Phase 3 canonization demo
@@ -74,7 +87,7 @@ python -m oubliette.app.repl             # interactive REPL — uses the REAL mo
 | `canon/` | the canonization lifecycle: `CanonRecord`s + the canon store with keyword retrieval |
 | `dm/` | the DM brain (assess + resolve) and the per-turn `context` builder (state/scene/canon/recent) |
 | `runtime/` | the turn loop: assess → (combat \| roll → resolve) → apply → render |
-| `app/` | terminal REPL |
+| `app/` | the web server (`server.py` + `static/index.html`) and the terminal REPL |
 
 ## What this does NOT do yet
 
