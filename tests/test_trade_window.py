@@ -20,7 +20,7 @@ from oubliette.runtime.loop import TurnLoop
 from oubliette.runtime.session import Session
 from oubliette.state.repository import StateError
 from oubliette.tools.dispatch import Dispatcher, ToolApplyError
-from oubliette.trade.service import build_state, buy_transact, sell_transact
+from oubliette.trade.service import build_state, buy_transact, checkout_transact, sell_transact
 
 
 def _session():
@@ -82,6 +82,55 @@ def test_buy_unstocked_item_rejected():
     s = _session()
     with pytest.raises(StateError):
         buy_transact(s.repo, "merchant_thom", "boots", 1)  # boots aren't in Thom's price list
+
+
+def test_checkout_basket_settles_buys_and_sells_in_one_transact():
+    s = _session()
+    disp = Dispatcher(s.repo, s.canon)
+    pc = s.repo.pc()
+    thom = s.repo.get_character("merchant_thom")
+    # buy a belt (5g) + waterskin (4g) = 9g; sell the boots (buyback) to offset
+    boots_offer = next(o.offer for o in build_state(s.repo, "merchant_thom").sell if o.item_id == "boots")
+    tx = checkout_transact(s.repo, "merchant_thom",
+                           buy=[("sturdy_belt", 1), ("waterskin", 1)], sell=[("boots", 1)])
+    rt = disp.resolve(tx)
+    s.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
+
+    assert pc.gold == 15 - (9 - boots_offer)     # paid the net
+    assert pc.item_qty("sturdy_belt") == 1 and pc.item_qty("waterskin") == 1
+    assert pc.item_qty("boots") == 0
+    # exactly one event for the whole basket
+    assert len(s.store.of_kind(EventKind.TOOL_APPLIED)) == 1
+
+
+def test_checkout_rejects_unaffordable_basket_atomically():
+    s = _session()
+    disp = Dispatcher(s.repo, s.canon)
+    pc = s.repo.pc()
+    # two satchels at 15g = 30g; player has 15g — must fail, nothing applied
+    tx = checkout_transact(s.repo, "merchant_thom", buy=[("leather_satchel", 2)], sell=[])
+    with pytest.raises(ToolApplyError):
+        disp.resolve(tx)
+    assert pc.gold == 15
+    assert pc.item_qty("leather_satchel") == 0
+
+
+def test_merchant_stock_appears_in_dm_context():
+    from oubliette.dm.context import build_context
+    s = _session()
+    ctx = build_context(s.repo, "a market")
+    assert "sells" in ctx and "leather satchel 15g" in ctx
+
+
+def test_item_resolution_handles_abbreviated_names():
+    s = _session()
+    # the DM often abbreviates — these must still resolve (haggle robustness)
+    assert s.repo.resolve_item_id("belt") == "sturdy_belt"
+    assert s.repo.resolve_item_id("gloves") == "riding_gloves"
+    assert s.repo.resolve_item_id("satchel") == "leather_satchel"
+    assert s.repo.resolve_item_id("boots") == "boots"     # exact id wins over fuzzy
+    with pytest.raises(StateError):
+        s.repo.resolve_item_id("dragon scale")
 
 
 def test_scripted_loop_summons_trade_window():

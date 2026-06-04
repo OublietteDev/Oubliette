@@ -82,6 +82,21 @@ def test_trade_window_opens_and_buy_updates_state():
     assert any(i["id"] == "waterskin" for i in d2["state"]["pc"]["inventory"])
 
 
+def test_checkout_endpoint_settles_a_basket():
+    _new()
+    mid = client.post("/api/turn", json={"text": "What do you have for sale?"}).json()["trade"]["merchant_id"]
+    r = client.post("/api/trade/checkout", json={
+        "merchant_id": mid,
+        "buy": [{"item_id": "waterskin", "qty": 1}, {"item_id": "sturdy_belt", "qty": 1}],
+        "sell": [],
+    })
+    d = r.json()
+    assert d["ok"] is True
+    assert d["state"]["pc"]["gold"] == 15 - 9   # waterskin 4 + belt 5
+    have = {i["id"] for i in d["state"]["pc"]["inventory"]}
+    assert {"waterskin", "sturdy_belt"} <= have
+
+
 def test_empty_message_rejected():
     _new()
     r = client.post("/api/turn", json={"text": "   "})

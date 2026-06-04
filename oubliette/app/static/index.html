@@ -147,6 +147,17 @@
   .trade-row button:hover:not(:disabled) { border-color: var(--accent); }
   .trade-row button:disabled { opacity: .35; cursor: default; }
   .trade-empty { color: var(--faint); font-style: italic; font-size: 13px; }
+  .stepper { display: flex; align-items: center; gap: 6px; }
+  .stepper button { width: 26px; height: 26px; padding: 0; font-size: 15px; line-height: 1; border-radius: 6px; border: 1px solid var(--line); background: #2a231d; color: var(--ink); cursor: pointer; }
+  .stepper button:hover:not(:disabled) { border-color: var(--accent); }
+  .stepper button:disabled { opacity: .3; cursor: default; }
+  .stepper .q { min-width: 18px; text-align: center; font-variant-numeric: tabular-nums; }
+  .trade-foot { display: flex; align-items: center; gap: 12px; padding: 13px 18px; border-top: 1px solid var(--line); background: linear-gradient(0deg, rgba(0,0,0,.28), transparent); }
+  .trade-summary { flex: 1; font-size: 13px; color: var(--muted); }
+  .trade-summary b { color: var(--gold); }
+  .trade-actions { display: flex; gap: 8px; }
+  #trade-settle { font: inherit; font-weight: 600; cursor: pointer; border: none; border-radius: 9px; padding: 8px 16px; background: linear-gradient(180deg, var(--accent), #9c5f2e); color: #fff; }
+  #trade-settle:disabled, #trade-haggle:disabled { opacity: .4; cursor: default; }
 </style>
 </head>
 <body>
@@ -214,6 +225,13 @@
       <div class="trade-col"><h3>For Sale</h3><ul class="trade-list" id="t-buy"></ul></div>
       <div class="trade-col"><h3>Your Goods</h3><ul class="trade-list" id="t-sell"></ul></div>
     </div>
+    <div class="trade-foot">
+      <div class="trade-summary" id="trade-summary">Pick items to trade…</div>
+      <div class="trade-actions">
+        <button class="act" id="trade-haggle" disabled>Haggle</button>
+        <button id="trade-settle" disabled>Settle</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -278,40 +296,97 @@ function addChips(msg, data) {
 
 // --- trade window ---------------------------------------------------------
 let tradeMerchant = null;
-function openTrade(t) { tradeMerchant = t.merchant_id; renderTrade(t); $("trade-overlay").classList.remove("hidden"); }
-function closeTrade() { $("trade-overlay").classList.add("hidden"); tradeMerchant = null; $("trade-msg").textContent = ""; }
+let tradeState = null;
+let basket = { buy: {}, sell: {} };
 
-function tradeRow(o, kind, playerGold) {
+function openTrade(t) { tradeMerchant = t.merchant_id; renderTrade(t); $("trade-overlay").classList.remove("hidden"); }
+function closeTrade() {
+  $("trade-overlay").classList.add("hidden");
+  tradeMerchant = null; tradeState = null; basket = { buy: {}, sell: {} };
+  $("trade-msg").textContent = "";
+}
+
+function stepper(kind, id, max) {
+  const wrap = el("div", "stepper");
+  const minus = el("button", null, "−");
+  const q = el("span", "q", "0");
+  const plus = el("button", null, "+");
+  const get = () => basket[kind][id] || 0;
+  const set = (v) => {
+    v = Math.max(0, Math.min(max, v));
+    if (v) basket[kind][id] = v; else delete basket[kind][id];
+    renderBasket();
+  };
+  minus.addEventListener("click", () => set(get() - 1));
+  plus.addEventListener("click", () => set(get() + 1));
+  wrap.append(minus, q, plus);
+  wrap._sync = () => { q.textContent = get(); minus.disabled = get() <= 0; plus.disabled = get() >= max; };
+  wrap._sync();
+  return wrap;
+}
+
+function tradeRow(o, kind) {
   const li = el("li", "trade-row");
   const info = el("div", "info");
   info.appendChild(el("div", "nm", o.name));
   info.appendChild(el("div", "meta", kind === "buy" ? `${o.qty} in stock` : `you have ${o.qty}`));
   li.appendChild(info);
   li.appendChild(el("div", "price", (kind === "buy" ? o.price : o.offer) + "g"));
-  const btn = el("button", null, kind === "buy" ? "Buy" : "Sell");
-  if (kind === "buy" && playerGold < o.price) btn.disabled = true;
-  if (kind === "sell" && !o.affordable) btn.disabled = true;
-  btn.addEventListener("click", () => tradeAction(kind, o.item_id));
-  li.appendChild(btn);
+  li.appendChild(stepper(kind, o.item_id, o.qty));
   return li;
 }
+
 function renderTrade(t) {
+  tradeState = t; basket = { buy: {}, sell: {} };
   $("trade-title").textContent = "Trading with " + t.merchant_name;
   $("t-pcgold").textContent = t.player_gold;
   $("t-mname").textContent = t.merchant_name + "'s gold";
   $("t-mgold").textContent = t.merchant_gold;
   const buy = $("t-buy"); buy.innerHTML = "";
   if (!t.buy.length) buy.appendChild(el("div", "trade-empty", "nothing for sale"));
-  t.buy.forEach(o => buy.appendChild(tradeRow(o, "buy", t.player_gold)));
+  t.buy.forEach(o => buy.appendChild(tradeRow(o, "buy")));
   const sell = $("t-sell"); sell.innerHTML = "";
   if (!t.sell.length) sell.appendChild(el("div", "trade-empty", "you have nothing to sell"));
-  t.sell.forEach(o => sell.appendChild(tradeRow(o, "sell", t.player_gold)));
+  t.sell.forEach(o => sell.appendChild(tradeRow(o, "sell")));
+  renderBasket();
 }
-async function tradeAction(action, item_id) {
+
+function basketTotals() {
+  let cost = 0, value = 0, nb = 0, ns = 0;
+  for (const [id, qn] of Object.entries(basket.buy)) {
+    const o = tradeState.buy.find(x => x.item_id === id); if (o) { cost += o.price * qn; nb += qn; }
+  }
+  for (const [id, qn] of Object.entries(basket.sell)) {
+    const o = tradeState.sell.find(x => x.item_id === id); if (o) { value += o.offer * qn; ns += qn; }
+  }
+  return { cost, value, net: cost - value, nb, ns };
+}
+
+function renderBasket() {
+  document.querySelectorAll("#t-buy .stepper, #t-sell .stepper").forEach(s => s._sync && s._sync());
+  const { cost, value, net, nb, ns } = basketTotals();
+  const any = nb > 0 || ns > 0;
+  if (!any) {
+    $("trade-summary").innerHTML = "Pick items to trade…";
+  } else {
+    const parts = [];
+    if (nb) parts.push(`buying ${nb} (${cost}g)`);
+    if (ns) parts.push(`selling ${ns} (${value}g)`);
+    const settle = net >= 0 ? `you pay <b>${net}g</b>` : `you receive <b>${-net}g</b>`;
+    $("trade-summary").innerHTML = parts.join(" · ") + " → " + settle;
+  }
+  $("trade-settle").disabled = !any || net > tradeState.player_gold;
+  $("trade-settle").textContent = any && net > 0 ? `Settle (${net}g)` : "Settle";
+  $("trade-haggle").disabled = !any;
+}
+
+async function settle() {
+  const buy = Object.entries(basket.buy).map(([item_id, qty]) => ({ item_id, qty }));
+  const sell = Object.entries(basket.sell).map(([item_id, qty]) => ({ item_id, qty }));
   try {
-    const res = await fetch("/api/trade", {
+    const res = await fetch("/api/trade/checkout", {
       method: "POST", headers: {"content-type": "application/json"},
-      body: JSON.stringify({ merchant_id: tradeMerchant, action, item_id, qty: 1 })
+      body: JSON.stringify({ merchant_id: tradeMerchant, buy, sell })
     });
     const data = await res.json();
     if (data.trade) renderTrade(data.trade);
@@ -319,7 +394,33 @@ async function tradeAction(action, item_id) {
     $("trade-msg").textContent = data.ok ? "" : (data.error || "");
   } catch (e) { $("trade-msg").textContent = "Error: " + e; }
 }
+
+function haggleMessage() {
+  const t = tradeState;
+  const buys = Object.entries(basket.buy).map(([id, qn]) => {
+    const o = t.buy.find(x => x.item_id === id); return `${qn}× ${o.name} (you're asking ${o.price}g each)`;
+  });
+  const sells = Object.entries(basket.sell).map(([id, qn]) => {
+    const o = t.sell.find(x => x.item_id === id); return `${qn}× ${o.name}`;
+  });
+  let m = `[At ${t.merchant_name}'s stall] `;
+  if (buys.length) m += `I want to buy: ${buys.join(", ")}. `;
+  if (sells.length) m += `I'll put toward it: ${sells.join(", ")}. `;
+  m += "Let's haggle — can we agree on a better price?";
+  return m;
+}
+
+function doHaggle() {
+  const { nb, ns } = basketTotals();
+  if (!nb && !ns) return;
+  const msg = haggleMessage();
+  closeTrade();
+  send(msg);
+}
+
 $("trade-done").addEventListener("click", closeTrade);
+$("trade-settle").addEventListener("click", settle);
+$("trade-haggle").addEventListener("click", doHaggle);
 $("trade-overlay").addEventListener("click", (e) => { if (e.target.id === "trade-overlay") closeTrade(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTrade(); });
 
@@ -370,10 +471,11 @@ function setBusy(b) {
   if (!b) input.focus();
 }
 
-async function send() {
-  const text = input.value.trim();
+async function send(textOverride) {
+  const override = typeof textOverride === "string";
+  const text = (override ? textOverride : input.value).trim();
   if (!text || busy) return;
-  input.value = "";
+  if (!override) input.value = "";
   addMessage("You", text, "player");
   setBusy(true);
   const thinkRow = el("div", "row dm");
@@ -431,7 +533,7 @@ async function send() {
   } finally { setBusy(false); }
 }
 
-sendBtn.addEventListener("click", send);
+sendBtn.addEventListener("click", () => send());
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
 });

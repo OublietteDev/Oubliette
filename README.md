@@ -52,6 +52,12 @@ rewrites. Everything runs with a **scripted (offline) DM** — no API key requir
   streams token-by-token over SSE (the `narration` field is pulled out of the
   partial structured-output JSON as it generates), with a blinking cursor,
   markdown (bold/italic/paragraphs), and message fade-ins.
+- **Phase 7** (tag `phase-7`): **trade basket + haggle**. The trade window now has
+  quantity steppers on both sides and a running net total; **Settle** executes the
+  whole basket as one validated transact at listed prices, while **Haggle** sends
+  the selection to the DM as a chat proposal — it rolls persuasion/deception and
+  settles at an *adjusted* price (the soft economy, §8/§11, wired to the window).
+  The merchant's priced stock is now in the DM's context too, so it can negotiate.
 
 ## Quickstart
 

@@ -36,7 +36,16 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
         lines.append("PRESENT (NPCs you may reference by id):")
         for n in npcs:
             note = n.disposition or n.description or "no notes"
-            lines.append(f"  - {n.name} (id: {n.id}) — {note}; carries {n.gold}g.")
+            # Surface a merchant's priced stock so the DM can negotiate (it was
+            # "blind to the trade window contents" otherwise).
+            stock = ""
+            if n.price_list:
+                in_stock = {s.item_id for s in n.inventory if s.qty > 0}
+                items = [f"{repo.get_item(i).name} {p}g"
+                         for i, p in list(n.price_list.items())[:8] if i in in_stock]
+                if items:
+                    stock = "; sells " + ", ".join(items)
+            lines.append(f"  - {n.name} (id: {n.id}) — {note}; carries {n.gold}g{stock}.")
     # Long-term memory: world canon relevant to this turn, retrieved by keyword
     # (gap G4). Stay consistent with these; provisional canon is soft.
     if canon:

@@ -28,7 +28,7 @@ from ..runtime.session import Session
 from ..dm.brain import Brain
 from ..state.repository import StateError
 from ..tools.dispatch import ToolApplyError
-from ..trade.service import build_state, buy_transact, sell_transact
+from ..trade.service import build_state, buy_transact, checkout_transact, sell_transact
 from .repl import _load_dotenv, _pick_client
 
 STATIC = Path(__file__).parent / "static"
@@ -221,6 +221,33 @@ async def post_trade(body: TradeActionIn) -> JSONResponse:
         except (ToolApplyError, StateError) as e:
             ok, error = False, str(e)
         # always return a fresh trade view + game state so the UI re-renders
+        try:
+            trade = build_state(repo, body.merchant_id).model_dump()
+        except StateError:
+            trade = None
+        return JSONResponse({"ok": ok, "error": error, "trade": trade, "state": _snapshot()})
+
+
+class CheckoutIn(BaseModel):
+    merchant_id: str
+    buy: list[dict] = []     # [{item_id, qty}]
+    sell: list[dict] = []
+
+
+@app.post("/api/trade/checkout")
+async def post_checkout(body: CheckoutIn) -> JSONResponse:
+    """Settle a whole basket at listed prices as one validated transact."""
+    async with GAME.lock:
+        repo = GAME.session.repo
+        buy = [(e["item_id"], int(e.get("qty", 1))) for e in body.buy]
+        sell = [(e["item_id"], int(e.get("qty", 1))) for e in body.sell]
+        try:
+            tx = checkout_transact(repo, body.merchant_id, buy, sell)
+            rt = GAME.loop.dispatcher.resolve(tx)
+            GAME.session.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
+            ok, error = True, None
+        except (ToolApplyError, StateError) as e:
+            ok, error = False, str(e)
         try:
             trade = build_state(repo, body.merchant_id).model_dump()
         except StateError:

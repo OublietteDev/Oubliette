@@ -63,14 +63,24 @@ class InMemoryRepository:
 
     def resolve_item_id(self, ref: str) -> str:
         """Map an item reference (id OR display name, loosely) to its canonical id.
-        Lets the DM name an item by its prose label and still hit the right id
-        (harness robustness — the model can't always know the slug)."""
+        Lets the DM name an item by its prose label — exact id/name first, then a
+        word-subset fallback (so 'belt' resolves 'sturdy belt' when unambiguous)."""
         if ref in self._items:
             return ref
         norm = ref.strip().lower().replace("_", " ")
         for item in self._items.values():
             if item.name.strip().lower() == norm or item.id.replace("_", " ") == norm:
                 return item.id
+        # Fuzzy: the ref's words are a subset of exactly one item's name/id words.
+        ref_words = set(norm.split())
+        if ref_words:
+            hits = [
+                item.id for item in self._items.values()
+                if ref_words <= set(item.name.lower().split())
+                or ref_words <= set(item.id.replace("_", " ").split())
+            ]
+            if len(hits) == 1:
+                return hits[0]
         raise StateError(f"no such item: {ref!r}")
 
     # --- protected mutators ---------------------------------------------------

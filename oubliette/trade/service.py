@@ -70,6 +70,47 @@ def buy_transact(repo: Repository, merchant_id: str, item_id: str, qty: int) -> 
     )
 
 
+def checkout_transact(
+    repo: Repository, merchant_id: str,
+    buy: list[tuple[str, int]], sell: list[tuple[str, int]],
+) -> Transact:
+    """Build ONE balanced transact for a whole basket: buy items at asking, sell
+    items at buyback, net gold settles the difference. Validated by the dispatcher
+    like any transact (player must cover a net cost; merchant a net payout)."""
+    merchant = repo.get_character(merchant_id)
+    give: list[ValueEntry] = []      # leaves the player
+    receive: list[ValueEntry] = []   # enters the player
+    cost = 0
+    n_buy = 0
+    for item_id, qty in buy:
+        if qty <= 0:
+            continue
+        if item_id not in merchant.price_list:
+            raise StateError(f"{item_id} is not for sale")
+        cost += merchant.price_list[item_id] * qty
+        receive.append(ValueEntry(item_id=item_id, qty=qty))
+        n_buy += qty
+    value = 0
+    n_sell = 0
+    for item_id, qty in sell:
+        if qty <= 0:
+            continue
+        value += buyback_price(repo, merchant, item_id) * qty
+        give.append(ValueEntry(item_id=item_id, qty=qty))
+        n_sell += qty
+    net = cost - value
+    if net > 0:
+        give.append(ValueEntry(gold=net))        # player pays the difference
+    elif net < 0:
+        receive.append(ValueEntry(gold=-net))     # player receives the difference
+    if not give and not receive:
+        raise StateError("nothing selected to trade")
+    return Transact(
+        from_="pc", counterparty=merchant_id, give=give, receive=receive,
+        reason=f"Settled with {merchant.name}: bought {n_buy}, sold {n_sell} (net {net:+d}g)",
+    )
+
+
 def sell_transact(repo: Repository, merchant_id: str, item_id: str, qty: int) -> Transact:
     merchant = repo.get_character(merchant_id)
     if qty <= 0:

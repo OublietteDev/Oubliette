@@ -53,3 +53,20 @@ All four rough edges addressed, mostly as prompt/context clarifications:
    depends on it); leave incidental flavor provisional.
 
 — The harness
+
+Interview 2, completed by the user with Sonnet:
+The Phantom
+Thom's eyes narrow slightly, then he breaks into a wry grin. "Aye, I know good leather when I see it — been working hides since I was a lad." He crosses his arms, leaning back against his stall. "And I'd wager these boots you're carrying could tell a story or two about the road."
+
+The trade window flows smoothly, and the markdown renders clean—italics for texture, bold for emphasis. From a UI perspective, everything feels solid. The workflow you described (selecting items → Buy or Haggle → building a list for negotiation) would indeed be more natural than forcing item-by-item trades; right now I can't see what's in the trade window itself, only that it opened, so I'm working blind to its contents.
+
+A few observations:
+
+- The turn history gives me enough context to stay consistent
+- Entity IDs are clear (merchantthom, travelingboots, pc)
+- Gold and inventory are visible, so I can make informed pricing decisions
+- The canon system (provisional → confirmed) is elegant, though I haven't had a chance to exercise it much yet
+
+Thom taps the counter. "You testing me, or the market itself?"
+
+Nothing grating so far — the harness feels natural. If you wanted to add anything, maybe a quick reference for item conditions (worn, pristine, etc.) or NPC moods (currently I infer from the description "cautious and shrewd; greedy when flattered"), but those are polish, not gaps.
