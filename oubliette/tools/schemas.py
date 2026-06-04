@@ -64,7 +64,31 @@ class Take(BaseModel):
     reason: str
 
 
-# The only doors into protected state, as a discriminated union (the schema the
-# model fills in). To add a tool: add a model + a `tool` literal, and a resolver
+class CreateEntity(BaseModel):
+    """Introduce new world content (an NPC, place, lore...). Always born
+    `provisional` (spec §7/§11) — the runtime forces that; the DM cannot create
+    confirmed canon directly."""
+
+    tool: Literal["create_entity"] = "create_entity"
+    entity_type: Literal["npc", "place", "lore", "item", "quest", "faction"]
+    name: str = Field(description="short name/title for the entity")
+    text: str = Field(default="", description="the canon — who/what this is")
+    origin: Literal["recombined", "freestyle"] = "freestyle"
+    reason: str
+
+
+class PromoteCanon(BaseModel):
+    """Promote a provisional entity to confirmed canon (spec §11)."""
+
+    tool: Literal["promote_canon"] = "promote_canon"
+    entity_id: str = Field(description="the canon id, e.g. 'canon-0'")
+    reason: str
+
+
+# The only doors into protected state + canon, as a discriminated union (the schema
+# the model fills in). To add a tool: add a model + a `tool` literal, and a resolver
 # branch in tools/dispatch.py.
-ToolCall = Annotated[Union[Transact, Give, Take], Field(discriminator="tool")]
+ToolCall = Annotated[
+    Union[Transact, Give, Take, CreateEntity, PromoteCanon],
+    Field(discriminator="tool"),
+]

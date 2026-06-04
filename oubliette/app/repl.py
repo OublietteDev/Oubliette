@@ -32,6 +32,11 @@ COMBAT_TRANSCRIPT = [
     "I try to talk the bandits down.",
 ]
 
+# Phase 3: canonization — introduce a new NPC as provisional world canon.
+CANON_TRANSCRIPT = [
+    "I approach the old woman at the well and ask her name.",
+]
+
 
 def _load_dotenv(path: str = ".env") -> None:
     """Minimal .env loader (no dependency): set vars not already in the environment.
@@ -59,13 +64,18 @@ def _pick_client(force_scripted: bool):
     return ScriptedLLMClient(), "scripted"
 
 
-def _render_state(repo: Repository) -> str:
+def _render_state(session: Session) -> str:
+    repo = session.repo
     pc = repo.pc()
     inv = ", ".join(f"{s.qty}x {repo.get_item(s.item_id).name}" for s in pc.inventory) or "(empty)"
-    return f"  [ {pc.name}: {pc.hp}/{pc.max_hp} HP | {pc.gold}g | {pc.xp} XP | inventory: {inv} ]"
+    line = f"  [ {pc.name}: {pc.hp}/{pc.max_hp} HP | {pc.gold}g | {pc.xp} XP | inventory: {inv} ]"
+    canon = session.canon.all()
+    if canon:
+        line += "\n  [ canon: " + ", ".join(f"{r.name} ({r.status})" for r in canon) + " ]"
+    return line
 
 
-def _print_report(report: TurnReport, repo: Repository) -> None:
+def _print_report(report: TurnReport, session: Session) -> None:
     if report.roll_outcome is not None:
         o = report.roll_outcome
         print(f"  ~ roll {o.spec} -> {o.rolls}{o.modifier:+d} = {o.total} "
@@ -79,7 +89,7 @@ def _print_report(report: TurnReport, repo: Repository) -> None:
         print(f"  [combat] outcome: {cr.outcome}{extra}")
     if report.meta_notice:
         print(f"  (meta) {report.meta_notice}")
-    print(_render_state(repo))
+    print(_render_state(session))
 
 
 async def _run(transcript: list[str] | None, force_scripted: bool, db: str | None) -> None:
@@ -91,14 +101,14 @@ async def _run(transcript: list[str] | None, force_scripted: bool, db: str | Non
     loop = TurnLoop(session, rng, Brain(client))
 
     where = f"sqlite:{db}" if db else "in-memory"
-    print(f"=== Oubliette Table (Phase 2) — {client_name} DM | log: {where} ===")
+    print(f"=== Oubliette Table (Phase 3) — {client_name} DM | log: {where} ===")
     print(f"  ({len(store.read_all())} events replayed)")
-    print(_render_state(repo))
+    print(_render_state(session))
 
     if transcript is not None:
         for line in transcript:
             print(f"\n> {line}")
-            _print_report(await loop.take_turn(line), repo)
+            _print_report(await loop.take_turn(line), session)
         store.close()
         return
 
@@ -113,7 +123,7 @@ async def _run(transcript: list[str] | None, force_scripted: bool, db: str | Non
             break
         if not line:
             continue
-        _print_report(await loop.take_turn(line), repo)
+        _print_report(await loop.take_turn(line), session)
     store.close()
 
 
@@ -123,6 +133,8 @@ def main() -> None:
                         help="auto-run the §14.1 acceptance transcript and exit")
     parser.add_argument("--combat", action="store_true",
                         help="auto-run the Phase 1 combat-boundary demo and exit")
+    parser.add_argument("--canon", action="store_true",
+                        help="auto-run the Phase 3 canonization demo and exit")
     parser.add_argument("--scripted", action="store_true",
                         help="force the scripted demo client even if a key is set")
     parser.add_argument("--db", metavar="PATH", default=None,
@@ -141,6 +153,8 @@ def main() -> None:
         transcript = DEMO_TRANSCRIPT
     elif args.combat:
         transcript = COMBAT_TRANSCRIPT
+    elif args.canon:
+        transcript = CANON_TRANSCRIPT
     asyncio.run(_run(transcript, args.scripted, args.db))
 
 

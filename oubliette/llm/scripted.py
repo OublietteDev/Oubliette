@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from ..combat.schemas import EncounterRequest, EnemyRef, ExitKind, TerrainSpec
 from ..enums import Ability, Skill, Tier, Verb, may_canonize
 from ..schemas import Intent, RollRequest, TurnAssessment, TurnResolution
-from ..tools.schemas import Transact, ValueEntry
+from ..tools.schemas import CreateEntity, Transact, ValueEntry
 from .client import Msg
 
 
@@ -104,6 +104,11 @@ class ScriptedLLMClient:
                                  purpose="skill_check.deception"),
             )
 
+        # Canon — introducing a new NPC the world hasn't established yet.
+        if "old woman" in player:
+            return assessment(Verb.SKILL_CHECK, Tier.FREESTYLE, skill=Skill.PERCEPTION,
+                              hint="A previously-unestablished NPC; introduce as provisional canon.")
+
         # Step 1 — looking around. Trivial perception: the DM judges no roll needed.
         if any(w in player for w in ("look", "examine", "inspect", "survey", "glance")):
             return assessment(Verb.SKILL_CHECK, Tier.FREESTYLE, skill=Skill.PERCEPTION,
@@ -119,6 +124,20 @@ class ScriptedLLMClient:
         skill = _field(text, "SKILL")
         tier = _field(text, "TIER")
         roll_result = _field(text, "ROLL_RESULT")  # "success" | "failure" | ""
+        player = _field(text, "PLAYER").lower()
+
+        # Canon — introduce the old woman as provisional world content.
+        if "old woman" in player:
+            return TurnResolution(
+                narration=("By the well, a weathered old woman looks up from a spread of cards, "
+                           "her eyes sharp as flint. 'A name? Names have prices, dear.'"),
+                tool_calls=[CreateEntity(
+                    entity_type="npc", name="the old woman at the well",
+                    text=("A weathered fortune-teller who tends the well in Brightvale's market "
+                          "square; speaks in riddles and trades names for coin."),
+                    reason="Player approached a previously-unestablished NPC at the well.",
+                )],
+            )
 
         if tier == Tier.DENIED.value:
             return TurnResolution(narration=(

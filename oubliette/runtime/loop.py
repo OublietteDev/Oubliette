@@ -50,11 +50,14 @@ class TurnLoop:
         self.brain = brain
         self.debug = debug or DebugLog()
         self.scene = scene
-        self.dispatcher = Dispatcher(session.repo)
+        self.dispatcher = Dispatcher(session.repo, session.canon)
         self.history: list[str] = []   # short-term continuity beats (gap G5)
 
     async def take_turn(self, player_text: str) -> TurnReport:
-        context = build_context(self.repo, self.scene, self.history[-HISTORY_IN_CONTEXT:])
+        # Retrieve world canon relevant to this turn → context (long-term memory, G4).
+        canon_hits = self.session.canon.search(player_text)
+        context = build_context(
+            self.repo, self.scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits)
         assessment = await self.brain.assess(player_text, context)
         # The PLAYER_MESSAGE event carries the raw text + the parsed intent (§4.1).
         self.session.emit_log(
@@ -100,9 +103,15 @@ class TurnLoop:
                 feedback = str(e)
                 self.debug.append("anomaly", stage="tool_resolve", attempt=attempt, error=str(e))
                 continue
-            # All valid → record-and-apply each as a TOOL_APPLIED event (atomic turn).
+            # All valid → record-and-apply each as its event (atomic turn).
             for rt in resolved:
-                self.session.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
+                if rt.canon_create is not None:
+                    self.session.emit_create_entity(rt.canon_create, rt.reason)
+                elif rt.canon_promote is not None:
+                    self.session.emit_promote(rt.canon_promote, rt.reason)
+                else:
+                    self.session.emit_state(
+                        EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
             applied = resolved
             success = True
             break
@@ -159,7 +168,12 @@ class TurnLoop:
                 f"[{report.roll_outcome.purpose}: rolled {report.roll_outcome.total} "
                 f"vs DC {report.assessment.roll.dc} → {report.roll_result}]")
         for rt in report.applied:
-            parts.append(f"effect({rt.tool}): {self._ops_summary(rt.ops)}")
+            if rt.canon_create is not None:
+                parts.append(f"created {rt.canon_create.entity_type} '{rt.canon_create.name}' (provisional)")
+            elif rt.canon_promote is not None:
+                parts.append(f"promoted {rt.canon_promote} → confirmed")
+            else:
+                parts.append(f"effect({rt.tool}): {self._ops_summary(rt.ops)}")
         if report.combat_result is not None:
             parts.append(f"combat → {report.combat_result.outcome}")
         narr = " ".join(report.narration.split())

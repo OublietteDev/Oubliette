@@ -9,11 +9,13 @@ tool applies or none does (no partial-application gap).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
+from ..canon.models import CanonDraft
+from ..canon.store import CanonStore
 from ..record.events import StateOp
 from ..state.repository import Repository, StateError
-from .schemas import Give, Take, ToolCall, Transact, ValueEntry
+from .schemas import CreateEntity, Give, PromoteCanon, Take, ToolCall, Transact, ValueEntry
 
 
 class ToolApplyError(Exception):
@@ -23,26 +25,43 @@ class ToolApplyError(Exception):
 
 @dataclass
 class ResolvedTool:
+    """A validated tool, normalized to its effect. Exactly one of `ops` /
+    `canon_create` / `canon_promote` is set, depending on the tool's target."""
+
     tool: str
-    ops: list[StateOp]
     reason: str
+    ops: list[StateOp] = field(default_factory=list)     # protected-state tools
+    canon_create: CanonDraft | None = None               # create_entity
+    canon_promote: str | None = None                     # promote_canon -> entity id
 
 
 class Dispatcher:
-    def __init__(self, repo: Repository) -> None:
+    def __init__(self, repo: Repository, canon: CanonStore | None = None) -> None:
         self.repo = repo
+        self.canon = canon
 
     def resolve(self, call: ToolCall) -> ResolvedTool:
         if isinstance(call, Transact):
-            ops = self._resolve_transact(call)
-        elif isinstance(call, Give):
-            ops = [self._credit_op(call.to, e) for e in call.items]
-        elif isinstance(call, Take):
+            return ResolvedTool(call.tool, call.reason, ops=self._resolve_transact(call))
+        if isinstance(call, Give):
+            return ResolvedTool(call.tool, call.reason,
+                                ops=[self._credit_op(call.to, e) for e in call.items])
+        if isinstance(call, Take):
             self._assert_can_cover(call.from_, call.items)
-            ops = [self._debit_op(call.from_, e) for e in call.items]
-        else:  # pragma: no cover - the union is exhaustive
-            raise ToolApplyError(f"no resolver for {type(call).__name__}")
-        return ResolvedTool(tool=call.tool, ops=ops, reason=call.reason)
+            return ResolvedTool(call.tool, call.reason,
+                                ops=[self._debit_op(call.from_, e) for e in call.items])
+        if isinstance(call, CreateEntity):
+            draft = CanonDraft(entity_type=call.entity_type, name=call.name,
+                               text=call.text, origin=call.origin)
+            return ResolvedTool(call.tool, call.reason, canon_create=draft)
+        if isinstance(call, PromoteCanon):
+            self._assert_promotable(call.entity_id)
+            return ResolvedTool(call.tool, call.reason, canon_promote=call.entity_id)
+        raise ToolApplyError(f"no resolver for {type(call).__name__}")  # pragma: no cover
+
+    def _assert_promotable(self, entity_id: str) -> None:
+        if self.canon is None or self.canon.get(entity_id) is None:
+            raise ToolApplyError(f"cannot promote unknown canon id {entity_id!r}")
 
     # --- resolvers ------------------------------------------------------------
     def _resolve_transact(self, t: Transact) -> list[StateOp]:

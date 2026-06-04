@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Literal
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
+    from ..canon.store import CanonStore
     from ..state.repository import Repository
 
 
@@ -25,7 +26,8 @@ class EventKind(str, Enum):
     ROLL = "roll"
     TOOL_APPLIED = "tool_applied"
     COMBAT_RESULT = "combat_result"
-    CANON_PROMOTED = "canon_promoted"   # reserved for Phase 3
+    CREATE_ENTITY = "create_entity"     # canon content born provisional (§7)
+    CANON_PROMOTED = "canon_promoted"   # provisional -> confirmed (§11)
 
 
 class StateOp(BaseModel):
@@ -95,14 +97,24 @@ class Event(BaseModel):
         return [StateOp.model_validate(o) for o in self.payload.get("ops", [])]
 
 
-def apply_event(event: Event, repo: "Repository") -> None:
-    """Replay one event into state. Non-state events (player_message, roll,
-    session_marker) carry no ops and are no-ops here."""
+def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = None) -> None:
+    """Replay one event into state. Protected-state events carry ops; canon events
+    carry their record/promotion. Non-state events (player_message, roll, marker)
+    are no-ops here."""
+    if event.kind == EventKind.CREATE_ENTITY.value:
+        if canon is not None:
+            from ..canon.models import CanonRecord
+            canon.add(CanonRecord.model_validate(event.payload["record"]))
+        return
+    if event.kind == EventKind.CANON_PROMOTED.value:
+        if canon is not None:
+            canon.promote(event.payload["entity_id"])
+        return
     apply_ops(event.state_ops(), repo)
 
 
-def replay(events: list[Event], repo: "Repository") -> None:
-    """Rebuild authoritative state by applying events in seq order. Never rolls,
-    never calls a model — the byte-identical-state guarantee (D9)."""
+def replay(events: list[Event], repo: "Repository", canon: "CanonStore | None" = None) -> None:
+    """Rebuild authoritative state (and canon) by applying events in seq order.
+    Never rolls, never calls a model — the byte-identical guarantee (D9)."""
     for event in sorted(events, key=lambda e: e.seq):
-        apply_event(event, repo)
+        apply_event(event, repo, canon)

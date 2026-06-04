@@ -6,7 +6,7 @@ never holds the pen.** See [`oubliette-table-spec-v0.2.md`](oubliette-table-spec
 for the full design (and [`oubliette-table-design-v0.1.md`](oubliette-table-design-v0.1.md)
 for the original rationale).
 
-## Status: Phase 2 — event sourcing + SQLite (on Phase 0/1)
+## Status: Phase 3 — canonization + retrieval (on Phase 0–2)
 
 Per spec §14, we build *through the seams* so later phases are substitutions, not
 rewrites. Everything runs with a **scripted (offline) DM** — no API key required.
@@ -23,8 +23,16 @@ rewrites. Everything runs with a **scripted (offline) DM** — no API key requir
   (live + replay); the RNG emits `ROLL` events (recorded, never re-rolled); the
   log persists to **SQLite**. Reload is byte-identical for authoritative state
   (D9). Run with `--db PATH` to persist and reload.
-- **Next (Phase 3):** canonization lifecycle (incl. the D5 ephemeral-survivor
-  promotion hook), the trade window, then a front-end.
+- **Phase 2.5/2.6** (tags `phase-2.5`, `phase-2.6`): harness ergonomics validated
+  against the live model — typed tool schemas, state/scene context, combat-summon
+  prompt, item-id resolution, and short-term turn continuity.
+- **Phase 3** (tag `phase-3`): the **canonization lifecycle** + **retrieval**. The
+  DM creates world content with `create_entity` (born `provisional`) and confirms
+  it with `promote_canon`; canon is event-sourced and rebuilds byte-identically on
+  replay; keyword retrieval feeds relevant canon back into context so the DM stays
+  consistent (its long-term memory). Verified live: the model named an NPC, then
+  reused it by retrieval instead of duplicating.
+- **Next:** the trade window, then a proper front-end (chat UI).
 
 ## Quickstart
 
@@ -36,6 +44,7 @@ pip install -e ".[dev]"
 pytest                                   # acceptance suite (Phase 0 + 1 + 2 replay)
 python -m oubliette.app.repl --script --scripted   # the §14.1 non-combat transcript
 python -m oubliette.app.repl --combat --scripted   # the Phase 1 combat-boundary demo
+python -m oubliette.app.repl --canon --scripted    # the Phase 3 canonization demo
 python -m oubliette.app.repl --scripted --db save.sqlite   # persist; re-run to reload+replay
 python -m oubliette.app.repl             # interactive REPL — uses the REAL model when
                                          # ANTHROPIC_API_KEY is set (in env or a .env file);
@@ -62,15 +71,17 @@ python -m oubliette.app.repl             # interactive REPL — uses the REAL mo
 | `schemas.py` | typed structured-output contracts (Intent, assessment, resolution, tool calls) |
 | `tools/` | the tool surface — the only doors into protected state |
 | `combat/` | the combat boundary: `EncounterRequest` → placeholder engine → `CombatResult` |
-| `dm/` | the DM brain: assess, then resolve (narrate + emit tools) |
+| `canon/` | the canonization lifecycle: `CanonRecord`s + the canon store with keyword retrieval |
+| `dm/` | the DM brain (assess + resolve) and the per-turn `context` builder (state/scene/canon/recent) |
 | `runtime/` | the turn loop: assess → (combat \| roll → resolve) → apply → render |
 | `app/` | terminal REPL |
 
 ## What this does NOT do yet
 
 The *tactical* combat internals (only the boundary + an auto-resolve placeholder
-exist), the canonization lifecycle, and the trade window — Phase 3 (spec §14).
-Also note: RNG *state* isn't persisted across reload (past rolls are in the log;
-post-reload rolls restart from the base seed) — fine for single-player and it
-doesn't affect the byte-identical-**state** guarantee, since state comes from
-recorded ops, not rolls.
+exist), the **trade window**, and a **front-end** (chat UI) — still to come. Canon
+quarantine is modeled (provisional vs confirmed) but quest-dependency auto-promotion
+isn't wired yet. Also note: RNG *state* isn't persisted across reload (past rolls
+are in the log; post-reload rolls restart from the base seed) — fine for
+single-player and it doesn't affect the byte-identical-**state** guarantee, since
+state comes from recorded ops, not rolls.

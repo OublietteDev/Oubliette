@@ -32,7 +32,10 @@ ASSESS_SYSTEM = (
     f"fight. Instead fill `encounter` (EncounterRequest), naming enemies by template id "
     f"[{_TEMPLATES}] or an existing entity id. If the player is trying to de-escalate "
     "(talk down, flee, surrender, bribe), set `encounter.chosen_exit` and list it in "
-    "`allow_exits`."
+    "`allow_exits`.\n"
+    "CANON: prefer existing PRESENT entities and RELEVANT CANON; reference them by id and "
+    "stay consistent with them. The actual introduction of new world content happens in the "
+    "resolve step (create_entity), not here."
 )
 
 RESOLVE_SYSTEM = (
@@ -49,7 +52,11 @@ RESOLVE_SYSTEM = (
     "exactly as the schema shows (transact has from_/counterparty/give/receive/reason; each "
     "give/receive entry sets EITHER gold OR item_id+qty). Use entity and item IDS from the "
     "context (e.g. item_id 'boots', not its prose name). NEVER assert a number in prose you "
-    "did not change via a tool. NPCs can only spend the gold they carry. Return a TurnResolution."
+    "did not change via a tool. NPCs can only spend the gold they carry.\n"
+    "CANON: when you introduce a NEW named person/place/thing the world should remember, emit "
+    "create_entity (it is saved as provisional — soft, not yet load-bearing). Reuse RELEVANT "
+    "CANON by id instead of re-inventing it. Use promote_canon only to confirm something that "
+    "has proven it matters. Return a TurnResolution."
 )
 
 

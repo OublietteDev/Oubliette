@@ -24,6 +24,7 @@ class EventStore(Protocol):
     def append(self, kind: "str | EventKind", payload: dict, caused_by: int | None = ...) -> Event: ...
     def read_all(self) -> list[Event]: ...
     def of_kind(self, kind: "str | EventKind") -> list[Event]: ...
+    def peek_seq(self) -> int: ...
     def close(self) -> None: ...
 
 
@@ -44,6 +45,9 @@ class InMemoryEventStore:
     def of_kind(self, kind) -> list[Event]:
         k = _kind_str(kind)
         return [e for e in self._events if e.kind == k]
+
+    def peek_seq(self) -> int:
+        return self._next
 
     def close(self) -> None:
         pass
@@ -86,6 +90,9 @@ class SqliteEventStore:
             "SELECT seq, kind, payload, caused_by FROM events WHERE kind = ? ORDER BY seq", (k,)
         ).fetchall()
         return [Event(seq=r[0], kind=r[1], payload=json.loads(r[2]), caused_by=r[3]) for r in rows]
+
+    def peek_seq(self) -> int:
+        return self._next
 
     def close(self) -> None:
         self._conn.close()
