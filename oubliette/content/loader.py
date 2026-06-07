@@ -25,7 +25,7 @@ from ..canon.models import CanonRecord
 from ..enums import Ability
 from ..state.models import Character, Item as StateItem, ItemStack
 from ..state.repository import InMemoryRepository
-from .schemas import NPC, Item, Place, PackManifest, Scenario, StatBlock
+from .schemas import NPC, Item, Lore, Place, PackManifest, Scenario, StatBlock
 
 DEFAULT_PACK = "brightvale"
 _PACKS_ROOT = Path(__file__).parent / "packs"
@@ -217,12 +217,13 @@ def _project_item(it: Item) -> StateItem:
     )
 
 
-def _authored_canon(npcs: list[NPC], places: list[Place]) -> list[CanonRecord]:
-    """Authored NPCs and places become confirmed, load-bearing canon so retrieval
-    (canon search) and the canon lifecycle work over authored content too. The
-    record id IS the pack slug (e.g. 'merchant_thom') — a namespace distinct from
-    runtime 'canon-N' ids, so it never perturbs the session id counter. Not
-    event-sourced: re-seeded from the pack on every load, like the repository."""
+def _authored_canon(npcs: list[NPC], places: list[Place], lore: list[Lore]) -> list[CanonRecord]:
+    """Authored NPCs, places and lore become confirmed, load-bearing canon so
+    retrieval (canon search) and the canon lifecycle work over authored content
+    too. The record id IS the pack slug (e.g. 'merchant_thom') — a namespace
+    distinct from runtime 'canon-N' ids, so it never perturbs the session id
+    counter. Not event-sourced: re-seeded from the pack on every load, like the
+    repository."""
     records: list[CanonRecord] = []
     for n in npcs:
         records.append(CanonRecord(
@@ -233,6 +234,14 @@ def _authored_canon(npcs: list[NPC], places: list[Place]) -> list[CanonRecord]:
         records.append(CanonRecord(
             id=p.id, entity_type="place", name=p.name, text=p.description,
             origin="authored", status="confirmed", load_bearing=True,
+        ))
+    for entry in lore:
+        # subjects ride along as keywords so the lore surfaces when its people /
+        # places are present or mentioned, without cluttering the displayed text.
+        records.append(CanonRecord(
+            id=entry.id, entity_type="lore", name=entry.title, text=entry.text,
+            origin="authored", status="confirmed", load_bearing=True,
+            keywords=list(entry.subjects) + list(entry.tags),
         ))
     return records
 
@@ -284,9 +293,11 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     statblocks = _parse_list(base / "statblocks.json", StatBlock, "statblocks.json", errors)
     npcs = _parse_list(base / "npcs.json", NPC, "npcs.json", errors)
     places = _parse_list(base / "places.json", Place, "places.json", errors)
+    lore = _parse_list(base / "lore.json", Lore, "lore.json", errors)
     scenarios = _parse_list(base / "scenarios.json", Scenario, "scenarios.json", errors)
 
     _lint(manifest, items, statblocks, npcs, places, scenarios, errors)
+    _dup_ids(lore, "lore", errors)        # subjects are free-form, so only ids are checked
 
     if errors:
         raise PackValidationError(pack_id, errors)
@@ -310,7 +321,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
                    for p in places}
 
     return LoadedWorld(
-        repository=repo, canon=_authored_canon(npcs, places), scene=scene,
+        repository=repo, canon=_authored_canon(npcs, places, lore), scene=scene,
         location=scenario.start_location, places=place_nodes,
         pack_id=manifest.id, pack_version=manifest.version,
     )

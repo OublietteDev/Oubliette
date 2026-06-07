@@ -60,7 +60,10 @@ class TurnLoop:
 
     async def take_turn(self, player_text: str, on_text=None) -> TurnReport:
         # Retrieve world canon relevant to this turn → context (long-term memory, G4).
-        canon_hits = self.session.canon.search(player_text)
+        # Retrieve relevant canon/lore by the player's words PLUS the situation —
+        # the current location and who's here — so a place's history surfaces when
+        # the party arrives, not only when someone names it.
+        canon_hits = self.session.canon.search(self._retrieval_query(player_text))
         scene = self._scene_override if self._scene_override is not None else self.session.scene
         context = build_context(
             self.repo, scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits,
@@ -92,6 +95,15 @@ class TurnLoop:
 
         self._record_beat(report)
         return report
+
+    def _retrieval_query(self, player_text: str) -> str:
+        """Canon/lore search terms: the player's words + the situation (current
+        location name + who's present), so a place's lore surfaces on arrival."""
+        loc = self.session.location
+        loc_name = self.session.places[loc].name if loc in self.session.places else ""
+        present = " ".join(n.name for n in self.repo.npcs()
+                           if loc is None or n.home_location == loc)
+        return " ".join(p for p in (player_text, loc_name, present) if p)
 
     def _open_trade(self, assessment: TurnAssessment) -> TurnReport | None:
         """Summon the trade window for a valid merchant with something to browse.

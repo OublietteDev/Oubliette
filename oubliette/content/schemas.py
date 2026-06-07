@@ -129,6 +129,17 @@ class Place(_Strict):
     position: dict | None = None     # {x,y} — reserved for the map UI; optional
 
 
+# --- lore (authored world history/legend the DM can draw on) ----------------
+class Lore(_Strict):
+    id: str
+    title: str
+    text: str                        # the lore itself — concentrated, the DM weaves it in
+    subjects: list[str] = Field(default_factory=list)  # free-form "about" names/topics
+                                     # (Brightvale, Silverfin Bay, Alden, Seraphel) — they
+                                     # need NOT be real entities; used to surface the lore
+    tags: list[str] = Field(default_factory=list)
+
+
 # --- scenarios ---------------------------------------------------------------
 class Scenario(_Strict):
     id: str

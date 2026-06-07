@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 EntityType = Literal["npc", "place", "lore", "item", "quest", "faction"]
 
@@ -31,3 +31,6 @@ class CanonRecord(BaseModel):
     status: Literal["provisional", "confirmed"]
     created_by_event: int | None = None
     load_bearing: bool = False
+    # Extra search terms that surface this record without cluttering its text — e.g.
+    # a lore entry's "about" subjects (Brightvale, Alden, Seraphel).
+    keywords: list[str] = Field(default_factory=list)

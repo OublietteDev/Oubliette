@@ -172,11 +172,12 @@
 
 <script>
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const EDITABLE = new Set(["items", "statblocks", "npcs", "places", "scenarios"]);   // C3: all editable
-const SINGULAR = { items: "item", statblocks: "creature", npcs: "character", places: "place", scenarios: "opening" };
+const EDITABLE = new Set(["items", "statblocks", "npcs", "places", "lore", "scenarios"]);
+const SINGULAR = { items: "item", statblocks: "creature", npcs: "character", places: "place",
+                   lore: "lore entry", scenarios: "opening" };
 const TITLES = { items: "Items", statblocks: "Creatures", npcs: "Characters & NPCs",
-                 places: "Places", scenarios: "Opening setup" };
-const ORDER = ["items", "statblocks", "npcs", "places", "scenarios"];
+                 places: "Places", lore: "Lore", scenarios: "Opening setup" };
+const ORDER = ["items", "statblocks", "npcs", "places", "lore", "scenarios"];
 const CATEGORIES = ["weapon", "armor", "gear", "consumable", "treasure", "misc"];
 const SLOTS = ["", "main_hand", "off_hand", "body", "feet", "hands", "waist", "head", "neck", "ring"];
 const ARMOR_TYPES = ["light", "medium", "heavy", "shield"];
@@ -278,6 +279,11 @@ function describe(kind, e) {
     const party = (e.default_party || []).length;
     return `starts at ${placeName(e.start_location)}${party ? ` · ${party} starting hero(es)` : ""}`;
   }
+  if (kind === "lore") {
+    const about = (e.subjects || []).length ? `about ${(e.subjects || []).join(", ")} — ` : "";
+    const body = (e.text || "").replace(/\s+/g, " ");
+    return about + (body.length > 120 ? body.slice(0, 120) + "…" : body);
+  }
   return "";
 }
 
@@ -301,7 +307,7 @@ function renderGroup(kind) {
   const cards = entries.length ? entries.map((e, i) => `
     <div class="card">
       <div class="cbody">
-        <div class="cname">${esc(e.name || e.id || "(unnamed)")}</div>
+        <div class="cname">${esc(e.name || e.title || e.id || "(unnamed)")}</div>
         <div class="cline">${esc(describe(kind, e))}</div>
       </div>
       ${editable ? `<div class="cactions">
@@ -361,9 +367,9 @@ function openEditor(kind, index) {
   if (kind === "statblocks") editorCtx.loot = ((original?.loot) || []).filter(l => l.item).map(l => ({ item: l.item, qty: l.qty || 1 }));
   if (kind === "npcs") editorCtx.inv = buildInvRows(original);
 
-  const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, scenarios: scenarioForm };
+  const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, lore: loreForm, scenarios: scenarioForm };
   const WIRES = { statblocks: wireStatblockForm, npcs: wireNpcForm, places: wirePlaceForm, items: wireItemForm };
-  const CONFIRMS = { items: confirmItem, statblocks: confirmStatblock, npcs: confirmNpc, places: confirmPlace, scenarios: confirmScenario };
+  const CONFIRMS = { items: confirmItem, statblocks: confirmStatblock, npcs: confirmNpc, places: confirmPlace, lore: confirmLore, scenarios: confirmScenario };
 
   const modal = document.getElementById("modal");
   modal.innerHTML = FORMS[kind](original);
@@ -690,6 +696,44 @@ function confirmNpc(original) {
   if (inv.length) base.inventory = inv; else delete base.inventory;
   if (Object.keys(prices).length) base.price_list = prices; else delete base.price_list;
   commitEntry("npcs", original, base);
+}
+
+// ---- lore form ----
+function entityNameOptions() {
+  const names = [...listOf("npcs"), ...listOf("places")].map(e => e.name).filter(Boolean);
+  return [...new Set(names)].map(n => `<option value="${esc(n)}"></option>`).join("");
+}
+function loreForm(lo) {
+  const v = lo || {};
+  return `
+    <div class="mhead">${lo ? "Edit lore" : "New lore"}</div>
+    <div class="mbody">
+      ${field("Title", `<input id="f_title" value="${esc(v.title || "")}" placeholder="The Founding of Brightvale" />`)}
+      ${field("The lore", `<textarea id="f_text" style="min-height:160px" placeholder="The established history or legend — concentrated.">${esc(v.text || "")}</textarea>`,
+              "Background the DM draws on and weaves in — not a script to recite. Keep it focused.")}
+      ${field("About (people, places, topics)", `<input id="f_subjects" list="entity-names" value="${esc((v.subjects || []).join(", "))}" placeholder="Brightvale, Silverfin Bay, Alden, Seraphel" />`,
+              "Comma-separated. What this lore concerns — it surfaces for the DM when these are present or come up. They need not be real characters.")}
+      ${field("Tags", `<input id="f_tags" value="${esc((v.tags || []).join(", "))}" placeholder="founding, dragon" />`)}
+      <datalist id="entity-names">${entityNameOptions()}</datalist>
+      <div class="invalid" id="f_err"></div>
+    </div>
+    <div class="mfoot"><button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" data-confirm>${lo ? "Update" : "Add"} lore</button></div>`;
+}
+function confirmLore(original) {
+  const title = document.getElementById("f_title").value.trim();
+  const text = document.getElementById("f_text").value.trim();
+  const err = document.getElementById("f_err");
+  if (!title) { err.textContent = "Please give it a title."; return; }
+  if (!text) { err.textContent = "Please write the lore itself."; return; }
+  const base = original ? { ...original } : {};
+  if (!base.id) base.id = uniqueId(slugify(title), new Set(listOf("lore").map(x => x.id)));
+  base.title = title; base.text = text;
+  const subjects = csv(document.getElementById("f_subjects").value);
+  const tags = csv(document.getElementById("f_tags").value);
+  if (subjects.length) base.subjects = subjects; else delete base.subjects;
+  if (tags.length) base.tags = tags; else delete base.tags;
+  commitEntry("lore", original, base);
 }
 
 // ---- opening setup (scenario) form ----

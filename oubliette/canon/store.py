@@ -57,7 +57,8 @@ class CanonStore:
         for i, rec in enumerate(self._records.values()):
             name_t = _tokens(rec.name)
             text_t = _tokens(rec.text)
-            score = 2 * len(q & name_t) + len(q & text_t)
+            kw_t = _tokens(" ".join(rec.keywords))          # "about" subjects, etc.
+            score = 2 * len(q & name_t) + len(q & text_t) + 2 * len(q & kw_t)
             if score > 0:
                 confirmed_rank = 1 if rec.status == "confirmed" else 0
                 scored.append((score, confirmed_rank, rec))

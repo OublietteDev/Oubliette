@@ -12,6 +12,9 @@ from __future__ import annotations
 from ..canon.models import CanonRecord
 from ..state.repository import Repository
 
+LORE_MAX = 3        # most lore entries surfaced in one turn's context
+LORE_CHARS = 1200   # per-entry budget — generous (lore is meant to be retold, not clipped)
+
 
 def _reachable(location: str | None, places: dict) -> list:
     """Places the party can travel to from `location`: its explicit exits, its
@@ -78,10 +81,20 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
     # Long-term memory: world canon relevant to this turn, retrieved by keyword
     # (gap G4). Stay consistent with these; provisional canon is soft.
     if canon:
-        lines.append("RELEVANT CANON (established world facts — stay consistent):")
-        for r in canon:
-            text = (r.text[:160] + "…") if len(r.text) > 160 else r.text
-            lines.append(f"  - [{r.status}] {r.entity_type} '{r.name}' (id: {r.id}){': ' + text if text else ''}")
+        lore_hits = [r for r in canon if r.entity_type == "lore"]
+        other = [r for r in canon if r.entity_type != "lore"]
+        # Authored history/legend gets a generous budget (a few entries, near-full
+        # text) so the DM can actually retell it, not a clipped snippet.
+        if lore_hits:
+            lines.append("WORLD LORE (established history/legend — treat as true; weave in as it fits):")
+            for r in lore_hits[:LORE_MAX]:
+                text = (r.text[:LORE_CHARS] + "…") if len(r.text) > LORE_CHARS else r.text
+                lines.append(f"  - {r.name}: {text}")
+        if other:
+            lines.append("RELEVANT CANON (established world facts — stay consistent):")
+            for r in other:
+                text = (r.text[:160] + "…") if len(r.text) > 160 else r.text
+                lines.append(f"  - [{r.status}] {r.entity_type} '{r.name}' (id: {r.id}){': ' + text if text else ''}")
     # Short-term continuity: what just happened, so the DM honors established
     # fiction and successful checks instead of re-litigating each turn (gap G5).
     if recent:
