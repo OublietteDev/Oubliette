@@ -129,6 +129,40 @@ def test_save_unknown_pack_is_404(tmp_path, monkeypatch):
     assert r.status_code == 404
 
 
+# --- illustrations ----------------------------------------------------------
+_TINY_PNG = ("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChw"
+             "GA60e6kgAAAABJRU5ErkJggg==")
+
+
+def test_upload_then_serve_pack_image(tmp_path, monkeypatch):
+    packs = _temp_brightvale(tmp_path, monkeypatch)
+    r = client.post("/api/pack/brightvale/image",
+                    json={"filename": "brightvale.jpg", "data": "data:image/png;base64," + _TINY_PNG})
+    assert r.status_code == 200 and r.json()["filename"] == "brightvale.jpg"
+    assert (packs / "brightvale" / "images" / "brightvale.jpg").is_file()
+
+    got = client.get("/api/pack/brightvale/image/brightvale.jpg")
+    assert got.status_code == 200
+    assert got.content[:8] == b"\x89PNG\r\n\x1a\n"          # the bytes we stored
+
+
+def test_upload_rejects_unsafe_filename(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    r = client.post("/api/pack/brightvale/image", json={"filename": "../evil.jpg", "data": _TINY_PNG})
+    assert r.status_code == 400
+
+
+def test_upload_rejects_bad_data(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    r = client.post("/api/pack/brightvale/image", json={"filename": "ok.jpg", "data": "not-base64!!!"})
+    assert r.status_code == 400
+
+
+def test_missing_pack_image_is_404(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    assert client.get("/api/pack/brightvale/image/nope.jpg").status_code == 404
+
+
 # --- C3: creatures, NPCs (stock + prices), opening setup --------------------
 def test_save_new_creature_and_merchant_stays_valid(tmp_path, monkeypatch):
     """Mimic the C3 editors' output (new creature + new shopkeeper wired by the

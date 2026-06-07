@@ -140,6 +140,11 @@
   .ability-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .ability-grid .field { margin-bottom: 0; }
   .invalid { color: var(--bad); font-size: 12px; margin-top: 6px; min-height: 16px; }
+  /* illustration preview — mirrors the game's quest-card image frame so "fit" is honest */
+  .illus-frame { width: 100%; height: 175px; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .illus-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .illus-empty { color: var(--faint); font-size: 12px; font-style: italic; padding: 0 16px; text-align: center; }
 
   .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
     background: #1b2118; border: 1px solid #3c4d35; color: var(--good);
@@ -363,7 +368,10 @@ let editorCtx = null;   // { kind, index, exits } while a modal is open
 function openEditor(kind, index) {
   const original = index != null ? listOf(kind)[index] : null;
   editorCtx = { kind, index };
-  if (kind === "places") editorCtx.exits = ((original?.exits) || []).map(x => ({ ...x }));
+  if (kind === "places") {
+    editorCtx.exits = ((original?.exits) || []).map(x => ({ ...x }));
+    editorCtx.image = original?.image || null;
+  }
   if (kind === "statblocks") editorCtx.loot = ((original?.loot) || []).filter(l => l.item).map(l => ({ item: l.item, qty: l.qty || 1 }));
   if (kind === "npcs") editorCtx.inv = buildInvRows(original);
 
@@ -488,6 +496,16 @@ function placeForm(pl) {
         <button class="btn mini" id="addExit" type="button">+ Add an exit</button>
         <div class="help" style="margin-top:8px">Pick where each exit leads from the places you've made.</div>
       </div>
+      <div class="subform">
+        <div class="sftitle">Illustration</div>
+        <div class="illus-frame" id="illusFrame"></div>
+        <input type="file" id="illusFile" accept="image/png,image/jpeg,image/webp" style="display:none" />
+        <div style="display:flex; gap:8px; margin-top:8px">
+          <button class="btn mini" type="button" id="illusChoose">Choose image…</button>
+          <button class="btn mini danger" type="button" id="illusRemove">Remove</button>
+        </div>
+        <div class="help" style="margin-top:8px">Shown on quest cards while the party is in this area (top-level areas mainly). It's resized for the web automatically; the preview shows how it sits in a card.</div>
+      </div>
       <div class="invalid" id="f_err"></div>
     </div>
     <div class="mfoot">
@@ -522,9 +540,55 @@ function renderExits() {
   box.querySelectorAll("[data-exit-del]").forEach(b =>
     b.addEventListener("click", e => { editorCtx.exits.splice(+e.target.dataset.exitDel, 1); renderExits(); }));
 }
+function renderIllus() {
+  const frame = document.getElementById("illusFrame");
+  if (editorCtx.image && state.id) {
+    frame.innerHTML = `<img src="/api/pack/${encodeURIComponent(state.id)}/image/${encodeURIComponent(editorCtx.image)}?b=${Date.now()}" alt="" />`;
+  } else {
+    frame.innerHTML = `<div class="illus-empty">No illustration — quest cards here use the default art.</div>`;
+  }
+  document.getElementById("illusRemove").style.display = editorCtx.image ? "" : "none";
+}
+function resizeToDataUrl(file, maxW) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      const cx = c.getContext("2d");
+      cx.fillStyle = "#14110f"; cx.fillRect(0, 0, w, h);   // flatten onto the theme dark
+      cx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(img.src);
+      resolve(c.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => reject(new Error("could not read that image"));
+    img.src = URL.createObjectURL(file);
+  });
+}
+async function onChooseIllus(file) {
+  const name = document.getElementById("f_name").value.trim();
+  const err = document.getElementById("f_err");
+  if (!name) { err.textContent = "Name the place first, then add its illustration."; return; }
+  err.textContent = "";
+  try {
+    const dataUrl = await resizeToDataUrl(file, 1200);
+    const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/image`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: slugify(name) + ".jpg", data: dataUrl }),
+    })).json();
+    if (res.error) { toast(res.error); return; }
+    editorCtx.image = res.filename;
+    renderIllus();
+  } catch (e) { toast(String(e.message || e)); }
+}
 function wirePlaceForm() {
   renderExits();
+  renderIllus();
   document.getElementById("addExit").addEventListener("click", () => { editorCtx.exits.push({ to: "", label: "" }); renderExits(); });
+  document.getElementById("illusChoose").addEventListener("click", () => document.getElementById("illusFile").click());
+  document.getElementById("illusFile").addEventListener("change", e => { if (e.target.files[0]) onChooseIllus(e.target.files[0]); });
+  document.getElementById("illusRemove").addEventListener("click", () => { editorCtx.image = null; renderIllus(); });
 }
 function confirmPlace(original) {
   const name = document.getElementById("f_name").value.trim();
@@ -540,6 +604,7 @@ function confirmPlace(original) {
   base.name = name; base.description = desc;
   const parent = document.getElementById("f_parent").value;
   if (parent) base.parent = parent; else delete base.parent;
+  if (editorCtx.image) base.image = editorCtx.image; else delete base.image;
   const tags = csv(document.getElementById("f_tags").value);
   if (tags.length) base.tags = tags; else delete base.tags;
   if (exits.length) base.exits = exits.map(e => e.label ? { to: e.to, label: e.label } : { to: e.to });

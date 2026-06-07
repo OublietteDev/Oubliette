@@ -16,6 +16,7 @@ OUBLIETTE_PACKS_ROOT env var (used by tests).
 
 from __future__ import annotations
 
+import base64
 import difflib
 import json
 import os
@@ -234,6 +235,47 @@ async def save_pack(pack_id: str, body: SaveIn) -> JSONResponse:
             _write_json(d / f"{name}.json", data)
 
     return JSONResponse({"ok": True, "backed_up": backup, "validation": _validate(pack_id)})
+
+
+class ImageIn(BaseModel):
+    filename: str                  # e.g. "brightvale.jpg" (browser already resized it)
+    data: str                      # a data URL or bare base64 of the (resized) image
+
+
+_SAFE_NAME = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+@app.post("/api/pack/{pack_id}/image")
+async def upload_image(pack_id: str, body: ImageIn) -> JSONResponse:
+    """Save an illustration into the pack's images/ folder. The browser resizes the
+    picture before sending it, so no image library is needed server-side."""
+    d = _pack_dir(pack_id)
+    if d is None:
+        return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
+    name = body.filename.strip()
+    if not name or not _SAFE_NAME.match(name):
+        return JSONResponse({"error": "unsafe filename"}, status_code=400)
+    raw = body.data.split(",", 1)[-1]        # tolerate a "data:image/...;base64," prefix
+    try:
+        blob = base64.b64decode(raw, validate=True)
+    except Exception:
+        return JSONResponse({"error": "bad image data"}, status_code=400)
+    images = d / "images"
+    images.mkdir(exist_ok=True)
+    (images / name).write_bytes(blob)
+    return JSONResponse({"ok": True, "filename": name})
+
+
+@app.get("/api/pack/{pack_id}/image/{filename}", response_model=None)
+async def get_image(pack_id: str, filename: str) -> FileResponse | JSONResponse:
+    """Serve a pack illustration (for The Forge's preview)."""
+    d = _pack_dir(pack_id)
+    if d is None or not _SAFE_NAME.match(filename):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    path = d / "images" / filename
+    if not path.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(path, headers={"Cache-Control": "no-cache"})
 
 
 class NewIn(BaseModel):
