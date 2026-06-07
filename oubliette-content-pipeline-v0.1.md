@@ -41,8 +41,22 @@ becomes game state.
 **Replay implication [LOCKED].** A save pins `pack_id + pack_version` and stores the
 created party. Reload = `load_pack(pinned) + inject(stored party) + replay(events)`.
 So packs are **immutable once published**; editing a pack mints a new version. A
-save opened against a changed/missing pack version warns rather than silently
-diverging.
+save opened against a changed/missing pack version **warns and loads best-effort**
+(it does not refuse) **[LOCKED]**.
+
+**Two homes for canon — the "run it back" guarantee [LOCKED].** This is the key
+distinction (do not conflate them):
+
+- **Pack canon** is authored content in the pack files — shared, reusable, versioned.
+- **Session canon** is what the DM invents *during play* (`create_entity`, provisional,
+  spec §11). It lives in the **save (event log)**, **never in the pack.** A session's
+  invented NPCs/places do **not** mutate the module.
+
+So starting a fresh campaign on the same pack always yields a **pristine world** — you
+can re-run the module untouched. And if, during playtesting, an author decides a
+session-invented thing *should* become permanent module canon, that's a **deliberate
+authoring act**: copy it into the pack files → a new pack version. You get both:
+re-runnable modules, and an opt-in path to fold playtest discoveries back into the world.
 
 ---
 
@@ -359,13 +373,15 @@ as their own arcs, in that order.
 
 ---
 
-## 9. Open questions [OPEN]
+## 9. Open questions
 
-1. **Pack registry / save pinning** — where the list of installed packs lives and how a
-   save resolves its pinned `pack_id + version` (and what to do on a version mismatch:
-   warn + best-effort, or refuse). Lean: warn + load, flag divergence risk.
-2. **Editing the default pack during dev** — bumping `version` on every tweak is noisy;
-   maybe a dev mode that doesn't pin strictly. Decide before P2.
+**Resolved (user review):**
+1. **Save / pack-version mismatch → RESOLVED: warn + load best-effort** (don't refuse).
+   Flag divergence risk but let the player continue. (Where the installed-pack registry
+   physically lives is a small build detail for P1/P2.)
+2. **Dev mode → RESOLVED: relaxed.** While actively authoring, load packs without strict
+   version-pinning and without nagging on every edit; bump `version` deliberately when
+   publishing/sharing. No chirping mid-edit.
 3. **SRD reference data → RESOLVED: packs are LAYERABLE.** A campaign loads a stack of
    packs — a **base SRD pack** (standard items, monsters, common content) **plus** one or
    more **world packs** on top. Later layers add to / override earlier ones **by id**, so
@@ -374,6 +390,8 @@ as their own arcs, in that order.
    linter runs over the *merged* result. (For P1 we still ship a single self-contained
    `brightvale` pack; layering is an additive loader feature we build when the base SRD
    pack exists — it doesn't change the schemas.)
+
+**Still open [OPEN]:**
 4. **Per-type files vs per-entity files** — §2 proposes per-type; large packs might want
    per-entity later. Loader should be agnostic (glob a type's directory if present).
 5. **Encounters / quests / factions schemas** — out of v1 scope; slot in as new files +
