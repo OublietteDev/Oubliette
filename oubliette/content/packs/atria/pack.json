@@ -1,0 +1,9 @@
+{
+  "id": "atria",
+  "schema_version": 1,
+  "name": "Atria",
+  "version": "0.1.0",
+  "author": "",
+  "description": "",
+  "entry_scenario": "opening"
+}

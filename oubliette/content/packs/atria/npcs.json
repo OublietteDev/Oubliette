@@ -1,0 +1,37 @@
+[
+  {
+    "id": "eustace_broadbarrel",
+    "name": "Eustace Broadbarrel",
+    "role": "Town Governor",
+    "disposition": "In general, overall jolly. Changes to a serious demeanor when conducting business - Eustace cares greatly about Brightvale, and takes great pride in maintaining the day-to-day activities of the city. Minor friction with the Council of Elders.",
+    "description": "Eustace Broadbarrel is a broad, red-faced man who looks more like a prosperous innkeeper than the elected head of a major city — and he has never once minded the comparison. He laughs easily and often, keeps a flask of Silverfin honey-mead on his desk at all times, and has been known to invite visiting merchants to dinner before their negotiations are even finished. The people of Brightvale elected him three times running, and they would tell you why plainly: he remembers names. Every dockworker, every market-stall keeper, every fisherman's widow. He makes people feel like the city belongs to them, which is either his greatest gift or his most practiced trick, depending on who you ask.\nWhat strangers tend to underestimate is the man behind the warmth. When the door closes and the business is real, Broadbarrel sets down the flask, folds his hands on the desk, and becomes someone else entirely — measured, precise, and very difficult to move. He has survived three terms in a city with a Council of Elders who consider the governorship a necessary inconvenience at best. That survival is not an accident.\nHis relationship with the Council is one of careful, well-dressed hostility. He respects their renown and says so, loudly and publicly. They acknowledge his mandate and do the same. In private, each believes the other holds too much, and both are probably right.",
+    "home_location": "the_palladian_ward_civic_government_district",
+    "gold": 500
+  },
+  {
+    "id": "elaida",
+    "name": "Elaida",
+    "role": "First of the Council of Elders",
+    "description": "Elaida is a tall, angular woman of late middle age who carries herself as though the room she is standing in was built specifically for her. She dresses without excess — no jewels, no embroidery — because she has never needed ornament to command attention. Her hair is silver-grey, worn severe. Her eyes are the color of deep water and about as warm.\nShe did not seek the Council. That is what she will tell you, and it is even true, in the way that things can be true without being the whole of the matter. She was a scholar of governance, then an arbitrator of disputes between merchant houses, then a mediator in a boundary conflict that threatened to become a war. By the time the Council considered her name, it was something of a formality. She accepted the seat as though she were doing Brightvale a favor, and she has governed herself by that assumption ever since.\nThe Council of Elders exists for the extraordinary — the crises too large or too strange for the governor's desk — and Elaida believes, without arrogance but with complete sincerity, that extraordinary problems require extraordinary minds. She would have convened in Alden's time. She would have had a plan within the hour. Whether the plan would have left room for a lone fisherman to make his own choice is a question she has never been asked and would not enjoy.\nHer relationship with Eustace Broadbarrel is unfailingly civil and quietly corrosive. She does not dislike him — she simply finds him approximate. A good enough solution to the problem of day-to-day governance. She would never say so aloud. She doesn't need to.",
+    "home_location": "the_palladian_ward_civic_government_district",
+    "gold": 501,
+    "disposition": "Composed, exacting, and quietly certain of her own correctness — civil in manner but with a coldness underneath that surfaces the moment she is contradicted."
+  },
+  {
+    "id": "captain_bromley",
+    "name": "Captain Bromley",
+    "role": "Fishing Boat Captain",
+    "disposition": "Gregarious and loose-tongued on every subject under the sun — until Seraphel comes up, at which point he becomes briefly, immovably serious; speaks like a pirate.",
+    "description": "Captain Bromley is a short, barrel-chested man with a sun-weathered face and a grey beard he trims badly and often. He has operated fishing and passenger vessels on Silverfin Bay for the better part of thirty years, and in that time he has accumulated an almost supernatural quantity of gossip, maritime trivia, and unsolicited opinions. Hiring Bromley to cross the bay means accepting that you will arrive knowing considerably more about the personal lives of Brightvale's dockworkers than you did when you left.\nHe is generous, reliable, and genuinely fond of his passengers in the way that a man is fond of an audience. His rates are fair. His boat is well-kept. His stories are only partially true, and he knows which parts.\nAsk him about the dragon and the warmth doesn't leave his face exactly — but something quiets behind it. He'll tell you she's out there, that she's always been out there, and that the bay runs full because of her grace. Then he'll change the subject. He has never been asked to sail toward her and accepted. He has never explained why. He doesn't feel he needs to.",
+    "home_location": "silverfin_docks",
+    "gold": 20
+  },
+  {
+    "id": "seraphel",
+    "name": "Seraphel",
+    "role": "Protector of Brightvale",
+    "disposition": "Grief-touched and ancient — she is not unfriendly, but there is a sorrow in her that runs deeper than conversation can reach. She speaks when she chooses to, and what she says tends to land heavily.",
+    "description": "Grief-touched and ancient — she is not unfriendly, but there is a sorrow in her that runs deeper than conversation can reach. She speaks when she chooses to, and what she says tends to land heavily.\nDescription: Seraphel is vast in the way that old things are vast — not just in size, though she is enormous, her body long enough to encircle a ship twice over, but in the sense of accumulated time she carries with her. Her scales shift through every color the bay wears depending on the light: deep green at dawn, silver at midday, the dark blue of deep water at night. Up close, sailors who have seen her say there is one patch of scales along her left flank, just behind the foreleg, where the coloring never quite recovered — the ghost of an old wound, where a fishing net once cut her to the bone.\nShe does not seek out human company. She never has, not really — that was always Alden's doing, his stubborn warmth pulling her incrementally closer to shore. Without him, she has drifted back toward the deep, and the distance feels intentional. She still guides the fish. She still patrols the bay. She keeps her promise. But she keeps it quietly, and from far away, and anyone watching carefully might notice that she never lingers near the spot where Alden died.\nShe can speak — her voice, when she uses it, is low and resonant, felt as much as heard. She will not use it for small things. If players somehow reach her and their business is genuine, she will listen. If it is not, she will simply submerge and decline to resurface. She does not owe anyone a conversation. She has already given this city everything she had to give.",
+    "home_location": "seraphel_s_roost"
+  }
+]

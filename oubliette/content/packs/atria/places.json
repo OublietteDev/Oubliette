@@ -1,0 +1,58 @@
+[
+  {
+    "id": "brightvale",
+    "name": "Brightvale",
+    "description": "A large, glistening city positioned on the Silverfin Bay. Commerce is driven by craftsmen of all types, and a healthy export of fish. Legends tell of a great protector dragon by the name of Seraphel, living on an unnamed island somewhere far out into the bay.",
+    "tags": [
+      "town",
+      "safe"
+    ]
+  },
+  {
+    "id": "brightvale_market_square",
+    "name": "The Coin Quarter (Market)",
+    "description": "The loud, chaotic heart of Brightvale's economy. Every race, every tongue, every smell. A good place for supplies, information, and trouble.",
+    "parent": "brightvale",
+    "tags": [
+      "town",
+      "safe",
+      "trade",
+      "quests"
+    ]
+  },
+  {
+    "id": "silverfin_docks",
+    "name": "Silverfin Docks",
+    "description": "The oldest part of the city — loud, salt-soaked, and proud of it. Fishing families who've worked the bay for generations sit uneasily alongside the foreign merchant fleets that have moved in over the decades.",
+    "parent": "brightvale",
+    "tags": [
+      "town",
+      "safe",
+      "trade",
+      "quests"
+    ]
+  },
+  {
+    "id": "the_palladian_ward_civic_government_district",
+    "name": "The Palladian Ward (Civic & Government District)",
+    "description": "Named for the pale stone it's built from. Orderly, imposing, and full of people who know more than they say. The town of Brightvale is comprised of a two-chamber government - a democratically elected governor who manages the boring day-to-day affairs of Brightvale, and the Council of Elders; a group of nine meritocratically selected officials. These elders are of such renown that often even visitors to the town can recognize their faces and names.",
+    "parent": "brightvale",
+    "tags": [
+      "town",
+      "government",
+      "safe",
+      "quests"
+    ]
+  },
+  {
+    "id": "seraphel_s_roost",
+    "name": "Seraphel's Roost",
+    "description": "Several miles out into Silverfin Bay, where the water turns from blue-green to a deep, unsettling indigo, a cluster of dark rocks breaks the surface — wave-smoothed and salt-bleached, ringed perpetually by wheeling seabirds that seem to nest nowhere else on the bay. Locals call it the Roost, though most have never been close enough to see it clearly. From the Brightvale docks on a clear day it is visible as a smudge on the horizon, easy to mistake for a trick of the light.\nUp close it is larger than it appears from shore — a jagged shelf of stone perhaps fifty feet across at its widest, with a natural hollow at its center deep enough to hold still water even in rough weather. The rocks are covered in the kinds of things that accumulate around a creature of immense age: barnacles the size of fists, kelp in colors that don't grow anywhere else in the bay, and in the still pool at the center, a single scale, iridescent and enormous, that the tides have never managed to carry away.\nSeraphel is not always here. But the Roost is where she returns, and on nights when the bay is calm, fishermen far out on the water sometimes report seeing the rocks glow faintly — every color at once, very briefly — before going dark again.",
+    "tags": [
+      "bay",
+      "safe",
+      "Seraphel",
+      "boat"
+    ]
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "the_founding_of_brightvale",
+    "title": "The Founding of Brightvale",
+    "text": "Before Brightvale had walls or merchants, it was a scatter of fishing houses along Silverfin Bay, and its people lived by what the tides gave them. Among them was Alden — a solitary fisherman with a wide laugh and a habit of keeping strange things to himself. One grey morning he found a shimmering scale at the tideline; that night, in the teeth of a storm, he rowed out toward a sorrowful cry and found a sea dragon, Seraphel, tearing herself bloody against a fishing net. He cut her free. In thanks she began to lead his boat to the richest waters, and the village's fortune — and the dragon's legend — grew with it, until the houses became a city. Decades later, aged and half-crippled, Alden faced the city's last hour: a monster roused from the deep by the grown city's noise, risen to drown it. For the first time in his long life he asked for help, bargaining his own life for the city's, and rose shining above the water to call down a wave that buried the beast. He died in his neighbours' arms, and with his last breath charged Seraphel to keep Brightvale safe. The city wept, and raised him into legend.",
+    "subjects": ["Brightvale", "Silverfin Bay", "Alden", "Seraphel"],
+    "tags": ["founding", "legend"]
+  },
+  {
+    "id": "seraphel_guardian_of_the_bay",
+    "title": "Seraphel, Guardian of Silverfin Bay",
+    "text": "The people of Brightvale will tell you their city is watched over by a sea dragon named Seraphel, and they are right. She is the dragon the fisherman Alden freed from a net generations ago — vast and ancient, her scales shifting through every colour the bay wears, with one patch along her left flank where an old wound never recovered its colour. While Alden lived, his stubborn warmth drew her close to shore; she led the boats to the fish and the bay ran full. When he died she withdrew toward the deep, and keeps his last charge — to guard the city — quietly, and from far off. Sailors say she still patrols the bay and still guides the catch, but that she never lingers near the place where Alden fell. She can speak, in a low voice felt as much as heard, though she rarely chooses to. Those who go looking for her seldom find her; those who do reach her had best have honest business, or she will simply sink from sight and decline to rise. She has already given this city everything she had to give.",
+    "subjects": ["Seraphel", "Silverfin Bay", "Alden", "Brightvale", "Seraphel's Roost"],
+    "tags": ["dragon", "legend"]
+  },
+  {
+    "id": "the_sirens_of_the_deep",
+    "title": "The Sirens of the Deep",
+    "text": "Years ago a pirate crew calling themselves the Sirens of the Deep worked this coast, making their name on the speed and cruelty of raids that ships never saw coming. Brightvale was spared, though almost no one ever learned why. Alden, who knew the bay's moods better than any, saw their bone-pale sails sliding toward the sleeping village one twilight and chose, as ever, to handle it alone. He made himself bait, drawing their ship into the Echoing Reefs east of the village — a maze of rock that had gutted better hulls than theirs — and slipped through the one safe channel he knew while the pirates, blind with greed, held their course and tore themselves open on the stone. He hauled the survivors from the water, rowed them to the guards on shore, and told no one. The shamed pirates kept the secret too, and so the village slept on, never knowing how near the dark had come. The Sirens were broken that night — but the sea is wide, and a name like theirs is the kind of thing that can wash back in on a later tide.",
+    "subjects": ["Sirens of the Deep", "Alden", "Echoing Reefs", "Silverfin Bay", "Brightvale"],
+    "tags": ["pirates", "quest", "legend"]
+  }
+]
