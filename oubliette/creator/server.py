@@ -18,10 +18,13 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel
 
 from ..content.loader import PackValidationError, load_pack
 
@@ -54,6 +57,26 @@ def _read_json(path: Path):
         return json.loads(path.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
         return None
+
+
+def _write_json(path: Path, data) -> None:
+    """Write a pack file in a clean, stable, human-diffable shape: 2-space indent,
+    real unicode (not \\uXXXX), and a trailing newline."""
+    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    path.write_text(text, encoding="utf-8")
+
+
+def _backup_pack(pack_dir: Path, pack_id: str) -> str:
+    """Copy the current pack to a timestamped backup BEFORE overwriting, so a
+    save is never destructive. Backups live OUTSIDE the packs root (in a sibling
+    `pack-backups/`) so they're never mistaken for packs. Returns the backup path."""
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    dest = _packs_root().parent / "pack-backups" / pack_id / stamp
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists():                       # same-second second save: keep both
+        dest = dest.parent / f"{stamp}-{len(list(dest.parent.iterdir()))}"
+    shutil.copytree(pack_dir, dest)
+    return str(dest)
 
 
 def _validate(pack_id: str) -> dict:
@@ -100,6 +123,29 @@ async def read_pack(pack_id: str) -> JSONResponse:
         return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
     contents = {name: _read_json(d / f"{name}.json") for name in PACK_FILES}
     return JSONResponse({"id": pack_id, "contents": contents, "validation": _validate(pack_id)})
+
+
+class SaveIn(BaseModel):
+    contents: dict          # {pack, items, statblocks, npcs, places, scenarios}
+
+
+@app.post("/api/pack/{pack_id}/save")
+async def save_pack(pack_id: str, body: SaveIn) -> JSONResponse:
+    """Write the edited world back to disk, after backing up the previous version.
+    Saving is allowed even while a world still has issues (you never lose work-in-
+    progress) — the response carries the fresh ✓/⚠ report so the page can show
+    whether it's playable yet."""
+    d = _pack_dir(pack_id)
+    if d is None:
+        return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
+
+    backup = _backup_pack(d, pack_id)
+    for name in PACK_FILES:
+        data = body.contents.get(name)
+        if data is not None:                # only rewrite files we were given
+            _write_json(d / f"{name}.json", data)
+
+    return JSONResponse({"ok": True, "backed_up": backup, "validation": _validate(pack_id)})
 
 
 def main() -> None:

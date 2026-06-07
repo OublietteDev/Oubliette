@@ -25,7 +25,7 @@
     display: flex; flex-direction: column; height: 100vh;
   }
   header {
-    display: flex; align-items: center; gap: 16px;
+    display: flex; align-items: center; gap: 14px;
     padding: 14px 22px; border-bottom: 1px solid var(--line);
     background: linear-gradient(180deg, rgba(0,0,0,.25), transparent);
   }
@@ -35,23 +35,30 @@
   }
   header .tag { font-size: 12px; color: var(--muted); font-style: italic; margin-left: 4px; }
   header .spacer { flex: 1; }
-  .badge {
-    font-size: 11px; color: var(--muted); border: 1px solid var(--line);
-    border-radius: 999px; padding: 4px 10px; background: var(--panel);
+  .badge { font-size: 11px; color: var(--muted); border: 1px solid var(--line);
+           border-radius: 999px; padding: 4px 10px; background: var(--panel); }
+  #dirty { font-size: 12px; color: var(--accent); font-style: italic; display: none; }
+
+  button.btn {
+    font: inherit; font-size: 13px; color: var(--ink); cursor: pointer;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 7px 13px; transition: border-color .15s, background .15s;
   }
+  button.btn:hover { border-color: var(--accent); background: #2a231d; }
+  button.btn:disabled { opacity: .45; cursor: default; }
+  button.btn.primary { border-color: var(--gold); color: var(--gold); }
+  button.btn.primary:hover:not(:disabled) { background: #2a231d; }
+  button.mini { font-size: 11px; padding: 4px 9px; border-radius: 7px; }
+  button.danger:hover { border-color: var(--bad); color: var(--bad); }
 
   main { display: grid; grid-template-columns: 280px 1fr; flex: 1; min-height: 0; }
-
-  /* worlds list */
   .worlds { border-right: 1px solid var(--line); overflow-y: auto; padding: 16px 14px; }
   .worlds h2 { font: 600 12px var(--sans); letter-spacing: .14em; text-transform: uppercase;
                color: var(--faint); margin: 4px 6px 12px; }
-  .world {
-    display: block; width: 100%; text-align: left; cursor: pointer;
+  .world { display: block; width: 100%; text-align: left; cursor: pointer;
     background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-    padding: 11px 13px; margin-bottom: 9px; color: var(--ink);
-    font: inherit; transition: border-color .15s, background .15s;
-  }
+    padding: 11px 13px; margin-bottom: 9px; color: var(--ink); font: inherit;
+    transition: border-color .15s, background .15s; }
   .world:hover { border-color: var(--accent); background: #2a231d; }
   .world.active { border-color: var(--gold); background: #2a231d; }
   .world .wname { font-family: var(--serif); font-size: 15px; color: var(--gold); }
@@ -61,7 +68,6 @@
   .pill.ok { color: var(--good); border-color: #3c4d35; background: #1b2118; }
   .pill.warn { color: var(--bad); border-color: #4d2c25; background: #221715; }
 
-  /* detail */
   .detail { overflow-y: auto; padding: 22px 28px; }
   .empty { color: var(--muted); font-style: italic; margin-top: 40px; text-align: center; }
   .detail h2 { font-family: var(--serif); color: var(--gold); margin: 0 0 4px; font-size: 24px; }
@@ -70,24 +76,63 @@
   .status { border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; box-shadow: var(--shadow); }
   .status.ok { background: #1b2118; border: 1px solid #3c4d35; }
   .status.warn { background: #221715; border: 1px solid #4d2c25; }
+  .status.dirty { background: #221c14; border: 1px solid #4d3f25; }
   .status .stitle { font-weight: 600; font-size: 15px; }
   .status.ok .stitle { color: var(--good); }
   .status.warn .stitle { color: var(--bad); }
+  .status.dirty .stitle { color: var(--accent); }
   .status ul { margin: 10px 0 0; padding-left: 18px; }
   .status li { font-size: 13px; color: var(--ink); margin: 4px 0; line-height: 1.4; }
 
   .group { margin-bottom: 22px; }
+  .group .ghead { display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 10px; }
   .group h3 { font: 600 12px var(--sans); letter-spacing: .12em; text-transform: uppercase;
-              color: var(--faint); border-bottom: 1px solid var(--line); padding-bottom: 6px; margin: 0 0 10px; }
-  .group .count { color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
-  .card {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-    padding: 11px 14px; margin-bottom: 8px;
-  }
+              color: var(--faint); margin: 0; }
+  .group .count { color: var(--muted); font-weight: 400; }
+  .group .gspacer { flex: 1; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 11px 14px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px; }
+  .card .cbody { flex: 1; min-width: 0; }
   .card .cname { font-family: var(--serif); font-size: 15px; color: var(--ink); }
   .card .cline { font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
-  .card .ctag { color: var(--accent-2); }
+  .card .cactions { display: flex; gap: 6px; flex-shrink: 0; }
   .nothing { color: var(--faint); font-style: italic; font-size: 13px; }
+  .readonly-note { font-size: 11px; color: var(--faint); font-style: italic; }
+
+  /* modal editor */
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none;
+    align-items: center; justify-content: center; z-index: 50; }
+  .scrim.open { display: flex; }
+  .modal { background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px;
+    width: min(560px, 92vw); max-height: 88vh; overflow-y: auto; box-shadow: var(--shadow); }
+  .modal .mhead { padding: 16px 20px; border-bottom: 1px solid var(--line);
+    font-family: var(--serif); color: var(--gold); font-size: 18px; }
+  .modal .mbody { padding: 18px 20px; }
+  .modal .mfoot { padding: 14px 20px; border-top: 1px solid var(--line);
+    display: flex; justify-content: flex-end; gap: 10px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .field .help { font-size: 11px; color: var(--faint); font-style: italic; margin-top: 4px; }
+  .field input, .field select, .field textarea {
+    width: 100%; font: inherit; font-size: 14px; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none; border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 70px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .subform { border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px;
+    margin-bottom: 14px; background: rgba(0,0,0,.15); }
+  .subform .sftitle { font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--faint); margin-bottom: 10px; }
+  .exit-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .invalid { color: var(--bad); font-size: 12px; margin-top: 6px; min-height: 16px; }
+
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    background: #1b2118; border: 1px solid #3c4d35; color: var(--good);
+    padding: 11px 18px; border-radius: 10px; box-shadow: var(--shadow); font-size: 13px;
+    opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 60; }
+  .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -95,42 +140,88 @@
     <h1>Oubliette: The Forge</h1>
     <span class="tag">— build a world the game can play</span>
     <span class="spacer"></span>
+    <span id="dirty">● unsaved changes</span>
+    <button class="btn primary" id="saveBtn" disabled>Save world</button>
     <span class="badge" id="rootBadge"></span>
   </header>
   <main>
-    <nav class="worlds">
-      <h2>Worlds</h2>
-      <div id="worldList"></div>
-    </nav>
+    <nav class="worlds"><h2>Worlds</h2><div id="worldList"></div></nav>
     <section class="detail" id="detail">
       <div class="empty">Pick a world on the left to open it.</div>
     </section>
   </main>
 
-<script>
-const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-let active = null;
+  <div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
+  <div class="toast" id="toast"></div>
 
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const EDITABLE = new Set(["items", "places"]);   // C2: items + places editable; rest read-only
+const TITLES = { items: "Items", statblocks: "Creatures", npcs: "Characters & NPCs",
+                 places: "Places", scenarios: "Opening setup" };
+const ORDER = ["items", "statblocks", "npcs", "places", "scenarios"];
+const CATEGORIES = ["weapon", "armor", "gear", "consumable", "treasure", "misc"];
+const SLOTS = ["", "main_hand", "off_hand", "body", "feet", "hands", "waist", "head", "neck", "ring"];
+const ARMOR_TYPES = ["light", "medium", "heavy", "shield"];
+
+let state = { id: null, contents: null, validation: null, dirty: false };
+
+// --- helpers ---------------------------------------------------------------
+const slugify = s => (String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, "_")
+                        .replace(/^_+|_+$/g, "")) || "thing";
+function uniqueId(base, existing) {
+  if (!existing.has(base)) return base;
+  let n = 2; while (existing.has(`${base}_${n}`)) n++; return `${base}_${n}`;
+}
+const listOf = kind => Array.isArray(state.contents?.[kind]) ? state.contents[kind] : [];
+const csv = s => String(s || "").split(",").map(x => x.trim()).filter(Boolean);
+
+function markDirty() {
+  state.dirty = true;
+  document.getElementById("dirty").style.display = "inline";
+  document.getElementById("saveBtn").disabled = false;
+  render();
+}
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+// --- worlds list -----------------------------------------------------------
 async function loadWorlds() {
-  const r = await fetch("/api/packs");
-  const { packs } = await r.json();
+  const { packs } = await (await fetch("/api/packs")).json();
   const list = document.getElementById("worldList");
   if (!packs.length) { list.innerHTML = '<div class="nothing">No worlds found yet.</div>'; return; }
   list.innerHTML = packs.map(p => `
-    <button class="world${p.id === active ? " active" : ""}" data-id="${esc(p.id)}">
+    <button class="world${p.id === state.id ? " active" : ""}" data-id="${esc(p.id)}">
       <div class="wname">${esc(p.name)}</div>
-      <div class="wmeta">
-        <span>v${esc(p.version || "?")}</span>
-        ${p.ok
-          ? '<span class="pill ok">✓ ready</span>'
-          : `<span class="pill warn">⚠ ${p.issue_count} to fix</span>`}
-      </div>
+      <div class="wmeta"><span>v${esc(p.version || "?")}</span>
+        ${p.ok ? '<span class="pill ok">✓ ready</span>'
+               : `<span class="pill warn">⚠ ${p.issue_count} to fix</span>`}</div>
     </button>`).join("");
   list.querySelectorAll(".world").forEach(b =>
-    b.addEventListener("click", () => openWorld(b.dataset.id)));
+    b.addEventListener("click", () => tryOpenWorld(b.dataset.id)));
 }
 
-// Friendly one-liners per kind of thing (read-only preview for C1).
+async function tryOpenWorld(id) {
+  if (state.dirty && !confirm("You have unsaved changes. Discard them and open another world?")) return;
+  await openWorld(id);
+}
+async function openWorld(id) {
+  const data = await (await fetch(`/api/pack/${encodeURIComponent(id)}`)).json();
+  if (data.error) { toast(data.error); return; }
+  state = { id, contents: data.contents, validation: data.validation, dirty: false };
+  document.getElementById("dirty").style.display = "none";
+  document.getElementById("saveBtn").disabled = true;
+  render(); loadWorlds();
+}
+
+// --- friendly one-liners ---------------------------------------------------
+function placeName(id) {
+  const p = listOf("places").find(x => x.id === id);
+  return p ? p.name : id;
+}
 function describe(kind, e) {
   if (kind === "items") {
     const bits = [e.category];
@@ -139,67 +230,276 @@ function describe(kind, e) {
     if (e.weapon) bits.push(`weapon ${e.weapon.damage}`);
     return bits.filter(Boolean).join(" · ") + (e.description ? ` — ${e.description}` : "");
   }
-  if (kind === "statblocks")
-    return `${e.kind} · ${e.hp} HP · defense ${e.armor_class} · worth ${e.xp} XP`;
+  if (kind === "statblocks") return `${e.kind} · ${e.hp} HP · defense ${e.armor_class} · worth ${e.xp} XP`;
   if (kind === "npcs") {
-    const where = e.home_location ? ` · lives at ${e.home_location}` : "";
-    const shop = e.price_list && Object.keys(e.price_list).length
-      ? ` · sells ${Object.keys(e.price_list).length} item(s)` : "";
+    const where = e.home_location ? ` · lives at ${placeName(e.home_location)}` : "";
+    const shop = e.price_list && Object.keys(e.price_list).length ? ` · sells ${Object.keys(e.price_list).length} item(s)` : "";
     return `${e.role || "person"}${where}${shop}${e.disposition ? ` — ${e.disposition}` : ""}`;
   }
   if (kind === "places") {
-    const exits = (e.exits || []).map(x => x.label || x.to).join(", ");
+    const exits = (e.exits || []).map(x => x.label || placeName(x.to)).join(", ");
     return (e.description || "") + (exits ? `  ↪ exits: ${exits}` : "");
   }
   if (kind === "scenarios") {
     const party = (e.default_party || []).length;
-    return `starts at ${e.start_location}${party ? ` · ${party} starting hero(es)` : ""}`;
+    return `starts at ${placeName(e.start_location)}${party ? ` · ${party} starting hero(es)` : ""}`;
   }
   return "";
 }
 
-const TITLES = { items: "Items", statblocks: "Creatures", npcs: "Characters & NPCs",
-                 places: "Places", scenarios: "Opening setup" };
-
-function renderGroup(kind, entries) {
-  const items = Array.isArray(entries) ? entries : [];
-  const body = items.length
-    ? items.map(e => `
-        <div class="card">
-          <div class="cname">${esc(e.name || e.id || "(unnamed)")}</div>
-          <div class="cline">${esc(describe(kind, e))}</div>
-        </div>`).join("")
-    : '<div class="nothing">None yet.</div>';
-  return `<div class="group">
-    <h3>${TITLES[kind]} <span class="count">(${items.length})</span></h3>${body}</div>`;
+// --- render ----------------------------------------------------------------
+function statusBanner() {
+  if (state.dirty)
+    return `<div class="status dirty"><div class="stitle">● Unsaved changes — click “Save world” to write them and re-check.</div></div>`;
+  const v = state.validation;
+  if (v && v.ok) return `<div class="status ok"><div class="stitle">✓ Ready to play</div></div>`;
+  if (v) return `<div class="status warn">
+      <div class="stitle">⚠ ${v.issues.length} thing(s) to fix before this world will load</div>
+      <ul>${v.issues.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>`;
+  return "";
 }
-
-async function openWorld(id) {
-  active = id;
-  const r = await fetch(`/api/pack/${encodeURIComponent(id)}`);
-  const data = await r.json();
+function renderGroup(kind) {
+  const entries = listOf(kind);
+  const editable = EDITABLE.has(kind);
+  const cards = entries.length ? entries.map((e, i) => `
+    <div class="card">
+      <div class="cbody">
+        <div class="cname">${esc(e.name || e.id || "(unnamed)")}</div>
+        <div class="cline">${esc(describe(kind, e))}</div>
+      </div>
+      ${editable ? `<div class="cactions">
+        <button class="btn mini" data-edit="${kind}" data-i="${i}">Edit</button>
+        <button class="btn mini danger" data-del="${kind}" data-i="${i}">Delete</button></div>` : ""}
+    </div>`).join("") : '<div class="nothing">None yet.</div>';
+  const head = `<div class="ghead"><h3>${TITLES[kind]}</h3>
+      <span class="count">(${entries.length})</span><span class="gspacer"></span>
+      ${editable ? `<button class="btn mini" data-add="${kind}">+ Add ${kind === "items" ? "item" : "place"}</button>`
+                 : `<span class="readonly-note">editing coming soon</span>`}</div>`;
+  return `<div class="group">${head}${cards}</div>`;
+}
+function render() {
   const d = document.getElementById("detail");
-  if (data.error) { d.innerHTML = `<div class="empty">${esc(data.error)}</div>`; loadWorlds(); return; }
-
-  const m = data.contents.pack || {};
-  const v = data.validation;
-  const status = v.ok
-    ? `<div class="status ok"><div class="stitle">✓ Ready to play</div></div>`
-    : `<div class="status warn">
-         <div class="stitle">⚠ ${v.issues.length} thing(s) to fix before this world will load</div>
-         <ul>${v.issues.map(i => `<li>${esc(i)}</li>`).join("")}</ul>
-       </div>`;
-
-  const groups = ["items", "statblocks", "npcs", "places", "scenarios"]
-    .map(k => renderGroup(k, data.contents[k])).join("");
-
-  d.innerHTML = `
-    <h2>${esc(m.name || id)}</h2>
+  if (!state.contents) { d.innerHTML = '<div class="empty">Pick a world on the left to open it.</div>'; return; }
+  const m = state.contents.pack || {};
+  d.innerHTML = `<h2>${esc(m.name || state.id)}</h2>
     <div class="sub">${esc(m.description || "")}${m.author ? ` · by ${esc(m.author)}` : ""} · v${esc(m.version || "?")}</div>
-    ${status}${groups}`;
-  loadWorlds();   // refresh the active highlight + badges
+    ${statusBanner()}${ORDER.map(renderGroup).join("")}`;
+  d.querySelectorAll("[data-edit]").forEach(b =>
+    b.addEventListener("click", () => openEditor(b.dataset.edit, +b.dataset.i)));
+  d.querySelectorAll("[data-del]").forEach(b =>
+    b.addEventListener("click", () => deleteEntry(b.dataset.del, +b.dataset.i)));
+  d.querySelectorAll("[data-add]").forEach(b =>
+    b.addEventListener("click", () => openEditor(b.dataset.add, null)));
 }
 
+function deleteEntry(kind, i) {
+  const e = listOf(kind)[i];
+  if (!confirm(`Delete “${e.name || e.id}”? (You can still undo by not saving.)`)) return;
+  state.contents[kind].splice(i, 1);
+  markDirty();
+}
+
+// --- the modal editor ------------------------------------------------------
+let editorCtx = null;   // { kind, index, exits } while a modal is open
+
+function openEditor(kind, index) {
+  const original = index != null ? listOf(kind)[index] : null;
+  editorCtx = { kind, index, exits: kind === "places" ? ((original?.exits) || []).map(x => ({...x})) : [] };
+  const modal = document.getElementById("modal");
+  modal.innerHTML = kind === "items" ? itemForm(original) : placeForm(original);
+  document.getElementById("scrim").classList.add("open");
+  if (kind === "items") wireItemForm();
+  if (kind === "places") wirePlaceForm();
+  modal.querySelector("[data-cancel]").addEventListener("click", closeEditor);
+  modal.querySelector("[data-confirm]").addEventListener("click", () =>
+    kind === "items" ? confirmItem(original) : confirmPlace(original));
+}
+function closeEditor() {
+  document.getElementById("scrim").classList.remove("open");
+  editorCtx = null;
+}
+
+function field(label, inner, help) {
+  return `<div class="field"><label>${label}</label>${inner}${help ? `<div class="help">${help}</div>` : ""}</div>`;
+}
+
+// ---- item form ----
+function itemForm(it) {
+  const v = it || {};
+  const cat = v.category || "misc";
+  return `
+    <div class="mhead">${it ? "Edit item" : "New item"}</div>
+    <div class="mbody">
+      ${field("Name", `<input id="f_name" value="${esc(v.name || "")}" placeholder="worn leather boots" />`,
+              "What players see it called.")}
+      <div class="row2">
+        ${field("Kind", `<select id="f_cat">${CATEGORIES.map(c =>
+            `<option value="${c}"${c === cat ? " selected" : ""}>${c}</option>`).join("")}</select>`)}
+        ${field("Worth (gold)", `<input id="f_value" type="number" min="0" value="${v.base_value ?? ""}" placeholder="(optional)" />`,
+                "A rough price hint. Leave blank if you like.")}
+      </div>
+      ${field("Description", `<textarea id="f_desc" placeholder="A short, flavourful line.">${esc(v.description || "")}</textarea>`)}
+      <div class="row2">
+        ${field("Worn in slot", `<select id="f_slot">${SLOTS.map(s =>
+            `<option value="${s}"${s === (v.slot || "") ? " selected" : ""}>${s || "(none)"}</option>`).join("")}</select>`,
+            "Where it's equipped, if anywhere.")}
+        ${field("Tags", `<input id="f_tags" value="${esc((v.tags || []).join(", "))}" placeholder="comma, separated" />`)}
+      </div>
+      <div id="armorBox" class="subform" style="display:none">
+        <div class="sftitle">Armor</div>
+        <div class="row2">
+          ${field("Protection (AC)", `<input id="f_ac" type="number" value="${v.armor?.base_ac ?? 11}" />`)}
+          ${field("Type", `<select id="f_atype">${ARMOR_TYPES.map(t =>
+              `<option value="${t}"${t === (v.armor?.type || "light") ? " selected" : ""}>${t}</option>`).join("")}</select>`)}
+        </div>
+      </div>
+      <div id="weaponBox" class="subform" style="display:none">
+        <div class="sftitle">Weapon</div>
+        <div class="row2">
+          ${field("Damage", `<input id="f_dmg" value="${esc(v.weapon?.damage || "1d6")}" placeholder="1d6" />`,
+                  "Dice it rolls, e.g. 1d6 or 2d4+1.")}
+          ${field("Attack bonus", `<input id="f_atk" type="number" value="${v.weapon?.attack_bonus ?? 0}" />`)}
+        </div>
+        ${field("Properties", `<input id="f_props" value="${esc((v.weapon?.properties || []).join(", "))}" placeholder="finesse, light" />`)}
+      </div>
+      <div class="invalid" id="f_err"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" data-confirm>${it ? "Update" : "Add"} item</button>
+    </div>`;
+}
+function wireItemForm() {
+  const sync = () => {
+    const c = document.getElementById("f_cat").value;
+    document.getElementById("armorBox").style.display = c === "armor" ? "block" : "none";
+    document.getElementById("weaponBox").style.display = c === "weapon" ? "block" : "none";
+  };
+  document.getElementById("f_cat").addEventListener("change", sync); sync();
+}
+function confirmItem(original) {
+  const name = document.getElementById("f_name").value.trim();
+  if (!name) { document.getElementById("f_err").textContent = "Please give it a name."; return; }
+  const base = original ? { ...original } : {};
+  if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("items").map(x => x.id)));
+  base.name = name;
+  base.category = document.getElementById("f_cat").value;
+
+  const setOrDel = (key, val) => { if (val === "" || val == null || (Array.isArray(val) && !val.length)) delete base[key]; else base[key] = val; };
+  const worth = document.getElementById("f_value").value;
+  setOrDel("base_value", worth === "" ? "" : Number(worth));
+  setOrDel("description", document.getElementById("f_desc").value.trim());
+  setOrDel("slot", document.getElementById("f_slot").value);
+  setOrDel("tags", csv(document.getElementById("f_tags").value));
+
+  delete base.armor; delete base.weapon;
+  if (base.category === "armor")
+    base.armor = { base_ac: Number(document.getElementById("f_ac").value || 0),
+                   type: document.getElementById("f_atype").value, dex_cap: original?.armor?.dex_cap ?? null };
+  if (base.category === "weapon") {
+    const w = { attack_bonus: Number(document.getElementById("f_atk").value || 0),
+                damage: document.getElementById("f_dmg").value.trim() || "1d4" };
+    const props = csv(document.getElementById("f_props").value);
+    if (props.length) w.properties = props;
+    base.weapon = w;
+  }
+  commitEntry("items", original, base);
+}
+
+// ---- place form ----
+function placeForm(pl) {
+  const v = pl || {};
+  return `
+    <div class="mhead">${pl ? "Edit place" : "New place"}</div>
+    <div class="mbody">
+      ${field("Name", `<input id="f_name" value="${esc(v.name || "")}" placeholder="Brightvale Market Square" />`)}
+      ${field("Scene description", `<textarea id="f_desc" placeholder="What players read when they arrive here.">${esc(v.description || "")}</textarea>`,
+              "This is the opening scene whenever the party is here.")}
+      ${field("Tags", `<input id="f_tags" value="${esc((v.tags || []).join(", "))}" placeholder="town, safe" />`)}
+      <div class="subform">
+        <div class="sftitle">Ways out (exits)</div>
+        <div id="exitList"></div>
+        <button class="btn mini" id="addExit" type="button">+ Add an exit</button>
+        <div class="help" style="margin-top:8px">Pick where each exit leads from the places you've made.</div>
+      </div>
+      <div class="invalid" id="f_err"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" data-confirm>${pl ? "Update" : "Add"} place</button>
+    </div>`;
+}
+function placeOptions(selected, selfId) {
+  const opts = listOf("places").filter(p => p.id !== selfId)
+    .map(p => `<option value="${esc(p.id)}"${p.id === selected ? " selected" : ""}>${esc(p.name)}</option>`).join("");
+  return `<option value="">(choose a place)</option>${opts}`;
+}
+function renderExits() {
+  const selfId = editorCtx.index != null ? listOf("places")[editorCtx.index].id : "__new__";
+  const box = document.getElementById("exitList");
+  box.innerHTML = editorCtx.exits.map((ex, i) => `
+    <div class="exit-row">
+      <select data-exit-to="${i}">${placeOptions(ex.to, selfId)}</select>
+      <input data-exit-label="${i}" value="${esc(ex.label || "")}" placeholder="north toward the gate" />
+      <button class="btn mini danger" type="button" data-exit-del="${i}">✕</button>
+    </div>`).join("") || '<div class="nothing" style="margin-bottom:8px">No exits yet.</div>';
+  box.querySelectorAll("[data-exit-to]").forEach(s =>
+    s.addEventListener("change", e => { editorCtx.exits[+e.target.dataset.exitTo].to = e.target.value; }));
+  box.querySelectorAll("[data-exit-label]").forEach(inp =>
+    inp.addEventListener("input", e => { editorCtx.exits[+e.target.dataset.exitLabel].label = e.target.value; }));
+  box.querySelectorAll("[data-exit-del]").forEach(b =>
+    b.addEventListener("click", e => { editorCtx.exits.splice(+e.target.dataset.exitDel, 1); renderExits(); }));
+}
+function wirePlaceForm() {
+  renderExits();
+  document.getElementById("addExit").addEventListener("click", () => { editorCtx.exits.push({ to: "", label: "" }); renderExits(); });
+}
+function confirmPlace(original) {
+  const name = document.getElementById("f_name").value.trim();
+  const desc = document.getElementById("f_desc").value.trim();
+  const err = document.getElementById("f_err");
+  if (!name) { err.textContent = "Please give it a name."; return; }
+  if (!desc) { err.textContent = "Please write a scene description — it's what players read here."; return; }
+  const exits = editorCtx.exits.filter(e => e.to);
+  if (exits.length !== editorCtx.exits.length) { err.textContent = "Every exit needs a destination chosen (or remove it)."; return; }
+
+  const base = original ? { ...original } : {};
+  if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("places").map(x => x.id)));
+  base.name = name; base.description = desc;
+  const tags = csv(document.getElementById("f_tags").value);
+  if (tags.length) base.tags = tags; else delete base.tags;
+  if (exits.length) base.exits = exits.map(e => e.label ? { to: e.to, label: e.label } : { to: e.to });
+  else delete base.exits;
+  commitEntry("places", original, base);
+}
+
+function commitEntry(kind, original, entry) {
+  if (!Array.isArray(state.contents[kind])) state.contents[kind] = [];
+  if (original != null && editorCtx.index != null) state.contents[kind][editorCtx.index] = entry;
+  else state.contents[kind].push(entry);
+  closeEditor();
+  markDirty();
+}
+
+// --- save ------------------------------------------------------------------
+async function saveWorld() {
+  if (!state.id || !state.dirty) return;
+  const btn = document.getElementById("saveBtn");
+  btn.disabled = true;
+  const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/save`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: state.contents }),
+  })).json();
+  if (res.error) { toast(res.error); btn.disabled = false; return; }
+  state.validation = res.validation; state.dirty = false;
+  document.getElementById("dirty").style.display = "none";
+  render(); loadWorlds();
+  toast(res.validation.ok ? "Saved ✓ — previous version backed up" : "Saved — previous version backed up (still has issues to fix)");
+}
+
+document.getElementById("saveBtn").addEventListener("click", saveWorld);
+document.getElementById("scrim").addEventListener("click", e => { if (e.target.id === "scrim") closeEditor(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && editorCtx) closeEditor(); });
 document.getElementById("rootBadge").textContent = "reading from content/packs";
 loadWorlds();
 </script>
