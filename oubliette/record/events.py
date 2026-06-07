@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from ..canon.store import CanonStore
+    from ..quest.store import QuestStore
     from ..state.repository import Repository
 
 
@@ -30,6 +31,8 @@ class EventKind(str, Enum):
     CANON_PROMOTED = "canon_promoted"   # provisional -> confirmed (§11)
     EQUIP_CHANGED = "equip_changed"     # player loadout change (bounded player action)
     LOCATION_CHANGED = "location_changed"   # party travels to another Place (DM tool)
+    QUEST_STARTED = "quest_started"     # a new quest the DM introduced
+    QUEST_UPDATED = "quest_updated"     # quest status change and/or an appended note
 
 
 class StateOp(BaseModel):
@@ -106,10 +109,11 @@ class Event(BaseModel):
         return [StateOp.model_validate(o) for o in self.payload.get("ops", [])]
 
 
-def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = None) -> None:
-    """Replay one event into state. Protected-state events carry ops; canon events
-    carry their record/promotion. Non-state events (player_message, roll, marker)
-    are no-ops here."""
+def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = None,
+                quests: "QuestStore | None" = None) -> None:
+    """Replay one event into state. Protected-state events carry ops; canon/quest
+    events carry their record/mutation. Non-state events (player_message, roll,
+    marker) are no-ops here."""
     if event.kind == EventKind.CREATE_ENTITY.value:
         if canon is not None:
             from ..canon.models import CanonRecord
@@ -119,11 +123,22 @@ def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = N
         if canon is not None:
             canon.promote(event.payload["entity_id"])
         return
+    if event.kind == EventKind.QUEST_STARTED.value:
+        if quests is not None:
+            from ..quest.models import Quest
+            quests.add(Quest.model_validate(event.payload["record"]))
+        return
+    if event.kind == EventKind.QUEST_UPDATED.value:
+        if quests is not None:
+            quests.update(event.payload["quest_id"], status=event.payload.get("status"),
+                          note=event.payload.get("note"))
+        return
     apply_ops(event.state_ops(), repo)
 
 
-def replay(events: list[Event], repo: "Repository", canon: "CanonStore | None" = None) -> None:
-    """Rebuild authoritative state (and canon) by applying events in seq order.
+def replay(events: list[Event], repo: "Repository", canon: "CanonStore | None" = None,
+           quests: "QuestStore | None" = None) -> None:
+    """Rebuild authoritative state (canon + quests) by applying events in seq order.
     Never rolls, never calls a model — the byte-identical guarantee (D9)."""
     for event in sorted(events, key=lambda e: e.seq):
-        apply_event(event, repo, canon)
+        apply_event(event, repo, canon, quests)

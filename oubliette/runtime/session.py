@@ -15,6 +15,8 @@ from typing import Callable
 from ..canon.models import CanonDraft, CanonRecord
 from ..canon.store import CanonStore
 from ..content.loader import DEFAULT_PACK, load_pack
+from ..quest.models import Quest, QuestStatus
+from ..quest.store import QuestStore
 from ..record.events import Event, EventKind, StateOp, apply_ops, replay
 from ..record.store import EventStore
 from ..seed import DEFAULT_SCENE
@@ -22,10 +24,12 @@ from ..state.repository import Repository
 
 
 class Session:
-    def __init__(self, store: EventStore, repo: Repository, canon: CanonStore) -> None:
+    def __init__(self, store: EventStore, repo: Repository, canon: CanonStore,
+                 quests: QuestStore | None = None) -> None:
         self.store = store
         self.repo = repo
         self.canon = canon
+        self.quests = quests if quests is not None else QuestStore()
         # Location/scene state — set up by `open` from the pack + the event log.
         self.places: dict = {}              # {place_id: PlaceNode}
         self.start_location: str | None = None
@@ -69,6 +73,7 @@ class Session:
             start_scene = DEFAULT_SCENE
             marker = {}
         canon = CanonStore()
+        quests = QuestStore()
         # Seed authored canon (slug ids) BEFORE replay so runtime 'canon-N' records
         # layer on top without colliding; it's part of the deterministic baseline,
         # not the event log, so reload re-seeds it identically.
@@ -84,7 +89,7 @@ class Session:
             elif event.kind == EventKind.SESSION_MARKER.value and event.payload.get("marker") == "end":
                 ended = True
 
-        session = cls(store, repo, canon)
+        session = cls(store, repo, canon, quests)
         session.places = places
         session.start_location = start_location
         session.start_scene = start_scene
@@ -93,7 +98,7 @@ class Session:
         session.pack_id = chosen_pack
         session.ended = ended
         if events:
-            replay(events, repo, canon)     # existing session: rebuild to current
+            replay(events, repo, canon, quests)   # existing session: rebuild to current
         else:
             session.emit_log(EventKind.SESSION_MARKER, marker="start", **marker)
         return session
@@ -110,6 +115,22 @@ class Session:
         with the reason and flags the session ended (persists across reload)."""
         self.store.append(EventKind.SESSION_MARKER, {"marker": "end", "reason": reason})
         self.ended = True
+
+    def emit_quest_start(self, title: str, text: str, reason: str) -> Quest:
+        """Record a new quest (the DM's `start_quest` tool). The id is assigned now
+        and recorded, so replay reproduces it exactly."""
+        quest = Quest(id=self.quests.next_id(), title=title, text=text, status="active")
+        self.store.append(EventKind.QUEST_STARTED, {"record": quest.model_dump(), "reason": reason})
+        self.quests.add(quest)
+        return quest
+
+    def emit_quest_update(self, quest_id: str, status: QuestStatus | None = None,
+                          note: str | None = None, reason: str = "") -> None:
+        """Advance a quest (the DM's `update_quest` tool): change its status and/or
+        append a note."""
+        self.store.append(EventKind.QUEST_UPDATED,
+                          {"quest_id": quest_id, "status": status, "note": note, "reason": reason})
+        self.quests.update(quest_id, status=status, note=note)
 
     def emit_log(self, kind: "str | EventKind", **payload) -> Event:
         """Append a non-state event (player message, roll, marker). No ops."""

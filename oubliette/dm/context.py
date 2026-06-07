@@ -32,7 +32,7 @@ def _reachable(location: str | None, places: dict) -> list:
 
 def build_context(repo: Repository, scene: str = "", recent: list[str] | None = None,
                   canon: list[CanonRecord] | None = None, location: str | None = None,
-                  places: dict | None = None) -> str:
+                  places: dict | None = None, quests: list | None = None) -> str:
     pc = repo.pc()
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
@@ -95,6 +95,14 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
             for r in other:
                 text = (r.text[:160] + "…") if len(r.text) > 160 else r.text
                 lines.append(f"  - [{r.status}] {r.entity_type} '{r.name}' (id: {r.id}){': ' + text if text else ''}")
+    # Ongoing goals the code is tracking — so the DM stays consistent about what the
+    # party is pursuing and advances them (update_quest) as the fiction develops.
+    if quests:
+        lines.append("ACTIVE QUESTS (the party's open goals — advance with update_quest as they develop):")
+        for q in quests:
+            text = (q.text[:200] + "…") if len(q.text) > 200 else q.text
+            latest = f" — latest: {q.notes[-1]}" if q.notes else ""
+            lines.append(f"  - [{q.id}] {q.title}{': ' + text if text else ''}{latest}")
     # Short-term continuity: what just happened, so the DM honors established
     # fiction and successful checks instead of re-litigating each turn (gap G5).
     if recent:

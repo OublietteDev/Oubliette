@@ -103,10 +103,33 @@ class EndSession(BaseModel):
     reason: str = Field(description="a brief, honest reason for ending (logged, not shown as fiction)")
 
 
+class StartQuest(BaseModel):
+    """Begin tracking a goal the party has taken on (an NPC's request, a mystery
+    they're chasing). Code records it as an active quest."""
+
+    tool: Literal["start_quest"] = "start_quest"
+    title: str = Field(description="a short name for the quest")
+    text: str = Field(default="", description="what the goal is, in a sentence or two")
+    reason: str
+
+
+class UpdateQuest(BaseModel):
+    """Advance a tracked quest: append a development as a note, and/or change its
+    status. Hand out any reward with a normal give/transact, not here."""
+
+    tool: Literal["update_quest"] = "update_quest"
+    quest_id: str = Field(description="the quest id from ACTIVE QUESTS, e.g. 'quest-0'")
+    status: Literal["active", "completed", "failed"] | None = Field(
+        default=None, description="set when the quest finishes (completed/failed)")
+    note: str | None = Field(default=None, description="a short development to record")
+    reason: str
+
+
 # The only doors into protected state + canon, as a discriminated union (the schema
 # the model fills in). To add a tool: add a model + a `tool` literal, and a resolver
 # branch in tools/dispatch.py.
 ToolCall = Annotated[
-    Union[Transact, Give, Take, CreateEntity, PromoteCanon, Travel, EndSession],
+    Union[Transact, Give, Take, CreateEntity, PromoteCanon, Travel, EndSession,
+          StartQuest, UpdateQuest],
     Field(discriminator="tool"),
 ]

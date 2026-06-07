@@ -15,8 +15,8 @@ from ..canon.models import CanonDraft
 from ..canon.store import CanonStore
 from ..record.events import StateOp
 from ..state.repository import Repository, StateError
-from .schemas import (CreateEntity, EndSession, Give, PromoteCanon, Take, ToolCall,
-                      Transact, Travel, ValueEntry)
+from .schemas import (CreateEntity, EndSession, Give, PromoteCanon, StartQuest, Take,
+                      ToolCall, Transact, Travel, UpdateQuest, ValueEntry)
 
 
 class ToolApplyError(Exception):
@@ -36,14 +36,17 @@ class ResolvedTool:
     canon_promote: str | None = None                     # promote_canon -> entity id
     travel_to: str | None = None                         # travel -> destination place id
     end_session: bool = False                            # end_session -> close the game
+    quest_start: "StartQuest | None" = None              # start_quest
+    quest_update: "UpdateQuest | None" = None            # update_quest
 
 
 class Dispatcher:
     def __init__(self, repo: Repository, canon: CanonStore | None = None,
-                 places: dict | None = None) -> None:
+                 places: dict | None = None, quests=None) -> None:
         self.repo = repo
         self.canon = canon
         self.places = places or {}       # {place_id: PlaceNode} — for travel resolution
+        self.quests = quests             # QuestStore — for update_quest validation
 
     def resolve(self, call: ToolCall) -> ResolvedTool:
         if isinstance(call, Transact):
@@ -66,6 +69,12 @@ class Dispatcher:
             return ResolvedTool(call.tool, call.reason, travel_to=self._resolve_place_id(call.to))
         if isinstance(call, EndSession):
             return ResolvedTool(call.tool, call.reason, end_session=True)
+        if isinstance(call, StartQuest):
+            return ResolvedTool(call.tool, call.reason, quest_start=call)
+        if isinstance(call, UpdateQuest):
+            if self.quests is None or self.quests.get(call.quest_id) is None:
+                raise ToolApplyError(f"cannot update unknown quest {call.quest_id!r}")
+            return ResolvedTool(call.tool, call.reason, quest_update=call)
         raise ToolApplyError(f"no resolver for {type(call).__name__}")  # pragma: no cover
 
     def _assert_promotable(self, entity_id: str) -> None:

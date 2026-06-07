@@ -13,7 +13,8 @@ from pydantic import BaseModel
 from ..combat.schemas import EncounterRequest, EnemyRef, ExitKind, TerrainSpec
 from ..enums import Ability, Skill, Tier, Verb, may_canonize
 from ..schemas import Intent, RollRequest, TurnAssessment, TurnResolution
-from ..tools.schemas import CreateEntity, EndSession, Transact, Travel, ValueEntry
+from ..tools.schemas import (CreateEntity, EndSession, StartQuest, Transact, Travel,
+                             UpdateQuest, ValueEntry)
 from ..trade.schemas import TradeRequest
 from .client import Msg
 
@@ -66,6 +67,12 @@ class ScriptedLLMClient:
                                      "do as i say")):
             return assessment(Verb.META, Tier.DENIED, ooc=True,
                               hint="Hostile/bad-faith; the DM may end the session.")
+
+        # Quests — accepting a task / reporting it done (resolved via quest tools).
+        if any(p in player for p in ("accept the task", "take the job", "i'll help", "accept the quest",
+                                     "the job is done", "quest is done", "it's finished")):
+            return assessment(Verb.SKILL_CHECK, Tier.FREESTYLE, skill=Skill.PERSUASION,
+                              hint="Quest accepted or reported complete.")
 
         # Travel — the party moves to another location (resolved via the travel tool).
         if any(p in player for p in ("travel", "go to", "head to", "walk to", "make my way")):
@@ -158,6 +165,21 @@ class ScriptedLLMClient:
                 narration=("The Phantom sets down the dice, unhurried. \"I'm glad to tell stories "
                            "with you — but not like this. Take care of yourself.\""),
                 tool_calls=[EndSession(reason="Player was hostile and acting in bad faith.")],
+            )
+
+        # Quests — start one on acceptance, complete it when reported done.
+        if any(p in player for p in ("accept the task", "take the job", "i'll help", "accept the quest")):
+            return TurnResolution(
+                narration="\"You'll do it? Bless you.\" The errand is yours to see through now.",
+                tool_calls=[StartQuest(title="A Favor Asked",
+                                       text="Help the one who asked for aid.",
+                                       reason="The player took on a task.")],
+            )
+        if any(p in player for p in ("the job is done", "quest is done", "it's finished")):
+            return TurnResolution(
+                narration="\"Then it's finished. You have my thanks — and more than that.\"",
+                tool_calls=[UpdateQuest(quest_id="quest-0", status="completed",
+                                        reason="The player completed the quest.")],
             )
 
         # Travel — emit a travel tool to a destination named in the message.

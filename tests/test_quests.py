@@ -1,0 +1,95 @@
+"""Emergent quest tracking: the DM starts/advances/closes quests; code owns the
+state and event-sources it (so a reload rebuilds quests exactly). Simple shape — a
+goal with a status + running notes; rewards stay ordinary give/transact tools.
+"""
+
+from __future__ import annotations
+
+import asyncio
+
+from oubliette.dm.brain import Brain
+from oubliette.dm.context import build_context
+from oubliette.llm.scripted import ScriptedLLMClient
+from oubliette.record.rng import Rng
+from oubliette.record.store import InMemoryEventStore, SqliteEventStore
+from oubliette.quest.models import Quest
+from oubliette.quest.store import QuestStore
+from oubliette.runtime.loop import TurnLoop
+from oubliette.runtime.session import Session
+from oubliette.state.models import Character
+from oubliette.state.repository import InMemoryRepository
+from oubliette.tools.dispatch import Dispatcher, ToolApplyError
+from oubliette.tools.schemas import StartQuest, UpdateQuest
+
+import pytest
+
+
+# --- store ------------------------------------------------------------------
+def test_quest_store_status_notes_and_active():
+    qs = QuestStore()
+    q = Quest(id=qs.next_id(), title="Find the cat")     # quest-0
+    qs.add(q)
+    assert qs.next_id() == "quest-1"                      # counter advanced
+    qs.update("quest-0", note="found a paw print")
+    qs.update("quest-0", status="completed", note="cat in hand")
+    done = qs.get("quest-0")
+    assert done.status == "completed" and done.notes == ["found a paw print", "cat in hand"]
+    assert qs.active() == []                              # completed isn't active
+
+
+# --- dispatcher -------------------------------------------------------------
+def test_dispatcher_starts_and_updates_quests():
+    qs = QuestStore()
+    qs.add(Quest(id="quest-0", title="An errand"))
+    disp = Dispatcher(None, None, None, qs)
+
+    started = disp.resolve(StartQuest(title="A new goal", text="do the thing", reason="r"))
+    assert started.quest_start.title == "A new goal"
+
+    updated = disp.resolve(UpdateQuest(quest_id="quest-0", status="completed", reason="r"))
+    assert updated.quest_update.status == "completed"
+
+    with pytest.raises(ToolApplyError):
+        disp.resolve(UpdateQuest(quest_id="quest-999", note="nope", reason="r"))
+
+
+# --- session + replay -------------------------------------------------------
+def test_quests_rebuild_byte_identical_on_reload(tmp_path):
+    db = str(tmp_path / "quests.sqlite")
+    store = SqliteEventStore(db)
+    s = Session.open(store)
+    q = s.emit_quest_start("Find the captain", "Locate Bromley at the docks.", "intro")
+    s.emit_quest_update(q.id, note="asked around the market")
+    s.emit_quest_update(q.id, status="completed", note="found him aboard his boat")
+    store.close()
+
+    reloaded = Session.open(SqliteEventStore(db))
+    rq = reloaded.quests.get(q.id)
+    assert rq is not None
+    assert rq.title == "Find the captain" and rq.status == "completed"
+    assert rq.notes == ["asked around the market", "found him aboard his boat"]
+
+
+# --- end-to-end through the loop (scripted) ---------------------------------
+def test_scripted_quest_lifecycle():
+    s = Session.open(InMemoryEventStore())
+    loop = TurnLoop(s, Rng(1, record=s.emit_log), Brain(ScriptedLLMClient()))
+
+    asyncio.run(loop.take_turn("I accept the task."))
+    quests = s.quests.all()
+    assert len(quests) == 1 and quests[0].id == "quest-0" and quests[0].status == "active"
+
+    asyncio.run(loop.take_turn("Good news — the job is done."))
+    assert s.quests.get("quest-0").status == "completed"
+    assert s.quests.active() == []
+
+
+# --- context ----------------------------------------------------------------
+def test_active_quests_appear_in_context():
+    repo = InMemoryRepository([Character(id="pc", name="You", kind="pc")], [], "pc")
+    q = Quest(id="quest-0", title="Find the captain", text="Locate Bromley.",
+              notes=["asked at the docks"])
+    ctx = build_context(repo, "scene", quests=[q])
+    assert "ACTIVE QUESTS" in ctx
+    assert "Find the captain" in ctx and "quest-0" in ctx
+    assert "asked at the docks" in ctx          # the latest note is surfaced

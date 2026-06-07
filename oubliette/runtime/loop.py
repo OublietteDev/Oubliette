@@ -56,7 +56,7 @@ class TurnLoop:
         # Scene/location live on the session (they change as the party travels); an
         # explicit scene arg still overrides the opening text if given.
         self._scene_override = scene
-        self.dispatcher = Dispatcher(session.repo, session.canon, session.places)
+        self.dispatcher = Dispatcher(session.repo, session.canon, session.places, session.quests)
         self.history: list[str] = []   # short-term continuity beats (gap G5)
 
     async def take_turn(self, player_text: str, on_text=None) -> TurnReport:
@@ -68,7 +68,8 @@ class TurnLoop:
         scene = self._scene_override if self._scene_override is not None else self.session.scene
         context = build_context(
             self.repo, scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits,
-            location=self.session.location, places=self.session.places)
+            location=self.session.location, places=self.session.places,
+            quests=self.session.quests.active())
         assessment = await self.brain.assess(player_text, context)
         # The PLAYER_MESSAGE event carries the raw text + the parsed intent (§4.1).
         self.session.emit_log(
@@ -170,6 +171,13 @@ class TurnLoop:
                     self.session.emit_travel(rt.travel_to, rt.reason)
                 elif rt.end_session:
                     self.session.emit_end(rt.reason)
+                elif rt.quest_start is not None:
+                    self.session.emit_quest_start(
+                        rt.quest_start.title, rt.quest_start.text, rt.reason)
+                elif rt.quest_update is not None:
+                    self.session.emit_quest_update(
+                        rt.quest_update.quest_id, status=rt.quest_update.status,
+                        note=rt.quest_update.note, reason=rt.reason)
                 else:
                     self.session.emit_state(
                         EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
@@ -236,6 +244,13 @@ class TurnLoop:
                 parts.append(f"promoted {rt.canon_promote} → confirmed")
             elif rt.travel_to is not None:
                 parts.append(f"travelled to {rt.travel_to}")
+            elif rt.quest_start is not None:
+                parts.append(f"started quest '{rt.quest_start.title}'")
+            elif rt.quest_update is not None:
+                state = rt.quest_update.status or "updated"
+                parts.append(f"quest {rt.quest_update.quest_id} → {state}")
+            elif rt.end_session:
+                parts.append("ended the session")
             else:
                 parts.append(f"effect({rt.tool}): {self._ops_summary(rt.ops)}")
         if report.combat_result is not None:
