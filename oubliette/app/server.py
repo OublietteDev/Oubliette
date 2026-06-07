@@ -170,6 +170,7 @@ def _turn_payload(report) -> dict:
 # --- API --------------------------------------------------------------------
 class TurnIn(BaseModel):
     text: str
+    ooc: bool = False          # player's explicit out-of-character signal (composer toggle)
 
 
 @app.get("/")
@@ -192,7 +193,7 @@ async def post_turn(body: TurnIn) -> JSONResponse:
     if GAME.session.ended:
         return JSONResponse({"error": "the DM has ended this session", "ended": True}, status_code=409)
     async with GAME.lock:  # serialize turns; combat/state mutation isn't reentrant
-        report = await GAME.loop.take_turn(text)
+        report = await GAME.loop.take_turn(text, ooc=body.ooc)
         return JSONResponse(_turn_payload(report))
 
 
@@ -221,7 +222,7 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
     async def run_turn() -> None:
         async with GAME.lock:
             try:
-                report = await GAME.loop.take_turn(text, on_text=on_text)
+                report = await GAME.loop.take_turn(text, on_text=on_text, ooc=body.ooc)
                 payload = _turn_payload(report)
                 payload["t"] = "done"
                 _emit(payload)

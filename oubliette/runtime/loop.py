@@ -14,12 +14,12 @@ from ..combat.boundary import CombatError, result_to_ops, run_encounter
 from ..combat.schemas import CombatResult
 from ..dm.brain import Brain
 from ..dm.context import build_context
-from ..enums import SKILL_ABILITY
+from ..enums import SKILL_ABILITY, Tier, Verb
 from ..record.events import EventKind
 from ..record.log import DebugLog
 from ..record.rng import Rng, RollOutcome
 from ..rules.checks import resolve_check
-from ..schemas import RollRequest, TurnAssessment
+from ..schemas import Intent, RollRequest, TurnAssessment
 from ..state.repository import StateError
 from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
 from ..trade.schemas import TradeState
@@ -59,8 +59,7 @@ class TurnLoop:
         self.dispatcher = Dispatcher(session.repo, session.canon, session.places, session.quests)
         self.history: list[str] = []   # short-term continuity beats (gap G5)
 
-    async def take_turn(self, player_text: str, on_text=None) -> TurnReport:
-        # Retrieve world canon relevant to this turn → context (long-term memory, G4).
+    async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
         # Retrieve relevant canon/lore by the player's words PLUS the situation —
         # the current location and who's here — so a place's history surfaces when
         # the party arrives, not only when someone names it.
@@ -70,7 +69,15 @@ class TurnLoop:
             self.repo, scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits,
             location=self.session.location, places=self.session.places,
             quests=self.session.quests.active())
-        assessment = await self.brain.assess(player_text, context)
+        # `ooc` is the player's explicit "out-of-character" signal (the composer
+        # toggle). When set, the turn is table-talk — no model guessing, no combat
+        # or trade — so in-character play is never mistaken for meta.
+        if ooc:
+            assessment = TurnAssessment(
+                intent=Intent(raw_text=player_text, verb=Verb.META, ooc=True),
+                tier=Tier.FREESTYLE, resolution_hint="Player is speaking out-of-character.")
+        else:
+            assessment = await self.brain.assess(player_text, context)
         # The PLAYER_MESSAGE event carries the raw text + the parsed intent (§4.1).
         self.session.emit_log(
             EventKind.PLAYER_MESSAGE, text=player_text,

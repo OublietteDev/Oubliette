@@ -94,6 +94,12 @@
     background: linear-gradient(180deg, var(--accent), #9c5f2e); color: #fff; font: inherit; font-weight: 600;
   }
   .composer button:disabled { opacity: .5; cursor: default; }
+  .ooc-toggle { font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; align-self: stretch;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 0 13px;
+    color: var(--muted); transition: color .15s, border-color .15s, background .15s; }
+  .ooc-toggle:hover { border-color: var(--accent); }
+  .ooc-toggle.ooc { color: var(--accent-2); border-color: var(--accent-2); background: #1b2118; }
+  .composer.ooc textarea { border-color: var(--accent-2); }
 
   .thinking { color: var(--muted); font-style: italic; font-size: 14px; display: flex; gap: 8px; align-items: center; }
   .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: pulse 1.1s infinite; }
@@ -256,6 +262,8 @@
     <section class="chat">
       <div class="log" id="log"></div>
       <div class="composer">
+        <button id="ooc-toggle" class="ooc-toggle" type="button"
+                title="Switch between speaking as your character and speaking to the DM out-of-character">🎭 In character</button>
         <textarea id="input" placeholder="What do you do?  (Enter to send · Shift+Enter for a new line)"></textarea>
         <button id="send">Send</button>
       </div>
@@ -629,7 +637,7 @@ async function send(textOverride) {
   try {
     const res = await fetch("/api/turn/stream", {
       method: "POST", headers: {"content-type": "application/json"},
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ text, ooc: oocMode })
     });
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -655,6 +663,20 @@ sendBtn.addEventListener("click", () => send());
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
 });
+
+// Out-of-character toggle: when on, the message is table-talk to the DM (the DM is
+// told explicitly), so in-character play is never mistaken for breaking character.
+let oocMode = false;
+const oocToggle = $("ooc-toggle");
+function setOoc(v) {
+  oocMode = v;
+  oocToggle.classList.toggle("ooc", v);
+  oocToggle.textContent = v ? "💬 Out of character" : "🎭 In character";
+  document.querySelector(".composer").classList.toggle("ooc", v);
+  input.placeholder = v ? "Speak to the DM, out of character…"
+                        : "What do you do?  (Enter to send · Shift+Enter for a new line)";
+}
+oocToggle.addEventListener("click", () => setOoc(!oocMode));
 async function openNewGame() {
   const { packs, current } = await (await fetch("/api/packs")).json();
   const list = $("newgame-list");
