@@ -138,7 +138,9 @@ class TurnIn(BaseModel):
 
 @app.get("/")
 async def index() -> FileResponse:
-    return FileResponse(STATIC / "index.html")
+    # no-cache: always revalidate so a refresh never serves a stale page (e.g. an
+    # old copy missing the menu). The single-file UI has no other assets to bust.
+    return FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-cache, max-age=0"})
 
 
 @app.get("/api/state")
