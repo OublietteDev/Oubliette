@@ -112,6 +112,33 @@ def test_situational_query_includes_location_and_present():
     assert "Governor" not in q               # homed elsewhere
 
 
+def test_situational_query_includes_parent_areas():
+    """Lore anchored to a city must surface while the party stands in its districts:
+    the query walks up the parent chain and includes each enclosing area's name."""
+    repo = InMemoryRepository([Character(id="pc", name="You", kind="pc")], [], "pc")
+    session = Session.open(InMemoryEventStore(), seed=lambda: repo)
+    session.places = {
+        "brightvale": PlaceNode("brightvale", "Brightvale", "city", None, ()),
+        "market": PlaceNode("market", "The Coin Quarter", "market", "brightvale", ()),
+    }
+    session.location = "market"
+    loop = TurnLoop(session, Rng(1, record=session.emit_log), Brain(ScriptedLLMClient()))
+
+    q = loop._retrieval_query("I look around")
+    assert "The Coin Quarter" in q           # the district itself
+    assert "Brightvale" in q                 # the enclosing city — its lore now surfaces
+
+
+def test_atria_city_lore_surfaces_inside_a_district():
+    """End-to-end against the real Atria pack: standing in the Coin Quarter (a
+    district of Brightvale), the founding lore is retrievable via the parent name."""
+    world = load_pack("atria")
+    store = _store(world.canon)
+    # the query the loop builds in the Coin Quarter now includes its parent, Brightvale
+    hits = [h.id for h in store.search("I look around The Coin Quarter (Market) Brightvale")]
+    assert "the_founding_of_brightvale" in hits
+
+
 # --- context budget ---------------------------------------------------------
 def test_world_lore_section_gets_generous_budget(tmp_path):
     long_text = "The tale. " * 60           # ~600 chars, well over a snippet

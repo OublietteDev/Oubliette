@@ -97,13 +97,21 @@ class TurnLoop:
         return report
 
     def _retrieval_query(self, player_text: str) -> str:
-        """Canon/lore search terms: the player's words + the situation (current
-        location name + who's present), so a place's lore surfaces on arrival."""
+        """Canon/lore search terms: the player's words + the situation. The location
+        contributes its OWN name AND every area it sits inside (walking up the parent
+        chain) — so a city's lore surfaces while the party stands in one of its
+        districts, not only at the city level — plus who's present."""
         loc = self.session.location
-        loc_name = self.session.places[loc].name if loc in self.session.places else ""
+        places = self.session.places
+        area_names: list[str] = []
+        cur, seen = loc, set()
+        while cur in places and cur not in seen:      # current place + its ancestors
+            seen.add(cur)
+            area_names.append(places[cur].name)
+            cur = places[cur].parent
         present = " ".join(n.name for n in self.repo.npcs()
                            if loc is None or n.home_location == loc)
-        return " ".join(p for p in (player_text, loc_name, present) if p)
+        return " ".join(p for p in [player_text, *area_names, present] if p)
 
     def _open_trade(self, assessment: TurnAssessment) -> TurnReport | None:
         """Summon the trade window for a valid merchant with something to browse.
