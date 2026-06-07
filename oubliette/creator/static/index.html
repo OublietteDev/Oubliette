@@ -87,10 +87,15 @@
   .group { margin-bottom: 22px; }
   .group .ghead { display: flex; align-items: center; gap: 10px;
     border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 10px; }
+  .group .gtoggle { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+  .group .gtoggle:hover h3 { color: var(--muted); }
+  .group .chev { font-size: 9px; color: var(--faint); transition: transform .15s; }
   .group h3 { font: 600 12px var(--sans); letter-spacing: .12em; text-transform: uppercase;
               color: var(--faint); margin: 0; }
   .group .count { color: var(--muted); font-weight: 400; }
   .group .gspacer { flex: 1; }
+  .group.collapsed .chev { transform: rotate(-90deg); }
+  .group.collapsed .gcards { display: none; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
     padding: 11px 14px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px; }
   .card .cbody { flex: 1; min-width: 0; }
@@ -165,6 +170,7 @@ const SLOTS = ["", "main_hand", "off_hand", "body", "feet", "hands", "waist", "h
 const ARMOR_TYPES = ["light", "medium", "heavy", "shield"];
 
 let state = { id: null, contents: null, validation: null, dirty: false };
+const collapsed = new Set();   // folded sections, remembered across re-renders
 
 // --- helpers ---------------------------------------------------------------
 const slugify = s => (String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, "_")
@@ -271,11 +277,14 @@ function renderGroup(kind) {
         <button class="btn mini" data-edit="${kind}" data-i="${i}">Edit</button>
         <button class="btn mini danger" data-del="${kind}" data-i="${i}">Delete</button></div>` : ""}
     </div>`).join("") : '<div class="nothing">None yet.</div>';
-  const head = `<div class="ghead"><h3>${TITLES[kind]}</h3>
-      <span class="count">(${entries.length})</span><span class="gspacer"></span>
+  const head = `<div class="ghead">
+      <span class="gtoggle" data-toggle="${kind}">
+        <span class="chev">▾</span><h3>${TITLES[kind]}</h3>
+        <span class="count">(${entries.length})</span>
+      </span><span class="gspacer"></span>
       ${editable ? `<button class="btn mini" data-add="${kind}">+ Add ${kind === "items" ? "item" : "place"}</button>`
                  : `<span class="readonly-note">editing coming soon</span>`}</div>`;
-  return `<div class="group">${head}${cards}</div>`;
+  return `<div class="group${collapsed.has(kind) ? " collapsed" : ""}">${head}<div class="gcards">${cards}</div></div>`;
 }
 function render() {
   const d = document.getElementById("detail");
@@ -290,6 +299,12 @@ function render() {
     b.addEventListener("click", () => deleteEntry(b.dataset.del, +b.dataset.i)));
   d.querySelectorAll("[data-add]").forEach(b =>
     b.addEventListener("click", () => openEditor(b.dataset.add, null)));
+  d.querySelectorAll("[data-toggle]").forEach(t =>
+    t.addEventListener("click", () => {
+      const kind = t.dataset.toggle;
+      collapsed.has(kind) ? collapsed.delete(kind) : collapsed.add(kind);
+      t.closest(".group").classList.toggle("collapsed");   // fold in place, no scroll jump
+    }));
 }
 
 function deleteEntry(kind, i) {
