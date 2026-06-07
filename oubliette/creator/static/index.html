@@ -104,6 +104,10 @@
   .card .cactions { display: flex; gap: 6px; flex-shrink: 0; }
   .nothing { color: var(--faint); font-style: italic; font-size: 13px; }
   .readonly-note { font-size: 11px; color: var(--faint); font-style: italic; }
+  .sec-warn { font-size: 10px; color: var(--bad); border: 1px solid #4d2c25;
+    background: #221715; border-radius: 999px; padding: 2px 8px; }
+  .worlds-head { display: flex; align-items: center; gap: 8px; margin: 4px 6px 12px; }
+  .worlds-head h2 { margin: 0; flex: 1; }
 
   /* modal editor */
   .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none;
@@ -154,7 +158,10 @@
     <span class="badge" id="rootBadge"></span>
   </header>
   <main>
-    <nav class="worlds"><h2>Worlds</h2><div id="worldList"></div></nav>
+    <nav class="worlds">
+      <div class="worlds-head"><h2>Worlds</h2><button class="btn mini" id="newWorldBtn">+ New</button></div>
+      <div id="worldList"></div>
+    </nav>
     <section class="detail" id="detail">
       <div class="empty">Pick a world on the left to open it.</div>
     </section>
@@ -176,6 +183,7 @@ const ARMOR_TYPES = ["light", "medium", "heavy", "shield"];
 
 let state = { id: null, contents: null, validation: null, dirty: false };
 const collapsed = new Set();   // folded sections, remembered across re-renders
+let secCounts = {};            // per-section issue counts from the last validation
 
 // --- helpers ---------------------------------------------------------------
 const slugify = s => (String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, "_")
@@ -278,9 +286,12 @@ function statusBanner() {
     return `<div class="status dirty"><div class="stitle">● Unsaved changes — click “Save world” to write them and re-check.</div></div>`;
   const v = state.validation;
   if (v && v.ok) return `<div class="status ok"><div class="stitle">✓ Ready to play</div></div>`;
-  if (v) return `<div class="status warn">
-      <div class="stitle">⚠ ${v.issues.length} thing(s) to fix before this world will load</div>
-      <ul>${v.issues.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>`;
+  if (v) {
+    const msgs = (v.friendly && v.friendly.length) ? v.friendly.map(f => f.message) : v.issues;
+    return `<div class="status warn">
+      <div class="stitle">⚠ ${msgs.length} thing(s) to fix before this world will load</div>
+      <ul>${msgs.map(m => `<li>${esc(m)}</li>`).join("")}</ul></div>`;
+  }
   return "";
 }
 function renderGroup(kind) {
@@ -296,10 +307,11 @@ function renderGroup(kind) {
         <button class="btn mini" data-edit="${kind}" data-i="${i}">Edit</button>
         <button class="btn mini danger" data-del="${kind}" data-i="${i}">Delete</button></div>` : ""}
     </div>`).join("") : '<div class="nothing">None yet.</div>';
+  const warn = secCounts[kind] ? `<span class="sec-warn">⚠ ${secCounts[kind]}</span>` : "";
   const head = `<div class="ghead">
       <span class="gtoggle" data-toggle="${kind}">
         <span class="chev">▾</span><h3>${TITLES[kind]}</h3>
-        <span class="count">(${entries.length})</span>
+        <span class="count">(${entries.length})</span>${warn}
       </span><span class="gspacer"></span>
       ${editable ? `<button class="btn mini" data-add="${kind}">+ Add ${SINGULAR[kind]}</button>`
                  : `<span class="readonly-note">editing coming soon</span>`}</div>`;
@@ -308,6 +320,11 @@ function renderGroup(kind) {
 function render() {
   const d = document.getElementById("detail");
   if (!state.contents) { d.innerHTML = '<div class="empty">Pick a world on the left to open it.</div>'; return; }
+  // Per-section warning counts from the last validation (hidden while dirty — the
+  // report is stale until the next save re-checks).
+  secCounts = {};
+  if (!state.dirty && state.validation && state.validation.friendly)
+    state.validation.friendly.forEach(f => { if (f.section) secCounts[f.section] = (secCounts[f.section] || 0) + 1; });
   const m = state.contents.pack || {};
   d.innerHTML = `<h2>${esc(m.name || state.id)}</h2>
     <div class="sub">${esc(m.description || "")}${m.author ? ` · by ${esc(m.author)}` : ""} · v${esc(m.version || "?")}</div>
@@ -717,7 +734,22 @@ async function saveWorld() {
   toast(res.validation.ok ? "Saved ✓ — previous version backed up" : "Saved — previous version backed up (still has issues to fix)");
 }
 
+async function newWorld() {
+  if (state.dirty && !confirm("You have unsaved changes. Discard them and start a new world?")) return;
+  const name = prompt("Name your new world:");
+  if (!name || !name.trim()) return;
+  const res = await (await fetch("/api/pack/new", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: name.trim() }),
+  })).json();
+  if (res.error) { toast(res.error); return; }
+  await loadWorlds();
+  await openWorld(res.id);
+  toast("New world created — start adding to it!");
+}
+
 document.getElementById("saveBtn").addEventListener("click", saveWorld);
+document.getElementById("newWorldBtn").addEventListener("click", newWorld);
 document.getElementById("scrim").addEventListener("click", e => { if (e.target.id === "scrim") closeEditor(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && editorCtx) closeEditor(); });
 document.getElementById("rootBadge").textContent = "reading from content/packs";

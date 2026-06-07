@@ -184,3 +184,39 @@ def test_scenario_edit_preserves_party(tmp_path, monkeypatch):
     assert reread["scene_override"] == "Dawn light slants across the market."
     assert len(reread["default_party"]) == 1
     assert reread["default_party"][0]["name"] == "You"
+
+
+# --- C4: new-world scaffold, friendly errors --------------------------------
+def test_new_world_scaffolds_a_ready_pack(tmp_path, monkeypatch):
+    monkeypatch.setenv("OUBLIETTE_PACKS_ROOT", str(tmp_path / "packs"))
+    r = client.post("/api/pack/new", json={"name": "Test Realm"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["id"] == "test_realm"
+    assert body["validation"]["ok"] is True            # a fresh world already loads
+
+    contents = client.get("/api/pack/test_realm").json()["contents"]
+    assert contents["pack"]["name"] == "Test Realm"
+    assert any(p["id"] == "town_square" for p in contents["places"])
+    assert contents["scenarios"][0]["start_location"] == "town_square"
+
+
+def test_new_world_duplicate_is_refused(tmp_path, monkeypatch):
+    monkeypatch.setenv("OUBLIETTE_PACKS_ROOT", str(tmp_path / "packs"))
+    assert client.post("/api/pack/new", json={"name": "Twice"}).status_code == 200
+    assert client.post("/api/pack/new", json={"name": "Twice"}).status_code == 409
+
+
+def test_friendly_errors_are_plain_with_suggestions(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    c = client.get("/api/pack/brightvale").json()["contents"]
+    # a character carrying a mistyped item id close to a real one ('sturdy belt')
+    c["npcs"].append({"id": "x", "name": "Wanderer", "inventory": [{"item": "belt"}]})
+    r = client.post("/api/pack/brightvale/save", json={"contents": c})
+    v = r.json()["validation"]
+    assert v["ok"] is False
+    # raw issues stay available (the guarantee); friendly rephrases with a section
+    assert any("belt" in i for i in v["issues"])
+    belt = [f for f in v["friendly"] if "belt" in f["message"]]
+    assert belt and belt[0]["section"] == "npcs"
+    assert any("Did you mean" in f["message"] and "sturdy belt" in f["message"] for f in v["friendly"])
