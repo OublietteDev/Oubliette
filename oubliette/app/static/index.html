@@ -195,8 +195,14 @@
   .inv-member { display: flex; flex-direction: column; gap: 12px; }
   .inv-mname { font-family: var(--serif); font-size: 17px; color: var(--gold); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
   .inv-group { display: flex; flex-direction: column; gap: 8px; }
-  .inv-grouphd { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--faint); }
+  .inv-grouphd { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--faint); cursor: pointer; user-select: none; display: flex; align-items: center; gap: 7px; }
+  .inv-grouphd:hover { color: var(--muted); }
   .inv-grouphd.equipped { color: var(--accent-2); }
+  .inv-grouphd .chev { font-size: 9px; transition: transform .15s; }
+  .inv-grouphd .count { color: var(--faint); letter-spacing: 0; }
+  .inv-items { display: flex; flex-direction: column; gap: 8px; }
+  .inv-group.collapsed .chev { transform: rotate(-90deg); }
+  .inv-group.collapsed .inv-items { display: none; }
   .inv-row { display: flex; align-items: center; gap: 12px; padding: 9px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; }
   .inv-row .info { flex: 1; min-width: 0; }
   .inv-row .nm { font-family: var(--serif); font-size: 14.5px; }
@@ -797,10 +803,22 @@ function invRow(it, memberId) {
   }
   return row;
 }
+const invCollapsed = new Set();   // remembers folded sections across re-renders
 function invGroup(label, items, memberId, isEquipped) {
-  const g = el("div", "inv-group");
-  g.appendChild(el("div", "inv-grouphd" + (isEquipped ? " equipped" : ""), label));
-  items.forEach(it => g.appendChild(invRow(it, memberId)));
+  const key = memberId + ":" + label;
+  const g = el("div", "inv-group" + (invCollapsed.has(key) ? " collapsed" : ""));
+  const hd = el("div", "inv-grouphd" + (isEquipped ? " equipped" : ""));
+  hd.appendChild(el("span", "chev", "▾"));
+  hd.appendChild(el("span", null, label));
+  hd.appendChild(el("span", "count", "(" + items.length + ")"));
+  hd.addEventListener("click", () => {
+    if (invCollapsed.has(key)) invCollapsed.delete(key); else invCollapsed.add(key);
+    g.classList.toggle("collapsed");
+  });
+  g.appendChild(hd);
+  const wrap = el("div", "inv-items");
+  items.forEach(it => wrap.appendChild(invRow(it, memberId)));
+  g.appendChild(wrap);
   return g;
 }
 function renderInventory(data) {
