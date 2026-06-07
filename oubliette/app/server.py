@@ -227,13 +227,15 @@ async def get_state() -> JSONResponse:
 async def world_image(place_id: str) -> FileResponse:
     """A place's illustration (for quest cards). Serves the pack's image if the
     place has one, else a tasteful fallback so cards always look complete."""
+    # no-cache (revalidate) rather than a long max-age, so newly-added or changed
+    # art shows immediately instead of a stale image lingering for a day.
     node = GAME.session.places.get(place_id)
     if node is not None and node.image and "/" not in node.image and "\\" not in node.image:
         path = _PACKS_ROOT / (GAME.pack_id or "") / "images" / node.image
         if path.is_file():
-            return FileResponse(path, headers={"Cache-Control": "max-age=86400"})
+            return FileResponse(path, headers={"Cache-Control": "no-cache"})
     return FileResponse(STATIC / "img" / "quest-fallback.svg",
-                        headers={"Cache-Control": "max-age=86400"})
+                        headers={"Cache-Control": "no-cache"})
 
 
 @app.post("/api/turn")

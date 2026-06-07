@@ -3,6 +3,7 @@
     "id": "brightvale",
     "name": "Brightvale",
     "description": "A large, glistening city positioned on the Silverfin Bay. Commerce is driven by craftsmen of all types, and a healthy export of fish. Legends tell of a great protector dragon by the name of Seraphel, living on an unnamed island somewhere far out into the bay.",
+    "image": "brightvale.jpg",
     "tags": [
       "town",
       "safe"
