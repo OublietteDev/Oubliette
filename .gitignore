@@ -9,6 +9,10 @@ venv/
 *.sqlite3
 .DS_Store
 
+# The Forge writes timestamped pack backups here before each save — local safety
+# net, not shared history.
+pack-backups/
+
 # Personal/local Claude Code settings — not shared history
 .claude/settings.local.json
 
