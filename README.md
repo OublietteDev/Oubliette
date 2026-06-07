@@ -63,7 +63,12 @@ rewrites. Everything runs with a **scripted (offline) DM** — no API key requir
   status-grouped entries (e.g. Quests → In-Progress / Completed) and markdown notes.
   The journal is **deliberately invisible to the DM** — stored in its own table,
   never read into context — so player notes can't induce hallucination or bloat the
-  prompt. (Map, Bestiary, Party Sheets, Inventory are stubbed "soon" menu slots.)
+  prompt. (Map, Bestiary, Party Sheets are stubbed "soon" menu slots.)
+- **Phase 9** (tag `phase-9`): the **Inventory panel**. Moved off the sidebar into a
+  menu panel: a section per party member, items grouped into Weapons / Armor (with
+  AC) / Gear / Consumables / Other, plus an **Equipped** section with equip/unequip
+  toggles. Loadout changes are event-sourced (an `equip` op) so they persist and
+  replay. (Total-AC-from-equipment is deferred to the rules pass.)
 
 ## Quickstart
 

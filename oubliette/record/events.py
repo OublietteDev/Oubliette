@@ -28,18 +28,20 @@ class EventKind(str, Enum):
     COMBAT_RESULT = "combat_result"
     CREATE_ENTITY = "create_entity"     # canon content born provisional (§7)
     CANON_PROMOTED = "canon_promoted"   # provisional -> confirmed (§11)
+    EQUIP_CHANGED = "equip_changed"     # player loadout change (bounded player action)
 
 
 class StateOp(BaseModel):
     """One atomic, replayable change to protected state. Deltas are commutative;
     `hp_set`/`conditions` are absolute (D7)."""
 
-    op: Literal["gold", "item", "hp_set", "xp", "conditions"]
+    op: Literal["gold", "item", "hp_set", "xp", "conditions", "equip"]
     char: str
     item_id: str | None = None
     delta: int | None = None
     value: int | None = None
     conditions: list[str] | None = None
+    item_ids: list[str] | None = None       # for the 'equip' op (absolute loadout)
 
     # --- typed constructors ---------------------------------------------------
     @classmethod
@@ -62,6 +64,10 @@ class StateOp(BaseModel):
     def conditions_set(cls, char: str, conditions: list[str]) -> "StateOp":
         return cls(op="conditions", char=char, conditions=list(conditions))
 
+    @classmethod
+    def equip(cls, char: str, item_ids: list[str]) -> "StateOp":
+        return cls(op="equip", char=char, item_ids=list(item_ids))
+
     def apply(self, repo: "Repository") -> None:
         if self.op == "gold":
             repo.adjust_gold(self.char, self.delta or 0)
@@ -77,6 +83,8 @@ class StateOp(BaseModel):
             repo.adjust_xp(self.char, self.delta or 0)
         elif self.op == "conditions":
             repo.set_conditions(self.char, self.conditions or [])
+        elif self.op == "equip":
+            repo.set_equipped(self.char, self.item_ids or [])
 
 
 def apply_ops(ops: list[StateOp], repo: "Repository") -> None:

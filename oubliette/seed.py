@@ -10,12 +10,15 @@ from .state.repository import InMemoryRepository
 
 # Item catalog (original content). base_value is an advisory hint only (§11).
 ITEMS = [
-    Item(id="boots", name="worn leather boots", tags=["apparel"], base_value=2),
-    Item(id="traveling_boots", name="sturdy traveling boots", tags=["apparel"], base_value=8),
-    Item(id="leather_satchel", name="leather satchel", tags=["container"], base_value=12),
-    Item(id="sturdy_belt", name="sturdy belt", tags=["apparel"], base_value=4),
-    Item(id="waterskin", name="leather waterskin", tags=["gear"], base_value=3),
-    Item(id="riding_gloves", name="riding gloves", tags=["apparel"], base_value=6),
+    Item(id="boots", name="worn leather boots", category="gear", base_value=2),
+    Item(id="knife", name="a trusty knife", category="weapon", base_value=2),
+    Item(id="leather_jerkin", name="leather jerkin", category="armor", base_value=10, armor_class=11),
+    Item(id="healing_draught", name="healing draught", category="consumable", base_value=25),
+    Item(id="traveling_boots", name="sturdy traveling boots", category="gear", base_value=8),
+    Item(id="leather_satchel", name="leather satchel", category="gear", base_value=12),
+    Item(id="sturdy_belt", name="sturdy belt", category="gear", base_value=4),
+    Item(id="waterskin", name="leather waterskin", category="gear", base_value=3),
+    Item(id="riding_gloves", name="riding gloves", category="gear", base_value=6),
 ]
 
 # What Thom has on the table, and what he asks for each (his stock = inventory
@@ -42,9 +45,15 @@ def seed_world() -> InMemoryRepository:
         skill_proficiencies={Skill.DECEPTION},                   # +2 proficiency
         hp=24, max_hp=24,
         armor_class=14,                                          # worn leather + DEX
-        attack_bonus=5, damage="1d8+3",                          # a trusty knife (placeholder)
+        attack_bonus=5, damage="1d8+3",                          # the knife, equipped below
         gold=15,
-        inventory=[ItemStack(item_id="boots", qty=1)],          # boots on the player's feet
+        inventory=[
+            ItemStack(item_id="boots", qty=1),
+            ItemStack(item_id="knife", qty=1),
+            ItemStack(item_id="leather_jerkin", qty=1),
+            ItemStack(item_id="healing_draught", qty=2),
+        ],
+        equipped=["knife", "leather_jerkin"],                    # wielded + worn
         description="A traveler with scuffed boots and a silver tongue.",
     )
 

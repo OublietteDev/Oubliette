@@ -11,11 +11,21 @@ from ..enums import Ability, Skill
 from ..rules.checks import ability_modifier, proficiency_bonus
 
 
+ItemCategory = Literal["weapon", "armor", "gear", "consumable", "treasure", "misc"]
+_EQUIPPABLE = {"weapon", "armor", "gear"}
+
+
 class Item(BaseModel):
     id: str
     name: str
+    category: ItemCategory = "misc"
     tags: list[str] = Field(default_factory=list)
     base_value: int | None = None       # advisory hint only; never enforced (spec §11)
+    armor_class: int | None = None      # AC granted when worn (armor); shown as info for now
+
+    @property
+    def equippable(self) -> bool:
+        return self.category in _EQUIPPABLE
 
 
 class ItemStack(BaseModel):
@@ -41,6 +51,7 @@ class Character(BaseModel):
     conditions: list[str] = Field(default_factory=list)
     gold: int = 0
     inventory: list[ItemStack] = Field(default_factory=list)
+    equipped: list[str] = Field(default_factory=list)   # item_ids worn/wielded (player loadout)
     # OPEN (flavor; not event-sourced — D-OPEN-1) -----------------------------
     description: str = ""
     disposition: str = ""    # NPC demeanor — context for the DM's DC-setting (D8)

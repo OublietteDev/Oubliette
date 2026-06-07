@@ -186,6 +186,28 @@
   .j-save { font: inherit; font-weight: 600; cursor: pointer; border: none; border-radius: 8px; padding: 7px 14px; background: linear-gradient(180deg, var(--accent), #9c5f2e); color: #fff; }
   .j-empty { color: var(--faint); font-style: italic; }
 
+  /* inventory */
+  .inv-modal { width: min(760px, 94vw); max-height: 88vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .inv-head { display: flex; align-items: center; gap: 12px; padding: 15px 18px; border-bottom: 1px solid var(--line); }
+  .inv-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 18px; }
+  .inv-head .spacer { flex: 1; }
+  .inv-body { padding: 16px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 22px; }
+  .inv-member { display: flex; flex-direction: column; gap: 12px; }
+  .inv-mname { font-family: var(--serif); font-size: 17px; color: var(--gold); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  .inv-group { display: flex; flex-direction: column; gap: 8px; }
+  .inv-grouphd { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--faint); }
+  .inv-grouphd.equipped { color: var(--accent-2); }
+  .inv-row { display: flex; align-items: center; gap: 12px; padding: 9px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; }
+  .inv-row .info { flex: 1; min-width: 0; }
+  .inv-row .nm { font-family: var(--serif); font-size: 14.5px; }
+  .inv-row .meta { font-size: 12px; color: var(--faint); display: flex; gap: 10px; flex-wrap: wrap; }
+  .inv-row .meta .ac { color: var(--accent-2); }
+  .inv-row .meta .val { color: var(--gold); }
+  .inv-eq { font-size: 10px; color: var(--accent-2); border: 1px solid #41613f; border-radius: 999px; padding: 1px 8px; text-transform: uppercase; letter-spacing: .06em; }
+  .inv-row button { font: inherit; font-size: 12px; cursor: pointer; border-radius: 7px; padding: 6px 12px; border: 1px solid var(--line); background: #2a231d; color: var(--ink); }
+  .inv-row button:hover { border-color: var(--accent); }
+  .inv-empty { color: var(--faint); font-style: italic; font-size: 13px; }
+
   .stepper { display: flex; align-items: center; gap: 6px; }
   .stepper button { width: 26px; height: 26px; padding: 0; font-size: 15px; line-height: 1; border-radius: 6px; border: 1px solid var(--line); background: #2a231d; color: var(--ink); cursor: pointer; }
   .stepper button:hover:not(:disabled) { border-color: var(--accent); }
@@ -241,10 +263,6 @@
         <div id="conditions" class="stats" style="margin-top:8px"></div>
       </div>
       <div class="card">
-        <h2>Inventory</h2>
-        <ul class="list" id="inventory"></ul>
-      </div>
-      <div class="card">
         <h2>Present</h2>
         <ul class="list" id="npcs"></ul>
       </div>
@@ -293,6 +311,17 @@
       </div>
       <div class="journal-content" id="j-content"></div>
     </div>
+  </div>
+</div>
+
+<div id="inv-overlay" class="overlay hidden">
+  <div class="inv-modal">
+    <div class="inv-head">
+      <h2>Inventory</h2>
+      <div class="spacer"></div>
+      <button class="act" id="inv-close">Close</button>
+    </div>
+    <div class="inv-body" id="inv-body"></div>
   </div>
 </div>
 
@@ -483,7 +512,7 @@ $("trade-done").addEventListener("click", closeTrade);
 $("trade-settle").addEventListener("click", settle);
 $("trade-haggle").addEventListener("click", doHaggle);
 $("trade-overlay").addEventListener("click", (e) => { if (e.target.id === "trade-overlay") closeTrade(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeTrade(); closeJournal(); closeMenu(); } });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeTrade(); closeJournal(); closeInventory(); closeMenu(); } });
 
 function renderState(s) {
   $("scene").textContent = s.scene || "";
@@ -496,13 +525,6 @@ function renderState(s) {
   $("ac").textContent = pc.armor_class;
   const cond = $("conditions");
   cond.textContent = pc.conditions.length ? "Conditions: " + pc.conditions.join(", ") : "";
-
-  const inv = $("inventory"); inv.innerHTML = "";
-  if (!pc.inventory.length) inv.appendChild(el("div", "empty", "empty-handed"));
-  pc.inventory.forEach(it => {
-    const li = el("li"); li.appendChild(el("span", null, it.name));
-    li.appendChild(el("span", "sub", "×" + it.qty)); inv.appendChild(li);
-  });
 
   const npcs = $("npcs"); npcs.innerHTML = "";
   if (!s.npcs.length) npcs.appendChild(el("div", "empty", "no one nearby"));
@@ -612,8 +634,8 @@ $("new-btn").addEventListener("click", async () => {
 // --- player menu (extensible registry) ------------------------------------
 const MENU_ITEMS = [
   { key: "journal",   label: "Journal",          icon: "📖", enabled: true,  open: () => openJournal() },
+  { key: "inventory", label: "Inventory",        icon: "🎒", enabled: true,  open: () => openInventory() },
   { key: "party",     label: "Party Sheets",     icon: "👥", enabled: false },
-  { key: "inventory", label: "Inventory",        icon: "🎒", enabled: false },
   { key: "bestiary",  label: "Bestiary & Rules", icon: "📚", enabled: false },
   { key: "map",       label: "Map",              icon: "🗺️", enabled: false },
 ];
@@ -742,6 +764,73 @@ function addEntry(sec) {
 }
 $("journal-close").addEventListener("click", closeJournal);
 $("j-add-section").addEventListener("click", addSection);
+
+// --- inventory (per party member, category subsections, equip toggles) ----
+const INV_CATEGORIES = [
+  ["weapon", "Weapons"], ["armor", "Armor"], ["gear", "Gear"],
+  ["consumable", "Consumables"], ["treasure", "Treasure"], ["misc", "Other"],
+];
+function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+async function openInventory() {
+  let data;
+  try { data = await (await fetch("/api/inventory")).json(); } catch (e) { data = { party: [] }; }
+  renderInventory(data);
+  $("inv-overlay").classList.remove("hidden");
+}
+function closeInventory() { $("inv-overlay").classList.add("hidden"); }
+
+function invRow(it, memberId) {
+  const row = el("div", "inv-row");
+  const info = el("div", "info");
+  info.appendChild(el("div", "nm", it.name));
+  const meta = el("div", "meta");
+  if (it.qty > 1) meta.appendChild(el("span", null, "×" + it.qty));
+  meta.appendChild(el("span", null, cap(it.category)));
+  if (it.armor_class != null) meta.appendChild(el("span", "ac", "AC " + it.armor_class));
+  if (it.value != null) meta.appendChild(el("span", "val", "~" + it.value + "g"));
+  info.appendChild(meta);
+  row.appendChild(info);
+  if (it.equippable) {
+    const btn = el("button", null, it.equipped ? "Unequip" : "Equip");
+    btn.addEventListener("click", () => equipToggle(memberId, it.item_id, !it.equipped));
+    row.appendChild(btn);
+  }
+  return row;
+}
+function invGroup(label, items, memberId, isEquipped) {
+  const g = el("div", "inv-group");
+  g.appendChild(el("div", "inv-grouphd" + (isEquipped ? " equipped" : ""), label));
+  items.forEach(it => g.appendChild(invRow(it, memberId)));
+  return g;
+}
+function renderInventory(data) {
+  const body = $("inv-body"); body.innerHTML = "";
+  if (!data.party || !data.party.length) { body.appendChild(el("div", "inv-empty", "no party members")); return; }
+  data.party.forEach(m => {
+    const sec = el("div", "inv-member");
+    sec.appendChild(el("div", "inv-mname", m.name));
+    const equipped = m.items.filter(it => it.equipped);
+    if (equipped.length) sec.appendChild(invGroup("Equipped", equipped, m.id, true));
+    INV_CATEGORIES.forEach(([cat, label]) => {
+      const items = m.items.filter(it => it.category === cat && !it.equipped);
+      if (items.length) sec.appendChild(invGroup(label, items, m.id, false));
+    });
+    if (!m.items.length) sec.appendChild(el("div", "inv-empty", "empty-handed"));
+    body.appendChild(sec);
+  });
+}
+async function equipToggle(charId, itemId, equip) {
+  try {
+    const res = await fetch("/api/equip", {
+      method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({ char_id: charId, item_id: itemId, equip })
+    });
+    const data = await res.json();
+    if (data.inventory) renderInventory(data.inventory);
+    if (data.state) renderState(data.state);
+  } catch (e) { /* ignore transient */ }
+}
+$("inv-close").addEventListener("click", closeInventory);
 
 async function boot() {
   const res = await fetch("/api/state");

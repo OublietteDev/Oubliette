@@ -21,7 +21,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from ..journal.store import Journal, JournalStore
-from ..record.events import EventKind
+from ..record.events import EventKind, StateOp
 from ..record.store import SqliteEventStore
 from ..record.rng import Rng
 from ..runtime.loop import TurnLoop
@@ -96,6 +96,24 @@ def _snapshot() -> dict:
             for r in GAME.session.canon.all()
         ],
     }
+
+
+def _build_inventory() -> dict:
+    """Per party-member inventory with item details for the inventory panel."""
+    repo = GAME.session.repo
+    party = []
+    for c in repo.party():
+        items = []
+        for s in c.inventory:
+            it = repo.get_item(s.item_id)
+            items.append({
+                "item_id": s.item_id, "name": it.name, "category": it.category,
+                "qty": s.qty, "value": it.base_value, "armor_class": it.armor_class,
+                "equippable": it.equippable, "equipped": s.item_id in c.equipped,
+                "tags": it.tags,
+            })
+        party.append({"id": c.id, "name": c.name, "items": items})
+    return {"party": party}
 
 
 def _describe_applied(rt) -> str:
@@ -258,6 +276,41 @@ async def post_checkout(body: CheckoutIn) -> JSONResponse:
         except StateError:
             trade = None
         return JSONResponse({"ok": ok, "error": error, "trade": trade, "state": _snapshot()})
+
+
+@app.get("/api/inventory")
+async def get_inventory() -> JSONResponse:
+    return JSONResponse(_build_inventory())
+
+
+class EquipIn(BaseModel):
+    char_id: str
+    item_id: str
+    equip: bool
+
+
+@app.post("/api/equip")
+async def post_equip(body: EquipIn) -> JSONResponse:
+    """Player loadout change — bounded (you can only equip an equippable item you
+    hold), validated by code, and recorded so it replays."""
+    async with GAME.lock:
+        repo = GAME.session.repo
+        try:
+            char = repo.get_character(body.char_id)
+            if char.item_qty(body.item_id) <= 0:
+                raise StateError("you are not carrying that item")
+            if body.equip and not repo.get_item(body.item_id).equippable:
+                raise StateError("that item cannot be equipped")
+            loadout = [i for i in char.equipped if i != body.item_id]
+            if body.equip:
+                loadout.append(body.item_id)
+            GAME.session.emit_state(
+                EventKind.EQUIP_CHANGED, [StateOp.equip(body.char_id, loadout)],
+                reason=f"player {'equipped' if body.equip else 'unequipped'} {body.item_id}")
+            ok, error = True, None
+        except StateError as e:
+            ok, error = False, str(e)
+        return JSONResponse({"ok": ok, "error": error, "inventory": _build_inventory(), "state": _snapshot()})
 
 
 @app.get("/api/journal")

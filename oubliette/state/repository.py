@@ -21,10 +21,12 @@ class StateError(Exception):
 @runtime_checkable
 class Repository(Protocol):
     def pc(self) -> Character: ...
+    def party(self) -> list[Character]: ...
     def get_character(self, char_id: str) -> Character: ...
     def get_item(self, item_id: str) -> Item: ...
     def resolve_item_id(self, ref: str) -> str: ...
     def npcs(self) -> list[Character]: ...
+    def set_equipped(self, char_id: str, item_ids: list[str]) -> None: ...
 
     # --- protected mutators (dispatcher- and combat-boundary-only) ---
     def adjust_gold(self, char_id: str, delta: int) -> None: ...
@@ -45,6 +47,9 @@ class InMemoryRepository:
 
     def pc(self) -> Character:
         return self._chars[self._pc_id]
+
+    def party(self) -> list[Character]:
+        return [c for c in self._chars.values() if c.kind == "pc"]
 
     def npcs(self) -> list[Character]:
         return [c for c in self._chars.values() if c.kind == "npc"]
@@ -135,3 +140,7 @@ class InMemoryRepository:
     def set_conditions(self, char_id: str, conditions: list[str]) -> None:
         """Absolute condition set (D7)."""
         self.get_character(char_id).conditions = list(conditions)
+
+    def set_equipped(self, char_id: str, item_ids: list[str]) -> None:
+        """Absolute equipped loadout (item ids the character wears/wields)."""
+        self.get_character(char_id).equipped = list(item_ids)
