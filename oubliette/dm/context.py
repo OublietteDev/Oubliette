@@ -14,7 +14,7 @@ from ..state.repository import Repository
 
 
 def build_context(repo: Repository, scene: str = "", recent: list[str] | None = None,
-                  canon: list[CanonRecord] | None = None) -> str:
+                  canon: list[CanonRecord] | None = None, location: str | None = None) -> str:
     pc = repo.pc()
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
@@ -31,7 +31,14 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
         f"PARTY: {pc.name} (id: {pc.id}) — {pc.hp}/{pc.max_hp} HP, {pc.gold}g, {pc.xp} XP; "
         f"carrying {inv}."
     )
+    # Only NPCs whose home is the party's current location are "present" in the
+    # scene — this keeps the prompt scoped as the cast grows. An NPC with no home
+    # is "nowhere in particular" and isn't placed in any scene. Everyone remains
+    # retrievable via canon search regardless of where they are. When no location
+    # is known (e.g. a custom seed with no pack), fall back to showing all NPCs.
     npcs = repo.npcs()
+    if location is not None:
+        npcs = [n for n in npcs if n.home_location == location]
     if npcs:
         lines.append("PRESENT (NPCs you may reference by id):")
         for n in npcs:

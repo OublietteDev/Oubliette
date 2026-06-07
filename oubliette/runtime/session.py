@@ -23,11 +23,12 @@ from ..state.repository import Repository
 
 class Session:
     def __init__(self, store: EventStore, repo: Repository, canon: CanonStore,
-                 scene: str = DEFAULT_SCENE) -> None:
+                 scene: str = DEFAULT_SCENE, location: str | None = None) -> None:
         self.store = store
         self.repo = repo
         self.canon = canon
         self.scene = scene          # opening location prose (from the content pack)
+        self.location = location    # the party's current Place id (scopes present NPCs)
 
     @classmethod
     def open(cls, store: EventStore, seed: Callable[[], Repository] | None = None) -> "Session":
@@ -38,11 +39,13 @@ class Session:
             repo: Repository = world.repository
             authored_canon = world.canon
             scene = world.scene
+            location = world.location
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
         else:
             repo = seed()
             authored_canon = []
             scene = DEFAULT_SCENE
+            location = None
             marker = {}
         canon = CanonStore()
         # Seed authored canon (slug ids) BEFORE replay so runtime 'canon-N' records
@@ -51,7 +54,7 @@ class Session:
         for rec in authored_canon:
             canon.add(rec)
         events = store.read_all()
-        session = cls(store, repo, canon, scene=scene)
+        session = cls(store, repo, canon, scene=scene, location=location)
         if events:
             replay(events, repo, canon)     # existing session: rebuild to current
         else:

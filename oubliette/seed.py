@@ -69,6 +69,7 @@ def seed_world() -> InMemoryRepository:
         price_list={i: p for i, _, p in THOM_STOCK},
         description="A leather-goods merchant; cautious, but greedy when flattered.",
         disposition="cautious and shrewd; greedy when flattered, quick to suspect a hard sell",
+        home_location="brightvale_market",
     )
 
     return InMemoryRepository(characters=[pc, thom], items=ITEMS, pc_id="pc")

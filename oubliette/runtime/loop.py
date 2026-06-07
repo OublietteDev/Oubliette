@@ -54,6 +54,7 @@ class TurnLoop:
         self.debug = debug or DebugLog()
         # Scene comes from the content pack (via the session); an explicit arg overrides.
         self.scene = scene if scene is not None else session.scene
+        self.location = session.location    # current Place id → scopes present NPCs
         self.dispatcher = Dispatcher(session.repo, session.canon)
         self.history: list[str] = []   # short-term continuity beats (gap G5)
 
@@ -61,7 +62,8 @@ class TurnLoop:
         # Retrieve world canon relevant to this turn → context (long-term memory, G4).
         canon_hits = self.session.canon.search(player_text)
         context = build_context(
-            self.repo, self.scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits)
+            self.repo, self.scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits,
+            location=self.location)
         assessment = await self.brain.assess(player_text, context)
         # The PLAYER_MESSAGE event carries the raw text + the parsed intent (§4.1).
         self.session.emit_log(

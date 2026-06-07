@@ -53,6 +53,7 @@ class LoadedWorld:
     repository: InMemoryRepository
     canon: list[CanonRecord]
     scene: str
+    location: str            # the start Place id — the party's current location
     pack_id: str
     pack_version: str
 
@@ -236,6 +237,7 @@ def _build_npc(n: NPC, statblocks: dict[str, StatBlock]) -> Character:
         price_list=dict(n.price_list),
         description=n.description,
         disposition=n.disposition,
+        home_location=n.home_location,
         **extra,
     )
 
@@ -287,5 +289,6 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
 
     return LoadedWorld(
         repository=repo, canon=_authored_canon(npcs, places), scene=scene,
+        location=scenario.start_location,
         pack_id=manifest.id, pack_version=manifest.version,
     )
