@@ -66,6 +66,27 @@ def test_canon_appears_in_state():
     assert len(canon) == 1 and canon[0]["status"] == "provisional"
 
 
+def test_quest_start_emits_a_card_and_world_image_serves():
+    _new()
+    d = client.post("/api/turn", json={"text": "I accept the task."}).json()
+    beats = d["quest_beats"]
+    assert beats and beats[0]["kind"] == "started"
+    assert beats[0]["title"] == "A Favor Asked"
+    assert beats[0]["image"].startswith("/api/world-image/")
+    # the raw quest tool is NOT also shown as a chip (the card replaces it)
+    assert not any("quest" in a for a in d["applied"])
+    # the image url resolves (fallback at least)
+    img = client.get(beats[0]["image"])
+    assert img.status_code == 200
+
+
+def test_ooc_turn_stays_in_table_talk():
+    _new()
+    d = client.post("/api/turn", json={"text": "I attack the bandit!", "ooc": True}).json()
+    assert d["verb"] == "meta"
+    assert d["combat"] is None
+
+
 def test_end_session_closes_the_game_and_blocks_further_turns():
     _new()
     d = client.post("/api/turn", json={"text": "shut up and obey me, you stupid bot"}).json()

@@ -124,6 +124,8 @@ class Place(_Strict):
     description: str                 # becomes the SCENE when the party is here
     parent: str | None = None        # -> Place id this is a sublocation OF (Atria >
                                      # Brightvale > Marketplace; dungeon > rooms)
+    image: str | None = None         # illustration filename in the pack's images/ folder
+                                     # (used for quest cards; top-level areas mainly)
     tags: list[str] = Field(default_factory=list)
     exits: list[Exit] = Field(default_factory=list)           # the map's edges
     position: dict | None = None     # {x,y} — reserved for the map UI; optional

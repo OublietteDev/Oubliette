@@ -40,7 +40,7 @@ def test_quest_store_status_notes_and_active():
 # --- dispatcher -------------------------------------------------------------
 def test_dispatcher_starts_and_updates_quests():
     qs = QuestStore()
-    qs.add(Quest(id="quest-0", title="An errand"))
+    qs.add(Quest(id="quest-0", title="An errand", status="completed"))  # not active → won't block a new start
     disp = Dispatcher(None, None, None, qs)
 
     started = disp.resolve(StartQuest(title="A new goal", text="do the thing", reason="r"))
@@ -51,6 +51,17 @@ def test_dispatcher_starts_and_updates_quests():
 
     with pytest.raises(ToolApplyError):
         disp.resolve(UpdateQuest(quest_id="quest-999", note="nope", reason="r"))
+
+
+def test_only_one_active_quest_at_a_time():
+    qs = QuestStore()
+    qs.add(Quest(id="quest-0", title="The current job", status="active"))
+    disp = Dispatcher(None, None, None, qs)
+    with pytest.raises(ToolApplyError):
+        disp.resolve(StartQuest(title="A second job", reason="r"))   # already one active
+    # once it's done, a new one is allowed
+    qs.update("quest-0", status="completed")
+    assert disp.resolve(StartQuest(title="A second job", reason="r")).quest_start is not None
 
 
 # --- session + replay -------------------------------------------------------

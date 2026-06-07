@@ -20,7 +20,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from ..content.loader import DEFAULT_PACK, available_packs
+from ..content.loader import DEFAULT_PACK, _PACKS_ROOT, available_packs
 from ..journal.store import Journal, JournalStore
 from ..record.events import EventKind, StateOp
 from ..record.store import SqliteEventStore
@@ -141,6 +141,41 @@ def _describe_applied(rt) -> str:
     return f"{rt.tool}: {TurnLoop._ops_summary(rt.ops)}"
 
 
+def _top_location_id() -> str | None:
+    """The party's enclosing top-level area (walk up the parent chain) — quest-card
+    illustrations key off this, not the specific sub-room."""
+    places = GAME.session.places
+    cur = GAME.session.location
+    seen: set = set()
+    while cur in places and cur not in seen:
+        seen.add(cur)
+        parent = places[cur].parent
+        if not parent:
+            break
+        cur = parent
+    return cur
+
+
+def _quest_beats(report) -> list[dict]:
+    """Visible quest moments (start/update/complete) for the chat stream, with the
+    current area's illustration. Computed from the turn's tool calls — the DM never
+    sees or manages these cards."""
+    top = _top_location_id() or "_"
+    image = f"/api/world-image/{top}"
+    beats: list[dict] = []
+    for rt in report.applied:
+        if rt.quest_start is not None:
+            beats.append({"kind": "started", "title": rt.quest_start.title, "detail": "", "image": image})
+        elif rt.quest_update is not None:
+            q = GAME.session.quests.get(rt.quest_update.quest_id)
+            title = q.title if q is not None else rt.quest_update.quest_id
+            status = rt.quest_update.status
+            kind = status if status in ("completed", "failed") else "updated"
+            beats.append({"kind": kind, "title": title,
+                          "detail": rt.quest_update.note or "", "image": image})
+    return beats
+
+
 def _turn_payload(report) -> dict:
     roll = None
     if report.roll_outcome is not None and report.assessment.roll is not None:
@@ -156,7 +191,10 @@ def _turn_payload(report) -> dict:
     return {
         "narration": report.narration,
         "roll": roll,
-        "applied": [_describe_applied(rt) for rt in report.applied],
+        # quest tools surface as their own cards (quest_beats), not raw chips
+        "applied": [_describe_applied(rt) for rt in report.applied
+                    if rt.quest_start is None and rt.quest_update is None],
+        "quest_beats": _quest_beats(report),
         "combat": combat,
         "trade": report.trade_open.model_dump() if report.trade_open is not None else None,
         "meta_notice": report.meta_notice,
@@ -183,6 +221,19 @@ async def index() -> FileResponse:
 @app.get("/api/state")
 async def get_state() -> JSONResponse:
     return JSONResponse({"state": _snapshot(), "model": GAME.client_name})
+
+
+@app.get("/api/world-image/{place_id}")
+async def world_image(place_id: str) -> FileResponse:
+    """A place's illustration (for quest cards). Serves the pack's image if the
+    place has one, else a tasteful fallback so cards always look complete."""
+    node = GAME.session.places.get(place_id)
+    if node is not None and node.image and "/" not in node.image and "\\" not in node.image:
+        path = _PACKS_ROOT / (GAME.pack_id or "") / "images" / node.image
+        if path.is_file():
+            return FileResponse(path, headers={"Cache-Control": "max-age=86400"})
+    return FileResponse(STATIC / "img" / "quest-fallback.svg",
+                        headers={"Cache-Control": "max-age=86400"})
 
 
 @app.post("/api/turn")

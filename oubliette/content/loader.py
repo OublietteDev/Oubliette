@@ -53,6 +53,7 @@ class PlaceNode:
     description: str
     parent: str | None
     exits: tuple[str, ...]        # destination Place ids
+    image: str | None = None     # illustration filename (in the pack's images/ folder)
 
 
 @dataclass
@@ -335,7 +336,8 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     place_by_id = {p.id: p for p in places}
     scene = scenario.scene_override or place_by_id[scenario.start_location].description
     place_nodes = {p.id: PlaceNode(id=p.id, name=p.name, description=p.description,
-                                   parent=p.parent, exits=tuple(e.to for e in p.exits))
+                                   parent=p.parent, exits=tuple(e.to for e in p.exits),
+                                   image=p.image)
                    for p in places}
 
     return LoadedWorld(

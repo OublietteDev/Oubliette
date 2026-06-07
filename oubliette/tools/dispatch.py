@@ -70,6 +70,9 @@ class Dispatcher:
         if isinstance(call, EndSession):
             return ResolvedTool(call.tool, call.reason, end_session=True)
         if isinstance(call, StartQuest):
+            if self.quests is not None and self.quests.active():
+                raise ToolApplyError(
+                    "a quest is already active — complete or fail it before starting another")
             return ResolvedTool(call.tool, call.reason, quest_start=call)
         if isinstance(call, UpdateQuest):
             if self.quests is None or self.quests.get(call.quest_id) is None:

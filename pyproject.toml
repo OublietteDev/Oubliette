@@ -26,8 +26,11 @@ build-backend = "setuptools.build_meta"
 include = ["oubliette*"]
 
 [tool.setuptools.package-data]
-# Authored content packs are data files shipped inside the package.
-"oubliette.content" = ["packs/**/*.json"]
+# Authored content packs are data files shipped inside the package (incl. images).
+"oubliette.content" = ["packs/**/*.json", "packs/**/*.png", "packs/**/*.jpg",
+                        "packs/**/*.jpeg", "packs/**/*.webp", "packs/**/*.svg"]
+# The game's single-page UI + illustrations.
+"oubliette.app" = ["static/**/*"]
 # The Forge's single-page UI.
 "oubliette.creator" = ["static/*"]
 
