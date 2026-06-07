@@ -58,6 +58,12 @@ rewrites. Everything runs with a **scripted (offline) DM** — no API key requir
   the selection to the DM as a chat proposal — it rolls persuasion/deception and
   settles at an *adjusted* price (the soft economy, §8/§11, wired to the window).
   The merchant's priced stock is now in the DM's context too, so it can negotiate.
+- **Phase 8** (tag `phase-8`): a **player menu** (extensible registry — add an entry
+  to `MENU_ITEMS`) and the first item, a **player journal**: modular sections with
+  status-grouped entries (e.g. Quests → In-Progress / Completed) and markdown notes.
+  The journal is **deliberately invisible to the DM** — stored in its own table,
+  never read into context — so player notes can't induce hallucination or bloat the
+  prompt. (Map, Bestiary, Party Sheets, Inventory are stubbed "soon" menu slots.)
 
 ## Quickstart
 
@@ -99,6 +105,7 @@ python -m oubliette.app.repl             # interactive REPL — uses the REAL mo
 | `combat/` | the combat boundary: `EncounterRequest` → placeholder engine → `CombatResult` |
 | `canon/` | the canonization lifecycle: `CanonRecord`s + the canon store with keyword retrieval |
 | `trade/` | the trade window (summoned tool): bounded merchant view + buy/sell as validated transacts |
+| `journal/` | the player journal store (SQLite) — player-owned notes, never read into the DM context |
 | `dm/` | the DM brain (assess + resolve) and the per-turn `context` builder (state/scene/canon/recent) |
 | `runtime/` | the turn loop: assess → (combat \| roll → resolve) → apply → render |
 | `app/` | the web server (`server.py` + `static/index.html`) and the terminal REPL |

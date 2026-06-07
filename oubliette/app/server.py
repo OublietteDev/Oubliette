@@ -20,6 +20,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+from ..journal.store import Journal, JournalStore
 from ..record.events import EventKind
 from ..record.store import SqliteEventStore
 from ..record.rng import Rng
@@ -48,6 +49,7 @@ class _Game:
     def _open(self) -> None:
         self.store = SqliteEventStore(DB_PATH)
         self.session = Session.open(self.store)
+        self.journal = JournalStore(DB_PATH)   # player notes — never enters DM context
         client, self.client_name = _pick_client(force_scripted=False)
         rng = Rng(seed=1234, record=self.session.emit_log)
         self.loop = TurnLoop(self.session, rng, Brain(client))
@@ -60,6 +62,7 @@ class _Game:
 
     def reset(self) -> None:
         self.store.close()
+        self.journal.close()
         if os.path.exists(DB_PATH):
             os.remove(DB_PATH)
         self._open()
@@ -253,6 +256,20 @@ async def post_checkout(body: CheckoutIn) -> JSONResponse:
         except StateError:
             trade = None
         return JSONResponse({"ok": ok, "error": error, "trade": trade, "state": _snapshot()})
+
+
+@app.get("/api/journal")
+async def get_journal() -> JSONResponse:
+    """Player notes. Deliberately separate from the turn path — never enters the
+    DM's context (so it can't induce hallucination or bloat the prompt)."""
+    return JSONResponse(GAME.journal.get().model_dump())
+
+
+@app.put("/api/journal")
+async def put_journal(body: Journal) -> JSONResponse:
+    async with GAME.lock:
+        GAME.journal.put(body)
+        return JSONResponse({"ok": True})
 
 
 @app.post("/api/new")

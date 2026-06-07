@@ -121,6 +121,31 @@ def test_stream_endpoint_yields_deltas_then_done():
     assert streamed.strip() == done["narration"].strip()
 
 
+def test_journal_roundtrips_and_is_invisible_to_the_dm():
+    _new()
+    assert client.get("/api/journal").json()["sections"] == []
+
+    doc = {"sections": [{
+        "id": "s1", "name": "Quests",
+        "entries": [{"id": "e1", "title": "The Missing Children",
+                     "status": "In-Progress", "body": "Search the **caves** past Brightvale."}],
+    }]}
+    assert client.put("/api/journal", json=doc).json()["ok"] is True
+
+    got = client.get("/api/journal").json()
+    assert got["sections"][0]["name"] == "Quests"
+    assert got["sections"][0]["entries"][0]["title"] == "The Missing Children"
+
+    # The guarantee: journal content NEVER reaches the DM's context, and writing it
+    # produces no game events.
+    from oubliette.app.server import GAME
+    from oubliette.dm.context import build_context
+    from oubliette.record.events import EventKind
+    ctx = build_context(GAME.session.repo, "a scene")
+    assert "Missing Children" not in ctx and "caves" not in ctx
+    assert GAME.session.store.of_kind(EventKind.TOOL_APPLIED) == []
+
+
 def test_index_page_served():
     r = client.get("/")
     assert r.status_code == 200

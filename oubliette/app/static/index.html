@@ -147,6 +147,45 @@
   .trade-row button:hover:not(:disabled) { border-color: var(--accent); }
   .trade-row button:disabled { opacity: .35; cursor: default; }
   .trade-empty { color: var(--faint); font-style: italic; font-size: 13px; }
+
+  /* player menu */
+  .menu-wrap { position: relative; }
+  .menu-pop { position: absolute; right: 0; top: 44px; min-width: 230px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; z-index: 60; }
+  .menu-pop.hidden { display: none; }
+  .menu-item { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 8px; cursor: pointer; color: var(--ink); font-size: 14px; }
+  .menu-item:hover:not(.disabled) { background: #2a231d; }
+  .menu-item.disabled { color: var(--faint); cursor: default; }
+  .menu-item .ico { width: 20px; text-align: center; }
+  .menu-item .soon { margin-left: auto; font-size: 10px; color: var(--faint); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; text-transform: uppercase; letter-spacing: .06em; }
+
+  /* journal */
+  .journal-modal { width: min(880px, 94vw); height: 86vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .journal-head { display: flex; align-items: center; gap: 12px; padding: 15px 18px; border-bottom: 1px solid var(--line); }
+  .journal-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 18px; }
+  .journal-note { font-size: 12px; color: var(--faint); font-style: italic; }
+  .journal-head .spacer { flex: 1; }
+  .journal-body { display: grid; grid-template-columns: 210px 1fr; flex: 1; min-height: 0; }
+  .journal-sections { border-right: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+  .j-seclist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .j-seclist li { padding: 8px 10px; border-radius: 8px; cursor: pointer; font-family: var(--serif); font-size: 14.5px; color: var(--ink); }
+  .j-seclist li:hover { background: #241f1c; }
+  .j-seclist li.active { background: #2a231d; color: var(--gold); }
+  .journal-content { padding: 16px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .j-sechead { display: flex; align-items: center; gap: 10px; }
+  .j-secname { font-family: var(--serif); font-size: 17px; color: var(--gold); flex: 1; }
+  .j-secactions, .j-eacts { display: flex; gap: 6px; }
+  .j-secactions .act, .j-eacts .act { font-size: 12px; padding: 5px 9px; }
+  .j-group { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--faint); margin-top: 6px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  .j-entry { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .j-etop { display: flex; align-items: center; gap: 10px; }
+  .j-etitle { font-family: var(--serif); font-size: 15px; flex: 1; }
+  .j-ebody { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+  .j-in, .j-ta { width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 14px; }
+  .j-ta { min-height: 92px; resize: vertical; line-height: 1.45; }
+  .j-erow { display: flex; gap: 8px; }
+  .j-save { font: inherit; font-weight: 600; cursor: pointer; border: none; border-radius: 8px; padding: 7px 14px; background: linear-gradient(180deg, var(--accent), #9c5f2e); color: #fff; }
+  .j-empty { color: var(--faint); font-style: italic; }
+
   .stepper { display: flex; align-items: center; gap: 6px; }
   .stepper button { width: 26px; height: 26px; padding: 0; font-size: 15px; line-height: 1; border-radius: 6px; border: 1px solid var(--line); background: #2a231d; color: var(--ink); cursor: pointer; }
   .stepper button:hover:not(:disabled) { border-color: var(--accent); }
@@ -167,6 +206,10 @@
       <div class="tag">Join the Phantom's Table</div>
     </div>
     <div class="spacer"></div>
+    <div class="menu-wrap">
+      <button class="act" id="menu-btn">☰ Menu</button>
+      <div class="menu-pop hidden" id="menu-pop"></div>
+    </div>
     <span class="badge" id="model-badge">…</span>
     <button class="act" id="new-btn">New Game</button>
   </header>
@@ -231,6 +274,24 @@
         <button class="act" id="trade-haggle" disabled>Haggle</button>
         <button id="trade-settle" disabled>Settle</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div id="journal-overlay" class="overlay hidden">
+  <div class="journal-modal">
+    <div class="journal-head">
+      <h2>Journal</h2>
+      <span class="journal-note">private — the DM cannot read this</span>
+      <div class="spacer"></div>
+      <button class="act" id="journal-close">Close</button>
+    </div>
+    <div class="journal-body">
+      <div class="journal-sections">
+        <ul class="j-seclist" id="j-sections"></ul>
+        <button class="act j-add" id="j-add-section">+ Section</button>
+      </div>
+      <div class="journal-content" id="j-content"></div>
     </div>
   </div>
 </div>
@@ -422,7 +483,7 @@ $("trade-done").addEventListener("click", closeTrade);
 $("trade-settle").addEventListener("click", settle);
 $("trade-haggle").addEventListener("click", doHaggle);
 $("trade-overlay").addEventListener("click", (e) => { if (e.target.id === "trade-overlay") closeTrade(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTrade(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeTrade(); closeJournal(); closeMenu(); } });
 
 function renderState(s) {
   $("scene").textContent = s.scene || "";
@@ -547,6 +608,140 @@ $("new-btn").addEventListener("click", async () => {
   addMessage("System", "A new tale begins. Describe what you do.", "system");
   renderState(data.state);
 });
+
+// --- player menu (extensible registry) ------------------------------------
+const MENU_ITEMS = [
+  { key: "journal",   label: "Journal",          icon: "📖", enabled: true,  open: () => openJournal() },
+  { key: "party",     label: "Party Sheets",     icon: "👥", enabled: false },
+  { key: "inventory", label: "Inventory",        icon: "🎒", enabled: false },
+  { key: "bestiary",  label: "Bestiary & Rules", icon: "📚", enabled: false },
+  { key: "map",       label: "Map",              icon: "🗺️", enabled: false },
+];
+const menuPop = $("menu-pop");
+function renderMenu() {
+  menuPop.innerHTML = "";
+  MENU_ITEMS.forEach(it => {
+    const row = el("div", "menu-item" + (it.enabled ? "" : " disabled"));
+    row.appendChild(el("span", "ico", it.icon));
+    row.appendChild(el("span", null, it.label));
+    if (!it.enabled) row.appendChild(el("span", "soon", "soon"));
+    else row.addEventListener("click", () => { closeMenu(); it.open(); });
+    menuPop.appendChild(row);
+  });
+}
+function toggleMenu() { menuPop.classList.contains("hidden") ? openMenu() : closeMenu(); }
+function openMenu() { renderMenu(); menuPop.classList.remove("hidden"); }
+function closeMenu() { menuPop.classList.add("hidden"); }
+$("menu-btn").addEventListener("click", (e) => { e.stopPropagation(); toggleMenu(); });
+document.addEventListener("click", (e) => {
+  if (!menuPop.classList.contains("hidden") && !e.target.closest(".menu-wrap")) closeMenu();
+});
+
+// --- journal (player-owned; never seen by the DM) -------------------------
+let journal = { sections: [] };
+let currentSection = null;
+
+function genId() { return "j" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function cleanJournal() {
+  return { sections: journal.sections.map(s => ({
+    id: s.id, name: s.name,
+    entries: s.entries.map(e => ({ id: e.id, title: e.title || "", status: e.status || "", body: e.body || "" })),
+  })) };
+}
+async function saveJournal() {
+  try { await fetch("/api/journal", { method: "PUT", headers: {"content-type": "application/json"}, body: JSON.stringify(cleanJournal()) }); }
+  catch (e) { /* keep editing even if a save blips */ }
+}
+async function openJournal() {
+  try {
+    const data = await (await fetch("/api/journal")).json();
+    journal = data && data.sections ? data : { sections: [] };
+  } catch (e) { journal = { sections: [] }; }
+  currentSection = journal.sections.length ? journal.sections[0].id : null;
+  renderSections(); renderContent();
+  $("journal-overlay").classList.remove("hidden");
+}
+function closeJournal() { $("journal-overlay").classList.add("hidden"); }
+
+function renderSections() {
+  const list = $("j-sections"); list.innerHTML = "";
+  journal.sections.forEach(s => {
+    const li = el("li", s.id === currentSection ? "active" : null, s.name);
+    li.addEventListener("click", () => { currentSection = s.id; renderSections(); renderContent(); });
+    list.appendChild(li);
+  });
+  if (!journal.sections.length) list.appendChild(el("div", "j-empty", "no sections yet"));
+}
+
+function renderContent() {
+  const c = $("j-content"); c.innerHTML = "";
+  const sec = journal.sections.find(s => s.id === currentSection);
+  if (!sec) { c.appendChild(el("div", "j-empty", "Add a section to begin — e.g. Quests, NPCs, Locations.")); return; }
+  const head = el("div", "j-sechead");
+  head.appendChild(el("div", "j-secname", sec.name));
+  const acts = el("div", "j-secactions");
+  const add = el("button", "act", "+ Entry"); add.onclick = () => addEntry(sec);
+  const ren = el("button", "act", "Rename"); ren.onclick = () => renameSection(sec);
+  const del = el("button", "act", "Delete"); del.onclick = () => deleteSection(sec);
+  acts.append(add, ren, del); head.appendChild(acts); c.appendChild(head);
+
+  if (!sec.entries.length) { c.appendChild(el("div", "j-empty", "No entries yet. Add one with “+ Entry”.")); return; }
+  const groups = {}, order = [];
+  sec.entries.forEach(e => { const k = e.status || ""; if (!(k in groups)) { groups[k] = []; order.push(k); } groups[k].push(e); });
+  order.forEach(k => {
+    if (k) c.appendChild(el("div", "j-group", k));
+    groups[k].forEach(e => c.appendChild(entryCard(sec, e)));
+  });
+}
+
+function entryCard(sec, e) {
+  const card = el("div", "j-entry");
+  if (e._editing) {
+    const ti = el("input", "j-in"); ti.placeholder = "Title"; ti.value = e.title || "";
+    const st = el("input", "j-in"); st.placeholder = "Status (optional — e.g. In-Progress, Completed)"; st.value = e.status || "";
+    const bd = el("textarea", "j-ta"); bd.placeholder = "Notes (markdown ok)"; bd.value = e.body || "";
+    const save = el("button", "j-save", "Save");
+    save.onclick = () => { e.title = ti.value.trim(); e.status = st.value.trim(); e.body = bd.value; delete e._editing; delete e._isNew; saveJournal(); renderContent(); };
+    const cancel = el("button", "act", "Cancel");
+    cancel.onclick = () => { if (e._isNew) sec.entries = sec.entries.filter(x => x !== e); delete e._editing; delete e._isNew; renderContent(); };
+    const row = el("div", "j-erow"); row.append(save, cancel);
+    card.append(ti, st, bd, row);
+    setTimeout(() => ti.focus(), 0);
+  } else {
+    const top = el("div", "j-etop");
+    top.appendChild(el("div", "j-etitle", e.title || "(untitled)"));
+    const acts = el("div", "j-eacts");
+    const ed = el("button", "act", "Edit"); ed.onclick = () => { e._editing = true; renderContent(); };
+    const del = el("button", "act", "Delete"); del.onclick = () => { if (confirm("Delete this entry?")) { sec.entries = sec.entries.filter(x => x !== e); saveJournal(); renderContent(); } };
+    acts.append(ed, del); top.appendChild(acts); card.appendChild(top);
+    if (e.body) { const b = el("div", "j-ebody"); b.innerHTML = md(e.body); card.appendChild(b); }
+  }
+  return card;
+}
+
+function addSection() {
+  const name = prompt("New section name (e.g. Quests, NPCs, Locations, Bestiary):");
+  if (!name || !name.trim()) return;
+  const s = { id: genId(), name: name.trim(), entries: [] };
+  journal.sections.push(s); currentSection = s.id; saveJournal(); renderSections(); renderContent();
+}
+function renameSection(sec) {
+  const name = prompt("Section name:", sec.name);
+  if (!name || !name.trim()) return;
+  sec.name = name.trim(); saveJournal(); renderSections(); renderContent();
+}
+function deleteSection(sec) {
+  if (!confirm(`Delete the “${sec.name}” section and its entries?`)) return;
+  journal.sections = journal.sections.filter(s => s !== sec);
+  currentSection = journal.sections.length ? journal.sections[0].id : null;
+  saveJournal(); renderSections(); renderContent();
+}
+function addEntry(sec) {
+  sec.entries.push({ id: genId(), title: "", status: "", body: "", _editing: true, _isNew: true });
+  renderContent();
+}
+$("journal-close").addEventListener("click", closeJournal);
+$("j-add-section").addEventListener("click", addSection);
 
 async function boot() {
   const res = await fetch("/api/state");
