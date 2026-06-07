@@ -271,6 +271,24 @@ def _build_npc(n: NPC, statblocks: dict[str, StatBlock]) -> Character:
 
 
 # --- public API --------------------------------------------------------------
+def available_packs(packs_root: Path | None = None) -> list[dict]:
+    """List the worlds that can be played: every pack folder with a manifest,
+    as {id, name, version}. Used by the game's New Game world-picker."""
+    root = packs_root or _PACKS_ROOT
+    out: list[dict] = []
+    if root.is_dir():
+        for d in sorted(p for p in root.iterdir() if p.is_dir()):
+            try:
+                manifest = json.loads((d / "pack.json").read_text(encoding="utf-8"))
+            except (FileNotFoundError, json.JSONDecodeError, OSError):
+                continue
+            if not isinstance(manifest, dict):
+                continue
+            out.append({"id": d.name, "name": manifest.get("name") or d.name,
+                        "version": manifest.get("version")})
+    return out
+
+
 def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> LoadedWorld:
     """Read `packs_root/pack_id/*.json` -> validate (schema + linter) -> build the
     authoritative baseline. Raises `PackValidationError` (aggregated) on any

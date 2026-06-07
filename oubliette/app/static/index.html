@@ -125,6 +125,16 @@
   /* trade window (modal) */
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.62); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 50; }
   .overlay.hidden { display: none; }
+  .newgame-modal { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; width: min(440px, 92vw); max-height: 84vh; overflow-y: auto; box-shadow: var(--shadow); }
+  .newgame-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+  .newgame-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 20px; }
+  .newgame-note { padding: 12px 20px 0; color: var(--muted); font-size: 12px; font-style: italic; }
+  .newgame-list { padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 10px; }
+  .world-card { text-align: left; cursor: pointer; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; color: var(--ink); font: inherit; transition: border-color .15s, background .15s; }
+  .world-card:hover { border-color: var(--gold); background: #2a231d; }
+  .world-card.current { border-color: var(--accent-2); }
+  .world-card .wc-name { font-family: var(--serif); font-size: 16px; color: var(--gold); }
+  .world-card .wc-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
   .trade-modal { width: min(740px, 92vw); max-height: 86vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
   .trade-head { display: flex; align-items: center; gap: 14px; padding: 15px 18px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(0,0,0,.25), transparent); }
   .trade-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 18px; }
@@ -278,6 +288,16 @@
       </div>
     </aside>
   </main>
+
+<div id="newgame-overlay" class="overlay hidden">
+  <div class="newgame-modal">
+    <div class="newgame-head"><h2>Choose a world</h2>
+      <div class="spacer"></div>
+      <button class="act" id="newgame-cancel">Cancel</button></div>
+    <div class="newgame-note">Starting a new game erases your current save.</div>
+    <div class="newgame-list" id="newgame-list"></div>
+  </div>
+</div>
 
 <div id="trade-overlay" class="overlay hidden">
   <div class="trade-modal">
@@ -626,16 +646,36 @@ sendBtn.addEventListener("click", () => send());
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
 });
-$("new-btn").addEventListener("click", async () => {
-  if (busy) return;
-  if (!confirm("Start a new game? This erases the current save.")) return;
-  const res = await fetch("/api/new", { method: "POST" });
+async function openNewGame() {
+  const { packs, current } = await (await fetch("/api/packs")).json();
+  const list = $("newgame-list");
+  list.innerHTML = "";
+  packs.forEach(p => {
+    const card = el("button", "world-card" + (p.id === current ? " current" : ""));
+    card.innerHTML = `<div class="wc-name">${escapeHtml(p.name)}</div>
+      <div class="wc-meta">v${escapeHtml(p.version || "?")}${p.id === current ? " · current world" : ""}</div>`;
+    card.addEventListener("click", () => startNewGame(p.id, p.name));
+    list.appendChild(card);
+  });
+  $("newgame-overlay").classList.remove("hidden");
+}
+function closeNewGame() { $("newgame-overlay").classList.add("hidden"); }
+async function startNewGame(packId, packName) {
+  if (!confirm(`Start a new game in “${packName}”? This erases the current save.`)) return;
+  closeNewGame();
+  const res = await fetch("/api/new", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pack_id: packId }),
+  });
   const data = await res.json();
   closeTrade();
   log.innerHTML = "";
-  addMessage("System", "A new tale begins. Describe what you do.", "system");
+  addMessage("System", `A new tale begins in ${packName}. Describe what you do.`, "system");
   renderState(data.state);
-});
+}
+$("new-btn").addEventListener("click", () => { if (!busy) openNewGame(); });
+$("newgame-cancel").addEventListener("click", closeNewGame);
+$("newgame-overlay").addEventListener("click", (e) => { if (e.target.id === "newgame-overlay") closeNewGame(); });
 
 // --- player menu (extensible registry) ------------------------------------
 const MENU_ITEMS = [

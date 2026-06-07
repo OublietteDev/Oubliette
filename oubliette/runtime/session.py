@@ -32,6 +32,7 @@ class Session:
         self.start_scene: str = DEFAULT_SCENE
         self.location: str | None = None    # party's current Place id (scopes present NPCs)
         self.scene: str = DEFAULT_SCENE     # current location's prose
+        self.pack_id: str | None = None     # which content pack this campaign is playing
 
     def _scene_for(self, location: str | None) -> str:
         """The prose for a location — the pack's opening text at the start spot
@@ -42,16 +43,22 @@ class Session:
         return node.description if node is not None else self.start_scene
 
     @classmethod
-    def open(cls, store: EventStore, seed: Callable[[], Repository] | None = None) -> "Session":
-        # Default: seed the authored baseline from the default content pack. A
-        # custom `seed` (used by tests) bypasses the pack and skips pack pinning.
+    def open(cls, store: EventStore, seed: Callable[[], Repository] | None = None,
+             pack_id: str = DEFAULT_PACK) -> "Session":
+        # `pack_id` chooses the world for a NEW game; an EXISTING save pins its own
+        # pack in the start marker, which wins on reload. A custom `seed` (tests)
+        # bypasses the pack entirely.
+        events = store.read_all()
+        chosen_pack: str | None = None
         if seed is None:
-            world = load_pack(DEFAULT_PACK)
+            chosen_pack = _start_marker_pack(events) or pack_id
+            world = load_pack(chosen_pack)
             repo: Repository = world.repository
             authored_canon = world.canon
             places = world.places
             start_location = world.location
             start_scene = world.scene
+            chosen_pack = world.pack_id
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
         else:
             repo = seed()
@@ -66,7 +73,6 @@ class Session:
         # not the event log, so reload re-seeds it identically.
         for rec in authored_canon:
             canon.add(rec)
-        events = store.read_all()
         # The current location is the start, with every LOCATION_CHANGED folded over
         # it — so reload lands the party exactly where they last travelled to.
         location = start_location
@@ -80,6 +86,7 @@ class Session:
         session.start_scene = start_scene
         session.location = location
         session.scene = session._scene_for(location)
+        session.pack_id = chosen_pack
         if events:
             replay(events, repo, canon)     # existing session: rebuild to current
         else:
@@ -122,3 +129,11 @@ class Session:
         """Promote provisional → confirmed canon (spec §11)."""
         self.store.append(EventKind.CANON_PROMOTED, {"entity_id": entity_id, "reason": reason})
         self.canon.promote(entity_id)
+
+
+def _start_marker_pack(events: list[Event]) -> str | None:
+    """The pack id pinned on a save's session-start marker (None if absent)."""
+    for event in sorted(events, key=lambda e: e.seq):
+        if event.kind == EventKind.SESSION_MARKER.value and event.payload.get("marker") == "start":
+            return event.payload.get("pack_id")
+    return None

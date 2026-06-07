@@ -66,6 +66,24 @@ def test_canon_appears_in_state():
     assert len(canon) == 1 and canon[0]["status"] == "provisional"
 
 
+def test_packs_listing_and_new_game_switches_world():
+    _new()                                            # current world = brightvale
+    listing = client.get("/api/packs").json()
+    ids = [p["id"] for p in listing["packs"]]
+    assert "brightvale" in ids and "atria" in ids
+    assert listing["current"] == "brightvale"
+
+    # start a new game in Atria → the world (and its opening scene) actually change
+    d = client.post("/api/new", json={"pack_id": "atria"}).json()
+    assert d["pack_id"] == "atria"
+    assert "Brightvale" in d["state"]["scene"]        # Atria's opening scene text
+    assert client.get("/api/packs").json()["current"] == "atria"
+
+    # cleanup: leave the shared game back on brightvale for other tests
+    client.post("/api/new", json={"pack_id": "brightvale"})
+    assert client.get("/api/packs").json()["current"] == "brightvale"
+
+
 def test_trade_window_opens_and_buy_updates_state():
     _new()
     r = client.post("/api/turn", json={"text": "What do you have for sale?"})

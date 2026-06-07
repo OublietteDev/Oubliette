@@ -20,6 +20,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+from ..content.loader import DEFAULT_PACK, available_packs
 from ..journal.store import Journal, JournalStore
 from ..record.events import EventKind, StateOp
 from ..record.store import SqliteEventStore
@@ -44,11 +45,13 @@ class _Game:
     def __init__(self) -> None:
         self.lock = asyncio.Lock()
         self.client_name = "scripted"
+        self.pack_id = DEFAULT_PACK            # world for a new game (saves pin their own)
         self._open()
 
     def _open(self) -> None:
         self.store = SqliteEventStore(DB_PATH)
-        self.session = Session.open(self.store)
+        self.session = Session.open(self.store, pack_id=self.pack_id)
+        self.pack_id = self.session.pack_id or self.pack_id   # reflect the loaded/pinned world
         self.journal = JournalStore(DB_PATH)   # player notes — never enters DM context
         client, self.client_name = _pick_client(force_scripted=False)
         rng = Rng(seed=1234, record=self.session.emit_log)
@@ -60,11 +63,15 @@ class _Game:
         client, self.client_name = _pick_client(force_scripted=False)
         self.loop.brain = Brain(client)
 
-    def reset(self) -> None:
+    def new_game(self, pack_id: str | None = None) -> None:
+        """Erase the save and start fresh — in `pack_id` if given, else the same
+        world as before."""
         self.store.close()
         self.journal.close()
         if os.path.exists(DB_PATH):
             os.remove(DB_PATH)
+        if pack_id:
+            self.pack_id = pack_id
         self._open()
 
 
@@ -336,11 +343,21 @@ async def put_journal(body: Journal) -> JSONResponse:
         return JSONResponse({"ok": True})
 
 
+@app.get("/api/packs")
+async def get_packs() -> JSONResponse:
+    """The worlds a new game can start in, and which one is playing now."""
+    return JSONResponse({"packs": available_packs(), "current": GAME.pack_id})
+
+
+class NewGameIn(BaseModel):
+    pack_id: str | None = None     # which world to start; None keeps the current one
+
+
 @app.post("/api/new")
-async def post_new() -> JSONResponse:
+async def post_new(body: NewGameIn | None = None) -> JSONResponse:
     async with GAME.lock:
-        GAME.reset()
-        return JSONResponse({"state": _snapshot(), "model": GAME.client_name})
+        GAME.new_game(body.pack_id if body else None)
+        return JSONResponse({"state": _snapshot(), "model": GAME.client_name, "pack_id": GAME.pack_id})
 
 
 def main() -> None:
