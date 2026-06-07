@@ -233,3 +233,26 @@ Later arcs: map view · layered base set · chargen integration · test-play but
 4. **Test-play button → later nicety** **[LOCKED]**. For now the flow is: save the
    pack, then run `play.bat` to try it with the DM. Fine as-is; a button can come later.
 ```
+
+---
+
+## 10. Progress log — built since this v0.1 plan (2026-06-07)
+
+The Forge is built well past this plan. Shipped (git tags in parens):
+
+- **C1 open & check** (`forge-c1`), **C2 edit items + places** (`forge-c2`), **C3 edit
+  creatures / NPCs / opening setup** (`forge-c3`), **C4 non-coder polish** (`forge-c4`).
+  All five world pieces are editable; "pick, don't type" pickers throughout; ids hidden
+  and stable; saving backs up the previous version; broken packs report plain-language,
+  aggregated errors with "did you mean?" suggestions; per-section warning badges; a
+  "New world" scaffold. Collapsible sections (`d923239`).
+- **Lore section** (`authored-lore`): author world history/legend; the "About" field
+  autocompletes from existing characters and places.
+- **Sublocations** (`travel-and-sublocations`): a "Part of (area)" parent picker, so a
+  place can sit inside another (Atria ▸ Brightvale ▸ Marketplace; dungeon ▸ rooms).
+- **Illustrations** (`forge-illustrations`): a place's Illustration field — pick an image
+  and it's resized in the browser and stored in the pack's `images/` folder, with a
+  preview frame that mirrors the game's quest-card framing so you see the fit.
+
+**Resolution of the open questions:** forms went **hand-built** (the §9.3 fallback, as
+anticipated). Layered base-SRD packs and character creation remain future arcs.

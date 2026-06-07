@@ -526,3 +526,37 @@ When that transcript runs clean, the core loop is proven and everything else is 
 | §11 canonization | §10 lifecycle state machine |
 | §12 open/deferred | §13 |
 ```
+
+---
+
+## Progress log — engine features built since v0.2.1 (2026-06-07)
+
+Beyond the Phase 0–3 skeleton this spec defines, the following shipped (git tags in
+parens). The core invariants held throughout: code owns state, the LLM only proposes;
+every protected mutation is an event applied via one path; replay never rolls or calls a
+model. The **verb enum stayed closed** (no new verbs needed); new capabilities arrived as
+**tools** in the discriminated union, not verbs.
+
+- **Front-end & play UX:** web chat UI (`phase-4`), trade window (`phase-5`),
+  token-streaming narration (`phase-6`), trade basket + haggle (`phase-7`), player journal —
+  DM-invisible (`phase-8`), inventory panel (`phase-9`).
+- **Authored content:** the content pipeline (`content-p1`), authored canon from packs
+  (`authored-canon`), and authored **lore** with situational retrieval (`authored-lore`).
+- **Travel + world graph** (`travel-and-sublocations`): a `travel` tool moves the party
+  between places; the party's location is **event-sourced** (a LOCATION_CHANGED fold over the
+  start), so reload lands where you left off; present-NPCs and lore are scoped to the current
+  location and the areas that enclose it.
+- **Quests** (`quests`): emergent, DM-created (`start_quest` / `update_quest`), simple shape
+  (goal + status + notes), one active at a time, event-sourced; active quests injected into
+  context; rewards stay ordinary `transact`/`give` (renegotiable); visible quest cards with
+  location art (`quest-cards-ooc`, `forge-illustrations`).
+- **`end_session` tool** (`end-session`): the DM may gracefully close a hostile / bad-faith
+  game; recorded and persisted; the runtime then refuses further turns.
+- **Out-of-character toggle** (`be9a981`): an explicit player OOC signal replaces the model's
+  unreliable self-classification of `meta` (diagnosed from a real playtest where it broke
+  character on clearly in-character lines).
+- **Pack switching** (`pack-switching`): start a new game in any installed pack; a save pins
+  its own pack and reloads into it.
+
+Combat internals remain deferred (the §8 boundary stands). Authored quests, layered SRD packs,
+character creation, and a map view are the named future arcs.

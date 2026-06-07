@@ -396,3 +396,29 @@ as their own arcs, in that order.
    per-entity later. Loader should be agnostic (glob a type's directory if present).
 5. **Encounters / quests / factions schemas** — out of v1 scope; slot in as new files +
    linter rules without breaking schema_version 1 (additive).
+
+---
+
+## 10. Progress log — built since this v0.1 plan (2026-06-07)
+
+P1 shipped and the pipeline has grown (git tags in parens):
+
+- **P1 migration** (`content-p1`): strict per-entity schemas + a whole-pack
+  cross-reference linter (aggregated `PackValidationError`); the Brightvale seed migrated
+  to `content/packs/brightvale/*.json`; `seed_world()` replaced by `load_pack()`; proven by
+  repo-parity and byte-identical-replay tests.
+- **Authored canon from packs** (`authored-canon`): NPCs and places load as confirmed,
+  retrievable `CanonRecord`s (id = pack slug), so the DM's memory/retrieval works over
+  authored content. Re-seeded each load (not event-sourced).
+- **Lore content type** (`authored-lore`): `lore.json` (id / title / text / subjects / tags)
+  → authored lore the DM retrieves **by situation** (the loop's query includes the current
+  location, its parent areas, and who's present; a lore entry's subjects ride along as
+  search keywords). Shown in a generous WORLD LORE context section.
+- **Place graph + sublocations** (`travel-and-sublocations`): `Place.parent` makes a place a
+  sublocation of another; the linter checks parent resolution / no self-parent; the place
+  graph is carried into the runtime to power the **travel** tool.
+- **Place illustrations** (`forge-illustrations`): optional `Place.image` (a filename in the
+  pack's `images/` folder), served for quest cards; authored via The Forge.
+
+All additive — **schema_version is still 1**. Quests are now tracked at runtime (emergent,
+DM-created); **authored** quests in packs (the §9.5 item) remain a future addition.
