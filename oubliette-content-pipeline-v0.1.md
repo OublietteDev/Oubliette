@@ -251,7 +251,10 @@ class Scenario(BaseModel):
     start_location: str                   # → Place id
     scene_override: str | None = None     # optional: override the place description as the opening scene
     party_source: Literal["creator", "default"] = "creator"
-    default_party: list[dict] = []        # PC definitions used when party_source == "default" (demo/test)
+    default_party: list[dict] = []        # PC definitions used when party_source == "default"
+    # default_party is a STOPGAP [confirmed]: it lets the app load + be playable before
+    # character creation exists. Once chargen ships, the normal path is party_source
+    # "creator" and default_party is only a demo/test convenience.
 ```
 
 ---
@@ -363,9 +366,14 @@ as their own arcs, in that order.
    warn + best-effort, or refuse). Lean: warn + load, flag divergence risk.
 2. **Editing the default pack during dev** — bumping `version` on every tweak is noisy;
    maybe a dev mode that doesn't pin strictly. Decide before P2.
-3. **SRD reference data** (skills/abilities, eventually classes/rules) — keep in code
-   (current enums) or move into a base "SRD pack"? Lean: keep SRD core in code for now;
-   authored packs add *world* content, not rules — revisit with the Bestiary/Rules arc.
+3. **SRD reference data → RESOLVED: packs are LAYERABLE.** A campaign loads a stack of
+   packs — a **base SRD pack** (standard items, monsters, common content) **plus** one or
+   more **world packs** on top. Later layers add to / override earlier ones **by id**, so
+   authors never re-create the basics. A save pins the **whole stack** (each pack id +
+   version). The loader becomes `load_packs([base, world, ...])`; the cross-reference
+   linter runs over the *merged* result. (For P1 we still ship a single self-contained
+   `brightvale` pack; layering is an additive loader feature we build when the base SRD
+   pack exists — it doesn't change the schemas.)
 4. **Per-type files vs per-entity files** — §2 proposes per-type; large packs might want
    per-entity later. Loader should be agnostic (glob a type's directory if present).
 5. **Encounters / quests / factions schemas** — out of v1 scope; slot in as new files +
