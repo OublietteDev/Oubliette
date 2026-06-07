@@ -1,0 +1,22 @@
+[
+  {
+    "id": "merchant_thom", "name": "Thom", "stat_block": "commoner",
+    "disposition": "cautious and shrewd; greedy when flattered, quick to suspect a hard sell",
+    "description": "A leather-goods merchant; cautious, but greedy when flattered.",
+    "role": "merchant", "home_location": "brightvale_market", "gold": 500,
+    "inventory": [
+      {"item": "traveling_boots", "qty": 2},
+      {"item": "leather_satchel", "qty": 1},
+      {"item": "sturdy_belt", "qty": 3},
+      {"item": "waterskin", "qty": 4},
+      {"item": "riding_gloves", "qty": 2}
+    ],
+    "price_list": {
+      "traveling_boots": 10,
+      "leather_satchel": 15,
+      "sturdy_belt": 5,
+      "waterskin": 4,
+      "riding_gloves": 8
+    }
+  }
+]

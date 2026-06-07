@@ -1,0 +1,9 @@
+{
+  "id": "brightvale",
+  "schema_version": 1,
+  "name": "The Brightvale Market",
+  "version": "1.0.0",
+  "author": "OublietteDev",
+  "description": "A starter market town — the Phase 0 seed, migrated to data.",
+  "entry_scenario": "brightvale_market"
+}

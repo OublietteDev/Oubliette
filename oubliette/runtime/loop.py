@@ -20,7 +20,6 @@ from ..record.log import DebugLog
 from ..record.rng import Rng, RollOutcome
 from ..rules.checks import resolve_check
 from ..schemas import RollRequest, TurnAssessment
-from ..seed import DEFAULT_SCENE
 from ..state.repository import StateError
 from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
 from ..trade.schemas import TradeState
@@ -47,13 +46,14 @@ class TurnReport:
 
 class TurnLoop:
     def __init__(self, session: Session, rng: Rng, brain: Brain,
-                 debug: DebugLog | None = None, scene: str = DEFAULT_SCENE) -> None:
+                 debug: DebugLog | None = None, scene: str | None = None) -> None:
         self.session = session
         self.repo = session.repo
         self.rng = rng
         self.brain = brain
         self.debug = debug or DebugLog()
-        self.scene = scene
+        # Scene comes from the content pack (via the session); an explicit arg overrides.
+        self.scene = scene if scene is not None else session.scene
         self.dispatcher = Dispatcher(session.repo, session.canon)
         self.history: list[str] = []   # short-term continuity beats (gap G5)
 

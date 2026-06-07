@@ -1,0 +1,267 @@
+"""Read a content pack, validate it whole, and build the authored baseline.
+
+Two validation layers (design doc §4):
+  1. **Schema** — each entity is parsed by its strict Pydantic model.
+  2. **Cross-reference linter** — the parsed pack is checked as a graph (refs
+     resolve, ids unique, merchants stock what they price, loadouts are sane).
+
+Both layers AGGREGATE: every problem found is collected into one
+`PackValidationError`, so an author sees the whole list at once instead of
+fixing-and-rerunning. A pack loads whole-and-valid or not at all.
+
+P1 builds only the repository baseline (characters + items) — proven equal to the
+old `seed.seed_world()`. Authored canon for NPCs/places is a later step.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+
+from pydantic import BaseModel, ValidationError
+
+from ..enums import Ability
+from ..state.models import Character, Item as StateItem, ItemStack
+from ..state.repository import InMemoryRepository
+from .schemas import NPC, Item, Place, PackManifest, Scenario, StatBlock
+
+DEFAULT_PACK = "brightvale"
+_PACKS_ROOT = Path(__file__).parent / "packs"
+
+
+class PackValidationError(Exception):
+    """A pack that failed schema and/or cross-reference validation. Carries the
+    full aggregated list of problems (`.errors`)."""
+
+    def __init__(self, pack_id: str, errors: list[str]) -> None:
+        self.pack_id = pack_id
+        self.errors = errors
+        body = "\n".join(f"  - {e}" for e in errors)
+        super().__init__(f"content pack {pack_id!r} failed validation:\n{body}")
+
+
+@dataclass
+class LoadedWorld:
+    """The authored baseline a campaign seeds from. `repository` is the engine's
+    runtime state (characters + items); `scene` is the opening location's prose.
+    The pack id/version are pinned onto the session so reload re-seeds correctly."""
+
+    repository: InMemoryRepository
+    scene: str
+    pack_id: str
+    pack_version: str
+
+
+# --- file reading ------------------------------------------------------------
+def _read_json(path: Path, filename: str, errors: list[str]):
+    """Return parsed JSON, or None (recording an error) if missing/malformed."""
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None                      # optional file; caller decides if required
+    except json.JSONDecodeError as e:
+        errors.append(f"{filename}: invalid JSON ({e})")
+        return None
+
+
+def _parse_list(path: Path, model: type[BaseModel], filename: str,
+                errors: list[str]) -> list:
+    """Parse a JSON array of `model`. A missing file is treated as empty (the
+    linter catches any dangling references). Per-entity errors are aggregated."""
+    data = _read_json(path, filename, errors)
+    if data is None:
+        return []
+    if not isinstance(data, list):
+        errors.append(f"{filename}: expected a JSON array")
+        return []
+    out = []
+    for i, raw in enumerate(data):
+        ident = raw.get("id", f"index {i}") if isinstance(raw, dict) else f"index {i}"
+        try:
+            out.append(model(**raw))
+        except (ValidationError, TypeError) as e:
+            for line in _format_errors(e):
+                errors.append(f"{filename}: {ident}: {line}")
+    return out
+
+
+def _format_errors(e: Exception) -> list[str]:
+    if isinstance(e, ValidationError):
+        out = []
+        for err in e.errors():
+            loc = ".".join(str(x) for x in err["loc"]) or "(root)"
+            out.append(f"{loc}: {err['msg']}")
+        return out
+    return [str(e)]
+
+
+# --- cross-reference linter --------------------------------------------------
+def _dup_ids(entities: list, type_name: str, errors: list[str]) -> None:
+    seen: set[str] = set()
+    for ent in entities:
+        if ent.id in seen:
+            errors.append(f"{type_name}: duplicate id {ent.id!r}")
+        seen.add(ent.id)
+
+
+def _lint(manifest: PackManifest | None, items: list[Item], statblocks: list[StatBlock],
+          npcs: list[NPC], places: list[Place], scenarios: list[Scenario],
+          errors: list[str]) -> None:
+    """Validate the parsed pack as a graph. Appends every problem to `errors`."""
+    for entities, name in [(items, "items"), (statblocks, "statblocks"),
+                           (npcs, "npcs"), (places, "places"), (scenarios, "scenarios")]:
+        _dup_ids(entities, name, errors)
+
+    item_ids = {i.id for i in items}
+    statblock_ids = {s.id for s in statblocks}
+    place_ids = {p.id for p in places}
+    scenario_ids = {s.id for s in scenarios}
+
+    def need_item(ref: str | None, where: str) -> None:
+        if ref is not None and ref not in item_ids:
+            errors.append(f"{where} references unknown item {ref!r}")
+
+    def need_place(ref: str | None, where: str) -> None:
+        if ref is not None and ref not in place_ids:
+            errors.append(f"{where} references unknown place {ref!r}")
+
+    # NPCs: stat block, home, stock, pricing.
+    for n in npcs:
+        if n.stat_block is not None and n.stat_block not in statblock_ids:
+            errors.append(f"npcs: {n.id}.stat_block references unknown stat block {n.stat_block!r}")
+        need_place(n.home_location, f"npcs: {n.id}.home_location")
+        stocked = {e.item for e in n.inventory}
+        for e in n.inventory:
+            need_item(e.item, f"npcs: {n.id}.inventory")
+        for priced in n.price_list:
+            need_item(priced, f"npcs: {n.id}.price_list")
+            if priced not in stocked:                 # can't sell what you don't hold (§9)
+                errors.append(f"npcs: {n.id}.price_list prices {priced!r} but it is not in inventory")
+
+    # Stat block loot.
+    for s in statblocks:
+        for drop in s.loot:
+            need_item(drop.item, f"statblocks: {s.id}.loot")
+
+    # Place exits.
+    for p in places:
+        for ex in p.exits:
+            need_place(ex.to, f"places: {p.id}.exits")
+
+    # Scenarios: start location + default party loadouts.
+    for sc in scenarios:
+        need_place(sc.start_location, f"scenarios: {sc.id}.start_location")
+        _lint_default_party(sc, item_ids, errors)
+
+    # Manifest entry scenario.
+    if manifest is not None and manifest.entry_scenario not in scenario_ids:
+        errors.append(f"pack.json: entry_scenario references unknown scenario {manifest.entry_scenario!r}")
+
+
+def _lint_default_party(sc: Scenario, item_ids: set[str], errors: list[str]) -> None:
+    """A default party is a list of state.Character dicts (the chargen stopgap).
+    Validate each parses and that its inventory/equipped reference real items."""
+    for i, raw in enumerate(sc.default_party):
+        where = f"scenarios: {sc.id}.default_party[{i}]"
+        try:
+            pc = Character(**raw)
+        except (ValidationError, TypeError) as e:
+            for line in _format_errors(e):
+                errors.append(f"{where}: {line}")
+            continue
+        held = {st.item_id for st in pc.inventory}
+        for st in pc.inventory:
+            if st.item_id not in item_ids:
+                errors.append(f"{where} inventory references unknown item {st.item_id!r}")
+        for eq in pc.equipped:
+            if eq not in item_ids:
+                errors.append(f"{where} equips unknown item {eq!r}")
+            elif eq not in held:
+                errors.append(f"{where} equips {eq!r} which is not in inventory")
+
+
+# --- projection: authoring shapes -> engine runtime models -------------------
+def _project_item(it: Item) -> StateItem:
+    """content.Item -> state.Item. The weapon/armor blocks are captured in the
+    pack but the runtime model only needs `armor_class` for now (AC-from-equipment
+    math is deferred); everything else the engine doesn't yet use is dropped."""
+    return StateItem(
+        id=it.id, name=it.name, category=it.category,
+        tags=list(it.tags), base_value=it.base_value,
+        armor_class=(it.armor.base_ac if it.armor else None),
+    )
+
+
+def _build_npc(n: NPC, statblocks: dict[str, StatBlock]) -> Character:
+    """Build a runtime npc Character. Combat stats come from the referenced stat
+    block (or Character defaults if none)."""
+    sb = statblocks.get(n.stat_block) if n.stat_block else None
+    abilities = {Ability(k): v for k, v in (sb.abilities.items() if sb else {})}
+    extra: dict = {}
+    if sb is not None:
+        extra = dict(
+            hp=sb.hp, max_hp=sb.hp, armor_class=sb.armor_class,
+            attack_bonus=sb.attack_bonus, damage=sb.damage, xp=sb.xp,
+        )
+    return Character(
+        id=n.id, name=n.name, kind="npc",
+        abilities=abilities,
+        gold=n.gold,
+        inventory=[ItemStack(item_id=e.item, qty=e.qty) for e in n.inventory],
+        price_list=dict(n.price_list),
+        description=n.description,
+        disposition=n.disposition,
+        **extra,
+    )
+
+
+# --- public API --------------------------------------------------------------
+def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> LoadedWorld:
+    """Read `packs_root/pack_id/*.json` -> validate (schema + linter) -> build the
+    authoritative baseline. Raises `PackValidationError` (aggregated) on any
+    problem; the pack never loads partially."""
+    base = (packs_root or _PACKS_ROOT) / pack_id
+    errors: list[str] = []
+
+    raw_manifest = _read_json(base / "pack.json", "pack.json", errors)
+    manifest: PackManifest | None = None
+    if raw_manifest is None:
+        errors.append("pack.json: file missing or unreadable")
+    else:
+        try:
+            manifest = PackManifest(**raw_manifest)
+        except (ValidationError, TypeError) as e:
+            for line in _format_errors(e):
+                errors.append(f"pack.json: {line}")
+
+    items = _parse_list(base / "items.json", Item, "items.json", errors)
+    statblocks = _parse_list(base / "statblocks.json", StatBlock, "statblocks.json", errors)
+    npcs = _parse_list(base / "npcs.json", NPC, "npcs.json", errors)
+    places = _parse_list(base / "places.json", Place, "places.json", errors)
+    scenarios = _parse_list(base / "scenarios.json", Scenario, "scenarios.json", errors)
+
+    _lint(manifest, items, statblocks, npcs, places, scenarios, errors)
+
+    if errors:
+        raise PackValidationError(pack_id, errors)
+
+    # --- build the baseline (validation passed; refs are safe) ---------------
+    assert manifest is not None
+    scenario = next(s for s in scenarios if s.id == manifest.entry_scenario)
+    statblock_by_id = {s.id: s for s in statblocks}
+
+    party = [Character(**raw) for raw in scenario.default_party]
+    npc_chars = [_build_npc(n, statblock_by_id) for n in npcs]
+    state_items = [_project_item(it) for it in items]
+    pc_id = party[0].id if party else "pc"
+
+    repo = InMemoryRepository(characters=party + npc_chars, items=state_items, pc_id=pc_id)
+
+    place_by_id = {p.id: p for p in places}
+    scene = scenario.scene_override or place_by_id[scenario.start_location].description
+
+    return LoadedWorld(
+        repository=repo, scene=scene,
+        pack_id=manifest.id, pack_version=manifest.version,
+    )

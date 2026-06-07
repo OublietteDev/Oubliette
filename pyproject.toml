@@ -24,5 +24,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["oubliette*"]
 
+[tool.setuptools.package-data]
+# Authored content packs are data files shipped inside the package.
+"oubliette.content" = ["packs/**/*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

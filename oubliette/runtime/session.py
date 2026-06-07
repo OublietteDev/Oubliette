@@ -14,28 +14,41 @@ from typing import Callable
 
 from ..canon.models import CanonDraft, CanonRecord
 from ..canon.store import CanonStore
+from ..content.loader import DEFAULT_PACK, load_pack
 from ..record.events import Event, EventKind, StateOp, apply_ops, replay
 from ..record.store import EventStore
-from ..seed import seed_world
+from ..seed import DEFAULT_SCENE
 from ..state.repository import Repository
 
 
 class Session:
-    def __init__(self, store: EventStore, repo: Repository, canon: CanonStore) -> None:
+    def __init__(self, store: EventStore, repo: Repository, canon: CanonStore,
+                 scene: str = DEFAULT_SCENE) -> None:
         self.store = store
         self.repo = repo
         self.canon = canon
+        self.scene = scene          # opening location prose (from the content pack)
 
     @classmethod
-    def open(cls, store: EventStore, seed: Callable[[], Repository] = seed_world) -> "Session":
-        repo = seed()                       # authored baseline (deterministic)
+    def open(cls, store: EventStore, seed: Callable[[], Repository] | None = None) -> "Session":
+        # Default: seed the authored baseline from the default content pack. A
+        # custom `seed` (used by tests) bypasses the pack and skips pack pinning.
+        if seed is None:
+            world = load_pack(DEFAULT_PACK)
+            repo: Repository = world.repository
+            scene = world.scene
+            marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
+        else:
+            repo = seed()
+            scene = DEFAULT_SCENE
+            marker = {}
         canon = CanonStore()
         events = store.read_all()
-        session = cls(store, repo, canon)
+        session = cls(store, repo, canon, scene=scene)
         if events:
             replay(events, repo, canon)     # existing session: rebuild to current
         else:
-            session.emit_log(EventKind.SESSION_MARKER, marker="start")
+            session.emit_log(EventKind.SESSION_MARKER, marker="start", **marker)
         return session
 
     def emit_log(self, kind: "str | EventKind", **payload) -> Event:

@@ -1,0 +1,25 @@
+[
+  {
+    "id": "commoner", "name": "commoner", "kind": "npc",
+    "abilities": {"str": 10, "dex": 10, "con": 10, "int": 10, "wis": 10, "cha": 10},
+    "hp": 9, "armor_class": 10, "attack_bonus": 2, "damage": "1d4",
+    "xp": 0,
+    "description": "An ordinary townsperson — no fighter, but not helpless."
+  },
+  {
+    "id": "road_bandit", "name": "road bandit", "kind": "monster",
+    "abilities": {"str": 11, "dex": 12, "con": 12, "int": 10, "wis": 10, "cha": 10},
+    "hp": 11, "armor_class": 12, "attack_bonus": 3, "damage": "1d6+1",
+    "xp": 25, "skills": ["stealth"],
+    "loot": [{"gold": 8}],
+    "description": "A desperate road-robber in patched leathers."
+  },
+  {
+    "id": "lean_wolf", "name": "lean wolf", "kind": "monster",
+    "abilities": {"str": 12, "dex": 15, "con": 12, "int": 3, "wis": 12, "cha": 6},
+    "hp": 9, "armor_class": 13, "attack_bonus": 4, "damage": "2d4",
+    "xp": 50, "skills": ["perception", "stealth"],
+    "loot": [],
+    "description": "Ribs showing, eyes bright with hunger."
+  }
+]

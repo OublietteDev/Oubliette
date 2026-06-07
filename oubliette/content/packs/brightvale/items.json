@@ -1,0 +1,49 @@
+[
+  {
+    "id": "boots", "name": "worn leather boots", "category": "gear",
+    "description": "Scuffed but comfortable; they have walked a hundred roads.",
+    "base_value": 2, "slot": "feet"
+  },
+  {
+    "id": "knife", "name": "a trusty knife", "category": "weapon",
+    "description": "A plain belt-knife, kept keen.",
+    "base_value": 2, "slot": "main_hand",
+    "weapon": { "attack_bonus": 0, "damage": "1d4", "properties": ["finesse", "light"] }
+  },
+  {
+    "id": "leather_jerkin", "name": "leather jerkin", "category": "armor",
+    "description": "Supple boiled leather.",
+    "base_value": 10, "slot": "body",
+    "armor": { "base_ac": 11, "type": "light", "dex_cap": null }
+  },
+  {
+    "id": "healing_draught", "name": "healing draught", "category": "consumable",
+    "description": "A bitter red tonic that knits flesh.",
+    "base_value": 25
+  },
+  {
+    "id": "traveling_boots", "name": "sturdy traveling boots", "category": "gear",
+    "description": "Thick-soled and freshly oiled.",
+    "base_value": 8, "slot": "feet"
+  },
+  {
+    "id": "leather_satchel", "name": "leather satchel", "category": "gear",
+    "description": "A roomy shoulder bag with a brass buckle.",
+    "base_value": 12
+  },
+  {
+    "id": "sturdy_belt", "name": "sturdy belt", "category": "gear",
+    "description": "Wide harness leather with an iron tongue.",
+    "base_value": 4, "slot": "waist"
+  },
+  {
+    "id": "waterskin", "name": "leather waterskin", "category": "gear",
+    "description": "Holds a day's water; tarred against leaks.",
+    "base_value": 3
+  },
+  {
+    "id": "riding_gloves", "name": "riding gloves", "category": "gear",
+    "description": "Soft kidskin, stitched at the seams.",
+    "base_value": 6, "slot": "hands"
+  }
+]

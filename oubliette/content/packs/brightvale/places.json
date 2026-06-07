@@ -1,0 +1,16 @@
+[
+  {
+    "id": "brightvale_market", "name": "Brightvale Market Square",
+    "description": "A crowded market square in the town of Brightvale. Thom's leather stall stands nearby, hung with belts and boots; a brazier smokes against the morning chill.",
+    "tags": ["town", "safe"],
+    "exits": [{"to": "brightvale_gate", "label": "north toward the gate"}],
+    "position": null
+  },
+  {
+    "id": "brightvale_gate", "name": "Brightvale North Gate",
+    "description": "The town's timber gate stands open to the north road. A bored guard leans on a spear, watching carts trundle past.",
+    "tags": ["town"],
+    "exits": [{"to": "brightvale_market", "label": "south into the market"}],
+    "position": null
+  }
+]
