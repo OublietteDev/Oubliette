@@ -131,6 +131,10 @@
   .subform .sftitle { font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
     color: var(--faint); margin-bottom: 10px; }
   .exit-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .loot-row { display: grid; grid-template-columns: 1fr 70px auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .shop-row { display: grid; grid-template-columns: 1fr 64px 80px auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .ability-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .ability-grid .field { margin-bottom: 0; }
   .invalid { color: var(--bad); font-size: 12px; margin-top: 6px; min-height: 16px; }
 
   .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
@@ -161,7 +165,8 @@
 
 <script>
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const EDITABLE = new Set(["items", "places"]);   // C2: items + places editable; rest read-only
+const EDITABLE = new Set(["items", "statblocks", "npcs", "places", "scenarios"]);   // C3: all editable
+const SINGULAR = { items: "item", statblocks: "creature", npcs: "character", places: "place", scenarios: "opening" };
 const TITLES = { items: "Items", statblocks: "Creatures", npcs: "Characters & NPCs",
                  places: "Places", scenarios: "Opening setup" };
 const ORDER = ["items", "statblocks", "npcs", "places", "scenarios"];
@@ -228,6 +233,20 @@ function placeName(id) {
   const p = listOf("places").find(x => x.id === id);
   return p ? p.name : id;
 }
+// A <select>'s options for picking an existing thing of `kind` by friendly name.
+function optionList(kind, selected, noneLabel) {
+  const none = noneLabel != null ? `<option value="">${esc(noneLabel)}</option>` : "";
+  return none + listOf(kind).map(e =>
+    `<option value="${esc(e.id)}"${e.id === selected ? " selected" : ""}>${esc(e.name || e.id)}</option>`).join("");
+}
+// Merchant rows fold inventory + price_list together: one row per held item, with
+// an optional price (set = for sale). This makes "you can't price what you don't
+// stock" impossible to violate.
+function buildInvRows(npc) {
+  const pl = (npc && npc.price_list) || {};
+  return ((npc && npc.inventory) || []).map(e =>
+    ({ item: e.item, qty: e.qty || 1, price: (e.item in pl) ? pl[e.item] : "" }));
+}
 function describe(kind, e) {
   if (kind === "items") {
     const bits = [e.category];
@@ -282,7 +301,7 @@ function renderGroup(kind) {
         <span class="chev">▾</span><h3>${TITLES[kind]}</h3>
         <span class="count">(${entries.length})</span>
       </span><span class="gspacer"></span>
-      ${editable ? `<button class="btn mini" data-add="${kind}">+ Add ${kind === "items" ? "item" : "place"}</button>`
+      ${editable ? `<button class="btn mini" data-add="${kind}">+ Add ${SINGULAR[kind]}</button>`
                  : `<span class="readonly-note">editing coming soon</span>`}</div>`;
   return `<div class="group${collapsed.has(kind) ? " collapsed" : ""}">${head}<div class="gcards">${cards}</div></div>`;
 }
@@ -319,15 +338,21 @@ let editorCtx = null;   // { kind, index, exits } while a modal is open
 
 function openEditor(kind, index) {
   const original = index != null ? listOf(kind)[index] : null;
-  editorCtx = { kind, index, exits: kind === "places" ? ((original?.exits) || []).map(x => ({...x})) : [] };
+  editorCtx = { kind, index };
+  if (kind === "places") editorCtx.exits = ((original?.exits) || []).map(x => ({ ...x }));
+  if (kind === "statblocks") editorCtx.loot = ((original?.loot) || []).filter(l => l.item).map(l => ({ item: l.item, qty: l.qty || 1 }));
+  if (kind === "npcs") editorCtx.inv = buildInvRows(original);
+
+  const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, scenarios: scenarioForm };
+  const WIRES = { statblocks: wireStatblockForm, npcs: wireNpcForm, places: wirePlaceForm, items: wireItemForm };
+  const CONFIRMS = { items: confirmItem, statblocks: confirmStatblock, npcs: confirmNpc, places: confirmPlace, scenarios: confirmScenario };
+
   const modal = document.getElementById("modal");
-  modal.innerHTML = kind === "items" ? itemForm(original) : placeForm(original);
+  modal.innerHTML = FORMS[kind](original);
   document.getElementById("scrim").classList.add("open");
-  if (kind === "items") wireItemForm();
-  if (kind === "places") wirePlaceForm();
+  if (WIRES[kind]) WIRES[kind]();
   modal.querySelector("[data-cancel]").addEventListener("click", closeEditor);
-  modal.querySelector("[data-confirm]").addEventListener("click", () =>
-    kind === "items" ? confirmItem(original) : confirmPlace(original));
+  modal.querySelector("[data-confirm]").addEventListener("click", () => CONFIRMS[kind](original));
 }
 function closeEditor() {
   document.getElementById("scrim").classList.remove("open");
@@ -486,6 +511,186 @@ function confirmPlace(original) {
   if (exits.length) base.exits = exits.map(e => e.label ? { to: e.to, label: e.label } : { to: e.to });
   else delete base.exits;
   commitEntry("places", original, base);
+}
+
+// ---- creature (stat block) form ----
+function statblockForm(sb) {
+  const v = sb || {}, ab = v.abilities || {};
+  const A = k => ab[k] ?? 10;
+  const gold = (v.loot || []).find(l => l.gold != null)?.gold ?? "";
+  return `
+    <div class="mhead">${sb ? "Edit creature" : "New creature"}</div>
+    <div class="mbody">
+      ${field("Name", `<input id="f_name" value="${esc(v.name || "")}" placeholder="road bandit" />`)}
+      <div class="row2">
+        ${field("Kind", `<select id="f_kind">
+            <option value="monster"${(v.kind || "monster") === "monster" ? " selected" : ""}>monster</option>
+            <option value="npc"${v.kind === "npc" ? " selected" : ""}>townsfolk (npc)</option></select>`)}
+        ${field("Worth (XP)", `<input id="f_xp" type="number" min="0" value="${v.xp ?? 0}" />`)}
+      </div>
+      <div class="row2">
+        ${field("Health (HP)", `<input id="f_hp" type="number" min="1" value="${v.hp ?? 8}" />`)}
+        ${field("Defense (AC)", `<input id="f_ac" type="number" value="${v.armor_class ?? 10}" />`)}
+      </div>
+      <div class="row2">
+        ${field("Attack bonus", `<input id="f_atk" type="number" value="${v.attack_bonus ?? 0}" />`)}
+        ${field("Damage", `<input id="f_dmg" value="${esc(v.damage || "1d6")}" placeholder="1d6" />`, "Dice it hits for.")}
+      </div>
+      <div class="subform"><div class="sftitle">Ability scores</div>
+        <div class="ability-grid">${["str","dex","con","int","wis","cha"].map(k =>
+          field(k.toUpperCase(), `<input id="f_ab_${k}" type="number" value="${A(k)}" />`)).join("")}</div></div>
+      ${field("Skills", `<input id="f_skills" value="${esc((v.skills || []).join(", "))}" placeholder="stealth, perception" />`, "Optional, comma-separated.")}
+      ${field("Special traits", `<input id="f_traits" value="${esc((v.traits || []).join(", "))}" placeholder="keen senses" />`, "Optional, comma-separated.")}
+      <div class="subform"><div class="sftitle">Loot dropped</div>
+        ${field("Gold", `<input id="f_gold" type="number" min="0" value="${gold}" placeholder="(optional)" />`)}
+        <div id="lootList"></div>
+        <button class="btn mini" type="button" id="addLoot">+ Add an item drop</button></div>
+      ${field("Description", `<textarea id="f_desc" placeholder="A short, flavourful line.">${esc(v.description || "")}</textarea>`)}
+      <div class="invalid" id="f_err"></div>
+    </div>
+    <div class="mfoot"><button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" data-confirm>${sb ? "Update" : "Add"} creature</button></div>`;
+}
+function renderLoot() {
+  const box = document.getElementById("lootList");
+  box.innerHTML = editorCtx.loot.map((l, i) => `
+    <div class="loot-row">
+      <select data-loot-item="${i}">${optionList("items", l.item, "(choose an item)")}</select>
+      <input data-loot-qty="${i}" type="number" min="1" value="${l.qty || 1}" />
+      <button class="btn mini danger" type="button" data-loot-del="${i}">✕</button>
+    </div>`).join("") || '<div class="nothing" style="margin:6px 0">No item drops.</div>';
+  box.querySelectorAll("[data-loot-item]").forEach(s => s.addEventListener("change", e => editorCtx.loot[+e.target.dataset.lootItem].item = e.target.value));
+  box.querySelectorAll("[data-loot-qty]").forEach(inp => inp.addEventListener("input", e => editorCtx.loot[+e.target.dataset.lootQty].qty = Number(e.target.value || 1)));
+  box.querySelectorAll("[data-loot-del]").forEach(b => b.addEventListener("click", e => { editorCtx.loot.splice(+e.target.dataset.lootDel, 1); renderLoot(); }));
+}
+function wireStatblockForm() {
+  renderLoot();
+  document.getElementById("addLoot").addEventListener("click", () => { editorCtx.loot.push({ item: "", qty: 1 }); renderLoot(); });
+}
+function confirmStatblock(original) {
+  const name = document.getElementById("f_name").value.trim();
+  if (!name) { document.getElementById("f_err").textContent = "Please give it a name."; return; }
+  const base = original ? { ...original } : {};
+  if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("statblocks").map(x => x.id)));
+  base.name = name;
+  base.kind = document.getElementById("f_kind").value;
+  base.abilities = {};
+  ["str","dex","con","int","wis","cha"].forEach(k => base.abilities[k] = Number(document.getElementById("f_ab_" + k).value || 10));
+  base.hp = Number(document.getElementById("f_hp").value || 1);
+  base.armor_class = Number(document.getElementById("f_ac").value || 10);
+  base.attack_bonus = Number(document.getElementById("f_atk").value || 0);
+  base.damage = document.getElementById("f_dmg").value.trim() || "1d4";
+  base.xp = Number(document.getElementById("f_xp").value || 0);
+  const skills = csv(document.getElementById("f_skills").value), traits = csv(document.getElementById("f_traits").value);
+  if (skills.length) base.skills = skills; else delete base.skills;
+  if (traits.length) base.traits = traits; else delete base.traits;
+  const loot = [], gold = document.getElementById("f_gold").value;
+  if (gold !== "" && Number(gold) > 0) loot.push({ gold: Number(gold) });
+  editorCtx.loot.forEach(l => { if (l.item) loot.push(l.qty && l.qty !== 1 ? { item: l.item, qty: l.qty } : { item: l.item }); });
+  if (loot.length) base.loot = loot; else delete base.loot;
+  const desc = document.getElementById("f_desc").value.trim();
+  if (desc) base.description = desc; else delete base.description;
+  commitEntry("statblocks", original, base);
+}
+
+// ---- character / NPC form ----
+function npcForm(npc) {
+  const v = npc || {};
+  return `
+    <div class="mhead">${npc ? "Edit character" : "New character"}</div>
+    <div class="mbody">
+      ${field("Name", `<input id="f_name" value="${esc(v.name || "")}" placeholder="Thom" />`)}
+      <div class="row2">
+        ${field("Role", `<input id="f_role" value="${esc(v.role || "")}" placeholder="merchant, guard, ..." />`, "Optional, advisory.")}
+        ${field("Coin (gold)", `<input id="f_gold" type="number" min="0" value="${v.gold ?? 0}" />`, "Caps what they can pay.")}
+      </div>
+      ${field("Temperament", `<textarea id="f_disp" placeholder="cautious and shrewd; greedy when flattered">${esc(v.disposition || "")}</textarea>`,
+              "How they act — the DM uses this to judge how hard they are to sway.")}
+      ${field("Description", `<textarea id="f_desc" placeholder="A leather-goods merchant.">${esc(v.description || "")}</textarea>`)}
+      <div class="row2">
+        ${field("Lives at", `<select id="f_home">${optionList("places", v.home_location || "", "(nowhere in particular)")}</select>`, "Pick a place.")}
+        ${field("Combat stats", `<select id="f_sb">${optionList("statblocks", v.stat_block || "", "(none / can't fight)")}</select>`, "Pick a creature stat line.")}
+      </div>
+      <div class="subform"><div class="sftitle">Shop &amp; belongings</div>
+        <div id="invList"></div>
+        <button class="btn mini" type="button" id="addInv">+ Add an item</button>
+        <div class="help" style="margin-top:8px">Give an item a price to put it up for sale; leave price blank for things they simply carry.</div></div>
+      <div class="invalid" id="f_err"></div>
+    </div>
+    <div class="mfoot"><button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" data-confirm>${npc ? "Update" : "Add"} character</button></div>`;
+}
+function renderInv() {
+  const box = document.getElementById("invList");
+  box.innerHTML = editorCtx.inv.map((r, i) => `
+    <div class="shop-row">
+      <select data-inv-item="${i}">${optionList("items", r.item, "(choose an item)")}</select>
+      <input data-inv-qty="${i}" type="number" min="1" value="${r.qty || 1}" title="how many they have" />
+      <input data-inv-price="${i}" type="number" min="0" value="${r.price ?? ""}" placeholder="price" title="sale price (blank = not for sale)" />
+      <button class="btn mini danger" type="button" data-inv-del="${i}">✕</button>
+    </div>`).join("") || '<div class="nothing" style="margin:6px 0">Nothing yet.</div>';
+  box.querySelectorAll("[data-inv-item]").forEach(s => s.addEventListener("change", e => editorCtx.inv[+e.target.dataset.invItem].item = e.target.value));
+  box.querySelectorAll("[data-inv-qty]").forEach(inp => inp.addEventListener("input", e => editorCtx.inv[+e.target.dataset.invQty].qty = Number(e.target.value || 1)));
+  box.querySelectorAll("[data-inv-price]").forEach(inp => inp.addEventListener("input", e => { const val = e.target.value; editorCtx.inv[+e.target.dataset.invPrice].price = val === "" ? "" : Number(val); }));
+  box.querySelectorAll("[data-inv-del]").forEach(b => b.addEventListener("click", e => { editorCtx.inv.splice(+e.target.dataset.invDel, 1); renderInv(); }));
+}
+function wireNpcForm() {
+  renderInv();
+  document.getElementById("addInv").addEventListener("click", () => { editorCtx.inv.push({ item: "", qty: 1, price: "" }); renderInv(); });
+}
+function confirmNpc(original) {
+  const name = document.getElementById("f_name").value.trim(), err = document.getElementById("f_err");
+  if (!name) { err.textContent = "Please give them a name."; return; }
+  const rows = editorCtx.inv.filter(r => r.item);
+  if (rows.length !== editorCtx.inv.length) { err.textContent = "Every belongings row needs an item chosen (or remove it)."; return; }
+  const base = original ? { ...original } : {};
+  if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("npcs").map(x => x.id)));
+  base.name = name;
+  const setOrDel = (k, val) => { if (val === "" || val == null) delete base[k]; else base[k] = val; };
+  setOrDel("role", document.getElementById("f_role").value.trim());
+  setOrDel("disposition", document.getElementById("f_disp").value.trim());
+  setOrDel("description", document.getElementById("f_desc").value.trim());
+  setOrDel("home_location", document.getElementById("f_home").value);
+  setOrDel("stat_block", document.getElementById("f_sb").value);
+  const goldNum = Number(document.getElementById("f_gold").value || 0);
+  if (goldNum) base.gold = goldNum; else delete base.gold;
+  const inv = [], prices = {};
+  rows.forEach(r => {
+    inv.push(r.qty && r.qty !== 1 ? { item: r.item, qty: r.qty } : { item: r.item });
+    if (r.price !== "" && r.price != null) prices[r.item] = Number(r.price);
+  });
+  if (inv.length) base.inventory = inv; else delete base.inventory;
+  if (Object.keys(prices).length) base.price_list = prices; else delete base.price_list;
+  commitEntry("npcs", original, base);
+}
+
+// ---- opening setup (scenario) form ----
+function scenarioForm(sc) {
+  const v = sc || {}, party = (v.default_party || []).length;
+  return `
+    <div class="mhead">${sc ? "Edit opening setup" : "New opening setup"}</div>
+    <div class="mbody">
+      ${field("Name", `<input id="f_name" value="${esc(v.name || "")}" placeholder="A Morning at Brightvale" />`)}
+      ${field("Starts at", `<select id="f_start">${optionList("places", v.start_location || "", "(choose a place)")}</select>`, "Where a new game begins.")}
+      ${field("Opening scene (optional)", `<textarea id="f_scene" placeholder="Leave blank to use the starting place's own description.">${esc(v.scene_override || "")}</textarea>`,
+              "Overrides the starting place's description, for the very first scene only.")}
+      ${party ? `<div class="help">Starting hero(es): ${party}. Editing heroes will come with character creation (a later feature) — they're kept untouched when you save.</div>` : ""}
+      <div class="invalid" id="f_err"></div>
+    </div>
+    <div class="mfoot"><button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" data-confirm>${sc ? "Update" : "Add"} opening</button></div>`;
+}
+function confirmScenario(original) {
+  const name = document.getElementById("f_name").value.trim();
+  const start = document.getElementById("f_start").value, err = document.getElementById("f_err");
+  if (!name) { err.textContent = "Please give it a name."; return; }
+  if (!start) { err.textContent = "Please choose where the game starts."; return; }
+  const base = original ? { ...original } : {};
+  if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("scenarios").map(x => x.id)));
+  base.name = name; base.start_location = start;
+  const scene = document.getElementById("f_scene").value.trim();
+  if (scene) base.scene_override = scene; else delete base.scene_override;
+  commitEntry("scenarios", original, base);
 }
 
 function commitEntry(kind, original, entry) {

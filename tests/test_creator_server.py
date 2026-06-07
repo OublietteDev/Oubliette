@@ -127,3 +127,60 @@ def test_save_unknown_pack_is_404(tmp_path, monkeypatch):
     _temp_brightvale(tmp_path, monkeypatch)
     r = client.post("/api/pack/ghost/save", json={"contents": {}})
     assert r.status_code == 404
+
+
+# --- C3: creatures, NPCs (stock + prices), opening setup --------------------
+def test_save_new_creature_and_merchant_stays_valid(tmp_path, monkeypatch):
+    """Mimic the C3 editors' output (new creature + new shopkeeper wired by the
+    pickers) and confirm the world still loads for the game."""
+    packs = _temp_brightvale(tmp_path, monkeypatch)
+    c = client.get("/api/pack/brightvale").json()["contents"]
+
+    c["statblocks"].append({
+        "id": "market_cat", "name": "market cat", "kind": "monster",
+        "abilities": {"str": 6, "dex": 15, "con": 10, "int": 3, "wis": 12, "cha": 7},
+        "hp": 3, "armor_class": 12, "attack_bonus": 4, "damage": "1d4", "xp": 10,
+    })
+    # a second merchant: home + stat block chosen from existing things; one item
+    # in stock, priced (boots already exist in the pack)
+    c["npcs"].append({
+        "id": "grocer_mae", "name": "Mae", "stat_block": "commoner",
+        "home_location": "brightvale_market", "role": "grocer", "gold": 40,
+        "disposition": "warm but no pushover",
+        "inventory": [{"item": "boots"}], "price_list": {"boots": 3},
+    })
+    r = client.post("/api/pack/brightvale/save", json={"contents": c})
+    assert r.json()["validation"]["ok"] is True
+
+    written = json.loads((packs / "brightvale" / "npcs.json").read_text(encoding="utf-8"))
+    assert any(n["id"] == "grocer_mae" for n in written)
+
+
+def test_pricing_unstocked_item_is_flagged(tmp_path, monkeypatch):
+    """The UI folds price into the stock row so this can't happen by hand — but the
+    loader is the real guarantee, so prove an unstocked price is still caught."""
+    _temp_brightvale(tmp_path, monkeypatch)
+    c = client.get("/api/pack/brightvale").json()["contents"]
+    c["npcs"].append({
+        "id": "bad_merchant", "name": "Sly", "inventory": [],
+        "price_list": {"boots": 5},          # priced but not stocked
+    })
+    r = client.post("/api/pack/brightvale/save", json={"contents": c})
+    assert r.json()["ok"] is True                              # WIP save still allowed
+    assert r.json()["validation"]["ok"] is False
+    assert any("not in inventory" in i for i in r.json()["validation"]["issues"])
+
+
+def test_scenario_edit_preserves_party(tmp_path, monkeypatch):
+    """Editing the opening setup (start/scene) must not drop the starter party —
+    the editor merges onto the original, so the chargen-stopgap party survives."""
+    _temp_brightvale(tmp_path, monkeypatch)
+    c = client.get("/api/pack/brightvale").json()["contents"]
+    sc = c["scenarios"][0]
+    sc["scene_override"] = "Dawn light slants across the market."
+    client.post("/api/pack/brightvale/save", json={"contents": c})
+
+    reread = client.get("/api/pack/brightvale").json()["contents"]["scenarios"][0]
+    assert reread["scene_override"] == "Dawn light slants across the market."
+    assert len(reread["default_party"]) == 1
+    assert reread["default_party"][0]["name"] == "You"
