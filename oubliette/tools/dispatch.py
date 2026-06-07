@@ -15,7 +15,7 @@ from ..canon.models import CanonDraft
 from ..canon.store import CanonStore
 from ..record.events import StateOp
 from ..state.repository import Repository, StateError
-from .schemas import CreateEntity, Give, PromoteCanon, Take, ToolCall, Transact, ValueEntry
+from .schemas import CreateEntity, Give, PromoteCanon, Take, ToolCall, Transact, Travel, ValueEntry
 
 
 class ToolApplyError(Exception):
@@ -26,19 +26,22 @@ class ToolApplyError(Exception):
 @dataclass
 class ResolvedTool:
     """A validated tool, normalized to its effect. Exactly one of `ops` /
-    `canon_create` / `canon_promote` is set, depending on the tool's target."""
+    `canon_create` / `canon_promote` / `travel_to` is set, per the tool's target."""
 
     tool: str
     reason: str
     ops: list[StateOp] = field(default_factory=list)     # protected-state tools
     canon_create: CanonDraft | None = None               # create_entity
     canon_promote: str | None = None                     # promote_canon -> entity id
+    travel_to: str | None = None                         # travel -> destination place id
 
 
 class Dispatcher:
-    def __init__(self, repo: Repository, canon: CanonStore | None = None) -> None:
+    def __init__(self, repo: Repository, canon: CanonStore | None = None,
+                 places: dict | None = None) -> None:
         self.repo = repo
         self.canon = canon
+        self.places = places or {}       # {place_id: PlaceNode} — for travel resolution
 
     def resolve(self, call: ToolCall) -> ResolvedTool:
         if isinstance(call, Transact):
@@ -57,11 +60,30 @@ class Dispatcher:
         if isinstance(call, PromoteCanon):
             self._assert_promotable(call.entity_id)
             return ResolvedTool(call.tool, call.reason, canon_promote=call.entity_id)
+        if isinstance(call, Travel):
+            return ResolvedTool(call.tool, call.reason, travel_to=self._resolve_place_id(call.to))
         raise ToolApplyError(f"no resolver for {type(call).__name__}")  # pragma: no cover
 
     def _assert_promotable(self, entity_id: str) -> None:
         if self.canon is None or self.canon.get(entity_id) is None:
             raise ToolApplyError(f"cannot promote unknown canon id {entity_id!r}")
+
+    def _resolve_place_id(self, ref: str) -> str:
+        """Map a destination reference (id OR name, loosely) to a known place id —
+        the DM may name a place by its prose label, mirroring item resolution."""
+        if ref in self.places:
+            return ref
+        norm = ref.strip().lower()
+        for node in self.places.values():
+            if node.name.strip().lower() == norm or node.id.replace("_", " ") == norm:
+                return node.id
+        ref_words = set(norm.replace("_", " ").split())
+        if ref_words:
+            hits = [n.id for n in self.places.values()
+                    if ref_words <= set(n.name.lower().split())]
+            if len(hits) == 1:
+                return hits[0]
+        raise ToolApplyError(f"cannot travel to unknown place {ref!r}")
 
     # --- resolvers ------------------------------------------------------------
     def _resolve_transact(self, t: Transact) -> list[StateOp]:

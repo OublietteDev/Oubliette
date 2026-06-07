@@ -52,18 +52,19 @@ class TurnLoop:
         self.rng = rng
         self.brain = brain
         self.debug = debug or DebugLog()
-        # Scene comes from the content pack (via the session); an explicit arg overrides.
-        self.scene = scene if scene is not None else session.scene
-        self.location = session.location    # current Place id → scopes present NPCs
-        self.dispatcher = Dispatcher(session.repo, session.canon)
+        # Scene/location live on the session (they change as the party travels); an
+        # explicit scene arg still overrides the opening text if given.
+        self._scene_override = scene
+        self.dispatcher = Dispatcher(session.repo, session.canon, session.places)
         self.history: list[str] = []   # short-term continuity beats (gap G5)
 
     async def take_turn(self, player_text: str, on_text=None) -> TurnReport:
         # Retrieve world canon relevant to this turn → context (long-term memory, G4).
         canon_hits = self.session.canon.search(player_text)
+        scene = self._scene_override if self._scene_override is not None else self.session.scene
         context = build_context(
-            self.repo, self.scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits,
-            location=self.location)
+            self.repo, scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits,
+            location=self.session.location, places=self.session.places)
         assessment = await self.brain.assess(player_text, context)
         # The PLAYER_MESSAGE event carries the raw text + the parsed intent (§4.1).
         self.session.emit_log(
@@ -144,6 +145,8 @@ class TurnLoop:
                     self.session.emit_create_entity(rt.canon_create, rt.reason)
                 elif rt.canon_promote is not None:
                     self.session.emit_promote(rt.canon_promote, rt.reason)
+                elif rt.travel_to is not None:
+                    self.session.emit_travel(rt.travel_to, rt.reason)
                 else:
                     self.session.emit_state(
                         EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
@@ -207,6 +210,8 @@ class TurnLoop:
                 parts.append(f"created {rt.canon_create.entity_type} '{rt.canon_create.name}' (provisional)")
             elif rt.canon_promote is not None:
                 parts.append(f"promoted {rt.canon_promote} → confirmed")
+            elif rt.travel_to is not None:
+                parts.append(f"travelled to {rt.travel_to}")
             else:
                 parts.append(f"effect({rt.tool}): {self._ops_summary(rt.ops)}")
         if report.combat_result is not None:

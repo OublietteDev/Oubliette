@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from ..combat.schemas import EncounterRequest, EnemyRef, ExitKind, TerrainSpec
 from ..enums import Ability, Skill, Tier, Verb, may_canonize
 from ..schemas import Intent, RollRequest, TurnAssessment, TurnResolution
-from ..tools.schemas import CreateEntity, Transact, ValueEntry
+from ..tools.schemas import CreateEntity, Transact, Travel, ValueEntry
 from ..trade.schemas import TradeRequest
 from .client import Msg
 
@@ -60,6 +60,10 @@ class ScriptedLLMClient:
                 encounter=encounter,
                 trade=trade,
             )
+
+        # Travel — the party moves to another location (resolved via the travel tool).
+        if any(p in player for p in ("travel", "go to", "head to", "walk to", "make my way")):
+            return assessment(Verb.MOVE, Tier.FREESTYLE, hint="Party travels to another place.")
 
         # Trade — browse the merchant's wares (opens the trade window).
         if any(p in player for p in ("wares", "what do you have", "what are you selling",
@@ -140,6 +144,15 @@ class ScriptedLLMClient:
         tier = _field(text, "TIER")
         roll_result = _field(text, "ROLL_RESULT")  # "success" | "failure" | ""
         player = _field(text, "PLAYER").lower()
+
+        # Travel — emit a travel tool to a destination named in the message.
+        if verb == Verb.MOVE.value:
+            dest = "brightvale_gate" if "gate" in player else "brightvale_market"
+            where = "the north gate" if dest == "brightvale_gate" else "the market square"
+            return TurnResolution(
+                narration=f"You make your way to {where}, the crowd thinning as you go.",
+                tool_calls=[Travel(to=dest, reason="The party travels across Brightvale.")],
+            )
 
         # Canon — introduce the old woman as provisional world content.
         if "old woman" in player:

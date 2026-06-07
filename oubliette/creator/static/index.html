@@ -270,8 +270,9 @@ function describe(kind, e) {
     return `${e.role || "person"}${where}${shop}${e.disposition ? ` — ${e.disposition}` : ""}`;
   }
   if (kind === "places") {
+    const inside = e.parent ? `in ${placeName(e.parent)} · ` : "";
     const exits = (e.exits || []).map(x => x.label || placeName(x.to)).join(", ");
-    return (e.description || "") + (exits ? `  ↪ exits: ${exits}` : "");
+    return inside + (e.description || "") + (exits ? `  ↪ exits: ${exits}` : "");
   }
   if (kind === "scenarios") {
     const party = (e.default_party || []).length;
@@ -470,6 +471,8 @@ function placeForm(pl) {
     <div class="mhead">${pl ? "Edit place" : "New place"}</div>
     <div class="mbody">
       ${field("Name", `<input id="f_name" value="${esc(v.name || "")}" placeholder="Brightvale Market Square" />`)}
+      ${field("Part of (area)", `<select id="f_parent">${parentOptions(v.id, v.parent || "")}</select>`,
+              "Optional: the larger place this sits inside — e.g. a town a shop belongs to, or a dungeon a room belongs to.")}
       ${field("Scene description", `<textarea id="f_desc" placeholder="What players read when they arrive here.">${esc(v.description || "")}</textarea>`,
               "This is the opening scene whenever the party is here.")}
       ${field("Tags", `<input id="f_tags" value="${esc((v.tags || []).join(", "))}" placeholder="town, safe" />`)}
@@ -485,6 +488,12 @@ function placeForm(pl) {
       <button class="btn" data-cancel>Cancel</button>
       <button class="btn primary" data-confirm>${pl ? "Update" : "Add"} place</button>
     </div>`;
+}
+function parentOptions(selfId, selected) {
+  const none = `<option value="">(top level — a place of its own)</option>`;
+  const opts = listOf("places").filter(p => p.id !== selfId)
+    .map(p => `<option value="${esc(p.id)}"${p.id === selected ? " selected" : ""}>${esc(p.name)}</option>`).join("");
+  return none + opts;
 }
 function placeOptions(selected, selfId) {
   const opts = listOf("places").filter(p => p.id !== selfId)
@@ -523,6 +532,8 @@ function confirmPlace(original) {
   const base = original ? { ...original } : {};
   if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("places").map(x => x.id)));
   base.name = name; base.description = desc;
+  const parent = document.getElementById("f_parent").value;
+  if (parent) base.parent = parent; else delete base.parent;
   const tags = csv(document.getElementById("f_tags").value);
   if (tags.length) base.tags = tags; else delete base.tags;
   if (exits.length) base.exits = exits.map(e => e.label ? { to: e.to, label: e.label } : { to: e.to });

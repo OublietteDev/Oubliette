@@ -29,6 +29,7 @@ class EventKind(str, Enum):
     CREATE_ENTITY = "create_entity"     # canon content born provisional (§7)
     CANON_PROMOTED = "canon_promoted"   # provisional -> confirmed (§11)
     EQUIP_CHANGED = "equip_changed"     # player loadout change (bounded player action)
+    LOCATION_CHANGED = "location_changed"   # party travels to another Place (DM tool)
 
 
 class StateOp(BaseModel):

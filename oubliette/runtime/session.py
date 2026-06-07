@@ -22,13 +22,24 @@ from ..state.repository import Repository
 
 
 class Session:
-    def __init__(self, store: EventStore, repo: Repository, canon: CanonStore,
-                 scene: str = DEFAULT_SCENE, location: str | None = None) -> None:
+    def __init__(self, store: EventStore, repo: Repository, canon: CanonStore) -> None:
         self.store = store
         self.repo = repo
         self.canon = canon
-        self.scene = scene          # opening location prose (from the content pack)
-        self.location = location    # the party's current Place id (scopes present NPCs)
+        # Location/scene state — set up by `open` from the pack + the event log.
+        self.places: dict = {}              # {place_id: PlaceNode}
+        self.start_location: str | None = None
+        self.start_scene: str = DEFAULT_SCENE
+        self.location: str | None = None    # party's current Place id (scopes present NPCs)
+        self.scene: str = DEFAULT_SCENE     # current location's prose
+
+    def _scene_for(self, location: str | None) -> str:
+        """The prose for a location — the pack's opening text at the start spot
+        (which may be a scenario scene_override), else the place's own description."""
+        if location is None or location == self.start_location:
+            return self.start_scene
+        node = self.places.get(location)
+        return node.description if node is not None else self.start_scene
 
     @classmethod
     def open(cls, store: EventStore, seed: Callable[[], Repository] | None = None) -> "Session":
@@ -38,14 +49,16 @@ class Session:
             world = load_pack(DEFAULT_PACK)
             repo: Repository = world.repository
             authored_canon = world.canon
-            scene = world.scene
-            location = world.location
+            places = world.places
+            start_location = world.location
+            start_scene = world.scene
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
         else:
             repo = seed()
             authored_canon = []
-            scene = DEFAULT_SCENE
-            location = None
+            places = {}
+            start_location = None
+            start_scene = DEFAULT_SCENE
             marker = {}
         canon = CanonStore()
         # Seed authored canon (slug ids) BEFORE replay so runtime 'canon-N' records
@@ -54,12 +67,31 @@ class Session:
         for rec in authored_canon:
             canon.add(rec)
         events = store.read_all()
-        session = cls(store, repo, canon, scene=scene, location=location)
+        # The current location is the start, with every LOCATION_CHANGED folded over
+        # it — so reload lands the party exactly where they last travelled to.
+        location = start_location
+        for event in sorted(events, key=lambda e: e.seq):
+            if event.kind == EventKind.LOCATION_CHANGED.value:
+                location = event.payload.get("to", location)
+
+        session = cls(store, repo, canon)
+        session.places = places
+        session.start_location = start_location
+        session.start_scene = start_scene
+        session.location = location
+        session.scene = session._scene_for(location)
         if events:
             replay(events, repo, canon)     # existing session: rebuild to current
         else:
             session.emit_log(EventKind.SESSION_MARKER, marker="start", **marker)
         return session
+
+    def emit_travel(self, to: str, reason: str) -> None:
+        """Move the party to another Place (the DM's `travel` tool). Records a
+        LOCATION_CHANGED event, then updates the current location + scene."""
+        self.store.append(EventKind.LOCATION_CHANGED, {"to": to, "reason": reason})
+        self.location = to
+        self.scene = self._scene_for(to)
 
     def emit_log(self, kind: "str | EventKind", **payload) -> Event:
         """Append a non-state event (player message, roll, marker). No ops."""

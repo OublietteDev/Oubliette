@@ -13,8 +13,23 @@ from ..canon.models import CanonRecord
 from ..state.repository import Repository
 
 
+def _reachable(location: str | None, places: dict) -> list:
+    """Places the party can travel to from `location`: its explicit exits, its
+    sublocations (children), and its siblings (same parent). Returns PlaceNodes."""
+    if location is None or location not in places:
+        return []
+    here = places[location]
+    ids: set[str] = set(here.exits)
+    ids |= {pid for pid, n in places.items() if n.parent == location}      # children
+    if here.parent is not None:
+        ids |= {pid for pid, n in places.items() if n.parent == here.parent}  # siblings
+    ids.discard(location)
+    return [places[i] for i in ids if i in places]
+
+
 def build_context(repo: Repository, scene: str = "", recent: list[str] | None = None,
-                  canon: list[CanonRecord] | None = None, location: str | None = None) -> str:
+                  canon: list[CanonRecord] | None = None, location: str | None = None,
+                  places: dict | None = None) -> str:
     pc = repo.pc()
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
@@ -53,6 +68,13 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                 if items:
                     stock = "; sells " + ", ".join(items)
             lines.append(f"  - {n.name} (id: {n.id}) — {note}; carries {n.gold}g{stock}.")
+    # Where the party can travel from here (exits, sublocations, neighbours). The DM
+    # moves them with the travel tool, naming the destination by id.
+    dests = _reachable(location, places or {})
+    if dests:
+        lines.append("WHERE YOU CAN GO (travel here with the travel tool, by id):")
+        for d in sorted(dests, key=lambda p: p.name):
+            lines.append(f"  - {d.name} (id: {d.id})")
     # Long-term memory: world canon relevant to this turn, retrieved by keyword
     # (gap G4). Stay consistent with these; provisional canon is soft.
     if canon:

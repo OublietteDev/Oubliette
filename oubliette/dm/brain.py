@@ -67,7 +67,12 @@ RESOLVE_SYSTEM = (
     "create_entity (saved as provisional — soft, not yet load-bearing). Reuse RELEVANT CANON by "
     "id instead of re-inventing it. Use promote_canon when the player shows they care about "
     "something OR it becomes load-bearing (a quest or confirmed entity now depends on it); leave "
-    "incidental flavor provisional. Return a TurnResolution."
+    "incidental flavor provisional.\n"
+    "TRAVEL: when the party moves to another location, emit a `travel` tool call with the "
+    "destination's id from WHERE YOU CAN GO — code moves the party and changes the scene + who's "
+    "present. Travel to LISTED destinations (or an existing place id); do not invent a place as a "
+    "travel target — if they head somewhere new, create_entity the place first, then travel to it. "
+    "Return a TurnResolution."
 )
 
 

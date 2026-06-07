@@ -122,6 +122,8 @@ class Place(_Strict):
     id: str
     name: str
     description: str                 # becomes the SCENE when the party is here
+    parent: str | None = None        # -> Place id this is a sublocation OF (Atria >
+                                     # Brightvale > Marketplace; dungeon > rooms)
     tags: list[str] = Field(default_factory=list)
     exits: list[Exit] = Field(default_factory=list)           # the map's edges
     position: dict | None = None     # {x,y} — reserved for the map UI; optional

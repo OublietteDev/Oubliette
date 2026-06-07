@@ -42,18 +42,32 @@ class PackValidationError(Exception):
         super().__init__(f"content pack {pack_id!r} failed validation:\n{body}")
 
 
+@dataclass(frozen=True)
+class PlaceNode:
+    """A runtime view of a Place: enough for the engine to move the party between
+    locations and tell the DM where it can go (the full authoring Place stays in
+    the pack)."""
+
+    id: str
+    name: str
+    description: str
+    parent: str | None
+    exits: tuple[str, ...]        # destination Place ids
+
+
 @dataclass
 class LoadedWorld:
     """The authored baseline a campaign seeds from. `repository` is the engine's
     runtime state (characters + items); `canon` is the authored CanonRecords
     (NPCs/places) the session seeds for retrieval; `scene` is the opening
-    location's prose. The pack id/version are pinned onto the session so reload
-    re-seeds correctly."""
+    location's prose; `places` is the location graph (for travel). The pack
+    id/version are pinned onto the session so reload re-seeds correctly."""
 
     repository: InMemoryRepository
     canon: list[CanonRecord]
     scene: str
     location: str            # the start Place id — the party's current location
+    places: dict             # {place_id: PlaceNode}
     pack_id: str
     pack_version: str
 
@@ -149,10 +163,15 @@ def _lint(manifest: PackManifest | None, items: list[Item], statblocks: list[Sta
         for drop in s.loot:
             need_item(drop.item, f"statblocks: {s.id}.loot")
 
-    # Place exits.
+    # Place exits + sublocation parents.
     for p in places:
         for ex in p.exits:
             need_place(ex.to, f"places: {p.id}.exits")
+        if p.parent is not None:
+            if p.parent == p.id:
+                errors.append(f"places: {p.id} is set as its own parent")
+            else:
+                need_place(p.parent, f"places: {p.id}.parent")
 
     # Scenarios: start location + default party loadouts.
     for sc in scenarios:
@@ -286,9 +305,12 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
 
     place_by_id = {p.id: p for p in places}
     scene = scenario.scene_override or place_by_id[scenario.start_location].description
+    place_nodes = {p.id: PlaceNode(id=p.id, name=p.name, description=p.description,
+                                   parent=p.parent, exits=tuple(e.to for e in p.exits))
+                   for p in places}
 
     return LoadedWorld(
         repository=repo, canon=_authored_canon(npcs, places), scene=scene,
-        location=scenario.start_location,
+        location=scenario.start_location, places=place_nodes,
         pack_id=manifest.id, pack_version=manifest.version,
     )

@@ -75,8 +75,14 @@ GAME = _Game()
 def _snapshot() -> dict:
     repo = GAME.session.repo
     pc = repo.pc()
+    location = GAME.session.location
+    # Who's here: NPCs homed at the party's current location (everyone when there's
+    # no location, e.g. a custom seed) — mirrors what the DM is told.
+    npcs = repo.npcs()
+    if location is not None:
+        npcs = [n for n in npcs if n.home_location == location]
     return {
-        "scene": GAME.loop.scene,
+        "scene": GAME.session.scene,
         "pc": {
             "name": pc.name, "hp": pc.hp, "max_hp": pc.max_hp,
             "gold": pc.gold, "xp": pc.xp, "armor_class": pc.armor_class,
@@ -88,7 +94,7 @@ def _snapshot() -> dict:
         },
         "npcs": [
             {"id": n.id, "name": n.name, "disposition": n.disposition, "gold": n.gold}
-            for n in repo.npcs()
+            for n in npcs
         ],
         # The panel shows SESSION canon (the DM's live inventions). Authored pack
         # canon stays backstage — it powers the DM's retrieval, but dumping every

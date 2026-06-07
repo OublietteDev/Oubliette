@@ -85,10 +85,19 @@ class PromoteCanon(BaseModel):
     reason: str
 
 
+class Travel(BaseModel):
+    """Move the party to another location. Code updates the scene and who's
+    present; emit this when the party goes somewhere in the world."""
+
+    tool: Literal["travel"] = "travel"
+    to: str = Field(description="destination place id (or its name) from WHERE YOU CAN GO")
+    reason: str = Field(description="the fiction for the move, e.g. 'the party walks to the inn'")
+
+
 # The only doors into protected state + canon, as a discriminated union (the schema
 # the model fills in). To add a tool: add a model + a `tool` literal, and a resolver
 # branch in tools/dispatch.py.
 ToolCall = Annotated[
-    Union[Transact, Give, Take, CreateEntity, PromoteCanon],
+    Union[Transact, Give, Take, CreateEntity, PromoteCanon, Travel],
     Field(discriminator="tool"),
 ]
