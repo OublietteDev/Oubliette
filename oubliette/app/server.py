@@ -90,10 +90,13 @@ def _snapshot() -> dict:
             {"id": n.id, "name": n.name, "disposition": n.disposition, "gold": n.gold}
             for n in repo.npcs()
         ],
+        # The panel shows SESSION canon (the DM's live inventions). Authored pack
+        # canon stays backstage — it powers the DM's retrieval, but dumping every
+        # authored place/NPC here would spoil unvisited content.
         "canon": [
             {"id": r.id, "type": r.entity_type, "name": r.name,
              "text": r.text, "status": r.status}
-            for r in GAME.session.canon.all()
+            for r in GAME.session.canon.all() if r.origin != "authored"
         ],
     }
 

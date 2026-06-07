@@ -107,8 +107,9 @@ def test_scripted_loop_introduces_provisional_canon():
     r = asyncio.run(loop.take_turn("I approach the old woman at the well and ask her name."))
 
     assert any(rt.canon_create is not None for rt in r.applied)
-    records = session.canon.all()
-    assert len(records) == 1
-    assert records[0].status == "provisional"
-    assert records[0].entity_type == "npc"
+    # Exactly one SESSION canon record was introduced (authored pack canon is
+    # confirmed; the DM's live invention is the only provisional one).
+    provisional = [rec for rec in session.canon.all() if rec.status == "provisional"]
+    assert len(provisional) == 1
+    assert provisional[0].entity_type == "npc"
     assert len(session.store.of_kind(EventKind.CREATE_ENTITY)) == 1

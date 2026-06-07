@@ -69,7 +69,7 @@ def _render_state(session: Session) -> str:
     pc = repo.pc()
     inv = ", ".join(f"{s.qty}x {repo.get_item(s.item_id).name}" for s in pc.inventory) or "(empty)"
     line = f"  [ {pc.name}: {pc.hp}/{pc.max_hp} HP | {pc.gold}g | {pc.xp} XP | inventory: {inv} ]"
-    canon = session.canon.all()
+    canon = [r for r in session.canon.all() if r.origin != "authored"]  # session canon only
     if canon:
         line += "\n  [ canon: " + ", ".join(f"{r.name} ({r.status})" for r in canon) + " ]"
     return line

@@ -21,6 +21,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
 
+from ..canon.models import CanonRecord
 from ..enums import Ability
 from ..state.models import Character, Item as StateItem, ItemStack
 from ..state.repository import InMemoryRepository
@@ -44,10 +45,13 @@ class PackValidationError(Exception):
 @dataclass
 class LoadedWorld:
     """The authored baseline a campaign seeds from. `repository` is the engine's
-    runtime state (characters + items); `scene` is the opening location's prose.
-    The pack id/version are pinned onto the session so reload re-seeds correctly."""
+    runtime state (characters + items); `canon` is the authored CanonRecords
+    (NPCs/places) the session seeds for retrieval; `scene` is the opening
+    location's prose. The pack id/version are pinned onto the session so reload
+    re-seeds correctly."""
 
     repository: InMemoryRepository
+    canon: list[CanonRecord]
     scene: str
     pack_id: str
     pack_version: str
@@ -193,6 +197,26 @@ def _project_item(it: Item) -> StateItem:
     )
 
 
+def _authored_canon(npcs: list[NPC], places: list[Place]) -> list[CanonRecord]:
+    """Authored NPCs and places become confirmed, load-bearing canon so retrieval
+    (canon search) and the canon lifecycle work over authored content too. The
+    record id IS the pack slug (e.g. 'merchant_thom') — a namespace distinct from
+    runtime 'canon-N' ids, so it never perturbs the session id counter. Not
+    event-sourced: re-seeded from the pack on every load, like the repository."""
+    records: list[CanonRecord] = []
+    for n in npcs:
+        records.append(CanonRecord(
+            id=n.id, entity_type="npc", name=n.name, text=n.description,
+            origin="authored", status="confirmed", load_bearing=True,
+        ))
+    for p in places:
+        records.append(CanonRecord(
+            id=p.id, entity_type="place", name=p.name, text=p.description,
+            origin="authored", status="confirmed", load_bearing=True,
+        ))
+    return records
+
+
 def _build_npc(n: NPC, statblocks: dict[str, StatBlock]) -> Character:
     """Build a runtime npc Character. Combat stats come from the referenced stat
     block (or Character defaults if none)."""
@@ -262,6 +286,6 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     scene = scenario.scene_override or place_by_id[scenario.start_location].description
 
     return LoadedWorld(
-        repository=repo, scene=scene,
+        repository=repo, canon=_authored_canon(npcs, places), scene=scene,
         pack_id=manifest.id, pack_version=manifest.version,
     )

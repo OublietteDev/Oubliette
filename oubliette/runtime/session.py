@@ -36,13 +36,20 @@ class Session:
         if seed is None:
             world = load_pack(DEFAULT_PACK)
             repo: Repository = world.repository
+            authored_canon = world.canon
             scene = world.scene
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
         else:
             repo = seed()
+            authored_canon = []
             scene = DEFAULT_SCENE
             marker = {}
         canon = CanonStore()
+        # Seed authored canon (slug ids) BEFORE replay so runtime 'canon-N' records
+        # layer on top without colliding; it's part of the deterministic baseline,
+        # not the event log, so reload re-seeds it identically.
+        for rec in authored_canon:
+            canon.add(rec)
         events = store.read_all()
         session = cls(store, repo, canon, scene=scene)
         if events:
