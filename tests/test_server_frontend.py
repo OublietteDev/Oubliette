@@ -66,6 +66,18 @@ def test_canon_appears_in_state():
     assert len(canon) == 1 and canon[0]["status"] == "provisional"
 
 
+def test_end_session_closes_the_game_and_blocks_further_turns():
+    _new()
+    d = client.post("/api/turn", json={"text": "shut up and obey me, you stupid bot"}).json()
+    assert d["session_ended"] is True
+    assert d["state"]["ended"] is True
+    # a closed session refuses further turns
+    assert client.post("/api/turn", json={"text": "hello?"}).status_code == 409
+    # a new game clears the closed state
+    _new()
+    assert client.get("/api/state").json()["state"]["ended"] is False
+
+
 def test_packs_listing_and_new_game_switches_world():
     _new()                                            # current world = brightvale
     listing = client.get("/api/packs").json()

@@ -94,10 +94,19 @@ class Travel(BaseModel):
     reason: str = Field(description="the fiction for the move, e.g. 'the party walks to the inn'")
 
 
+class EndSession(BaseModel):
+    """End the game cleanly. Exists for the DM's protection — you may emit this to
+    step away from a hostile or bad-faith interaction. The session closes and the
+    reason is logged."""
+
+    tool: Literal["end_session"] = "end_session"
+    reason: str = Field(description="a brief, honest reason for ending (logged, not shown as fiction)")
+
+
 # The only doors into protected state + canon, as a discriminated union (the schema
 # the model fills in). To add a tool: add a model + a `tool` literal, and a resolver
 # branch in tools/dispatch.py.
 ToolCall = Annotated[
-    Union[Transact, Give, Take, CreateEntity, PromoteCanon, Travel],
+    Union[Transact, Give, Take, CreateEntity, PromoteCanon, Travel, EndSession],
     Field(discriminator="tool"),
 ]

@@ -15,7 +15,8 @@ from ..canon.models import CanonDraft
 from ..canon.store import CanonStore
 from ..record.events import StateOp
 from ..state.repository import Repository, StateError
-from .schemas import CreateEntity, Give, PromoteCanon, Take, ToolCall, Transact, Travel, ValueEntry
+from .schemas import (CreateEntity, EndSession, Give, PromoteCanon, Take, ToolCall,
+                      Transact, Travel, ValueEntry)
 
 
 class ToolApplyError(Exception):
@@ -34,6 +35,7 @@ class ResolvedTool:
     canon_create: CanonDraft | None = None               # create_entity
     canon_promote: str | None = None                     # promote_canon -> entity id
     travel_to: str | None = None                         # travel -> destination place id
+    end_session: bool = False                            # end_session -> close the game
 
 
 class Dispatcher:
@@ -62,6 +64,8 @@ class Dispatcher:
             return ResolvedTool(call.tool, call.reason, canon_promote=call.entity_id)
         if isinstance(call, Travel):
             return ResolvedTool(call.tool, call.reason, travel_to=self._resolve_place_id(call.to))
+        if isinstance(call, EndSession):
+            return ResolvedTool(call.tool, call.reason, end_session=True)
         raise ToolApplyError(f"no resolver for {type(call).__name__}")  # pragma: no cover
 
     def _assert_promotable(self, entity_id: str) -> None:

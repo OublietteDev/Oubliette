@@ -33,6 +33,7 @@ class Session:
         self.location: str | None = None    # party's current Place id (scopes present NPCs)
         self.scene: str = DEFAULT_SCENE     # current location's prose
         self.pack_id: str | None = None     # which content pack this campaign is playing
+        self.ended: bool = False            # the DM closed this session (end_session tool)
 
     def _scene_for(self, location: str | None) -> str:
         """The prose for a location — the pack's opening text at the start spot
@@ -76,9 +77,12 @@ class Session:
         # The current location is the start, with every LOCATION_CHANGED folded over
         # it — so reload lands the party exactly where they last travelled to.
         location = start_location
+        ended = False
         for event in sorted(events, key=lambda e: e.seq):
             if event.kind == EventKind.LOCATION_CHANGED.value:
                 location = event.payload.get("to", location)
+            elif event.kind == EventKind.SESSION_MARKER.value and event.payload.get("marker") == "end":
+                ended = True
 
         session = cls(store, repo, canon)
         session.places = places
@@ -87,6 +91,7 @@ class Session:
         session.location = location
         session.scene = session._scene_for(location)
         session.pack_id = chosen_pack
+        session.ended = ended
         if events:
             replay(events, repo, canon)     # existing session: rebuild to current
         else:
@@ -99,6 +104,12 @@ class Session:
         self.store.append(EventKind.LOCATION_CHANGED, {"to": to, "reason": reason})
         self.location = to
         self.scene = self._scene_for(to)
+
+    def emit_end(self, reason: str) -> None:
+        """Close the session (the DM's `end_session` tool). Records an end marker
+        with the reason and flags the session ended (persists across reload)."""
+        self.store.append(EventKind.SESSION_MARKER, {"marker": "end", "reason": reason})
+        self.ended = True
 
     def emit_log(self, kind: "str | EventKind", **payload) -> Event:
         """Append a non-state event (player message, roll, marker). No ops."""

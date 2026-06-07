@@ -540,6 +540,7 @@ $("trade-haggle").addEventListener("click", doHaggle);
 $("trade-overlay").addEventListener("click", (e) => { if (e.target.id === "trade-overlay") closeTrade(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeTrade(); closeJournal(); closeInventory(); closeMenu(); } });
 
+let gameEnded = false;          // set when the DM ends the session (locks the composer)
 function renderState(s) {
   $("scene").textContent = s.scene || "";
   const pc = s.pc;
@@ -572,12 +573,20 @@ function renderState(s) {
     if (r.text) li.appendChild(el("div", "canon-text", r.text));
     canon.appendChild(li);
   });
+
+  if (s.ended && !gameEnded) {
+    gameEnded = true;
+    addMessage("System", "— The Phantom has closed the table. This session has ended; start a New Game to play again. —", "system");
+  }
+  setBusy(busy);                // re-apply the composer lock (stays disabled when ended)
 }
 
 let busy = false;
 function setBusy(b) {
-  busy = b; sendBtn.disabled = b; input.disabled = b;
-  if (!b) input.focus();
+  busy = b;
+  const locked = b || gameEnded;
+  sendBtn.disabled = locked; input.disabled = locked;
+  if (!locked) input.focus();
 }
 
 async function send(textOverride) {
@@ -669,6 +678,7 @@ async function startNewGame(packId, packName) {
   });
   const data = await res.json();
   closeTrade();
+  gameEnded = false;            // a fresh game clears any prior end-of-session lock
   log.innerHTML = "";
   addMessage("System", `A new tale begins in ${packName}. Describe what you do.`, "system");
   renderState(data.state);

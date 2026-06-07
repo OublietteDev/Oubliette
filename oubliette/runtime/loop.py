@@ -42,6 +42,7 @@ class TurnReport:
     meta_notice: str | None = None         # set when the D6 fallback fires
     combat_result: CombatResult | None = None
     trade_open: TradeState | None = None   # set when a trade window is summoned
+    session_ended: bool = False            # the DM closed the game (end_session)
 
 
 class TurnLoop:
@@ -167,6 +168,8 @@ class TurnLoop:
                     self.session.emit_promote(rt.canon_promote, rt.reason)
                 elif rt.travel_to is not None:
                     self.session.emit_travel(rt.travel_to, rt.reason)
+                elif rt.end_session:
+                    self.session.emit_end(rt.reason)
                 else:
                     self.session.emit_state(
                         EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
@@ -184,6 +187,7 @@ class TurnLoop:
             player_text=player_text, assessment=assessment, narration=narration,
             roll_outcome=roll_outcome, roll_result=roll_result, applied=applied,
             meta_notice=meta_notice,
+            session_ended=any(rt.end_session for rt in applied),
         )
 
     def _run_combat(self, player_text: str, assessment: TurnAssessment) -> TurnReport:

@@ -90,6 +90,7 @@ def _snapshot() -> dict:
         npcs = [n for n in npcs if n.home_location == location]
     return {
         "scene": GAME.session.scene,
+        "ended": GAME.session.ended,
         "pc": {
             "name": pc.name, "hp": pc.hp, "max_hp": pc.max_hp,
             "gold": pc.gold, "xp": pc.xp, "armor_class": pc.armor_class,
@@ -159,6 +160,7 @@ def _turn_payload(report) -> dict:
         "combat": combat,
         "trade": report.trade_open.model_dump() if report.trade_open is not None else None,
         "meta_notice": report.meta_notice,
+        "session_ended": report.session_ended,
         "verb": report.assessment.intent.verb.value,
         "tier": report.assessment.tier.value,
         "state": _snapshot(),
@@ -187,6 +189,8 @@ async def post_turn(body: TurnIn) -> JSONResponse:
     text = body.text.strip()
     if not text:
         return JSONResponse({"error": "empty message"}, status_code=400)
+    if GAME.session.ended:
+        return JSONResponse({"error": "the DM has ended this session", "ended": True}, status_code=409)
     async with GAME.lock:  # serialize turns; combat/state mutation isn't reentrant
         report = await GAME.loop.take_turn(text)
         return JSONResponse(_turn_payload(report))
@@ -199,6 +203,8 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
     text = body.text.strip()
     if not text:
         return JSONResponse({"error": "empty message"}, status_code=400)
+    if GAME.session.ended:
+        return JSONResponse({"error": "the DM has ended this session", "ended": True}, status_code=409)
 
     loop = asyncio.get_running_loop()
     queue: asyncio.Queue = asyncio.Queue()

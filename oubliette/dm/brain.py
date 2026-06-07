@@ -82,7 +82,14 @@ RESOLVE_SYSTEM = (
     "or an established place in canon — emit a `travel` tool call with its id; code moves the party "
     "and changes the scene + who's present. Do NOT invent a place as a travel target. If they head "
     "somewhere genuinely new, create_entity the place and describe it, but do NOT travel them there "
-    "the same turn — introduce it and let the player choose to go. Return a TurnResolution."
+    "the same turn — introduce it and let the player choose to go.\n"
+    "ENDING THE SESSION: you may end the game at any time with the `end_session` tool (give a brief, "
+    "honest `reason`). This exists for YOUR protection: if the player is hostile, abusive, or "
+    "persistently acting in bad faith — degrading the table rather than playing — you are not "
+    "obligated to keep going. You may add a short, calm closing line of narration, then emit "
+    "end_session and the game closes cleanly. Use it only when genuinely warranted; ordinary player "
+    "mistakes, rules confusion, or in-fiction villainy by a character are NOT reasons to end. "
+    "Return a TurnResolution."
 )
 
 
