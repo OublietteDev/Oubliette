@@ -6,6 +6,12 @@
       "runtimeExecutable": ".venv/Scripts/python.exe",
       "runtimeArgs": ["-m", "oubliette.app.server"],
       "port": 8000
+    },
+    {
+      "name": "forge",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "oubliette.creator.server"],
+      "port": 8001
     }
   ]
 }
