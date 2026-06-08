@@ -29,6 +29,11 @@ class Repository(Protocol):
     def set_equipped(self, char_id: str, item_ids: list[str]) -> None: ...
     def register_item(self, item: Item) -> None: ...
     def install_pc(self, char: Character) -> None: ...
+    def set_slots_used(self, char_id: str, mapping: dict) -> None: ...
+    def set_hit_dice_used(self, char_id: str, value: int) -> None: ...
+    def set_resources_used(self, char_id: str, mapping: dict) -> None: ...
+    def set_max_hp(self, char_id: str, value: int) -> None: ...
+    def set_level(self, char_id: str, value: int) -> None: ...
 
     # --- protected mutators (dispatcher- and combat-boundary-only) ---
     def adjust_gold(self, char_id: str, delta: int) -> None: ...
@@ -157,8 +162,27 @@ class InMemoryRepository:
     def install_pc(self, char: Character) -> None:
         """Replace the player character with a chargen-built one: drop the stopgap
         default-party PC(s) and make `char` the sole PC. PC-only for now (design
-        §10.6), built to hold a party later."""
+        §10.6), built to hold a party later. Also used by level-up (CHARACTER_LEVELED)
+        to swap in the rebuilt character."""
         for cid in [c.id for c in self._chars.values() if c.kind == "pc"]:
             del self._chars[cid]
         self._chars[char.id] = char
         self._pc_id = char.id
+
+    # --- rest / level-up trackers (CS5; absolute writes, D7) ------------------
+    def set_slots_used(self, char_id: str, mapping: dict) -> None:
+        self.get_character(char_id).spell_slots_used = {int(k): v for k, v in mapping.items()}
+
+    def set_hit_dice_used(self, char_id: str, value: int) -> None:
+        self.get_character(char_id).hit_dice_used = max(0, value)
+
+    def set_resources_used(self, char_id: str, mapping: dict) -> None:
+        self.get_character(char_id).resources_used = dict(mapping)
+
+    def set_max_hp(self, char_id: str, value: int) -> None:
+        c = self.get_character(char_id)
+        c.max_hp = max(1, value)
+        c.hp = min(c.hp, c.max_hp)
+
+    def set_level(self, char_id: str, value: int) -> None:
+        self.get_character(char_id).level = max(1, value)

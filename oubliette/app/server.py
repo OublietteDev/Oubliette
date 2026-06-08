@@ -30,6 +30,7 @@ from ..record.rng import Rng
 from ..rules import derive
 from ..rules.chargen import (POINT_BUY_BUDGET, POINT_BUY_COST, STANDARD_ARRAY,
                              CharacterBuild, ChargenError, build_character)
+from ..rules.rest import long_rest_ops, short_rest_ops
 from ..runtime.loop import TurnLoop
 from ..runtime.session import Session
 from ..dm.brain import Brain
@@ -62,8 +63,8 @@ class _Game:
         self.pack_id = self.session.pack_id or self.pack_id   # reflect the loaded/pinned world
         self.journal = JournalStore(DB_PATH)   # player notes — never enters DM context
         client, self.client_name = _pick_client(force_scripted=False)
-        rng = Rng(seed=1234, record=self.session.emit_log)
-        self.loop = TurnLoop(self.session, rng, Brain(client))
+        self.rng = Rng(seed=1234, record=self.session.emit_log)
+        self.loop = TurnLoop(self.session, self.rng, Brain(client))
 
     def refresh_client(self) -> None:
         """Re-pick the model client — call AFTER .env is loaded so a key present
@@ -796,6 +797,8 @@ def _sheet_member(char: Character, rs: Ruleset) -> dict:
         "inventory": [{"name": _item_name(rs, s.item_id), "qty": s.qty,
                        "equipped": s.item_id in char.equipped} for s in char.inventory],
         "gold": char.gold, "conditions": list(char.conditions),
+        "hit_dice_used": char.hit_dice_used, "slots_used": dict(char.spell_slots_used),
+        "resources_used": dict(char.resources_used),
     }
     if sheet is None:
         return out
@@ -842,6 +845,33 @@ async def get_sheet() -> JSONResponse:
     """The party's read-only character sheets (PC-only today, built to hold a party)."""
     rs = _ruleset()
     return JSONResponse({"party": [_sheet_member(c, rs) for c in GAME.session.repo.party()]})
+
+
+class RestIn(BaseModel):
+    char_id: str = "pc"
+    kind: str                       # "short" | "long"
+    hit_dice: int = 0               # short rest only: how many hit dice to spend healing
+
+
+@app.post("/api/rest")
+async def post_rest(body: RestIn) -> JSONResponse:
+    """Take a short or long rest (CS5): compute the recovery ops and record-then-apply
+    a REST_TAKEN event. Short-rest hit-die healing rolls through the seeded RNG."""
+    async with GAME.lock:
+        rs = _ruleset()
+        try:
+            char = GAME.session.repo.get_character(body.char_id)
+        except StateError as e:
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+        if body.kind == "long":
+            ops = long_rest_ops(char, rs)
+        elif body.kind == "short":
+            ops = short_rest_ops(char, rs, spend_hit_dice=max(0, body.hit_dice), rng=GAME.rng)
+        else:
+            return JSONResponse({"ok": False, "error": "rest kind must be 'short' or 'long'"}, status_code=400)
+        GAME.session.emit_state(EventKind.REST_TAKEN, ops, rest=body.kind)
+        return JSONResponse({"ok": True, "party": [_sheet_member(c, rs) for c in GAME.session.repo.party()],
+                             "state": _snapshot()})
 
 
 @app.post("/api/chargen/preview")

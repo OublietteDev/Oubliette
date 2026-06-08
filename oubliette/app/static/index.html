@@ -333,6 +333,10 @@
   .sh-pill { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; font-size: 12px; color: var(--muted); }
   .sh-flavor { font-size: 12px; color: var(--muted); }
   .sh-flavor b { color: var(--faint); font-weight: 600; }
+  .sh-restbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .sh-restbar .act { font-size: 13px; }
+  .sh-restbar input { width: 46px; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; color: var(--ink); font: inherit; padding: 5px 7px; }
+  .sh-restbar .sh-hdnote { font-size: 11px; color: var(--faint); margin-left: auto; }
   .inv-member { display: flex; flex-direction: column; gap: 12px; }
   .inv-mname { font-family: var(--serif); font-size: 17px; color: var(--gold); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
   .inv-group { display: flex; flex-direction: column; gap: 8px; }
@@ -1843,6 +1847,8 @@ function renderSheetMember(m) {
   top.appendChild(shCell("Hit Dice", m.hit_dice ? `${m.hit_dice.total - m.hit_dice.used}d${m.hit_dice.die}` : "—"));
   root.appendChild(top);
 
+  root.appendChild(renderRestBar(m));
+
   // abilities
   const ab = el("div", "sh-abils");
   ABIL_ORDER.forEach(a => {
@@ -1874,7 +1880,7 @@ function renderSheetMember(m) {
   root.appendChild(cols);
 
   // spellcasting
-  if (m.spellcasting) root.appendChild(renderSpellcasting(m.spellcasting));
+  if (m.spellcasting) root.appendChild(renderSpellcasting(m.spellcasting, m.slots_used || {}));
 
   // class resources (rage, sorcery points, …)
   if (m.resources && Object.keys(m.resources).length) {
@@ -1882,7 +1888,9 @@ function renderSheetMember(m) {
     const tags = el("div", "sh-tags2");
     Object.keys(m.resources).forEach(name => {
       const r = m.resources[name];
-      tags.appendChild(el("span", "sh-pill", `${name}: ${r.unlimited ? "∞" : r.max} (${r.recharge} rest)`));
+      const used = (m.resources_used && m.resources_used[name]) || 0;
+      const avail = r.unlimited ? "∞" : `${Math.max(0, r.max - used)}/${r.max}`;
+      tags.appendChild(el("span", "sh-pill", `${name}: ${avail} (${r.recharge} rest)`));
     });
     rs.appendChild(tags); root.appendChild(rs);
   }
@@ -1934,6 +1942,37 @@ function renderSheetMember(m) {
   }
   return root;
 }
+function renderRestBar(m) {
+  const bar = el("div", "sh-restbar");
+  const availDice = m.hit_dice ? (m.hit_dice.total - m.hit_dice.used) : 0;
+  const shortBtn = el("button", "act", "Short Rest");
+  let hdInput = null;
+  if (m.hit_dice && m.hit_dice.die) {
+    bar.appendChild(el("span", "sh-flavor", "spend"));
+    hdInput = el("input"); hdInput.type = "number"; hdInput.min = 0; hdInput.max = availDice;
+    hdInput.value = Math.min(1, availDice); hdInput.title = "hit dice to spend on a short rest";
+    bar.appendChild(hdInput);
+    bar.appendChild(el("span", "sh-flavor", `of ${availDice}d${m.hit_dice.die} hit dice`));
+  }
+  shortBtn.addEventListener("click", () => doRest(m.id, "short", hdInput ? parseInt(hdInput.value || "0", 10) : 0));
+  const longBtn = el("button", "act primary", "Long Rest");
+  longBtn.addEventListener("click", () => doRest(m.id, "long", 0));
+  bar.appendChild(shortBtn); bar.appendChild(longBtn);
+  return bar;
+}
+async function doRest(charId, kind, hitDice) {
+  try {
+    const res = await fetch("/api/rest", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ char_id: charId, kind, hit_dice: hitDice }),
+    });
+    const data = await res.json();
+    if (!data.ok) { addMessage("System", "Rest failed: " + (data.error || "unknown"), "system"); return; }
+    renderSheet({ party: data.party });
+    if (data.state) renderState(data.state);
+    addMessage("System", kind === "long" ? "You take a long rest and wake restored." : "You take a short rest.", "system");
+  } catch (e) { /* transient */ }
+}
 function featRow(it) {
   const row = el("div", "sh-feat");
   const nm = el("div", "sh-fname");
@@ -1948,14 +1987,17 @@ function featRow(it) {
   row.appendChild(nm); if (it.text) row.appendChild(txt);
   return row;
 }
-function renderSpellcasting(sc) {
+function renderSpellcasting(sc, slotsUsed) {
   const sec = el("div", "sh-sec");
   sec.appendChild(el("h3", null, "Spellcasting"));
   const top = el("div", "sh-flavor"); top.style.marginBottom = "8px";
   top.innerHTML = `<b>Ability:</b> ${sc.ability.toUpperCase()} &nbsp; <b>Save DC:</b> ${sc.save_dc} &nbsp; <b>Attack:</b> ${shSigned(sc.attack_bonus)}`;
   sec.appendChild(top);
   const slots = el("div", "sh-slots");
-  Object.keys(sc.slots).sort().forEach(lv => slots.appendChild(el("div", "sh-slot", `L${lv}: ${sc.slots[lv]}${sc.slots_recharge === "short" ? " ⟳short" : ""}`)));
+  Object.keys(sc.slots).sort().forEach(lv => {
+    const used = (slotsUsed && slotsUsed[lv]) || 0;
+    slots.appendChild(el("div", "sh-slot", `L${lv}: ${Math.max(0, sc.slots[lv] - used)}/${sc.slots[lv]}${sc.slots_recharge === "short" ? " ⟳short" : ""}`));
+  });
   if (slots.children.length) sec.appendChild(slots);
   if (sc.cantrips.length) { sec.appendChild(el("div", "sh-src", `Cantrips (${sc.cantrips_known ?? sc.cantrips.length})`)); sc.cantrips.forEach(s => sec.appendChild(spellRow(s))); }
   if (sc.spells.length) {

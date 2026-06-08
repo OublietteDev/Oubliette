@@ -36,19 +36,23 @@ class EventKind(str, Enum):
     QUEST_UPDATED = "quest_updated"     # quest status change and/or an appended note
     CONTRACT_SET = "contract_set"       # per-campaign table contract (tone + lines/veils)
     CHARACTER_CREATED = "character_created"  # chargen output: the built PC + granted SRD gear
+    CHARACTER_LEVELED = "character_leveled"  # level-up output: the rebuilt PC (CS5)
+    REST_TAKEN = "rest_taken"           # short/long rest: ops restoring hp/slots/hit-dice/resources
 
 
 class StateOp(BaseModel):
     """One atomic, replayable change to protected state. Deltas are commutative;
     `hp_set`/`conditions` are absolute (D7)."""
 
-    op: Literal["gold", "item", "hp_set", "xp", "conditions", "equip"]
+    op: Literal["gold", "item", "hp_set", "xp", "conditions", "equip",
+                "slots_used", "hit_dice_used", "resources_used", "max_hp", "level"]
     char: str
     item_id: str | None = None
     delta: int | None = None
     value: int | None = None
     conditions: list[str] | None = None
     item_ids: list[str] | None = None       # for the 'equip' op (absolute loadout)
+    mapping: dict | None = None             # for slots_used / resources_used (absolute)
 
     # --- typed constructors ---------------------------------------------------
     @classmethod
@@ -75,6 +79,26 @@ class StateOp(BaseModel):
     def equip(cls, char: str, item_ids: list[str]) -> "StateOp":
         return cls(op="equip", char=char, item_ids=list(item_ids))
 
+    @classmethod
+    def slots_used(cls, char: str, mapping: dict) -> "StateOp":
+        return cls(op="slots_used", char=char, mapping={str(k): v for k, v in mapping.items()})
+
+    @classmethod
+    def hit_dice_used(cls, char: str, value: int) -> "StateOp":
+        return cls(op="hit_dice_used", char=char, value=value)
+
+    @classmethod
+    def resources_used(cls, char: str, mapping: dict) -> "StateOp":
+        return cls(op="resources_used", char=char, mapping=dict(mapping))
+
+    @classmethod
+    def max_hp(cls, char: str, value: int) -> "StateOp":
+        return cls(op="max_hp", char=char, value=value)
+
+    @classmethod
+    def level(cls, char: str, value: int) -> "StateOp":
+        return cls(op="level", char=char, value=value)
+
     def apply(self, repo: "Repository") -> None:
         if self.op == "gold":
             repo.adjust_gold(self.char, self.delta or 0)
@@ -92,6 +116,16 @@ class StateOp(BaseModel):
             repo.set_conditions(self.char, self.conditions or [])
         elif self.op == "equip":
             repo.set_equipped(self.char, self.item_ids or [])
+        elif self.op == "slots_used":
+            repo.set_slots_used(self.char, {int(k): v for k, v in (self.mapping or {}).items()})
+        elif self.op == "hit_dice_used":
+            repo.set_hit_dice_used(self.char, self.value or 0)
+        elif self.op == "resources_used":
+            repo.set_resources_used(self.char, dict(self.mapping or {}))
+        elif self.op == "max_hp":
+            repo.set_max_hp(self.char, self.value or 1)
+        elif self.op == "level":
+            repo.set_level(self.char, self.value or 1)
 
 
 def apply_ops(ops: list[StateOp], repo: "Repository") -> None:
@@ -147,7 +181,7 @@ def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = N
             quests.update(event.payload["quest_id"], status=event.payload.get("status"),
                           note=event.payload.get("note"))
         return
-    if event.kind == EventKind.CHARACTER_CREATED.value:
+    if event.kind in (EventKind.CHARACTER_CREATED.value, EventKind.CHARACTER_LEVELED.value):
         install_character(event.payload, repo)
         return
     apply_ops(event.state_ops(), repo)
