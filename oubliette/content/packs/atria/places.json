@@ -7,7 +7,12 @@
     "tags": [
       "town",
       "safe"
-    ]
+    ],
+    "position": {
+      "x": 55.9,
+      "y": 49.5
+    },
+    "map_image": "brightvale_map.jpg"
   },
   {
     "id": "brightvale_market_square",
@@ -19,7 +24,11 @@
       "safe",
       "trade",
       "quests"
-    ]
+    ],
+    "position": {
+      "x": 67.8,
+      "y": 26.7
+    }
   },
   {
     "id": "silverfin_docks",
@@ -31,7 +40,11 @@
       "safe",
       "trade",
       "quests"
-    ]
+    ],
+    "position": {
+      "x": 57.3,
+      "y": 62.3
+    }
   },
   {
     "id": "the_palladian_ward_civic_government_district",
@@ -43,7 +56,11 @@
       "government",
       "safe",
       "quests"
-    ]
+    ],
+    "position": {
+      "x": 48.6,
+      "y": 33.1
+    }
   },
   {
     "id": "seraphel_s_roost",
@@ -54,6 +71,10 @@
       "safe",
       "Seraphel",
       "boat"
-    ]
+    ],
+    "position": {
+      "x": 60.5,
+      "y": 85.8
+    }
   }
 ]
