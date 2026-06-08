@@ -148,6 +148,7 @@
   .cue-vol input[type=range] { flex: 1; accent-color: var(--accent); }
   .cue-gap { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; white-space: nowrap; }
   .cue-gap input { width: 52px; font-size: 13px; }
+  .cue-when { font-size: 12px; color: var(--faint); align-self: center; }
   .loot-row { display: grid; grid-template-columns: 1fr 70px auto; gap: 8px; margin-bottom: 8px; align-items: center; }
   .shop-row { display: grid; grid-template-columns: 1fr 64px 80px auto; gap: 8px; margin-bottom: 8px; align-items: center; }
   .ability-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -677,8 +678,8 @@ async function onChooseIllus(file) {
   } catch (e) { toast(String(e.message || e)); }
 }
 // ---- soundscape cues (design oubliette-audio-mixer §4) ----
-// time/weather conditions (the "when" fields) are deferred to S5, when the engine
-// actually tracks them — authoring controls that did nothing would only mislead.
+// "when" (time/weather) conditions are live as of S5 — the engine tracks time-of-day
+// and weather (the DM reports them), and the soundscape filters cues to match.
 const audioMissing = file => !!file && !(state.audioFiles || []).includes(file);
 function audioOptions(selected) {
   const files = state.audioFiles || [];
@@ -707,6 +708,11 @@ function renderSounds() {
         <label class="cue-vol">vol <input type="range" min="0" max="100" data-cue-gain="${i}" value="${Math.round((c.gain != null ? c.gain : 1) * 100)}" /></label>
         ${shot ? `<span class="cue-gap">every <input type="number" min="1" data-cue-min="${i}" value="${c.min_gap ?? 6}" />–<input type="number" min="1" data-cue-max="${i}" value="${c.max_gap ?? 16}" /> s</span>` : ""}
       </div>
+      <div class="cue-row">
+        <span class="cue-when">when</span>
+        <select data-cue-time="${i}"><option value="any"${(c.time || "any") === "any" ? " selected" : ""}>any time</option><option value="day"${c.time === "day" ? " selected" : ""}>day only</option><option value="night"${c.time === "night" ? " selected" : ""}>night only</option></select>
+        <select data-cue-weather="${i}">${["any", "clear", "rain", "storm", "wind"].map(w => `<option value="${w}"${(c.weather || "any") === w ? " selected" : ""}>${w === "any" ? "any weather" : w}</option>`).join("")}</select>
+      </div>
     </div>`;
   }).join("") || '<div class="nothing" style="margin-bottom:8px">No sounds yet.</div>';
   const on = (sel, ev, fn) => box.querySelectorAll(sel).forEach(el => el.addEventListener(ev, fn));
@@ -719,6 +725,8 @@ function renderSounds() {
   on("[data-cue-kind]", "change", e => { editorCtx.sounds[+e.target.dataset.cueKind].kind = e.target.value; renderSounds(); });
   on("[data-cue-cat]", "change", e => { editorCtx.sounds[+e.target.dataset.cueCat].category = e.target.value; });
   on("[data-cue-scope]", "change", e => { editorCtx.sounds[+e.target.dataset.cueScope].scope = e.target.value; });
+  on("[data-cue-time]", "change", e => { editorCtx.sounds[+e.target.dataset.cueTime].time = e.target.value; });
+  on("[data-cue-weather]", "change", e => { editorCtx.sounds[+e.target.dataset.cueWeather].weather = e.target.value; });
   on("[data-cue-gain]", "input", e => { editorCtx.sounds[+e.target.dataset.cueGain].gain = +e.target.value / 100; });
   on("[data-cue-min]", "input", e => { editorCtx.sounds[+e.target.dataset.cueMin].min_gap = +e.target.value; });
   on("[data-cue-max]", "input", e => { editorCtx.sounds[+e.target.dataset.cueMax].max_gap = +e.target.value; });
@@ -761,6 +769,8 @@ function previewCue(i) {
 function cleanCue(c) {
   const o = { file: c.file, kind: c.kind || "bed", category: c.category || "sfx" };
   if (c.scope === "passed_down") o.scope = "passed_down";
+  if (c.time && c.time !== "any") o.time = c.time;
+  if (c.weather && c.weather !== "any") o.weather = c.weather;
   if (c.gain != null && Math.abs(c.gain - 1) > 1e-6) o.gain = Math.round(c.gain * 100) / 100;
   if (o.kind === "oneshot") {
     if (c.min_gap != null) o.min_gap = c.min_gap;
