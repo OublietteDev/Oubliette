@@ -747,6 +747,103 @@ async def get_chargen_options() -> JSONResponse:
     return JSONResponse(_chargen_options())
 
 
+# --- the read-only character sheet (CS3) -------------------------------------
+def _ruleset_name(table: dict, ident: str | None) -> str | None:
+    """Display name for a ruleset id (class/race/…), or None for a missing id."""
+    if ident is None:
+        return None
+    ent = table.get(ident)
+    return ent.name if ent is not None else ident
+
+
+def _spell_view(rs: Ruleset, spell_id: str) -> dict:
+    s = rs.spells.get(spell_id)
+    if s is None:
+        return {"id": spell_id, "name": spell_id, "level": None}
+    return {"id": s.id, "name": s.name, "level": s.level, "school": s.school,
+            "casting_time": s.casting_time, "range": s.range, "components": s.components,
+            "duration": s.duration, "concentration": s.concentration, "ritual": s.ritual,
+            "description": s.description}
+
+
+def _sheet_member(char: Character, rs: Ruleset) -> dict:
+    """One character's full sheet — every number code-derived (design §7). Works for a
+    chargen PC (full D&D build) and degrades gracefully for a sheet-less quick-start
+    hero (basic stats only)."""
+    repo = GAME.session.repo
+    equipped_items = []
+    for i in char.equipped:
+        try:
+            equipped_items.append(repo.get_item(i))
+        except StateError:
+            pass
+    d = derive.sheet_stats(char, rs, equipped_items)
+    sheet = char.sheet
+    saves = {a.value: {"mod": d["saves"][a.value],
+                       "proficient": bool(sheet and a in sheet.saving_throw_proficiencies)}
+             for a in Ability}
+    from ..enums import SKILL_ABILITY, Skill
+    skills = {s.value: {"mod": d["skills"][s.value], "ability": SKILL_ABILITY[s].value,
+                        "proficient": s in char.skill_proficiencies,
+                        "expertise": bool(sheet and s in sheet.expertise)}
+              for s in Skill}
+    out = {
+        "id": char.id, "name": char.name, "has_sheet": sheet is not None,
+        "level": char.level, "hp": char.hp, "max_hp": char.max_hp,
+        "abilities": {a.value: {"score": char.abilities.get(a, 10), "mod": char.ability_mod(a)}
+                      for a in Ability},
+        "saves": saves, "skills": skills, "derived": d,
+        "inventory": [{"name": _item_name(rs, s.item_id), "qty": s.qty,
+                       "equipped": s.item_id in char.equipped} for s in char.inventory],
+        "gold": char.gold, "conditions": list(char.conditions),
+    }
+    if sheet is None:
+        return out
+    cc = rs.classes.get(sheet.char_class)
+    out["identity"] = {
+        "race": _ruleset_name(rs.races, sheet.race),
+        "subrace": _ruleset_name(rs.subraces, sheet.subrace),
+        "char_class": _ruleset_name(rs.classes, sheet.char_class),
+        "subclass": _ruleset_name(rs.subclasses, sheet.subclass),
+        "background": _ruleset_name(rs.backgrounds, sheet.background),
+        "alignment": sheet.alignment, "size": sheet.size, "speed": sheet.speed,
+    }
+    out["hit_dice"] = {"die": (cc.hit_die if cc else None), "total": char.level,
+                       "used": char.hit_dice_used}
+    out["proficiencies"] = {
+        "armor": list(sheet.armor_proficiencies), "weapons": list(sheet.weapon_proficiencies),
+        "tools": list(sheet.tool_proficiencies), "languages": list(sheet.languages),
+    }
+    # features grouped by source, in a stable source order
+    order = ["race", "subrace", "class", "subclass", "background", "feat"]
+    groups: dict = {}
+    for f in sheet.features:
+        groups.setdefault(f.source or "other", []).append({"name": f.name, "text": f.text})
+    out["features"] = [{"source": src, "items": groups[src]}
+                       for src in order + [s for s in groups if s not in order] if src in groups]
+    if sheet.spellcasting_ability is not None:
+        out["spellcasting"] = {
+            "ability": sheet.spellcasting_ability.value,
+            "save_dc": d["spell_save_dc"], "attack_bonus": d["spell_attack_bonus"],
+            "slots": d["spell_slots"], "slots_recharge": d["spell_slots_recharge"],
+            "cantrips_known": d["cantrips_known"], "prepared_count": d["prepared_count"],
+            "cantrips": [_spell_view(rs, s) for s in sheet.cantrips_known],
+            "spells": [_spell_view(rs, s) for s in (sheet.spells_prepared or sheet.spells_known)],
+        }
+    out["resources"] = d["class_resources"]
+    out["flavor"] = {"personality_traits": list(sheet.personality_traits),
+                     "ideals": list(sheet.ideals), "bonds": list(sheet.bonds),
+                     "flaws": list(sheet.flaws)}
+    return out
+
+
+@app.get("/api/sheet")
+async def get_sheet() -> JSONResponse:
+    """The party's read-only character sheets (PC-only today, built to hold a party)."""
+    rs = _ruleset()
+    return JSONResponse({"party": [_sheet_member(c, rs) for c in GAME.session.repo.party()]})
+
+
 @app.post("/api/chargen/preview")
 async def post_chargen_preview(body: CharacterBuild) -> JSONResponse:
     """Run the firewall live: validate the in-progress build and return either the

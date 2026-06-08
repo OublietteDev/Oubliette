@@ -271,7 +271,19 @@ International License."* Oubliette is non-commercial/open-source, so this is cle
     out-of-order preview responses found & fixed with request sequencing). Tests in
     `tests/test_server_frontend.py` (+6): options, preview accept/reject, new-with-build, invalid-
     build-preserves-save, quick-start.
-- **CS3 — Sheet panel.** The full read-only sheet.
+- **CS3 — Sheet panel. ✅ BUILT (2026-06-08, 188 tests green).** The stubbed "Party
+  Sheets" (👥) ☰ entry is now the full read-only sheet. `GET /api/sheet` returns the
+  party's code-derived sheets (`_sheet_member` over `derive.sheet_stats` + the build +
+  ruleset for display names and spell/feature text). The panel (`sheet-overlay` in the
+  SPA) renders: identity line, combat stats row (AC/HP/Init/Speed/Prof/hit-dice), ability
+  cards (mod + score), saving throws & all 18 skills with proficiency/expertise **dots**,
+  a spellcasting block (DC/attack + slot pills + cantrips/prepared with descriptions on
+  click), class resources, features grouped by source (expandable), proficiencies &
+  languages, equipment (equipped marked), and personality flavor. Degrades gracefully for
+  a sheet-less quick-start hero (basics only — no identity/spellcasting/features). Verified
+  end-to-end in-browser (fighter sheet + quick-start degradation; spellcasting render via a
+  synthetic payload since no caster is buildable until CS4). Tests in
+  `tests/test_server_frontend.py` (+2): full PC sheet + quick-start degradation.
 - **CS4 — SRD content fill (the slog).** Author the full backbone into
   `content/srd/*.json`, in chunks — I draft, OublietteDev verifies. Runs alongside CS1–CS3
   using the slice, then completes the set.

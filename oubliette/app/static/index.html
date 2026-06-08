@@ -292,6 +292,47 @@
   .inv-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 18px; }
   .inv-head .spacer { flex: 1; }
   .inv-body { padding: 16px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 22px; }
+  /* --- character sheet (CS3) --- */
+  .sheet-modal { width: min(820px, 96vw); }
+  .sh-name { font-family: var(--serif); font-size: 22px; color: var(--gold); }
+  .sh-sub { color: var(--muted); font-size: 13px; margin: 2px 0 14px; }
+  .sh-top { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 16px; }
+  @media (max-width: 560px) { .sh-top { grid-template-columns: repeat(3, 1fr); } }
+  .sh-cell { background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 4px; text-align: center; }
+  .sh-cell b { display: block; font-size: 19px; color: var(--ink); }
+  .sh-cell span { font-size: 10px; color: var(--faint); text-transform: uppercase; letter-spacing: .04em; }
+  .sh-abils { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 16px; }
+  @media (max-width: 560px) { .sh-abils { grid-template-columns: repeat(3, 1fr); } }
+  .sh-abil { background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px; text-align: center; }
+  .sh-abil .sh-mod { font-size: 22px; font-family: var(--serif); color: var(--gold); }
+  .sh-abil .sh-score { font-size: 12px; color: var(--muted); }
+  .sh-abil .sh-lbl { font-size: 10px; color: var(--faint); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+  .sh-cols { display: grid; grid-template-columns: 220px 1fr; gap: 18px; margin-bottom: 16px; }
+  @media (max-width: 560px) { .sh-cols { grid-template-columns: 1fr; } }
+  .sh-sec h3 { font-family: var(--serif); color: var(--gold); font-size: 15px; margin: 0 0 8px; border-bottom: 1px solid var(--line); padding-bottom: 5px; }
+  .sh-line { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 13px; }
+  .sh-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--accent); flex: none; }
+  .sh-dot.on { background: var(--accent); }
+  .sh-dot.exp { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 0 2px rgba(0,0,0,.3) inset; }
+  .sh-line .sh-mv { width: 26px; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .sh-line .sh-nm { color: var(--muted); }
+  .sh-line .sh-ab { color: var(--faint); font-size: 10px; text-transform: uppercase; margin-left: auto; }
+  .sh-sec { margin-bottom: 16px; }
+  .sh-spell { border: 1px solid var(--line); border-radius: 8px; margin: 5px 0; background: var(--panel-2); }
+  .sh-spellhd { display: flex; align-items: center; gap: 8px; padding: 7px 10px; cursor: pointer; font-size: 13px; }
+  .sh-spellhd .sh-lv { font-size: 10px; color: var(--accent-2); text-transform: uppercase; }
+  .sh-spellhd .sh-tags { margin-left: auto; color: var(--faint); font-size: 10px; }
+  .sh-spellbody { padding: 0 10px 9px; font-size: 12px; color: var(--muted); }
+  .sh-slots { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .sh-slot { background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px 11px; font-size: 12px; color: var(--gold); }
+  .sh-feat { border-bottom: 1px solid var(--line); padding: 6px 0; }
+  .sh-feat .sh-fname { font-size: 13px; color: var(--ink); cursor: pointer; display: flex; gap: 7px; align-items: center; }
+  .sh-feat .sh-ftext { font-size: 12px; color: var(--muted); margin: 4px 0 0 16px; }
+  .sh-src { font-size: 10px; color: var(--faint); text-transform: uppercase; letter-spacing: .08em; margin: 10px 0 4px; }
+  .sh-tags2 { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sh-pill { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; font-size: 12px; color: var(--muted); }
+  .sh-flavor { font-size: 12px; color: var(--muted); }
+  .sh-flavor b { color: var(--faint); font-weight: 600; }
   .inv-member { display: flex; flex-direction: column; gap: 12px; }
   .inv-mname { font-family: var(--serif); font-size: 17px; color: var(--gold); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
   .inv-group { display: flex; flex-direction: column; gap: 8px; }
@@ -546,6 +587,17 @@
       <button class="act" id="inv-close">Close</button>
     </div>
     <div class="inv-body" id="inv-body"></div>
+  </div>
+</div>
+
+<div id="sheet-overlay" class="overlay hidden">
+  <div class="inv-modal sheet-modal">
+    <div class="inv-head">
+      <h2>Character Sheet</h2>
+      <div class="spacer"></div>
+      <button class="act" id="sheet-close">Close</button>
+    </div>
+    <div class="inv-body" id="sheet-body"></div>
   </div>
 </div>
 
@@ -1436,7 +1488,7 @@ $("newgame-overlay").addEventListener("click", (e) => { if (e.target.id === "new
 const MENU_ITEMS = [
   { key: "journal",   label: "Journal",          icon: "📖", enabled: true,  open: () => openJournal() },
   { key: "inventory", label: "Inventory",        icon: "🎒", enabled: true,  open: () => openInventory() },
-  { key: "party",     label: "Party Sheets",     icon: "👥", enabled: false },
+  { key: "party",     label: "Party Sheets",     icon: "👥", enabled: true,  open: () => openSheet() },
   { key: "bestiary",  label: "Bestiary & Rules", icon: "📚", enabled: false },
   { key: "map",       label: "Map",              icon: "🗺️", enabled: true,  open: () => openWorldMap() },
   { key: "settings",  label: "Settings",         icon: "⚙️", enabled: true,  open: () => openSettings() },
@@ -1736,6 +1788,202 @@ async function equipToggle(charId, itemId, equip) {
   } catch (e) { /* ignore transient */ }
 }
 $("inv-close").addEventListener("click", closeInventory);
+
+// --- character sheet (CS3): read-only display of the code-owned numbers ----
+async function openSheet() {
+  let data;
+  try { data = await (await fetch("/api/sheet")).json(); } catch (e) { data = { party: [] }; }
+  renderSheet(data);
+  $("sheet-overlay").classList.remove("hidden");
+}
+function closeSheet() { $("sheet-overlay").classList.add("hidden"); }
+const shSigned = (n) => (n == null ? "—" : (n >= 0 ? "+" : "") + n);
+const ABIL_ORDER = ["str", "dex", "con", "int", "wis", "cha"];
+
+function shCell(label, val) {
+  const c = el("div", "sh-cell"); c.appendChild(el("b", null, String(val))); c.appendChild(el("span", null, label)); return c;
+}
+function shStatLine(name, mod, proficient, expertise, ability) {
+  const row = el("div", "sh-line");
+  const dot = el("div", "sh-dot" + (expertise ? " exp" : proficient ? " on" : ""));
+  dot.title = expertise ? "expertise" : proficient ? "proficient" : "not proficient";
+  row.appendChild(dot);
+  row.appendChild(el("span", "sh-mv", shSigned(mod)));
+  row.appendChild(el("span", "sh-nm", name));
+  if (ability) row.appendChild(el("span", "sh-ab", ability));
+  return row;
+}
+function renderSheet(data) {
+  const body = $("sheet-body"); body.innerHTML = "";
+  if (!data.party || !data.party.length) { body.appendChild(el("div", "inv-empty", "no party members")); return; }
+  data.party.forEach(m => body.appendChild(renderSheetMember(m)));
+}
+function renderSheetMember(m) {
+  const root = el("div", "inv-member");
+  root.appendChild(el("div", "sh-name", m.name));
+  if (m.has_sheet) {
+    const id = m.identity;
+    const bits = [`Level ${m.level}`,
+      id.race + (id.subrace ? ` (${id.subrace})` : ""),
+      id.char_class + (id.subclass ? ` — ${id.subclass}` : ""), id.background];
+    if (id.alignment) bits.push(id.alignment);
+    root.appendChild(el("div", "sh-sub", bits.filter(Boolean).join(" · ")));
+  } else {
+    root.appendChild(el("div", "sh-sub", `Level ${m.level} · pre-made hero`));
+  }
+
+  // top combat stats
+  const d = m.derived;
+  const top = el("div", "sh-top");
+  top.appendChild(shCell("AC", d.armor_class));
+  top.appendChild(shCell("HP", `${m.hp}/${m.max_hp}`));
+  top.appendChild(shCell("Init", shSigned(d.initiative)));
+  top.appendChild(shCell("Speed", m.has_sheet ? m.identity.speed : 30));
+  top.appendChild(shCell("Prof", shSigned(d.proficiency_bonus)));
+  top.appendChild(shCell("Hit Dice", m.hit_dice ? `${m.hit_dice.total - m.hit_dice.used}d${m.hit_dice.die}` : "—"));
+  root.appendChild(top);
+
+  // abilities
+  const ab = el("div", "sh-abils");
+  ABIL_ORDER.forEach(a => {
+    const cell = el("div", "sh-abil");
+    cell.appendChild(el("div", "sh-mod", shSigned(m.abilities[a].mod)));
+    cell.appendChild(el("div", "sh-score", String(m.abilities[a].score)));
+    cell.appendChild(el("div", "sh-lbl", a.toUpperCase()));
+    ab.appendChild(cell);
+  });
+  root.appendChild(ab);
+
+  // saves + skills, two columns
+  const cols = el("div", "sh-cols");
+  const savesSec = el("div", "sh-sec"); savesSec.appendChild(el("h3", null, "Saving Throws"));
+  ABIL_ORDER.forEach(a => savesSec.appendChild(shStatLine(a.toUpperCase(), m.saves[a].mod, m.saves[a].proficient, false)));
+  if (d.passive_perception != null) {
+    const pp = el("div", "sh-line"); pp.style.marginTop = "8px";
+    pp.appendChild(el("span", "sh-mv", String(d.passive_perception)));
+    pp.appendChild(el("span", "sh-nm", "Passive Perception"));
+    savesSec.appendChild(pp);
+  }
+  cols.appendChild(savesSec);
+  const skillsSec = el("div", "sh-sec"); skillsSec.appendChild(el("h3", null, "Skills"));
+  Object.keys(m.skills).sort().forEach(s => {
+    const sk = m.skills[s];
+    skillsSec.appendChild(shStatLine(prettySkill(s), sk.mod, sk.proficient, sk.expertise, sk.ability));
+  });
+  cols.appendChild(skillsSec);
+  root.appendChild(cols);
+
+  // spellcasting
+  if (m.spellcasting) root.appendChild(renderSpellcasting(m.spellcasting));
+
+  // class resources (rage, sorcery points, …)
+  if (m.resources && Object.keys(m.resources).length) {
+    const rs = el("div", "sh-sec"); rs.appendChild(el("h3", null, "Resources"));
+    const tags = el("div", "sh-tags2");
+    Object.keys(m.resources).forEach(name => {
+      const r = m.resources[name];
+      tags.appendChild(el("span", "sh-pill", `${name}: ${r.unlimited ? "∞" : r.max} (${r.recharge} rest)`));
+    });
+    rs.appendChild(tags); root.appendChild(rs);
+  }
+
+  // features by source
+  if (m.features && m.features.length) {
+    const fs = el("div", "sh-sec"); fs.appendChild(el("h3", null, "Features & Traits"));
+    m.features.forEach(g => {
+      fs.appendChild(el("div", "sh-src", g.source));
+      g.items.forEach(it => fs.appendChild(featRow(it)));
+    });
+    root.appendChild(fs);
+  }
+
+  // proficiencies & languages
+  if (m.proficiencies) {
+    const p = m.proficiencies;
+    const ps = el("div", "sh-sec"); ps.appendChild(el("h3", null, "Proficiencies & Languages"));
+    [["Armor", p.armor], ["Weapons", p.weapons], ["Tools", p.tools], ["Languages", p.languages]].forEach(([lbl, arr]) => {
+      if (!arr || !arr.length) return;
+      const line = el("div", "sh-flavor"); line.style.margin = "3px 0";
+      line.appendChild(el("b", null, lbl + ": "));
+      line.appendChild(document.createTextNode(arr.join(", ")));
+      ps.appendChild(line);
+    });
+    root.appendChild(ps);
+  }
+
+  // equipment
+  const eq = el("div", "sh-sec"); eq.appendChild(el("h3", null, "Equipment" + (m.gold != null ? ` · ${m.gold} gp` : "")));
+  const tags = el("div", "sh-tags2");
+  m.inventory.forEach(it => tags.appendChild(el("span", "sh-pill",
+    `${it.name}${it.qty > 1 ? " ×" + it.qty : ""}${it.equipped ? " ⚔" : ""}`)));
+  if (!m.inventory.length) tags.appendChild(el("span", "sh-flavor", "empty-handed"));
+  eq.appendChild(tags); root.appendChild(eq);
+
+  // flavor
+  if (m.flavor && (m.flavor.personality_traits.length || m.flavor.ideals.length || m.flavor.bonds.length || m.flavor.flaws.length)) {
+    const fl = el("div", "sh-sec"); fl.appendChild(el("h3", null, "Personality"));
+    [["Traits", m.flavor.personality_traits], ["Ideals", m.flavor.ideals],
+     ["Bonds", m.flavor.bonds], ["Flaws", m.flavor.flaws]].forEach(([lbl, arr]) => {
+      if (!arr.length) return;
+      const line = el("div", "sh-flavor"); line.style.margin = "3px 0";
+      line.appendChild(el("b", null, lbl + ": "));
+      line.appendChild(document.createTextNode(arr.join(" ")));
+      fl.appendChild(line);
+    });
+    root.appendChild(fl);
+  }
+  return root;
+}
+function featRow(it) {
+  const row = el("div", "sh-feat");
+  const nm = el("div", "sh-fname");
+  nm.appendChild(el("span", "chev", "▸"));
+  nm.appendChild(el("span", null, it.name));
+  const txt = el("div", "sh-ftext"); txt.textContent = it.text; txt.style.display = "none";
+  nm.addEventListener("click", () => {
+    const open = txt.style.display === "none";
+    txt.style.display = open ? "block" : "none";
+    nm.querySelector(".chev").textContent = open ? "▾" : "▸";
+  });
+  row.appendChild(nm); if (it.text) row.appendChild(txt);
+  return row;
+}
+function renderSpellcasting(sc) {
+  const sec = el("div", "sh-sec");
+  sec.appendChild(el("h3", null, "Spellcasting"));
+  const top = el("div", "sh-flavor"); top.style.marginBottom = "8px";
+  top.innerHTML = `<b>Ability:</b> ${sc.ability.toUpperCase()} &nbsp; <b>Save DC:</b> ${sc.save_dc} &nbsp; <b>Attack:</b> ${shSigned(sc.attack_bonus)}`;
+  sec.appendChild(top);
+  const slots = el("div", "sh-slots");
+  Object.keys(sc.slots).sort().forEach(lv => slots.appendChild(el("div", "sh-slot", `L${lv}: ${sc.slots[lv]}${sc.slots_recharge === "short" ? " ⟳short" : ""}`)));
+  if (slots.children.length) sec.appendChild(slots);
+  if (sc.cantrips.length) { sec.appendChild(el("div", "sh-src", `Cantrips (${sc.cantrips_known ?? sc.cantrips.length})`)); sc.cantrips.forEach(s => sec.appendChild(spellRow(s))); }
+  if (sc.spells.length) {
+    const lbl = sc.prepared_count != null ? `Prepared (${sc.prepared_count})` : "Spells Known";
+    sec.appendChild(el("div", "sh-src", lbl));
+    sc.spells.forEach(s => sec.appendChild(spellRow(s)));
+  }
+  return sec;
+}
+function spellRow(s) {
+  const wrap = el("div", "sh-spell");
+  const hd = el("div", "sh-spellhd");
+  hd.appendChild(el("span", "sh-lv", s.level === 0 ? "C" : "L" + s.level));
+  hd.appendChild(el("span", null, s.name));
+  const tags = [];
+  if (s.concentration) tags.push("conc");
+  if (s.ritual) tags.push("ritual");
+  if (s.school) tags.push(s.school);
+  if (tags.length) hd.appendChild(el("span", "sh-tags", tags.join(" · ")));
+  const bodyEl = el("div", "sh-spellbody"); bodyEl.style.display = "none";
+  bodyEl.textContent = [s.casting_time, s.range, s.duration].filter(Boolean).join(" · ") + (s.description ? "\n" + s.description : "");
+  bodyEl.style.whiteSpace = "pre-line";
+  hd.addEventListener("click", () => { bodyEl.style.display = bodyEl.style.display === "none" ? "block" : "none"; });
+  wrap.appendChild(hd); if (s.description || s.casting_time) wrap.appendChild(bodyEl);
+  return wrap;
+}
+$("sheet-close").addEventListener("click", closeSheet);
+$("sheet-overlay").addEventListener("click", (e) => { if (e.target.id === "sheet-overlay") closeSheet(); });
 
 // --- soundscape mixer (S2: inherited beds, crossfaded on travel; music/sfx buses) ---
 // Engine-resolved: the server hands us a flat list of beds for the current location (its

@@ -308,3 +308,30 @@ def test_new_game_with_invalid_build_is_rejected_and_save_survives():
 def test_quick_start_keeps_the_default_party():
     d = client.post("/api/new", json={"pack_id": "brightvale"}).json()   # no build
     assert d["state"]["pc"]["gold"] == 15        # brightvale's default-party hero
+
+
+# --- character sheet (CS3) --------------------------------------------------
+def test_sheet_for_a_created_pc_is_fully_derived():
+    client.post("/api/new", json={"pack_id": "brightvale", "build": _FIGHTER_BUILD})
+    m = client.get("/api/sheet").json()["party"][0]
+    assert m["has_sheet"] and m["name"] == "Bron"
+    assert m["identity"]["char_class"] == "Fighter" and m["identity"]["race"] == "Human"
+    assert m["abilities"]["str"] == {"score": 16, "mod": 3}
+    assert m["saves"]["str"]["proficient"] is True and m["saves"]["dex"]["proficient"] is False
+    assert m["skills"]["athletics"]["proficient"] is True      # from the soldier background
+    assert m["derived"]["armor_class"] == 18
+    assert m["hit_dice"] == {"die": 10, "total": 1, "used": 0}
+    srcs = {g["source"] for g in m["features"]}
+    assert {"class", "background"} <= srcs
+    assert any(it["name"] == "Chain Mail" and it["equipped"] for it in m["inventory"])
+    _new()
+
+
+def test_sheet_degrades_for_a_quickstart_hero():
+    client.post("/api/new", json={"pack_id": "brightvale"})   # no build → default party
+    m = client.get("/api/sheet").json()["party"][0]
+    assert m["has_sheet"] is False
+    assert "identity" not in m and "spellcasting" not in m
+    # basic code-owned numbers still render
+    assert set(m["abilities"]) == {"str", "dex", "con", "int", "wis", "cha"}
+    assert "armor_class" in m["derived"]
