@@ -15,6 +15,7 @@ import asyncio
 import json
 import os
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -378,7 +379,7 @@ def _soundscape() -> list:
             seen.add(name)
             layers.append({
                 "file": name,
-                "url": f"/api/audio/{name}",
+                "url": f"/api/audio/{quote(name)}",   # encode &, spaces, etc. in the filename
                 "kind": "bed",
                 "category": cue.get("category", "sfx"),
                 "gain": cue.get("gain", 1.0),

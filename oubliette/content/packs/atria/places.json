@@ -98,5 +98,29 @@
       "x": 60.5,
       "y": 85.8
     }
+  },
+  {
+    "id": "the_lantern_wake_tavern",
+    "name": "The Lantern & Wake Tavern",
+    "description": "The Lantern & Wake is one of Brightvale's oldest and most beloved taverns, standing just a stone's throw from the harbor docks. Captains fresh from distant voyages share tables with local fishermen, while merchants haggle over contracts beside crackling hearthfires. The tavern's founder claimed that a lantern left burning in the upper window would always guide sailors safely home, and the tradition has been faithfully maintained for nearly two centuries.",
+    "parent": "brightvale",
+    "tags": [
+      "town",
+      "safe",
+      "quests",
+      "food and drink"
+    ],
+    "position": {
+      "x": 65.8,
+      "y": 52.8
+    },
+    "sounds": [
+      {
+        "file": "Lantern&Wake_Background_Theme.mp3",
+        "kind": "bed",
+        "category": "music",
+        "scope": "local"
+      }
+    ]
   }
 ]
