@@ -119,6 +119,8 @@
   aside { background: var(--panel); overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 18px; }
   .card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
   .card h2 { margin: 0 0 10px; font-family: var(--serif); font-size: 15px; color: var(--gold); letter-spacing: .3px; }
+  #scene-card h2 { display: flex; align-items: baseline; gap: 8px; }
+  .env { font-family: var(--sans); font-size: 11px; font-weight: 400; color: var(--muted); letter-spacing: .02em; margin-left: auto; white-space: nowrap; }
   .sheet-name { font-family: var(--serif); font-size: 18px; }
   .hpbar { height: 9px; border-radius: 6px; background: #2c2420; overflow: hidden; margin: 8px 0 6px; border: 1px solid var(--line); }
   .hpfill { height: 100%; background: linear-gradient(90deg, #7d9a6b, #b9533f); transition: width .4s; }
@@ -344,7 +346,7 @@
 
     <aside>
       <div class="card" id="scene-card">
-        <h2>The Scene</h2>
+        <h2>The Scene <span class="env" id="env-badge"></span></h2>
         <div class="scene" id="scene"></div>
       </div>
       <div class="card">
@@ -653,8 +655,14 @@ $("trade-overlay").addEventListener("click", (e) => { if (e.target.id === "trade
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeTrade(); closeJournal(); closeInventory(); closeWorldMap(); closeMenu(); } });
 
 let gameEnded = false;          // set when the DM ends the session (locks the composer)
+function envLabel(t, w) {
+  const ti = { day: "☀️ Day", night: "🌙 Night" }[t] || "";
+  const wi = { clear: "Clear", rain: "🌧️ Rain", storm: "⛈️ Storm", wind: "🌬️ Wind" }[w] || "";
+  return ti && wi ? `${ti} · ${wi}` : (ti || wi);
+}
 function renderState(s) {
   $("scene").textContent = s.scene || "";
+  $("env-badge").textContent = envLabel(s.time_of_day, s.weather);
   const pc = s.pc;
   $("pc-name").textContent = pc.name;
   $("hp").textContent = `HP ${pc.hp}/${pc.max_hp}`;

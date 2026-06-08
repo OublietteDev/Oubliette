@@ -84,6 +84,17 @@ rewrites. Everything runs with a **scripted (offline) DM** — no API key requir
   server-side in `/api/map`, so unvisited content never reaches the browser; DM-invented
   locations simply don't appear (you can only `travel` to authored places). Fits the
   DM-driven, location-to-location travel model (no free roam).
+- **Phase 11 — the Soundscape** (S1–S5; see [`oubliette-audio-mixer-v0.1.md`](oubliette-audio-mixer-v0.1.md)):
+  a **location-driven ambient audio mixer**, derived from state — the LLM never plays a
+  sound. Looping **beds** + sparse randomized **one-shots**, each tagged music/sfx, riding
+  the place tree (a top-level **theme passes down** into its children) and conditioned on
+  **time-of-day & weather**, which are now **engine state the DM reports** each turn
+  (`ENVIRONMENT_CHANGED`, replay-safe). The browser mixer (Web Audio) crossfades on travel
+  behind a one-time "enable sound" gate, with Music/SFX volume sliders; the Scene card shows
+  the live `☀️ Day · Clear`. Authored in **The Forge** (a per-place Soundscape editor; sounds
+  copied into the pack, portable like art) with a missing-file warning, and a game "↻ Reload
+  world" button that picks up Forge edits mid-session. (S6 — the actual weather/night sounds
+  + feel-tuning — is the remaining, mostly-authoring step.)
 
 ## Quickstart
 

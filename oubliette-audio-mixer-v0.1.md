@@ -266,3 +266,35 @@ Later niceties: area-level weather sets; time advancing on a long rest; per-cue 
     DM-reported?
 11. **Authoring ergonomics** — the §4 cue form may want grouping/presets once we hear real
     packs (the user's flag). Revisit after S1–S3.
+
+---
+
+## 10. Progress log — built since this v0.1 plan (2026-06-08)
+
+S1–S5 shipped; only S6 (the actual weather/night sounds + feel-tuning, mostly authoring)
+remains. Git commits in parens.
+
+- **S1 — location beds** (`a5c8cb9`): one ambient bed per place, crossfaded on travel; the
+  one-time "🔈 Enable sound" autoplay gate; master volume + mute; sounds served from
+  `pack/audio/`; shipped with synth placeholder loops.
+- **S2 — inheritance + buses** (`bdbb422`): the top-level **theme passes down** the place
+  tree (local sounds stay put); each cue routes through a **music** or **sfx** gain bus →
+  master, with independent player sliders.
+- **S3 — one-shots** (`2d7c1a9`): sparse, randomized incidental sounds (mug clinks, chair
+  scrapes, gulls) fired at a `[min_gap,max_gap]` interval with gain/pan jitter.
+- **S4 — Forge authoring** (`2fbe0da`): a **Soundscape** section in the place editor — pick
+  or upload a sound, set kind/category/reach/volume/gap, ▶ preview — writing `Place.sounds`.
+- **S5 — environment** (`8112ac6`, `4dfbd02`): `time_of_day`/`weather` are **engine state**;
+  the DM reports them each turn (recorded as `ENVIRONMENT_CHANGED`, replay-safe), kept stable
+  unless the story turns; `_soundscape` filters cues by them; the Forge's "when" pickers are
+  live; the game shows a **`☀️ Day · Clear`** indicator on the Scene card.
+
+**Tooling added along the way:** a game **"↻ Reload world"** button (`POST /api/reload`
+re-reads the pack and replays the save) so Forge edits show up mid-game; and a **non-blocking
+"missing sound" warning** in the Forge when a cue points at a deleted file.
+
+**Resolution of open questions:** #5 player controls landed as **Music + SFX sliders + mute**
+(S2). #6 muffling → the **passed-down / local** scope (S2). #8 prompting → **conservative**
+(carry time/weather forward unless the story clearly turns them; the DM reports every turn,
+code records only an actual change). #9 format/size and #10 auto-advancing time remain open;
+#11 (authoring presets) deferred — the hand-built cue form reads fine so far.
