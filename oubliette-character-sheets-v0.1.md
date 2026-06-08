@@ -284,9 +284,18 @@ International License."* Oubliette is non-commercial/open-source, so this is cle
   end-to-end in-browser (fighter sheet + quick-start degradation; spellcasting render via a
   synthetic payload since no caster is buildable until CS4). Tests in
   `tests/test_server_frontend.py` (+2): full PC sheet + quick-start degradation.
-- **CS4 — SRD content fill (the slog).** Author the full backbone into
-  `content/srd/*.json`, in chunks — I draft, OublietteDev verifies. Runs alongside CS1–CS3
-  using the slice, then completes the set.
+- **CS4 — SRD content fill (the slog). 🚧 IN PROGRESS (chunked gates).** Author the
+  full backbone into `content/srd/*.json`, transcribed verbatim from 5thsrd.org (strict
+  SRD 5.1, CC-BY-4.0) by a schema-validated agent fleet + completeness critic, curated
+  to the convention (mechanical traits only), each gate gated on OublietteDev's spot-check.
+  - **Done:** Gate 0 (compliance scrub — removed non-SRD Soldier/Alert/Tough/Resilient;
+    SRD has only Acolyte + Grappler), Gate 1 (9 races + 15 conditions), Gate 2 (4 subraces
+    — SRD ships one per applicable race). Plus the general **race/subrace choice mechanism**
+    (Half-Elf flexible ASI/skills, Human/High-Elf languages, High-Elf wizard cantrip).
+  - **Remaining:** equipment (~100+), the 7 missing classes + their 1–20 tables, spells (~300).
+  - **Known content gap (blocked on the spells gate):** a wizard / High Elf needs 3 wizard
+    cantrips at level 1 but the slice ships only 2 — chargen rejects the build until the
+    spell content lands. Bones are correct; it's a data shortfall, not a logic bug.
 - **CS5 — Leveling, rests, resources. ✅ BUILT (2026-06-08, 212 tests green).**
   - **CS5a — Rests + tracking.** New absolute StateOps (`slots_used`/`hit_dice_used`/
     `resources_used`/`max_hp`/`level`) + repo setters. `rules/rest.py`: long rest (full
