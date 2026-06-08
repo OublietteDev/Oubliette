@@ -164,17 +164,43 @@ def _translate(issue: str, pools: dict) -> dict:
     return {"message": issue, "section": lead if lead in _TYPES else None}
 
 
+def _audio_warnings(pack_id: str) -> list:
+    """Non-blocking checks: place sound cues that point at a file no longer in the pack's
+    audio/ folder. Audio is cosmetic — a missing sound just plays nothing — so these are
+    WARNINGS, never load errors (the world still loads and plays)."""
+    d = _pack_dir(pack_id)
+    if d is None:
+        return []
+    audio = d / "audio"
+    have = {p.name for p in audio.iterdir() if p.is_file()} if audio.is_dir() else set()
+    places = _read_json(d / "places.json")
+    out = []
+    if isinstance(places, list):
+        for p in places:
+            if not isinstance(p, dict):
+                continue
+            who = p.get("name") or p.get("id") or "a place"
+            for c in (p.get("sounds") or []):
+                f = c.get("file") if isinstance(c, dict) else None
+                if f and f not in have:
+                    out.append({"message": f"“{who}” uses a sound “{f}” that isn’t in the "
+                                           f"pack — it will be silent.", "section": "places"})
+    return out
+
+
 def _validate(pack_id: str) -> dict:
     """Run the GAME's loader. `issues` is the raw aggregated list (the guarantee);
-    `friendly` rephrases each one in plain language with a section tag for the UI."""
+    `friendly` rephrases each one in plain language with a section tag for the UI.
+    `warnings` are non-blocking notes (missing sound files) — `ok` ignores them."""
+    warnings = _audio_warnings(pack_id)
     try:
         load_pack(pack_id, packs_root=_packs_root())
-        return {"ok": True, "issues": [], "friendly": []}
+        return {"ok": True, "issues": [], "friendly": [], "warnings": warnings}
     except PackValidationError as e:
         d = _pack_dir(pack_id)
         pools = _name_pools(d) if d else {}
         return {"ok": False, "issues": e.errors,
-                "friendly": [_translate(i, pools) for i in e.errors]}
+                "friendly": [_translate(i, pools) for i in e.errors], "warnings": warnings}
 
 
 @app.get("/")
@@ -200,6 +226,7 @@ async def list_packs() -> JSONResponse:
                 "version": manifest.get("version") if isinstance(manifest, dict) else None,
                 "ok": report["ok"],
                 "issue_count": len(report["issues"]),
+                "warning_count": len(report.get("warnings", [])),
             })
     return JSONResponse({"packs": out})
 
