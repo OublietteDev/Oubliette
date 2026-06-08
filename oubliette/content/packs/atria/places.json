@@ -15,7 +15,7 @@
     "map_image": "brightvale_map.jpg",
     "sounds": [
       {
-        "file": "placeholder_theme.wav",
+        "file": "Brightvale_Background_Theme.mp3",
         "kind": "bed",
         "category": "music"
       }
