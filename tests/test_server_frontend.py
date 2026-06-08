@@ -246,6 +246,7 @@ _FIGHTER_BUILD = {
     "base_abilities": {"str": 15, "dex": 14, "con": 13, "int": 12, "wis": 10, "cha": 8},
     "skills": ["perception", "survival"],
     "languages": ["Draconic", "Celestial"],            # acolyte grants 2 free languages
+    "race_languages": ["Orc"],                         # human grants 1 extra language of choice
     "equipment_choices": [[0], [0], [0]],
 }
 

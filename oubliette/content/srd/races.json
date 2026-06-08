@@ -7,9 +7,8 @@
     "speed": 30,
     "darkvision": 0,
     "languages": ["Common"],
-    "traits": [
-      {"name": "Extra Language", "text": "You can speak, read, and write one extra language of your choice. Humans typically learn the languages of other peoples they deal with, including obscure dialects."}
-    ]
+    "language_choices": 1,
+    "traits": []
   },
   {
     "id": "elf",
@@ -84,15 +83,16 @@
     "id": "half_elf",
     "name": "Half-Elf",
     "ability_increases": {"cha": 2},
+    "ability_score_choices": {"choose": 2, "amount": 1},
     "size": "Medium",
     "speed": 30,
     "darkvision": 60,
     "languages": ["Common", "Elvish"],
+    "language_choices": 1,
+    "skill_choices": {"choose": 2, "from": []},
     "traits": [
-      {"name": "Ability Score Increase", "text": "Two other ability scores of your choice each increase by 1. (Your Charisma increase is applied automatically; the two choices are not yet applied by the builder.)"},
       {"name": "Fey Ancestry", "text": "You have advantage on saving throws against being charmed, and magic can't put you to sleep."},
-      {"name": "Skill Versatility", "text": "You gain proficiency in two skills of your choice."},
-      {"name": "Extra Language", "text": "You can speak, read, and write one extra language of your choice."}
+      {"name": "Skill Versatility", "text": "You gain proficiency in two skills of your choice."}
     ]
   },
   {

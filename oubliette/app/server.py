@@ -35,7 +35,7 @@ from ..rules.levelup import LevelUpChoice, LevelUpError, level_up, level_up_plan
 from ..runtime.loop import TurnLoop
 from ..runtime.session import Session
 from ..dm.brain import Brain
-from ..enums import Ability
+from ..enums import Ability, Skill
 from ..state.models import Character, CharacterSheet
 from ..state.repository import StateError
 from ..table import TONE_PRESETS, TableContract
@@ -689,7 +689,12 @@ def _chargen_options() -> dict:
     races = [{
         "id": r.id, "name": r.name, "speed": r.speed, "size": r.size,
         "ability_increases": dict(r.ability_increases),
+        "ability_score_choices": ({"choose": r.ability_score_choices.choose,
+                                   "amount": r.ability_score_choices.amount}
+                                  if r.ability_score_choices else None),
         "languages": list(r.languages),
+        "language_choices": r.language_choices,
+        "skill_choices": {"choose": r.skill_choices.choose, "from": list(r.skill_choices.from_)},
         "subraces": [{"id": s.id, "name": s.name,
                       "ability_increases": dict(s.ability_increases)}
                      for s in rs.subraces_for(r.id)],
@@ -714,6 +719,7 @@ def _chargen_options() -> dict:
         "classes": classes, "races": races, "backgrounds": backgrounds,
         "spells_by_class": spells_by_class,
         "abilities": [a.value for a in Ability],
+        "skills": [s.value for s in Skill],
         "standard_array": STANDARD_ARRAY,
         "point_buy": {"budget": POINT_BUY_BUDGET, "cost": POINT_BUY_COST},
     }

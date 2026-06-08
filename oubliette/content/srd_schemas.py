@@ -188,14 +188,27 @@ class Subclass(_Strict):
 
 
 # --- races --------------------------------------------------------------------
+class AbilityScoreChoice(_Strict):
+    """A race's FLEXIBLE ability-score increase (e.g. Half-Elf: +1 to two abilities
+    of your choice, *other* than those the race already raises). The fixed part
+    stays in `Race.ability_increases`; this is the player-chosen remainder, applied
+    by chargen from the player's picks."""
+
+    choose: int = 0                  # how many distinct abilities the player picks
+    amount: int = 1                  # the bonus applied to each picked ability
+
+
 class Race(_Strict):
     id: str
     name: str
     ability_increases: dict[AbilityKey, int] = Field(default_factory=dict)
+    ability_score_choices: AbilityScoreChoice | None = None   # flexible ASI (Half-Elf)
     size: Literal["Small", "Medium", "Large"] = "Medium"
     speed: int = 30
     darkvision: int = 0              # range in feet (0 = none)
     languages: list[str] = Field(default_factory=list)
+    language_choices: int = 0        # extra languages of the player's choice (Human, Half-Elf)
+    skill_choices: SkillChoice = Field(default_factory=SkillChoice)  # e.g. Half-Elf Skill Versatility
     traits: list[Feature] = Field(default_factory=list)
 
 

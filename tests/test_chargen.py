@@ -39,6 +39,7 @@ def _fighter(**over) -> CharacterBuild:
         ability_method="standard_array", base_abilities=dict(STD),
         skills=[Skill.PERCEPTION, Skill.SURVIVAL],     # acolyte already grants insight/religion
         languages=["Draconic", "Celestial"],           # acolyte grants 2 free languages
+        race_languages=["Orc"],                        # human grants 1 extra language of choice
         equipment_choices=[[0], [0], [0]],             # chain mail; longsword+shield; light crossbow
     )
     base.update(over)
@@ -53,6 +54,7 @@ def _wizard(**over) -> CharacterBuild:
                         Ability.WIS: 12, Ability.STR: 10, Ability.CHA: 8},
         skills=[Skill.ARCANA, Skill.INVESTIGATION],
         languages=["Draconic", "Celestial"],           # acolyte grants 2 free languages
+        race_languages=["Orc"],                         # human grants 1 extra language of choice
         cantrips=["fire_bolt", "mage_hand", "light"],
         spells=["magic_missile", "shield", "burning_hands", "detect_magic"],
         equipment_choices=[[1]],                        # dagger
@@ -89,7 +91,7 @@ def test_fighter_build_is_fully_derived():
 
 
 def test_subrace_traits_and_abilities_fold_in():
-    char, _ = build_character(_fighter(race="elf", subrace="high_elf"), RS)
+    char, _ = build_character(_fighter(race="elf", subrace="high_elf", race_languages=[]), RS)
     assert char.abilities[Ability.DEX] == 16    # base 14 + elf 2
     assert char.abilities[Ability.INT] == 13    # base 12 + high-elf 1
     assert "Elvish" in char.sheet.languages
@@ -157,6 +159,49 @@ def test_cannot_pick_too_many_or_off_list_skills():
 def test_cannot_duplicate_a_background_skill():
     dup = _fighter(skills=[Skill.PERCEPTION, Skill.INSIGHT])   # acolyte already grants insight
     assert "already granted by your background" in _why(dup)
+
+
+# --- race choices: flexible ASI, bonus skills, extra languages (Half-Elf, Human) ---
+def _half_elf(**over) -> CharacterBuild:
+    base = dict(
+        name="Aria", race="half_elf", char_class="fighter", background="acolyte",
+        ability_method="standard_array", base_abilities=dict(STD),
+        skills=[Skill.PERCEPTION, Skill.SURVIVAL],
+        race_ability_choices=[Ability.DEX, Ability.CON],   # Half-Elf: +1 to two OTHER abilities
+        race_skills=[Skill.STEALTH, Skill.ATHLETICS],      # Skill Versatility: any two
+        languages=["Draconic", "Celestial"],               # acolyte's two
+        race_languages=["Orc"],                            # Half-Elf's one extra
+        equipment_choices=[[0], [0], [0]],
+    )
+    base.update(over)
+    return CharacterBuild(**base)
+
+
+def test_half_elf_choices_apply():
+    char, _ = build_character(_half_elf(), RS)
+    assert char.abilities[Ability.CHA] == 10      # 8 + 2 fixed
+    assert char.abilities[Ability.DEX] == 15      # 14 + 1 chosen
+    assert char.abilities[Ability.CON] == 14      # 13 + 1 chosen
+    assert {Skill.STEALTH, Skill.ATHLETICS} <= char.skill_proficiencies
+    assert "Orc" in char.sheet.languages and "Elvish" in char.sheet.languages
+
+
+def test_half_elf_ability_choice_must_be_other():
+    # "two OTHER ability scores of your choice" — can't stack the +1 onto the fixed CHA
+    assert "already increased" in _why(_half_elf(race_ability_choices=[Ability.CHA, Ability.DEX]))
+
+
+def test_half_elf_ability_choice_count_enforced():
+    assert "raises 2 ability" in _why(_half_elf(race_ability_choices=[Ability.DEX]))
+
+
+def test_half_elf_skill_choice_count_and_dups_enforced():
+    assert "grants 2" in _why(_half_elf(race_skills=[Skill.STEALTH]))
+    assert "already granted" in _why(_half_elf(race_skills=[Skill.INSIGHT, Skill.STEALTH]))
+
+
+def test_human_requires_its_extra_language():
+    assert "language(s) of choice" in _why(_fighter(race_languages=[]))
 
 
 def test_non_caster_cannot_take_spells():

@@ -61,6 +61,9 @@ class CharacterBuild(BaseModel):
     skills: list[Skill] = Field(default_factory=list)                  # class skill picks
     expertise: list[Skill] = Field(default_factory=list)
     languages: list[str] = Field(default_factory=list)                 # background free picks
+    race_ability_choices: list[Ability] = Field(default_factory=list)  # flexible racial ASI picks (Half-Elf)
+    race_skills: list[Skill] = Field(default_factory=list)             # racial skill picks (Half-Elf Versatility)
+    race_languages: list[str] = Field(default_factory=list)            # racial extra-language picks (Human, Half-Elf)
     cantrips: list[str] = Field(default_factory=list)                  # spell ids (level 0)
     spells: list[str] = Field(default_factory=list)                    # spell ids (level 1+)
     equipment_choices: list[list[int]] = Field(default_factory=list)   # per class choice: option idxs
@@ -120,6 +123,64 @@ def _dupes(values: list) -> list:
             out.append(v)
         seen.add(v)
     return out
+
+
+# --- race choices (flexible ASI / skills / languages: Half-Elf, Human) --------
+def _final_abilities(build: CharacterBuild, race, subrace) -> dict:
+    """Final ability scores: the derivation engine's fixed racial increases, plus
+    the race's FLEXIBLE +1s the player chose (Half-Elf). Applied here so validation
+    and assembly agree."""
+    abilities = derive.final_abilities(build.base_abilities, race, subrace)
+    asc = race.ability_score_choices if race is not None else None
+    if asc is not None and asc.choose:
+        for ab in build.race_ability_choices:
+            abilities[ab] = abilities.get(ab, 10) + asc.amount
+    return abilities
+
+
+def _validate_race_choices(build: CharacterBuild, race, taken_skills: set,
+                           errors: list[str]) -> None:
+    """A race may grant the player choices the fixed fields can't hold: a flexible
+    ability increase (+1 to N abilities *other* than the fixed ones), bonus skill
+    proficiencies, and extra languages. Validate count/membership/distinctness, and
+    that picks don't duplicate proficiencies already granted elsewhere."""
+    # flexible ability-score increase
+    asc = race.ability_score_choices
+    picks = build.race_ability_choices
+    if asc is None or not asc.choose:
+        if picks:
+            errors.append(f"race ability choice: {race.name} grants no flexible ability increase")
+    else:
+        if len(picks) != asc.choose:
+            errors.append(f"race ability choice: {race.name} raises {asc.choose} ability(ies), got {len(picks)}")
+        for ab in _dupes(picks):
+            errors.append(f"race ability choice: {ab.value!r} chosen more than once")
+        for ab in picks:
+            if ab.value in race.ability_increases:   # "two OTHER ability scores of your choice"
+                errors.append(f"race ability choice: {ab.value!r} is already increased by {race.name} — choose another")
+
+    # bonus skill proficiencies (Half-Elf Skill Versatility)
+    sc = race.skill_choices
+    rskills = build.race_skills
+    if sc is None or not sc.choose:
+        if rskills:
+            errors.append(f"race skills: {race.name} grants no skill choice")
+    else:
+        allowed = set(sc.from_) if sc.from_ else {s.value for s in Skill}   # empty 'from' = any skill
+        if len(rskills) != sc.choose:
+            errors.append(f"race skills: {race.name} grants {sc.choose}, got {len(rskills)}")
+        for sk in _dupes(rskills):
+            errors.append(f"race skills: {sk.value!r} chosen more than once")
+        for sk in rskills:
+            if sk.value not in allowed:
+                errors.append(f"race skills: {sk.value!r} is not an allowed option")
+            if sk in taken_skills:
+                errors.append(f"race skills: {sk.value!r} is already granted — pick another")
+
+    # extra languages of choice (Human, Half-Elf)
+    if len(build.race_languages) != race.language_choices:
+        errors.append(f"race languages: {race.name} grants {race.language_choices} "
+                      f"language(s) of choice, got {len(build.race_languages)}")
 
 
 # --- equipment ----------------------------------------------------------------
@@ -280,20 +341,25 @@ def build_character(build: CharacterBuild, ruleset: Ruleset, char_id: str = "pc"
             if sk in bg_skills:
                 errors.append(f"skills: {sk.value!r} is already granted by your background — pick another")
 
+    # race choices: flexible ASI, bonus skills, extra languages (Half-Elf, Human).
+    if race is not None:
+        _validate_race_choices(build, race, set(build.skills) | bg_skills, errors)
+
     # expertise (rare at level 1): must be a skill you're actually proficient in.
-    proficient = set(build.skills) | bg_skills
+    proficient = set(build.skills) | bg_skills | set(build.race_skills)
     for sk in build.expertise:
         if sk not in proficient:
             errors.append(f"expertise: {sk.value!r} requires proficiency in that skill first")
 
-    # languages: the background's free-language count (racial extras are flavor text, deferred).
+    # languages: the background's free-language count (the race's extra-language picks
+    # are validated separately in _validate_race_choices).
     if bg is not None and len(build.languages) != bg.languages:
         errors.append(f"languages: background grants {bg.languages} free language(s), got {len(build.languages)}")
 
     # Spell + equipment validation need a provisional character for the derivation engine.
     grants: list[tuple[str, int]] = []
     if cc is not None and race is not None and bg is not None and not _abilities_fatal(build):
-        abilities = derive.final_abilities(build.base_abilities, race, subrace)
+        abilities = _final_abilities(build, race, subrace)
         spell_ability = Ability(cc.spellcasting.ability) if cc.spellcasting else None
         temp = Character(
             id=char_id, name=build.name, kind="pc", level=START_LEVEL,
@@ -321,7 +387,7 @@ def _abilities_fatal(build: CharacterBuild) -> bool:
 def _assemble(build: CharacterBuild, cc: CharClass, race, subrace, subclass, bg,
               ruleset: Ruleset, grants: list[tuple[str, int]], char_id: str
               ) -> tuple[Character, list[Item]]:
-    abilities = derive.final_abilities(build.base_abilities, race, subrace)
+    abilities = _final_abilities(build, race, subrace)
     spell_ability = Ability(cc.spellcasting.ability) if cc.spellcasting else None
 
     features: list[FeatureRef] = []
@@ -350,7 +416,7 @@ def _assemble(build: CharacterBuild, cc: CharClass, race, subrace, subclass, bg,
         armor_proficiencies=list(cc.armor_proficiencies),
         weapon_proficiencies=list(cc.weapon_proficiencies),
         tool_proficiencies=list(cc.tool_proficiencies) + list(bg.tool_proficiencies),
-        languages=list(race.languages) + list(build.languages),
+        languages=list(race.languages) + list(build.languages) + list(build.race_languages),
         features=features,
         speed=race.speed, size=race.size, alignment=build.alignment,
         personality_traits=list(build.personality_traits), ideals=list(build.ideals),
@@ -378,7 +444,8 @@ def _assemble(build: CharacterBuild, cc: CharClass, race, subrace, subclass, bg,
     char = Character(
         id=char_id, name=build.name, kind="pc", level=START_LEVEL,
         abilities=abilities,
-        skill_proficiencies=set(build.skills) | {Skill(s) for s in bg.skill_proficiencies},
+        skill_proficiencies=(set(build.skills) | {Skill(s) for s in bg.skill_proficiencies}
+                             | set(build.race_skills)),
         gold=bg.starting_gold,
         inventory=inventory, equipped=equipped,
         sheet=sheet, description=build.description,

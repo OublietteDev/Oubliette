@@ -1094,7 +1094,8 @@ async function ngToCharacter() {
   if (!cgOpt) cgOpt = await (await fetch("/api/chargen/options")).json();
   cg = { name: "", race: "", subrace: null, char_class: "", subclass: null, background: "",
          ability_method: "standard_array", base_abilities: {}, skills: [], expertise: [],
-         languages: [], cantrips: [], spells: [], equipment_choices: [], alignment: "",
+         languages: [], race_ability_choices: [], race_skills: [], race_languages: [],
+         cantrips: [], spells: [], equipment_choices: [], alignment: "",
          description: "", personality_traits: [], ideals: [], bonds: [], flaws: [], _pool: [] };
   selectRace(cgOpt.races[0].id);
   selectClass(cgOpt.classes[0].id, true);
@@ -1107,8 +1108,11 @@ async function ngToCharacter() {
 
 function selectRace(id) {
   cg.race = id;
-  const subs = cgRace().subraces;
-  cg.subrace = subs.length ? subs[0].id : null;
+  const r = cgRace();
+  cg.subrace = r.subraces.length ? r.subraces[0].id : null;
+  cg.race_ability_choices = [];
+  cg.race_skills = [];
+  cg.race_languages = Array(r.language_choices || 0).fill("");
 }
 function selectClass(id, silent) {
   cg.char_class = id;
@@ -1198,9 +1202,11 @@ function renderCgForm() {
 
   // Abilities
   root.appendChild(renderAbilities());
+  const raceAsc = renderRaceAbilityChoices(); if (raceAsc) root.appendChild(raceAsc);
 
   // Skills
   root.appendChild(renderSkills());
+  const raceSk = renderRaceSkills(); if (raceSk) root.appendChild(raceSk);
 
   // Spells (casters only)
   if (cgClass().is_caster) root.appendChild(renderSpells());
@@ -1210,6 +1216,68 @@ function renderCgForm() {
 
   // Languages
   if (cgBg().languages > 0) root.appendChild(renderLanguages());
+  const raceLang = renderRaceLanguages(); if (raceLang) root.appendChild(raceLang);
+}
+
+// Race-granted choices the fixed fields can't hold (Half-Elf flexible ASI + skills,
+// Human/Half-Elf extra language). The live preview enforces counts; these just collect picks.
+function renderRaceAbilityChoices() {
+  const r = cgRace(), asc = r.ability_score_choices;
+  if (!asc || !asc.choose) return null;
+  const sec = secEl(`${r.name} ability increase — choose ${asc.choose} (+${asc.amount} each)`);
+  const checks = el("div", "cg-checks");
+  cgOpt.abilities.forEach(a => {
+    if (r.ability_increases[a]) return;          // "two OTHER abilities" — fixed ones excluded
+    const lab = el("label", "cg-check");
+    const cb = el("input"); cb.type = "checkbox"; cb.checked = cg.race_ability_choices.includes(a);
+    cb.addEventListener("change", () => {
+      if (cb.checked) cg.race_ability_choices.push(a);
+      else cg.race_ability_choices = cg.race_ability_choices.filter(x => x !== a);
+      cgPreview();
+    });
+    lab.appendChild(cb); lab.appendChild(el("span", null, `${a.toUpperCase()} +${asc.amount}`));
+    checks.appendChild(lab);
+  });
+  sec.appendChild(checks);
+  return sec;
+}
+
+function renderRaceSkills() {
+  const r = cgRace(), sc = r.skill_choices;
+  if (!sc || !sc.choose) return null;
+  const bg = cgBg();
+  const taken = new Set([...bg.skills, ...cg.skills]);   // already granted elsewhere — can't double
+  const pool = (sc.from && sc.from.length) ? sc.from : cgOpt.skills;   // empty 'from' = any skill
+  const sec = secEl(`${r.name} skills — choose ${sc.choose}`);
+  const checks = el("div", "cg-checks");
+  pool.forEach(s => {
+    if (taken.has(s)) return;
+    const lab = el("label", "cg-check");
+    const cb = el("input"); cb.type = "checkbox"; cb.checked = cg.race_skills.includes(s);
+    cb.addEventListener("change", () => {
+      if (cb.checked) cg.race_skills.push(s); else cg.race_skills = cg.race_skills.filter(x => x !== s);
+      cgPreview();
+    });
+    lab.appendChild(cb); lab.appendChild(el("span", null, prettySkill(s)));
+    checks.appendChild(lab);
+  });
+  sec.appendChild(checks);
+  return sec;
+}
+
+function renderRaceLanguages() {
+  const r = cgRace();
+  if (!r.language_choices) return null;
+  const sec = secEl(`${r.name} languages — choose ${r.language_choices}`);
+  const row = el("div", "cg-row");
+  for (let i = 0; i < r.language_choices; i++) {
+    const f = el("label", "cg-field"); f.appendChild(el("span", null, `Language ${i + 1}`));
+    const inp = el("input"); inp.type = "text"; inp.value = cg.race_languages[i] || ""; inp.placeholder = "e.g. Orc";
+    inp.addEventListener("input", () => { cg.race_languages[i] = inp.value; cgPreview(); });
+    f.appendChild(inp); row.appendChild(f);
+  }
+  sec.appendChild(row);
+  return sec;
 }
 
 function renderAbilities() {
@@ -1330,6 +1398,8 @@ function finalAbility(key) {
   const r = cgRace(); if (r && r.ability_increases[key]) v += r.ability_increases[key];
   const sr = (r.subraces || []).find(s => s.id === cg.subrace);
   if (sr && sr.ability_increases[key]) v += sr.ability_increases[key];
+  if (r && r.ability_score_choices && cg.race_ability_choices.includes(key))
+    v += r.ability_score_choices.amount;
   return v;
 }
 function labeledBlock(label, node) { const w = el("div"); w.appendChild(el("div", "cg-hint", label)); w.appendChild(node); return w; }
