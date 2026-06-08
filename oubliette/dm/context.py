@@ -32,7 +32,8 @@ def _reachable(location: str | None, places: dict) -> list:
 
 def build_context(repo: Repository, scene: str = "", recent: list[str] | None = None,
                   canon: list[CanonRecord] | None = None, location: str | None = None,
-                  places: dict | None = None, quests: list | None = None) -> str:
+                  places: dict | None = None, quests: list | None = None,
+                  time_of_day: str | None = None, weather: str | None = None) -> str:
     pc = repo.pc()
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
@@ -45,6 +46,9 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
     lines: list[str] = []
     if scene:
         lines.append(f"SCENE: {scene}")
+    if time_of_day or weather:
+        lines.append(f"ENVIRONMENT: it is {time_of_day or 'day'}, weather {weather or 'clear'} "
+                     f"(report these back on your TurnResolution; keep them unless the story turns).")
     lines.append(
         f"PARTY: {pc.name} (id: {pc.id}) — {pc.hp}/{pc.max_hp} HP, {pc.gold}g, {pc.xp} XP; "
         f"carrying {inv}."

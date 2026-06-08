@@ -31,6 +31,7 @@ class EventKind(str, Enum):
     CANON_PROMOTED = "canon_promoted"   # provisional -> confirmed (§11)
     EQUIP_CHANGED = "equip_changed"     # player loadout change (bounded player action)
     LOCATION_CHANGED = "location_changed"   # party travels to another Place (DM tool)
+    ENVIRONMENT_CHANGED = "environment_changed"  # time-of-day / weather (DM-reported)
     QUEST_STARTED = "quest_started"     # a new quest the DM introduced
     QUEST_UPDATED = "quest_updated"     # quest status change and/or an appended note
 

@@ -101,6 +101,8 @@ def _snapshot() -> dict:
     return {
         "scene": GAME.session.scene,
         "ended": GAME.session.ended,
+        "time_of_day": GAME.session.time_of_day,
+        "weather": GAME.session.weather,
         "pc": {
             "name": pc.name, "hp": pc.hp, "max_hp": pc.max_hp,
             "gold": pc.gold, "xp": pc.xp, "armor_class": pc.armor_class,
@@ -383,6 +385,10 @@ def _soundscape() -> list:
                 continue
             if not at_current and cue.get("scope", "local") != "passed_down":
                 continue                                  # ancestors give only passed-down cues
+            if cue.get("time", "any") not in ("any", GAME.session.time_of_day):
+                continue                                  # time/weather conditions (S5)
+            if cue.get("weather", "any") not in ("any", GAME.session.weather):
+                continue
             name = cue.get("file")
             if not name or name in seen:
                 continue

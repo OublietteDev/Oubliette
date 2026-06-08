@@ -36,6 +36,8 @@ class Session:
         self.start_scene: str = DEFAULT_SCENE
         self.location: str | None = None    # party's current Place id (scopes present NPCs)
         self.scene: str = DEFAULT_SCENE     # current location's prose
+        self.time_of_day: str = "day"       # engine-owned environment (DM-reported); drives
+        self.weather: str = "clear"         # narration tone + the soundscape (audio mixer §5)
         self.pack_id: str | None = None     # which content pack this campaign is playing
         self.world_map: str | None = None   # top-level map background image filename (pack)
         self.ended: bool = False            # the DM closed this session (end_session tool)
@@ -85,10 +87,14 @@ class Session:
         # The current location is the start, with every LOCATION_CHANGED folded over
         # it — so reload lands the party exactly where they last travelled to.
         location = start_location
+        time_of_day, weather = "day", "clear"
         ended = False
         for event in sorted(events, key=lambda e: e.seq):
             if event.kind == EventKind.LOCATION_CHANGED.value:
                 location = event.payload.get("to", location)
+            elif event.kind == EventKind.ENVIRONMENT_CHANGED.value:
+                time_of_day = event.payload.get("time_of_day", time_of_day)
+                weather = event.payload.get("weather", weather)
             elif event.kind == EventKind.SESSION_MARKER.value and event.payload.get("marker") == "end":
                 ended = True
 
@@ -98,6 +104,8 @@ class Session:
         session.start_scene = start_scene
         session.location = location
         session.scene = session._scene_for(location)
+        session.time_of_day = time_of_day
+        session.weather = weather
         session.pack_id = chosen_pack
         session.world_map = world_map
         session.ended = ended
@@ -113,6 +121,20 @@ class Session:
         self.store.append(EventKind.LOCATION_CHANGED, {"to": to, "reason": reason})
         self.location = to
         self.scene = self._scene_for(to)
+
+    def emit_environment(self, time_of_day: str | None = None,
+                         weather: str | None = None, reason: str = "") -> None:
+        """Update the engine-owned environment (the DM's per-turn report). Records an
+        ENVIRONMENT_CHANGED event so reload reproduces the soundscape + tone, then applies
+        the new value(s); a None field leaves that aspect unchanged."""
+        if time_of_day is None and weather is None:
+            return
+        if time_of_day is not None:
+            self.time_of_day = time_of_day
+        if weather is not None:
+            self.weather = weather
+        self.store.append(EventKind.ENVIRONMENT_CHANGED,
+                          {"time_of_day": self.time_of_day, "weather": self.weather, "reason": reason})
 
     def emit_end(self, reason: str) -> None:
         """Close the session (the DM's `end_session` tool). Records an end marker

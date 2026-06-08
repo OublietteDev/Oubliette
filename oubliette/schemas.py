@@ -8,6 +8,8 @@ Phase 2+ can split them back out without changing shapes.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from .combat.schemas import EncounterRequest
@@ -63,3 +65,7 @@ class TurnResolution(BaseModel):
 
     narration: str
     tool_calls: list[ToolCall] = Field(default_factory=list)
+    # The DM reports the CURRENT environment each turn (engine-owned state, audio mixer §5).
+    # Carry the prior values forward unchanged unless the story has just turned them.
+    time_of_day: Literal["day", "night"] | None = None
+    weather: Literal["clear", "rain", "storm", "wind"] | None = None

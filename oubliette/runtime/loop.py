@@ -70,7 +70,8 @@ class TurnLoop:
         context = build_context(
             self.repo, scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits,
             location=self.session.location, places=self.session.places,
-            quests=self.session.quests.active())
+            quests=self.session.quests.active(),
+            time_of_day=self.session.time_of_day, weather=self.session.weather)
         # `ooc` is the player's explicit "out-of-character" signal (the composer
         # toggle). When set, the turn is table-talk — no model guessing, no combat
         # or trade — so in-character play is never mistaken for meta.
@@ -200,6 +201,14 @@ class TurnLoop:
                     self.session.emit_state(
                         EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
             applied = resolved
+            # The DM reports the current environment each turn; record only an ACTUAL
+            # change (it carries the values forward unchanged otherwise) so we don't log
+            # every turn or needlessly re-cue the soundscape.
+            s = self.session
+            new_time = resolution.time_of_day if resolution.time_of_day and resolution.time_of_day != s.time_of_day else None
+            new_weather = resolution.weather if resolution.weather and resolution.weather != s.weather else None
+            if new_time or new_weather:
+                s.emit_environment(new_time, new_weather, reason="dm report")
             success = True
             break
 

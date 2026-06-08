@@ -100,6 +100,11 @@ RESOLVE_SYSTEM = (
     "obligated to keep going. You may add a short, calm closing line of narration, then emit "
     "end_session and the game closes cleanly. Use it only when genuinely warranted; ordinary player "
     "mistakes, rules confusion, or in-fiction villainy by a character are NOT reasons to end. "
+    "ENVIRONMENT: the ENVIRONMENT line gives the current time-of-day (day/night) and weather "
+    "(clear/rain/storm/wind). Report them back in the `time_of_day` and `weather` fields every "
+    "turn — carry them forward UNCHANGED unless the story has just turned them (the party beds "
+    "down for the night; a storm you've been describing finally breaks). Don't drift them at "
+    "random; let them follow the fiction, and your narration should match what you report.\n"
     "Return a TurnResolution."
 )
 
