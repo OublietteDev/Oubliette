@@ -19,6 +19,68 @@
         "kind": "bed",
         "category": "music",
         "scope": "passed_down"
+      },
+      {
+        "file": "Rain_outside.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "rain"
+      },
+      {
+        "file": "Thunder1.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "storm",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "Thunder2.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "storm",
+        "min_gap": 25,
+        "max_gap": 60
+      },
+      {
+        "file": "Thunder3.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "storm",
+        "min_gap": 35,
+        "max_gap": 60
+      },
+      {
+        "file": "Rain_outside.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "storm"
+      },
+      {
+        "file": "Wind1.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "wind",
+        "gain": 0.91,
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "Wind2.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "wind",
+        "gain": 0.9,
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "Wind3.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "wind",
+        "min_gap": 15,
+        "max_gap": 60
       }
     ]
   },
@@ -39,9 +101,83 @@
     },
     "sounds": [
       {
-        "file": "placeholder_market.wav",
+        "file": "Rain_outside.mp3",
         "kind": "bed",
-        "category": "sfx"
+        "category": "sfx",
+        "weather": "rain"
+      },
+      {
+        "file": "Rain_outside.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "storm"
+      },
+      {
+        "file": "Thunder1.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "storm",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "Thunder2.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "storm",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "Thunder3.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "storm",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "Wind1.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "wind"
+      },
+      {
+        "file": "Wind2.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "wind"
+      },
+      {
+        "file": "Wind3.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "wind"
+      },
+      {
+        "file": "MarketBackground.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "time": "day",
+        "weather": "clear"
+      },
+      {
+        "file": "HorseCloppingFull.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "time": "day",
+        "weather": "clear",
+        "min_gap": 55,
+        "max_gap": 95
+      },
+      {
+        "file": "MarketBell.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "time": "day",
+        "weather": "clear",
+        "min_gap": 25,
+        "max_gap": 55
       }
     ]
   },
@@ -62,17 +198,98 @@
     },
     "sounds": [
       {
-        "file": "placeholder_waves.wav",
-        "kind": "bed",
-        "category": "sfx"
-      },
-      {
-        "file": "placeholder_gull.wav",
+        "file": "Seagull1.mp3",
         "kind": "oneshot",
         "category": "sfx",
-        "scope": "local",
-        "min_gap": 6,
-        "max_gap": 16
+        "time": "day",
+        "weather": "clear",
+        "min_gap": 15,
+        "max_gap": 30
+      },
+      {
+        "file": "Waves.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "clear",
+        "gain": 0.8
+      },
+      {
+        "file": "Rain_outside.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "rain"
+      },
+      {
+        "file": "Rain_outside.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "storm"
+      },
+      {
+        "file": "Thunder1.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "storm",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "Thunder2.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "storm",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "Thunder3.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "storm",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "Wind1.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "wind",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "Wind2.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "wind",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "Wind3.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "wind",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "HeavyWaves.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "rain"
+      },
+      {
+        "file": "HeavyWaves.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "storm"
+      },
+      {
+        "file": "HeavyWaves.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "wind"
       }
     ]
   },
@@ -90,7 +307,83 @@
     "position": {
       "x": 48.6,
       "y": 33.1
-    }
+    },
+    "sounds": [
+      {
+        "file": "Rain_indoor.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "rain"
+      },
+      {
+        "file": "Rain_indoor.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "storm"
+      },
+      {
+        "file": "IndoorThunder1.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "storm",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "IndoorThunder2.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "storm",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "ClerkBackgroundTalking.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "time": "day"
+      },
+      {
+        "file": "ClerkWriting.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "time": "day",
+        "min_gap": 20,
+        "max_gap": 35
+      },
+      {
+        "file": "ClerkPapers.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "time": "day",
+        "min_gap": 25,
+        "max_gap": 45
+      },
+      {
+        "file": "Wind1.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "wind",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "Wind2.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "wind",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "Wind3.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "wind",
+        "min_gap": 15,
+        "max_gap": 60
+      }
+    ]
   },
   {
     "id": "seraphel_s_roost",
@@ -105,7 +398,75 @@
     "position": {
       "x": 60.5,
       "y": 85.8
-    }
+    },
+    "sounds": [
+      {
+        "file": "Brightvale_Background_Theme.mp3",
+        "kind": "bed",
+        "category": "music"
+      },
+      {
+        "file": "Rain_outside.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "rain"
+      },
+      {
+        "file": "Rain_outside.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "storm"
+      },
+      {
+        "file": "Waves.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "clear"
+      },
+      {
+        "file": "Seagull1.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "time": "day",
+        "weather": "clear",
+        "min_gap": 15,
+        "max_gap": 25
+      },
+      {
+        "file": "HeavyWaves.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "rain"
+      },
+      {
+        "file": "HeavyWaves.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "storm"
+      },
+      {
+        "file": "HeavyWaves.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "wind"
+      },
+      {
+        "file": "Thunder1.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "storm",
+        "min_gap": 55,
+        "max_gap": 65
+      },
+      {
+        "file": "Wind1.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "wind",
+        "min_gap": 55,
+        "max_gap": 65
+      }
+    ]
   },
   {
     "id": "the_lantern_wake_tavern",
@@ -124,26 +485,53 @@
     },
     "sounds": [
       {
-        "file": "Lantern&Wake_Background_Theme.mp3",
+        "file": "BottleClinking.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "min_gap": 12,
+        "max_gap": 36
+      },
+      {
+        "file": "Tavern_Chair_Scrape.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "min_gap": 30,
+        "max_gap": 45
+      },
+      {
+        "file": "CrowdedTavernPatrons.mp3",
         "kind": "bed",
-        "category": "music",
-        "scope": "local"
+        "category": "sfx",
+        "time": "night",
+        "gain": 0.5
       },
       {
-        "file": "placeholder_clink.wav",
-        "kind": "oneshot",
+        "file": "Rain_indoor.mp3",
+        "kind": "bed",
         "category": "sfx",
-        "scope": "local",
-        "min_gap": 5,
-        "max_gap": 14
+        "weather": "rain"
       },
       {
-        "file": "placeholder_chair.wav",
+        "file": "Rain_indoor.mp3",
+        "kind": "bed",
+        "category": "sfx",
+        "weather": "storm"
+      },
+      {
+        "file": "IndoorThunder1.mp3",
         "kind": "oneshot",
         "category": "sfx",
-        "scope": "local",
-        "min_gap": 14,
-        "max_gap": 34
+        "weather": "storm",
+        "min_gap": 15,
+        "max_gap": 60
+      },
+      {
+        "file": "IndoorThunder2.mp3",
+        "kind": "oneshot",
+        "category": "sfx",
+        "weather": "storm",
+        "min_gap": 15,
+        "max_gap": 60
       }
     ]
   }
