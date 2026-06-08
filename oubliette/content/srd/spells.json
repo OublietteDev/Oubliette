@@ -1,0 +1,39 @@
+[
+  {
+    "id": "fire_bolt", "name": "Fire Bolt", "level": 0, "school": "evocation",
+    "casting_time": "1 action", "range": "120 feet", "components": "V, S",
+    "duration": "Instantaneous", "classes": ["wizard"],
+    "description": "Hurl a mote of fire at a creature or object. Ranged spell attack; on a hit, 1d10 fire damage. Damage scales at 5th, 11th, and 17th level."
+  },
+  {
+    "id": "mage_hand", "name": "Mage Hand", "level": 0, "school": "conjuration",
+    "casting_time": "1 action", "range": "30 feet", "components": "V, S",
+    "duration": "1 minute", "classes": ["wizard"],
+    "description": "A spectral hand you can use to manipulate objects, open doors, or carry up to 10 pounds."
+  },
+  {
+    "id": "magic_missile", "name": "Magic Missile", "level": 1, "school": "evocation",
+    "casting_time": "1 action", "range": "120 feet", "components": "V, S",
+    "duration": "Instantaneous", "classes": ["wizard"],
+    "description": "Three glowing darts, each dealing 1d4+1 force damage and hitting automatically. Creates one more dart per slot level above 1st."
+  },
+  {
+    "id": "shield", "name": "Shield", "level": 1, "school": "abjuration",
+    "casting_time": "1 reaction", "range": "Self", "components": "V, S",
+    "duration": "1 round", "classes": ["wizard"],
+    "description": "An invisible barrier grants +5 AC until the start of your next turn, including against the triggering attack, and negates magic missile."
+  },
+  {
+    "id": "burning_hands", "name": "Burning Hands", "level": 1, "school": "evocation",
+    "casting_time": "1 action", "range": "Self (15-foot cone)", "components": "V, S",
+    "duration": "Instantaneous", "classes": ["wizard"],
+    "description": "A cone of flame; each creature in it makes a Dexterity save, taking 3d6 fire damage (half on success). +1d6 per slot level above 1st."
+  },
+  {
+    "id": "detect_magic", "name": "Detect Magic", "level": 1, "school": "divination",
+    "casting_time": "1 action", "range": "Self", "components": "V, S",
+    "duration": "Concentration, up to 10 minutes", "concentration": true, "ritual": true,
+    "classes": ["wizard"],
+    "description": "Sense the presence of magic within 30 feet, and learn the school of any magical aura you see."
+  }
+]

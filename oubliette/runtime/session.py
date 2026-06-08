@@ -43,6 +43,7 @@ class Session:
         self.world_map: str | None = None   # top-level map background image filename (pack)
         self.ended: bool = False            # the DM closed this session (end_session tool)
         self.table: TableContract = DEFAULT_TABLE   # campaign's tone + content boundaries
+        self.ruleset = None                  # the global SRD ruleset (chargen/sheet/derivation)
 
     def _scene_for(self, location: str | None) -> str:
         """The prose for a location — the pack's opening text at the start spot
@@ -70,6 +71,7 @@ class Session:
             start_scene = world.scene
             chosen_pack = world.pack_id
             world_map = world.world_map
+            ruleset = world.ruleset
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
         else:
             repo = seed()
@@ -78,6 +80,7 @@ class Session:
             start_location = None
             start_scene = DEFAULT_SCENE
             world_map = None
+            ruleset = None
             marker = {}
         canon = CanonStore()
         quests = QuestStore()
@@ -115,6 +118,7 @@ class Session:
         session.world_map = world_map
         session.ended = ended
         session.table = table
+        session.ruleset = ruleset
         if events:
             replay(events, repo, canon, quests)   # existing session: rebuild to current
         else:

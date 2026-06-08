@@ -1,0 +1,22 @@
+[
+  {
+    "id": "champion",
+    "name": "Champion",
+    "parent": "fighter",
+    "label": "Martial Archetype",
+    "features": [
+      {"name": "Improved Critical", "level": 3, "text": "Your weapon attacks score a critical hit on a roll of 19 or 20."},
+      {"name": "Remarkable Athlete", "level": 7, "text": "Add half your proficiency bonus to Str, Dex, or Con checks that don't already use it."}
+    ]
+  },
+  {
+    "id": "evocation",
+    "name": "School of Evocation",
+    "parent": "wizard",
+    "label": "Arcane Tradition",
+    "features": [
+      {"name": "Evocation Savant", "level": 2, "text": "Halve the time and gold to copy evocation spells into your spellbook."},
+      {"name": "Sculpt Spells", "level": 2, "text": "When you cast an evocation spell affecting others, you can protect allies from its effects."}
+    ]
+  }
+]

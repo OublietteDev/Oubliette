@@ -25,6 +25,7 @@ from ..canon.models import CanonRecord
 from ..enums import Ability
 from ..state.models import Character, Item as StateItem, ItemStack
 from ..state.repository import InMemoryRepository
+from .ruleset import Ruleset, load_ruleset
 from .schemas import NPC, Item, Lore, Place, PackManifest, Scenario, StatBlock
 
 DEFAULT_PACK = "brightvale"
@@ -75,6 +76,7 @@ class LoadedWorld:
     pack_id: str
     pack_version: str
     world_map: str | None = None   # the top-level map background image filename (manifest)
+    ruleset: Ruleset | None = None  # the global SRD ruleset (chargen/sheet/derivation)
 
 
 # --- file reading ------------------------------------------------------------
@@ -349,4 +351,5 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
         repository=repo, canon=_authored_canon(npcs, places, lore), scene=scene,
         location=scenario.start_location, places=place_nodes,
         pack_id=manifest.id, pack_version=manifest.version, world_map=manifest.world_map,
+        ruleset=load_ruleset(),   # the global SRD layer (shared by every world)
     )

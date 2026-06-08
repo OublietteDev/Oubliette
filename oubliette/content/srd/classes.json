@@ -1,0 +1,81 @@
+[
+  {
+    "id": "fighter",
+    "name": "Fighter",
+    "hit_die": 10,
+    "primary_ability": ["str", "dex"],
+    "saving_throws": ["str", "con"],
+    "armor_proficiencies": ["light", "medium", "heavy", "shields"],
+    "weapon_proficiencies": ["simple", "martial"],
+    "tool_proficiencies": [],
+    "skill_choices": {"choose": 2, "from": ["acrobatics", "animal_handling", "athletics", "history", "insight", "intimidation", "perception", "survival"]},
+    "starting_equipment": {
+      "fixed": [{"item": "explorers_pack"}],
+      "choices": [
+        {"choose": 1, "options": [[{"item": "chain_mail"}], [{"item": "leather_armor"}]]},
+        {"choose": 1, "options": [[{"item": "longsword"}, {"item": "shield"}], [{"item": "handaxe", "qty": 2}]]},
+        {"choose": 1, "options": [[{"item": "light_crossbow"}], [{"item": "handaxe", "qty": 2}]]}
+      ]
+    },
+    "asi_levels": [4, 6, 8, 12, 14, 16, 19],
+    "subclass_level": 3,
+    "subclass_label": "Martial Archetype",
+    "features": [
+      {"name": "Fighting Style", "level": 1, "text": "Adopt a fighting style (e.g. Defense: +1 AC while wearing armor)."},
+      {"name": "Second Wind", "level": 1, "text": "Once per short/long rest, a bonus action to regain 1d10 + fighter level HP."},
+      {"name": "Action Surge", "level": 2, "text": "Once per short/long rest, take one additional action on your turn."},
+      {"name": "Martial Archetype", "level": 3, "text": "Choose a martial archetype that shapes your approach to battle."},
+      {"name": "Extra Attack", "level": 5, "text": "Attack twice, instead of once, when you take the Attack action."},
+      {"name": "Indomitable", "level": 9, "text": "Reroll a failed saving throw; once per long rest."}
+    ]
+  },
+  {
+    "id": "wizard",
+    "name": "Wizard",
+    "hit_die": 6,
+    "primary_ability": ["int"],
+    "saving_throws": ["int", "wis"],
+    "armor_proficiencies": [],
+    "weapon_proficiencies": ["daggers", "darts", "slings", "quarterstaffs", "light crossbows"],
+    "tool_proficiencies": [],
+    "skill_choices": {"choose": 2, "from": ["arcana", "history", "insight", "investigation", "medicine", "religion"]},
+    "starting_equipment": {
+      "fixed": [{"item": "spellbook"}, {"item": "explorers_pack"}],
+      "choices": [
+        {"choose": 1, "options": [[{"item": "quarterstaff"}], [{"item": "dagger"}]]}
+      ]
+    },
+    "asi_levels": [4, 8, 12, 16, 19],
+    "subclass_level": 2,
+    "subclass_label": "Arcane Tradition",
+    "spellcasting": {"ability": "int", "caster_type": "full", "preparation": "prepared", "ritual": true},
+    "features": [
+      {"name": "Spellcasting", "level": 1, "text": "Cast wizard spells using Intelligence. Prepare INT mod + wizard level spells from your spellbook each day."},
+      {"name": "Arcane Recovery", "level": 1, "text": "Once per day on a short rest, recover spell slots totalling up to half your wizard level (rounded up)."},
+      {"name": "Arcane Tradition", "level": 2, "text": "Choose an arcane tradition that shapes your magic."},
+      {"name": "Ability Score Improvement", "level": 4, "text": "Increase ability scores or take a feat."}
+    ],
+    "spell_progression": [
+      {"level": 1, "cantrips_known": 3, "spell_slots": [2]},
+      {"level": 2, "cantrips_known": 3, "spell_slots": [3]},
+      {"level": 3, "cantrips_known": 3, "spell_slots": [4, 2]},
+      {"level": 4, "cantrips_known": 4, "spell_slots": [4, 3]},
+      {"level": 5, "cantrips_known": 4, "spell_slots": [4, 3, 2]},
+      {"level": 6, "cantrips_known": 4, "spell_slots": [4, 3, 3]},
+      {"level": 7, "cantrips_known": 4, "spell_slots": [4, 3, 3, 1]},
+      {"level": 8, "cantrips_known": 4, "spell_slots": [4, 3, 3, 2]},
+      {"level": 9, "cantrips_known": 4, "spell_slots": [4, 3, 3, 3, 1]},
+      {"level": 10, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2]},
+      {"level": 11, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1]},
+      {"level": 12, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1]},
+      {"level": 13, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1, 1]},
+      {"level": 14, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1, 1]},
+      {"level": 15, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1, 1, 1]},
+      {"level": 16, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1, 1, 1]},
+      {"level": 17, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1, 1, 1, 1]},
+      {"level": 18, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 3, 1, 1, 1, 1]},
+      {"level": 19, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 3, 2, 1, 1, 1]},
+      {"level": 20, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 3, 2, 2, 1, 1]}
+    ]
+  }
+]

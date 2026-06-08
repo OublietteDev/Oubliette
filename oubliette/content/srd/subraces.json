@@ -1,0 +1,22 @@
+[
+  {
+    "id": "high_elf",
+    "name": "High Elf",
+    "race": "elf",
+    "ability_increases": {"int": 1},
+    "traits": [
+      {"name": "Elf Weapon Training", "text": "Proficiency with longsword, shortsword, shortbow, and longbow."},
+      {"name": "Cantrip", "text": "You know one cantrip of your choice from the wizard spell list (Intelligence is its ability)."},
+      {"name": "Extra Language", "text": "You can speak, read, and write one extra language of your choice."}
+    ]
+  },
+  {
+    "id": "hill_dwarf",
+    "name": "Hill Dwarf",
+    "race": "dwarf",
+    "ability_increases": {"wis": 1},
+    "traits": [
+      {"name": "Dwarven Toughness", "text": "Your hit point maximum increases by 1, and by 1 every time you gain a level."}
+    ]
+  }
+]

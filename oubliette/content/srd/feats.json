@@ -1,0 +1,15 @@
+[
+  {
+    "id": "alert", "name": "Alert", "prerequisite": "",
+    "text": "+5 bonus to initiative, you can't be surprised while conscious, and creatures don't gain advantage on attacks against you from being hidden."
+  },
+  {
+    "id": "tough", "name": "Tough", "prerequisite": "",
+    "text": "Your hit point maximum increases by an amount equal to twice your level when you gain this feat, and by 2 each level thereafter."
+  },
+  {
+    "id": "resilient", "name": "Resilient", "prerequisite": "",
+    "ability_increases": {"con": 1},
+    "text": "Increase one ability score by 1 (here, Constitution) and gain proficiency in saving throws using that ability."
+  }
+]

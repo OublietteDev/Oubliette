@@ -1,0 +1,215 @@
+"""Strict, versioned schemas for the SRD ruleset (design doc §3).
+
+This is the *system* content — classes, races, backgrounds, spells, feats,
+equipment — shared by every world, distinct from the world content in
+`content/schemas.py`. Same discipline: every model forbids unknown fields, so a
+typo in a ruleset file is a load error, not a silent drop. The loader
+(`content/ruleset.py`) parses these whole and lints the cross-references.
+
+Backbone: SRD 5.1 (CC-BY-4.0) — see the NOTICE file. The shapes are the full,
+real shapes now (build through the seams) so the big content fill in CS4 adds
+DATA, not schema churn.
+"""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import ConfigDict, Field, model_validator
+
+from .schemas import ArmorProfile, WeaponProfile, _Strict
+
+# Bump on a breaking change to these shapes; the ruleset carries its own version.
+RULESET_SCHEMA_VERSION = 1
+
+AbilityKey = Literal["str", "dex", "con", "int", "wis", "cha"]
+CasterType = Literal["full", "half", "third", "pact", "none"]
+
+
+# --- shared little pieces -----------------------------------------------------
+class Feature(_Strict):
+    """A named, leveled ability granted by a race/class/subclass/background/feat.
+    Effect is reference TEXT for now (the firewall: code owns numbers, the DM
+    narrates); structured effect data is a later, combat-arc concern."""
+
+    name: str
+    level: int = 1                   # character level it's gained (1 for racial/background)
+    text: str = ""
+
+
+class EquipmentGrant(_Strict):
+    """One concrete item granted (by a class/background starting kit)."""
+
+    item: str                        # -> SrdEquipment id
+    qty: int = 1
+
+
+class EquipmentChoice(_Strict):
+    """A 'choose N of these bundles' decision in a starting kit. Each option is a
+    bundle (list) of grants, so '(a) a longsword or (b) two handaxes' is two
+    one-item / two-item options."""
+
+    choose: int = 1
+    options: list[list[EquipmentGrant]] = Field(default_factory=list)
+
+
+class StartingEquipment(_Strict):
+    fixed: list[EquipmentGrant] = Field(default_factory=list)     # always granted
+    choices: list[EquipmentChoice] = Field(default_factory=list)  # player picks
+
+
+class SkillChoice(_Strict):
+    choose: int = 0
+    from_: list[str] = Field(default_factory=list, alias="from")   # SRD skill keys
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+
+# --- equipment ----------------------------------------------------------------
+class SrdEquipment(_Strict):
+    """The standard SRD gear catalog (weapons/armor/gear/etc.). Mirrors the world
+    `content.Item` shape and adds the mechanical bits (cost/weight + the existing
+    weapon/armor profiles). Registered into a campaign's item catalog when a
+    created character is granted it."""
+
+    id: str
+    name: str
+    category: Literal["weapon", "armor", "gear", "consumable", "treasure", "misc"] = "misc"
+    description: str = ""
+    cost: int | None = None          # in copper? no — gold pieces (advisory; soft economy §11)
+    weight: float | None = None      # lb
+    base_value: int | None = None    # advisory price hint (matches content.Item)
+    tags: list[str] = Field(default_factory=list)
+    slot: str | None = None
+    weapon: WeaponProfile | None = None
+    armor: ArmorProfile | None = None
+
+
+# --- spells -------------------------------------------------------------------
+class Spell(_Strict):
+    id: str
+    name: str
+    level: int                       # 0 = cantrip
+    school: str                      # abjuration, evocation, ...
+    casting_time: str = "1 action"
+    range: str = ""
+    components: str = ""             # "V, S, M (a pinch of sulfur)"
+    duration: str = "Instantaneous"
+    concentration: bool = False
+    ritual: bool = False
+    classes: list[str] = Field(default_factory=list)   # -> CharClass ids that can learn it
+    description: str = ""
+
+    @model_validator(mode="after")
+    def _level_range(self) -> "Spell":
+        if not 0 <= self.level <= 9:
+            raise ValueError("spell level must be 0 (cantrip) through 9")
+        return self
+
+
+# --- classes ------------------------------------------------------------------
+class SpellcastingProfile(_Strict):
+    ability: AbilityKey
+    caster_type: CasterType = "full"
+    preparation: Literal["known", "prepared"] = "known"
+    ritual: bool = False
+
+
+class SpellProgressionRow(_Strict):
+    """One character-level row of a caster's spell numbers — the SRD class table,
+    verbatim, so it reads as the book reads and is trivially verifiable."""
+
+    level: int                       # character level (1-20)
+    cantrips_known: int | None = None
+    spells_known: int | None = None  # 'known' casters only; 'prepared' compute mod+level
+    spell_slots: list[int] = Field(default_factory=list)  # slots by spell level at THIS level
+
+
+class CharClass(_Strict):
+    id: str
+    name: str
+    hit_die: Literal[6, 8, 10, 12]
+    primary_ability: list[AbilityKey] = Field(default_factory=list)
+    saving_throws: list[AbilityKey] = Field(default_factory=list)   # the two proficient saves
+    armor_proficiencies: list[str] = Field(default_factory=list)
+    weapon_proficiencies: list[str] = Field(default_factory=list)
+    tool_proficiencies: list[str] = Field(default_factory=list)
+    skill_choices: SkillChoice = Field(default_factory=SkillChoice)
+    starting_equipment: StartingEquipment = Field(default_factory=StartingEquipment)
+    asi_levels: list[int] = Field(default_factory=list)             # levels granting ASI/feat
+    subclass_level: int | None = None        # when the subclass is chosen
+    subclass_label: str = ""                 # "Martial Archetype", "Divine Domain", ...
+    spellcasting: SpellcastingProfile | None = None
+    features: list[Feature] = Field(default_factory=list)
+    spell_progression: list[SpellProgressionRow] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _saves(self) -> "CharClass":
+        if self.saving_throws and len(self.saving_throws) != 2:
+            raise ValueError("a class has exactly two saving-throw proficiencies")
+        return self
+
+
+class Subclass(_Strict):
+    id: str
+    name: str
+    parent: str                      # -> CharClass id
+    label: str = ""                  # the class's subclass_label (Champion -> Martial Archetype)
+    features: list[Feature] = Field(default_factory=list)
+    spellcasting: SpellcastingProfile | None = None   # e.g. some domains/archetypes add casting
+    spell_progression: list[SpellProgressionRow] = Field(default_factory=list)
+
+
+# --- races --------------------------------------------------------------------
+class Race(_Strict):
+    id: str
+    name: str
+    ability_increases: dict[AbilityKey, int] = Field(default_factory=dict)
+    size: Literal["Small", "Medium", "Large"] = "Medium"
+    speed: int = 30
+    darkvision: int = 0              # range in feet (0 = none)
+    languages: list[str] = Field(default_factory=list)
+    traits: list[Feature] = Field(default_factory=list)
+
+
+class Subrace(_Strict):
+    id: str
+    name: str
+    race: str                        # -> Race id
+    ability_increases: dict[AbilityKey, int] = Field(default_factory=dict)
+    traits: list[Feature] = Field(default_factory=list)
+
+
+# --- backgrounds --------------------------------------------------------------
+class Background(_Strict):
+    id: str
+    name: str
+    skill_proficiencies: list[str] = Field(default_factory=list)
+    tool_proficiencies: list[str] = Field(default_factory=list)
+    languages: int = 0               # number of free languages of the player's choice
+    equipment: list[EquipmentGrant] = Field(default_factory=list)
+    starting_gold: int = 0
+    feature: Feature | None = None
+    # flavor tables (personality/ideal/bond/flaw) shown on the sheet
+    personality_traits: list[str] = Field(default_factory=list)
+    ideals: list[str] = Field(default_factory=list)
+    bonds: list[str] = Field(default_factory=list)
+    flaws: list[str] = Field(default_factory=list)
+
+
+# --- feats --------------------------------------------------------------------
+class Feat(_Strict):
+    id: str
+    name: str
+    prerequisite: str = ""
+    ability_increases: dict[AbilityKey, int] = Field(default_factory=dict)  # half-feats
+    text: str = ""
+
+
+# --- conditions ---------------------------------------------------------------
+class Condition(_Strict):
+    """An SRD condition — reference text now; the combat arc applies its effects."""
+
+    id: str
+    name: str
+    text: str = ""

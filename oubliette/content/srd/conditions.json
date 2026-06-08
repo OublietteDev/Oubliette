@@ -1,0 +1,14 @@
+[
+  {
+    "id": "prone", "name": "Prone",
+    "text": "A prone creature's only movement option is to crawl. It has disadvantage on attack rolls. Attacks against it have advantage if the attacker is within 5 feet, disadvantage otherwise."
+  },
+  {
+    "id": "poisoned", "name": "Poisoned",
+    "text": "A poisoned creature has disadvantage on attack rolls and ability checks."
+  },
+  {
+    "id": "grappled", "name": "Grappled",
+    "text": "A grappled creature's speed becomes 0, and it can't benefit from any bonus to its speed. The condition ends if the grappler is incapacitated or the creature is removed from reach."
+  }
+]

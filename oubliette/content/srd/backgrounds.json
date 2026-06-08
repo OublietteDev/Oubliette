@@ -1,0 +1,30 @@
+[
+  {
+    "id": "soldier",
+    "name": "Soldier",
+    "skill_proficiencies": ["athletics", "intimidation"],
+    "tool_proficiencies": ["one gaming set", "vehicles (land)"],
+    "languages": 0,
+    "equipment": [{"item": "explorers_pack"}],
+    "starting_gold": 10,
+    "feature": {"name": "Military Rank", "text": "Soldiers loyal to your old organization still recognize your rank; you can invoke it for influence and access among the military."},
+    "personality_traits": ["I can stare down a hell hound without flinching.", "I face problems head-on; a simple, direct solution is the best path to success."],
+    "ideals": ["Greater Good. Our lot is to lay down our lives in defense of others."],
+    "bonds": ["I would still lay down my life for the people I served with."],
+    "flaws": ["I made a terrible mistake in battle that cost many lives, and I would do anything to keep it secret."]
+  },
+  {
+    "id": "acolyte",
+    "name": "Acolyte",
+    "skill_proficiencies": ["insight", "religion"],
+    "tool_proficiencies": [],
+    "languages": 2,
+    "equipment": [{"item": "explorers_pack"}],
+    "starting_gold": 15,
+    "feature": {"name": "Shelter of the Faithful", "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion."},
+    "personality_traits": ["I idolize a particular hero of my faith and constantly refer to that person's deeds.", "I quote (or misquote) sacred texts and proverbs in almost every situation."],
+    "ideals": ["Faith. I trust that my deity will guide my actions for the greater good."],
+    "bonds": ["I would die to recover an ancient relic of my faith that was lost long ago."],
+    "flaws": ["I judge others harshly, and myself even more severely."]
+  }
+]

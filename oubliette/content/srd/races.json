@@ -1,0 +1,41 @@
+[
+  {
+    "id": "human",
+    "name": "Human",
+    "ability_increases": {"str": 1, "dex": 1, "con": 1, "int": 1, "wis": 1, "cha": 1},
+    "size": "Medium",
+    "speed": 30,
+    "languages": ["Common"],
+    "traits": [
+      {"name": "Extra Language", "text": "You can speak, read, and write one extra language of your choice."}
+    ]
+  },
+  {
+    "id": "elf",
+    "name": "Elf",
+    "ability_increases": {"dex": 2},
+    "size": "Medium",
+    "speed": 30,
+    "darkvision": 60,
+    "languages": ["Common", "Elvish"],
+    "traits": [
+      {"name": "Keen Senses", "text": "You have proficiency in the Perception skill."},
+      {"name": "Fey Ancestry", "text": "Advantage on saves against being charmed; magic can't put you to sleep."},
+      {"name": "Trance", "text": "You meditate 4 hours instead of sleeping 8 for a long rest."}
+    ]
+  },
+  {
+    "id": "dwarf",
+    "name": "Dwarf",
+    "ability_increases": {"con": 2},
+    "size": "Medium",
+    "speed": 25,
+    "darkvision": 60,
+    "languages": ["Common", "Dwarvish"],
+    "traits": [
+      {"name": "Dwarven Resilience", "text": "Advantage on saves against poison, and resistance to poison damage."},
+      {"name": "Stonecunning", "text": "Add double proficiency to History checks about stonework."},
+      {"name": "Dwarven Combat Training", "text": "Proficiency with battleaxe, handaxe, light hammer, and warhammer."}
+    ]
+  }
+]

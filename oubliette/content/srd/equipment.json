@@ -1,0 +1,60 @@
+[
+  {
+    "id": "longsword", "name": "Longsword", "category": "weapon",
+    "description": "A versatile martial blade.", "cost": 15, "weight": 3, "base_value": 15,
+    "slot": "main_hand", "tags": ["martial", "melee"],
+    "weapon": {"damage": "1d8", "properties": ["versatile (1d10)"]}
+  },
+  {
+    "id": "dagger", "name": "Dagger", "category": "weapon",
+    "description": "A simple, light blade — finesse and throwable.", "cost": 2, "weight": 1, "base_value": 2,
+    "slot": "main_hand", "tags": ["simple", "melee"],
+    "weapon": {"damage": "1d4", "properties": ["finesse", "light", "thrown (range 20/60)"]}
+  },
+  {
+    "id": "handaxe", "name": "Handaxe", "category": "weapon",
+    "description": "A light throwing axe.", "cost": 5, "weight": 2, "base_value": 5,
+    "slot": "main_hand", "tags": ["simple", "melee"],
+    "weapon": {"damage": "1d6", "properties": ["light", "thrown (range 20/60)"]}
+  },
+  {
+    "id": "quarterstaff", "name": "Quarterstaff", "category": "weapon",
+    "description": "A simple wooden staff.", "weight": 4, "base_value": 1,
+    "slot": "main_hand", "tags": ["simple", "melee"],
+    "weapon": {"damage": "1d6", "properties": ["versatile (1d8)"]}
+  },
+  {
+    "id": "light_crossbow", "name": "Light Crossbow", "category": "weapon",
+    "description": "A simple ranged crossbow.", "cost": 25, "weight": 5, "base_value": 25,
+    "slot": "main_hand", "tags": ["simple", "ranged"],
+    "weapon": {"damage": "1d8", "properties": ["ammunition (range 80/320)", "loading", "two-handed"]}
+  },
+  {
+    "id": "leather_armor", "name": "Leather Armor", "category": "armor",
+    "description": "Light armor of stiffened leather.", "cost": 10, "weight": 10, "base_value": 10,
+    "slot": "body", "tags": ["light"],
+    "armor": {"base_ac": 11, "type": "light"}
+  },
+  {
+    "id": "chain_mail", "name": "Chain Mail", "category": "armor",
+    "description": "Heavy interlocking rings. Requires Str 13; disadvantage on Stealth.",
+    "cost": 75, "weight": 55, "base_value": 75, "slot": "body", "tags": ["heavy"],
+    "armor": {"base_ac": 16, "type": "heavy"}
+  },
+  {
+    "id": "shield", "name": "Shield", "category": "armor",
+    "description": "A wooden or metal shield. +2 AC.", "cost": 10, "weight": 6, "base_value": 10,
+    "slot": "off_hand", "tags": ["shield"],
+    "armor": {"base_ac": 2, "type": "shield"}
+  },
+  {
+    "id": "spellbook", "name": "Spellbook", "category": "gear",
+    "description": "A leather-bound tome of arcane writings.", "cost": 50, "weight": 3, "base_value": 50,
+    "slot": "body", "tags": ["arcane"]
+  },
+  {
+    "id": "explorers_pack", "name": "Explorer's Pack", "category": "gear",
+    "description": "Backpack, bedroll, mess kit, tinderbox, torches, rations, rope.",
+    "cost": 10, "weight": 59, "base_value": 10, "tags": ["pack"]
+  }
+]
