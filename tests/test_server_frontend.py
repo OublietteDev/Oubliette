@@ -241,10 +241,11 @@ def test_index_page_served():
 
 # --- chargen (CS2) ----------------------------------------------------------
 _FIGHTER_BUILD = {
-    "name": "Bron", "race": "human", "char_class": "fighter", "background": "soldier",
+    "name": "Bron", "race": "human", "char_class": "fighter", "background": "acolyte",
     "ability_method": "standard_array",
     "base_abilities": {"str": 15, "dex": 14, "con": 13, "int": 12, "wis": 10, "cha": 8},
     "skills": ["perception", "survival"],
+    "languages": ["Draconic", "Celestial"],            # acolyte grants 2 free languages
     "equipment_choices": [[0], [0], [0]],
 }
 
@@ -318,7 +319,7 @@ def test_sheet_for_a_created_pc_is_fully_derived():
     assert m["identity"]["char_class"] == "Fighter" and m["identity"]["race"] == "Human"
     assert m["abilities"]["str"] == {"score": 16, "mod": 3}
     assert m["saves"]["str"]["proficient"] is True and m["saves"]["dex"]["proficient"] is False
-    assert m["skills"]["athletics"]["proficient"] is True      # from the soldier background
+    assert m["skills"]["insight"]["proficient"] is True        # from the acolyte background
     assert m["derived"]["armor_class"] == 18
     assert m["hit_dice"] == {"die": 10, "total": 1, "used": 0}
     srcs = {g["source"] for g in m["features"]}

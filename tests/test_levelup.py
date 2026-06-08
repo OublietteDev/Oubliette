@@ -20,7 +20,7 @@ def _fighter(level=1, **over) -> Character:
         abilities={Ability.STR: 16, Ability.DEX: 14, Ability.CON: 14,
                    Ability.INT: 10, Ability.WIS: 12, Ability.CHA: 8},
         inventory=[ItemStack(item_id="longsword", qty=1)],
-        sheet=CharacterSheet(race="human", char_class="fighter", background="soldier",
+        sheet=CharacterSheet(race="human", char_class="fighter", background="acolyte",
                              saving_throw_proficiencies={Ability.STR, Ability.CON}),
     )
     base.update(over)
@@ -53,10 +53,9 @@ def test_asi_raises_abilities():
 
 
 def test_feat_at_asi_level_is_recorded():
-    leveled = level_up(_fighter(3), RS, LevelUpChoice(feat="resilient"))
-    assert leveled.abilities[Ability.CON] == 15            # resilient bumps CON +1
-    assert "resilient" in leveled.sheet.feats
-    assert any(f.source == "feat" and f.name == "Resilient" for f in leveled.sheet.features)
+    leveled = level_up(_fighter(3), RS, LevelUpChoice(feat="grappler"))   # SRD's only feat
+    assert "grappler" in leveled.sheet.feats
+    assert any(f.source == "feat" and f.name == "Grappler" for f in leveled.sheet.features)
 
 
 # --- the firewall -----------------------------------------------------------
@@ -77,7 +76,7 @@ def test_asi_cannot_exceed_twenty():
 
 def test_asi_and_feat_are_mutually_exclusive():
     assert "not both" in _why(
-        _fighter(3), LevelUpChoice(feat="resilient", ability_increases={Ability.STR: 2}))
+        _fighter(3), LevelUpChoice(feat="grappler", ability_increases={Ability.STR: 2}))
 
 
 def test_non_asi_level_rejects_improvements():

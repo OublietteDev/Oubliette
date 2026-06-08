@@ -24,7 +24,7 @@ def _fighter() -> Character:
         abilities={Ability.STR: 16, Ability.DEX: 14, Ability.CON: 14,
                    Ability.INT: 10, Ability.WIS: 12, Ability.CHA: 8},
         skill_proficiencies={Skill.ATHLETICS, Skill.PERCEPTION},
-        sheet=CharacterSheet(race="human", char_class="fighter", background="soldier",
+        sheet=CharacterSheet(race="human", char_class="fighter", background="acolyte",
                              saving_throw_proficiencies={Ability.STR, Ability.CON}),
     )
 
@@ -157,7 +157,7 @@ def _barbarian(level: int = 1) -> Character:
     return Character(id="pc", name="Grog", kind="pc", level=level,
                      abilities={Ability.STR: 16, Ability.DEX: 14, Ability.CON: 16,
                                 Ability.INT: 8, Ability.WIS: 12, Ability.CHA: 10},
-                     sheet=CharacterSheet(race="human", char_class="barbarian", background="soldier"))
+                     sheet=CharacterSheet(race="human", char_class="barbarian", background="acolyte"))
 
 
 def _warlock(level: int = 1) -> Character:

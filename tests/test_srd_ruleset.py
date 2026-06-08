@@ -20,8 +20,19 @@ def test_bundled_ruleset_loads():
     assert rs.srd_version == "5.1"
     assert "fighter" in rs.classes and "wizard" in rs.classes
     assert "human" in rs.races and "elf" in rs.races
-    assert "soldier" in rs.backgrounds
+    assert "acolyte" in rs.backgrounds
     assert "fire_bolt" in rs.spells and "longsword" in rs.equipment
+
+
+def test_only_srd_legal_backgrounds_and_feats():
+    """Strict-SRD guard. SRD 5.1 contains exactly ONE background (Acolyte) and ONE
+    feat (Grappler). This tripwire fails if non-SRD content sneaks back in — a prior
+    pass had injected Soldier + Alert/Tough/Resilient from memory, a WotC-copyright
+    risk. Enriching chargen later with ORIGINAL-flavor content is a deliberate change
+    that updates this test on purpose."""
+    rs = load_ruleset()
+    assert set(rs.backgrounds) == {"acolyte"}
+    assert set(rs.feats) == {"grappler"}
 
 
 def test_wizard_is_a_full_caster_with_the_srd_slot_table():

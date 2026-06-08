@@ -1,15 +1,8 @@
 [
   {
-    "id": "alert", "name": "Alert", "prerequisite": "",
-    "text": "+5 bonus to initiative, you can't be surprised while conscious, and creatures don't gain advantage on attacks against you from being hidden."
-  },
-  {
-    "id": "tough", "name": "Tough", "prerequisite": "",
-    "text": "Your hit point maximum increases by an amount equal to twice your level when you gain this feat, and by 2 each level thereafter."
-  },
-  {
-    "id": "resilient", "name": "Resilient", "prerequisite": "",
-    "ability_increases": {"con": 1},
-    "text": "Increase one ability score by 1 (here, Constitution) and gain proficiency in saving throws using that ability."
+    "id": "grappler",
+    "name": "Grappler",
+    "prerequisite": "Strength 13 or higher",
+    "text": "You've developed the skills necessary to hold your own in close-quarters grappling. You have advantage on attack rolls against a creature you are grappling. You can use your action to try to pin a creature grappled by you. To do so, make another grapple check. If you succeed, you and the creature are both restrained until the grapple ends."
   }
 ]

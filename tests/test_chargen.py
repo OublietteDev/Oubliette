@@ -35,9 +35,10 @@ STD = {Ability.STR: 15, Ability.DEX: 14, Ability.CON: 13,
 
 def _fighter(**over) -> CharacterBuild:
     base = dict(
-        name="Bron", race="human", char_class="fighter", background="soldier",
+        name="Bron", race="human", char_class="fighter", background="acolyte",
         ability_method="standard_array", base_abilities=dict(STD),
-        skills=[Skill.PERCEPTION, Skill.SURVIVAL],     # soldier already grants athletics/intimidation
+        skills=[Skill.PERCEPTION, Skill.SURVIVAL],     # acolyte already grants insight/religion
+        languages=["Draconic", "Celestial"],           # acolyte grants 2 free languages
         equipment_choices=[[0], [0], [0]],             # chain mail; longsword+shield; light crossbow
     )
     base.update(over)
@@ -72,19 +73,19 @@ def test_fighter_build_is_fully_derived():
     assert char.damage == "1d8"                            # longsword
     # proficiencies = class picks + background grants
     assert char.skill_proficiencies == {Skill.PERCEPTION, Skill.SURVIVAL,
-                                         Skill.ATHLETICS, Skill.INTIMIDATION}
+                                         Skill.INSIGHT, Skill.RELIGION}
     assert char.sheet.saving_throw_proficiencies == {Ability.STR, Ability.CON}
     # gear: explorer's pack granted twice (class fixed + background) → qty 2
     assert char.item_qty("explorers_pack") == 2
     assert set(char.equipped) == {"chain_mail", "shield", "longsword"}
-    assert char.gold == 10
+    assert char.gold == 15
     # the granted SRD gear is handed back for catalog registration
     assert {it.id for it in items} == {"explorers_pack", "chain_mail", "longsword",
                                        "shield", "light_crossbow"}
     # features carry their source + text (no ruleset lookup needed to render them)
     names = {(f.source, f.name) for f in char.sheet.features}
     assert ("class", "Second Wind") in names
-    assert ("background", "Military Rank") in names
+    assert ("background", "Shelter of the Faithful") in names
 
 
 def test_subrace_traits_and_abilities_fold_in():
@@ -154,7 +155,7 @@ def test_cannot_pick_too_many_or_off_list_skills():
 
 
 def test_cannot_duplicate_a_background_skill():
-    dup = _fighter(skills=[Skill.PERCEPTION, Skill.ATHLETICS])   # soldier already grants athletics
+    dup = _fighter(skills=[Skill.PERCEPTION, Skill.INSIGHT])   # acolyte already grants insight
     assert "already granted by your background" in _why(dup)
 
 

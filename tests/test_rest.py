@@ -20,7 +20,7 @@ def _barbarian(level=3, hp=10, hit_dice_used=3, rage_used=2) -> Character:
         abilities={Ability.STR: 16, Ability.DEX: 14, Ability.CON: 16,
                    Ability.INT: 8, Ability.WIS: 12, Ability.CHA: 10},
         hit_dice_used=hit_dice_used, resources_used={"Rage": rage_used},
-        sheet=CharacterSheet(race="human", char_class="barbarian", background="soldier"))
+        sheet=CharacterSheet(race="human", char_class="barbarian", background="acolyte"))
 
 
 def _warlock(level=3, slots_used=None) -> Character:
