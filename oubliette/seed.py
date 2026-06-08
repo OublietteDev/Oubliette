@@ -11,8 +11,9 @@ from .state.repository import InMemoryRepository
 # Item catalog (original content). base_value is an advisory hint only (§11).
 ITEMS = [
     Item(id="boots", name="worn leather boots", category="gear", base_value=2),
-    Item(id="knife", name="a trusty knife", category="weapon", base_value=2),
-    Item(id="leather_jerkin", name="leather jerkin", category="armor", base_value=10, armor_class=11),
+    Item(id="knife", name="a trusty knife", category="weapon", base_value=2, damage="1d4"),
+    Item(id="leather_jerkin", name="leather jerkin", category="armor", base_value=10,
+         armor_class=11, armor_type="light"),
     Item(id="healing_draught", name="healing draught", category="consumable", base_value=25),
     Item(id="traveling_boots", name="sturdy traveling boots", category="gear", base_value=8),
     Item(id="leather_satchel", name="leather satchel", category="gear", base_value=12),

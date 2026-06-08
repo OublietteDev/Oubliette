@@ -214,13 +214,15 @@ def _lint_default_party(sc: Scenario, item_ids: set[str], errors: list[str]) -> 
 
 # --- projection: authoring shapes -> engine runtime models -------------------
 def _project_item(it: Item) -> StateItem:
-    """content.Item -> state.Item. The weapon/armor blocks are captured in the
-    pack but the runtime model only needs `armor_class` for now (AC-from-equipment
-    math is deferred); everything else the engine doesn't yet use is dropped."""
+    """content.Item -> state.Item. Carries the mechanical bits the derivation engine
+    needs: armor base_ac/type/dex_cap (for AC math) and weapon damage."""
     return StateItem(
         id=it.id, name=it.name, category=it.category,
         tags=list(it.tags), base_value=it.base_value,
         armor_class=(it.armor.base_ac if it.armor else None),
+        armor_type=(it.armor.type if it.armor else None),
+        dex_cap=(it.armor.dex_cap if it.armor else None),
+        damage=(it.weapon.damage if it.weapon else None),
     )
 
 

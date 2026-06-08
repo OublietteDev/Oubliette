@@ -216,9 +216,17 @@ International License."* Oubliette is non-commercial/open-source, so this is cle
   10 equipment); `NOTICE` (SRD 5.1 CC-BY attribution); `LoadedWorld.ruleset` +
   `Session.ruleset` wired (NOT merged into world item catalogs — parity preserved).
   Tests `tests/test_srd_ruleset.py` (11).
-- **CS1 — Character model + derivation engine.** `CharacterSheet`; `rules/derive.py`;
-  unit tests vs known SRD characters (a L1 fighter's AC/saves, a wizard's spell DC,
-  a monk's unarmored AC). Built against the slice.
+- **CS1 — Character model + derivation engine. ✅ BUILT (2026-06-08, 156 tests green).**
+  `state.models`: `FeatureRef` + `CharacterSheet` (the build); `Character.sheet`
+  (+ `spell_slots_used`/`hit_dice_used` trackers); `Item` enriched with
+  `armor_type`/`dex_cap`/`damage`; loader `_project_item` carries them (seed.py oracle
+  updated to match → byte-identical parity preserved). `rules/derive.py`: AC (light/
+  medium/heavy/shield + monk/barbarian unarmored defense), saves, skills (+expertise),
+  initiative (+Alert), spell save DC/attack, slots, cantrips/prepared counts, max HP,
+  racial ability application, + a `sheet_stats()` snapshot. Tests `tests/test_derive.py`
+  (16) vs known SRD characters. NOTE: feature HP bonuses (Tough/Hill Dwarf) + fighting-
+  style AC are CS5 refinements; hard-class schema stress (warlock pact/sorcerer/half-
+  casters) pending the SRD source.
 - **CS2 — Chargen.** Backend build-validator + the multi-step UI; `CHARACTER_CREATED`;
   New Game integration; quick-start. (Uses the slice; grows with content.)
 - **CS3 — Sheet panel.** The full read-only sheet.

@@ -21,7 +21,10 @@ class Item(BaseModel):
     category: ItemCategory = "misc"
     tags: list[str] = Field(default_factory=list)
     base_value: int | None = None       # advisory hint only; never enforced (spec §11)
-    armor_class: int | None = None      # AC granted when worn (armor); shown as info for now
+    armor_class: int | None = None      # AC granted when worn: armor base_ac, or a shield's +N
+    armor_type: Literal["light", "medium", "heavy", "shield"] | None = None  # for AC math
+    dex_cap: int | None = None          # medium armor caps DEX bonus (usually 2)
+    damage: str | None = None           # weapon damage dice (e.g. "1d8") for the sheet
 
     @property
     def equippable(self) -> bool:
@@ -31,6 +34,53 @@ class Item(BaseModel):
 class ItemStack(BaseModel):
     item_id: str
     qty: int = 1
+
+
+class FeatureRef(BaseModel):
+    """A feature on the sheet, resolved from the ruleset at creation. Carries its
+    text so the sheet + DM context need no ruleset lookup to display it."""
+
+    name: str
+    source: str = ""          # "race" | "subrace" | "class" | "subclass" | "background" | "feat"
+    text: str = ""
+    level: int = 1
+
+
+class CharacterSheet(BaseModel):
+    """The D&D build behind a PC (design doc §4). Set at chargen, changed only by
+    level-up. Derived numbers (AC, saves, slots…) are NOT stored here — they're
+    recomputed by `rules/derive` from this + equipment + the ruleset. The PC's final
+    (post-racial) ability scores live in the outer `Character.abilities`, so all
+    existing code keeps working; `base_abilities` records the pre-racial picks."""
+
+    race: str
+    char_class: str
+    background: str
+    subrace: str | None = None
+    subclass: str | None = None
+    base_abilities: dict[Ability, int] = Field(default_factory=dict)  # chosen, pre-racial
+    ability_method: str = "standard_array"   # standard_array | point_buy | roll
+    saving_throw_proficiencies: set[Ability] = Field(default_factory=set)
+    expertise: set[Skill] = Field(default_factory=set)
+    armor_proficiencies: list[str] = Field(default_factory=list)
+    weapon_proficiencies: list[str] = Field(default_factory=list)
+    tool_proficiencies: list[str] = Field(default_factory=list)
+    languages: list[str] = Field(default_factory=list)
+    features: list[FeatureRef] = Field(default_factory=list)
+    feats: list[str] = Field(default_factory=list)
+    speed: int = 30
+    size: str = "Medium"
+    alignment: str = ""
+    # background flavor (shown on the sheet)
+    personality_traits: list[str] = Field(default_factory=list)
+    ideals: list[str] = Field(default_factory=list)
+    bonds: list[str] = Field(default_factory=list)
+    flaws: list[str] = Field(default_factory=list)
+    # spellcasting (casters)
+    spellcasting_ability: Ability | None = None
+    cantrips_known: list[str] = Field(default_factory=list)
+    spells_known: list[str] = Field(default_factory=list)
+    spells_prepared: list[str] = Field(default_factory=list)
 
 
 class Character(BaseModel):
@@ -52,6 +102,11 @@ class Character(BaseModel):
     gold: int = 0
     inventory: list[ItemStack] = Field(default_factory=list)
     equipped: list[str] = Field(default_factory=list)   # item_ids worn/wielded (player loadout)
+    # The full D&D build (PCs from chargen). NPCs leave it None and run on stat-block
+    # combat stats. Protected resource trackers (mutated in CS5: rests / casting).
+    sheet: CharacterSheet | None = None
+    spell_slots_used: dict[int, int] = Field(default_factory=dict)   # {spell_level: used}
+    hit_dice_used: int = 0
     # OPEN (flavor; not event-sourced — D-OPEN-1) -----------------------------
     description: str = ""
     disposition: str = ""    # NPC demeanor — context for the DM's DC-setting (D8)
