@@ -202,6 +202,16 @@ class Session:
         install_character(payload, self.repo)
         return char
 
+    def emit_character_leveled(self, char: Character, reason: str = "level up") -> Character:
+        """Record-then-apply a CHARACTER_LEVELED event carrying the rebuilt PC (CS5).
+        The character is already built by `rules.levelup` (the server rolls HP via the
+        RNG and supplies equipped items); here we just persist + reinstall it, so replay
+        reproduces it exactly."""
+        payload = {"character": char.model_dump(mode="json"), "items": [], "reason": reason}
+        self.store.append(EventKind.CHARACTER_LEVELED, payload)
+        install_character(payload, self.repo)
+        return char
+
     def emit_log(self, kind: "str | EventKind", **payload) -> Event:
         """Append a non-state event (player message, roll, marker). No ops."""
         return self.store.append(kind, payload)

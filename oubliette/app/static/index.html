@@ -605,6 +605,21 @@
   </div>
 </div>
 
+<div id="levelup-overlay" class="overlay hidden">
+  <div class="newgame-modal">
+    <div class="newgame-head"><h2 id="lu-title">Level Up</h2>
+      <div class="spacer"></div>
+      <button class="act" id="lu-cancel">Cancel</button></div>
+    <div class="newgame-note" id="lu-note"></div>
+    <div class="newgame-list"><div class="contract-form" id="lu-form"></div></div>
+    <div class="ng-foot">
+      <div class="spacer"></div>
+      <span class="cg-status" id="lu-status"></span>
+      <button class="act primary" id="lu-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <div id="map-overlay" class="overlay hidden">
   <div class="map-modal">
     <div class="map-head">
@@ -1958,6 +1973,11 @@ function renderRestBar(m) {
   const longBtn = el("button", "act primary", "Long Rest");
   longBtn.addEventListener("click", () => doRest(m.id, "long", 0));
   bar.appendChild(shortBtn); bar.appendChild(longBtn);
+  if (m.has_sheet) {
+    const luBtn = el("button", "act", "Level Up ✦");
+    luBtn.addEventListener("click", () => openLevelUp(m.id));
+    bar.appendChild(luBtn);
+  }
   return bar;
 }
 async function doRest(charId, kind, hitDice) {
@@ -2026,6 +2046,95 @@ function spellRow(s) {
 }
 $("sheet-close").addEventListener("click", closeSheet);
 $("sheet-overlay").addEventListener("click", (e) => { if (e.target.id === "sheet-overlay") closeSheet(); });
+
+// --- level up (CS5) -------------------------------------------------------
+let luPlan = null, luCharId = "pc", lu = null;
+async function openLevelUp(charId) {
+  luCharId = charId;
+  try { luPlan = await (await fetch(`/api/levelup/plan?char_id=${encodeURIComponent(charId)}`)).json(); }
+  catch (e) { return; }
+  if (!luPlan.can_level) { addMessage("System", "Cannot level up: " + (luPlan.reason || "unknown"), "system"); return; }
+  lu = { hp_method: "average", asi_mode: "asi", increases: ["str", "dex"], feat: null, subclass: null };
+  if (luPlan.needs_subclass && luPlan.subclass_options.length) lu.subclass = luPlan.subclass_options[0].id;
+  $("lu-title").textContent = `Advance to Level ${luPlan.next_level}`;
+  $("lu-note").textContent = luPlan.new_features && luPlan.new_features.length
+    ? "You gain: " + luPlan.new_features.join(", ") + "."
+    : "Choose how your hero grows.";
+  $("lu-status").textContent = "";
+  renderLuForm();
+  $("levelup-overlay").classList.remove("hidden");
+}
+function closeLevelUp() { $("levelup-overlay").classList.add("hidden"); }
+function renderLuForm() {
+  const root = $("lu-form"); root.innerHTML = "";
+  // HP
+  root.appendChild(el("label", null, "Hit points"));
+  const hp = el("div", "cg-methods");
+  [["average", `Average (+${luPlan.average_hp_gain})`], ["roll", `Roll a d${luPlan.hit_die}`]].forEach(([m, label]) => {
+    const b = el("button", "act" + (lu.hp_method === m ? " on" : ""), label);
+    b.addEventListener("click", () => { lu.hp_method = m; renderLuForm(); });
+    hp.appendChild(b);
+  });
+  root.appendChild(hp);
+  // ASI / feat
+  if (luPlan.is_asi) {
+    root.appendChild(el("label", null, "Ability Score Improvement"));
+    const modes = el("div", "cg-methods");
+    [["asi", "+2 to abilities"], ["feat", "Take a feat"]].forEach(([m, label]) => {
+      const b = el("button", "act" + (lu.asi_mode === m ? " on" : ""), label);
+      b.addEventListener("click", () => { lu.asi_mode = m; renderLuForm(); });
+      modes.appendChild(b);
+    });
+    root.appendChild(modes);
+    if (lu.asi_mode === "asi") {
+      const row = el("div", "cg-row");
+      [0, 1].forEach(i => {
+        row.appendChild(selectField(`Increase ${i + 1} (+1)`, lu.increases[i],
+          ABIL_ORDER.map(a => ({ value: a, label: a.toUpperCase() })),
+          v => { lu.increases[i] = v; }));
+      });
+      root.appendChild(row);
+      root.appendChild(el("div", "cg-hint", "Pick the same ability twice for +2 to it."));
+    } else {
+      const f = el("label", "cg-field"); f.appendChild(el("span", null, "Feat"));
+      const sel = el("select");
+      (luPlan.feats || []).forEach(ft => { const o = el("option"); o.value = ft.id; o.textContent = ft.name; sel.appendChild(o); });
+      lu.feat = lu.feat || (luPlan.feats[0] && luPlan.feats[0].id);
+      sel.value = lu.feat || "";
+      sel.addEventListener("change", () => { lu.feat = sel.value; });
+      f.appendChild(sel); root.appendChild(f);
+    }
+  }
+  // subclass
+  if (luPlan.needs_subclass && luPlan.subclass_options.length) {
+    root.appendChild(el("label", null, luPlan.subclass_label || "Subclass"));
+    const sel = el("select");
+    luPlan.subclass_options.forEach(s => { const o = el("option"); o.value = s.id; o.textContent = s.name; sel.appendChild(o); });
+    sel.value = lu.subclass;
+    sel.addEventListener("change", () => { lu.subclass = sel.value; });
+    root.appendChild(sel);
+  }
+}
+async function confirmLevelUp() {
+  const body = { char_id: luCharId, hp_method: lu.hp_method };
+  if (luPlan.is_asi) {
+    if (lu.asi_mode === "feat") body.feat = lu.feat;
+    else { const inc = {}; lu.increases.forEach(a => inc[a] = (inc[a] || 0) + 1); body.ability_increases = inc; }
+  }
+  if (luPlan.needs_subclass) body.subclass = lu.subclass;
+  const res = await fetch("/api/levelup", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!data.ok) { const s = $("lu-status"); s.className = "cg-status bad"; s.textContent = (data.errors || ["failed"]).join("; "); return; }
+  closeLevelUp();
+  renderSheet({ party: data.party });
+  if (data.state) renderState(data.state);
+  addMessage("System", `You advance to level ${luPlan.next_level}.`, "system");
+}
+$("lu-cancel").addEventListener("click", closeLevelUp);
+$("lu-confirm").addEventListener("click", confirmLevelUp);
+$("levelup-overlay").addEventListener("click", (e) => { if (e.target.id === "levelup-overlay") closeLevelUp(); });
 
 // --- soundscape mixer (S2: inherited beds, crossfaded on travel; music/sfx buses) ---
 // Engine-resolved: the server hands us a flat list of beds for the current location (its

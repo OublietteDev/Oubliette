@@ -335,3 +335,34 @@ def test_sheet_degrades_for_a_quickstart_hero():
     # basic code-owned numbers still render
     assert set(m["abilities"]) == {"str", "dex", "con", "int", "wis", "cha"}
     assert "armor_class" in m["derived"]
+
+
+# --- rests & level-up over HTTP (CS5) ---------------------------------------
+def test_rest_endpoint_restores_after_short_rest_hit_dice():
+    # a level-1 fighter has one d10 hit die; spending it on a short rest marks it used,
+    # a long rest gives it back
+    client.post("/api/new", json={"pack_id": "brightvale", "build": _FIGHTER_BUILD})
+    d = client.post("/api/rest", json={"kind": "short", "hit_dice": 1}).json()
+    assert d["ok"] and d["party"][0]["hit_dice_used"] == 1
+    d2 = client.post("/api/rest", json={"kind": "long"}).json()
+    assert d2["party"][0]["hit_dice_used"] == 0
+    _new()
+
+
+def test_levelup_flow_over_http():
+    client.post("/api/new", json={"pack_id": "brightvale", "build": _FIGHTER_BUILD})
+    plan = client.get("/api/levelup/plan").json()
+    assert plan["next_level"] == 2 and plan["is_asi"] is False
+    # L1 -> L2 (plain)
+    d = client.post("/api/levelup", json={"hp_method": "average"}).json()
+    assert d["ok"] and d["party"][0]["level"] == 2 and d["party"][0]["max_hp"] == 20
+    # L2 -> L3 needs a subclass (fighter Martial Archetype)
+    assert client.post("/api/levelup", json={}).status_code == 400
+    d3 = client.post("/api/levelup", json={"subclass": "champion"}).json()
+    assert d3["party"][0]["identity"]["subclass"] == "Champion"
+    # L3 -> L4 is an ASI level: bare attempt fails, an ASI succeeds
+    assert client.post("/api/levelup", json={}).status_code == 400
+    d4 = client.post("/api/levelup", json={"ability_increases": {"str": 2}}).json()
+    m = d4["party"][0]
+    assert m["level"] == 4 and m["abilities"]["str"]["score"] == 18
+    _new()

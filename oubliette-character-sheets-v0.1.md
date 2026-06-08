@@ -287,8 +287,25 @@ International License."* Oubliette is non-commercial/open-source, so this is cle
 - **CS4 — SRD content fill (the slog).** Author the full backbone into
   `content/srd/*.json`, in chunks — I draft, OublietteDev verifies. Runs alongside CS1–CS3
   using the slice, then completes the set.
-- **CS5 — Leveling, rests, resources.** Level-up flow; short/long rest; slot/
-  hit-die/charge tracking (the mechanics that work without combat).
+- **CS5 — Leveling, rests, resources. ✅ BUILT (2026-06-08, 212 tests green).**
+  - **CS5a — Rests + tracking.** New absolute StateOps (`slots_used`/`hit_dice_used`/
+    `resources_used`/`max_hp`/`level`) + repo setters. `rules/rest.py`: long rest (full
+    HP, all slots, short+long-recharge resources reset, regain ½-level hit dice) and
+    short rest (pact slots, short-recharge resources, optional hit-die healing rolled
+    via the seeded RNG → recorded as absolute `hp_set`). `REST_TAKEN` event (via
+    `emit_state`); `POST /api/rest`; the sheet grows a rest bar + shows used/max for
+    slots/resources/hit-dice. Tests `tests/test_rest.py` (6).
+  - **CS5b — Level-up.** `rules/levelup.py`: `level_up()` validates the choice (ASI sums
+    to 2 / feat / cap 20; subclass required-at-its-level + class match; HP average-or-rolled
+    in die range) and rebuilds the character one level up, carrying protected state over;
+    `level_up_plan()` drives the UI. `CHARACTER_LEVELED` event reuses `install_character`
+    (replay reinstalls the whole rebuilt PC). `GET /api/levelup/plan` + `POST /api/levelup`
+    (server rolls HP via RNG when chosen). The sheet's rest bar gains a **Level Up** button →
+    a modal (HP method, ASI/feat, subclass) with the firewall surfaced. NOTE: learning new
+    cantrips/spells on level-up is deferred to CS4 (no caster is buildable until content lands;
+    slots themselves are derived from level, so they already scale). Tests `tests/test_levelup.py`
+    (16) + HTTP flow in `test_server_frontend.py`. The slice ships `champion` (fighter) +
+    `evocation` (wizard) subclasses, so the subclass path is real & tested.
 - **CS6 — DM context integration.** Feed the mechanical sheet + features/spells
   (reference) into `build_context` so the DM narrates rules-aware and calls for the
   right saves/checks.

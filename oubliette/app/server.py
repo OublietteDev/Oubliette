@@ -31,6 +31,7 @@ from ..rules import derive
 from ..rules.chargen import (POINT_BUY_BUDGET, POINT_BUY_COST, STANDARD_ARRAY,
                              CharacterBuild, ChargenError, build_character)
 from ..rules.rest import long_rest_ops, short_rest_ops
+from ..rules.levelup import LevelUpChoice, LevelUpError, level_up, level_up_plan
 from ..runtime.loop import TurnLoop
 from ..runtime.session import Session
 from ..dm.brain import Brain
@@ -870,6 +871,49 @@ async def post_rest(body: RestIn) -> JSONResponse:
         else:
             return JSONResponse({"ok": False, "error": "rest kind must be 'short' or 'long'"}, status_code=400)
         GAME.session.emit_state(EventKind.REST_TAKEN, ops, rest=body.kind)
+        return JSONResponse({"ok": True, "party": [_sheet_member(c, rs) for c in GAME.session.repo.party()],
+                             "state": _snapshot()})
+
+
+@app.get("/api/levelup/plan")
+async def get_levelup_plan(char_id: str = "pc") -> JSONResponse:
+    """What advancing to the next level requires (drives the level-up UI)."""
+    try:
+        char = GAME.session.repo.get_character(char_id)
+    except StateError as e:
+        return JSONResponse({"can_level": False, "reason": str(e)})
+    return JSONResponse(level_up_plan(char, _ruleset()))
+
+
+class LevelUpIn(LevelUpChoice):
+    char_id: str = "pc"
+
+
+@app.post("/api/levelup")
+async def post_levelup(body: LevelUpIn) -> JSONResponse:
+    """Advance a character one level (CS5). Rolls HP via the seeded RNG when the player
+    chose to roll, then records-then-applies a CHARACTER_LEVELED event."""
+    async with GAME.lock:
+        rs = _ruleset()
+        try:
+            char = GAME.session.repo.get_character(body.char_id)
+        except StateError as e:
+            return JSONResponse({"ok": False, "errors": [str(e)]}, status_code=400)
+        choice = LevelUpChoice(**body.model_dump(exclude={"char_id"}))
+        cc = rs.classes.get(char.sheet.char_class) if char.sheet else None
+        if choice.hp_method == "roll" and choice.hp_roll is None and cc is not None:
+            choice.hp_roll = GAME.rng.roll(f"1d{cc.hit_die}", "level_up_hp").total
+        equipped = []
+        for i in char.equipped:
+            try:
+                equipped.append(GAME.session.repo.get_item(i))
+            except StateError:
+                pass
+        try:
+            leveled = level_up(char, rs, choice, equipped_items=equipped, char_id=body.char_id)
+        except LevelUpError as e:
+            return JSONResponse({"ok": False, "errors": e.errors}, status_code=400)
+        GAME.session.emit_character_leveled(leveled)
         return JSONResponse({"ok": True, "party": [_sheet_member(c, rs) for c in GAME.session.repo.party()],
                              "state": _snapshot()})
 
