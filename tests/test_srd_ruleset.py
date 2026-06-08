@@ -24,6 +24,17 @@ def test_bundled_ruleset_loads():
     assert "fire_bolt" in rs.spells and "longsword" in rs.equipment
 
 
+def test_full_race_and_condition_sets_present():
+    """CS4 Gate 1: the SRD's full 9 races and 15 conditions are loaded (the slice
+    shipped only 3 of each). Count tripwire so a future content edit can't silently
+    drop one; existing subraces still cross-reference elf/dwarf."""
+    rs = load_ruleset()
+    assert set(rs.races) == {"human", "elf", "dwarf", "halfling", "dragonborn",
+                             "gnome", "half_elf", "half_orc", "tiefling"}
+    assert len(rs.conditions) == 15
+    assert {"exhaustion", "unconscious", "petrified", "blinded"} <= set(rs.conditions)
+
+
 def test_only_srd_legal_backgrounds_and_feats():
     """Strict-SRD guard. SRD 5.1 contains exactly ONE background (Acolyte) and ONE
     feat (Grappler). This tripwire fails if non-SRD content sneaks back in — a prior
