@@ -1127,7 +1127,7 @@ $("inv-close").addEventListener("click", closeInventory);
 // sound" click resumes the context. (One-shots, time/weather arrive in later seams.)
 let audioCtx = null, masterGain = null, musicGain = null, sfxGain = null;
 let soundOn = false, soundMuted = false, musicVol = 0.7, sfxVol = 0.7;
-const SS = { spec: [], beds: new Map(), buffers: new Map() };  // beds: file -> {src, gain}
+const SS = { spec: [], beds: new Map(), buffers: new Map(), shots: new Map(), fires: 0 };  // beds/shots: file -> handle
 const clamp01 = v => Math.max(0, Math.min(1, v));
 try { const m = localStorage.getItem("ob-music"); if (m != null) musicVol = clamp01(+m); } catch (e) {}
 try { const s = localStorage.getItem("ob-sfx"); if (s != null) sfxVol = clamp01(+s); } catch (e) {}
@@ -1164,9 +1164,12 @@ function setSoundscape(spec) {
 async function applySoundscape() {
   if (!soundOn) return;
   const FADE = 1.2;
-  const want = new Map(SS.spec.map(l => [l.file, l]));
+  const beds = SS.spec.filter(l => (l.kind || "bed") === "bed");
+  const shots = SS.spec.filter(l => l.kind === "oneshot");
+  const wantBeds = new Map(beds.map(l => [l.file, l]));
+
   for (const [file, node] of [...SS.beds]) {            // fade out beds no longer wanted
-    if (!want.has(file)) {
+    if (!wantBeds.has(file)) {
       const g = node.gain.gain;
       g.cancelScheduledValues(audioCtx.currentTime);
       g.setValueAtTime(g.value, audioCtx.currentTime);
@@ -1176,7 +1179,7 @@ async function applySoundscape() {
       SS.beds.delete(file);
     }
   }
-  for (const layer of SS.spec) {                        // fade in / update wanted beds
+  for (const layer of beds) {                           // fade in / update wanted beds
     const target = Math.max(0, Math.min(1, layer.gain != null ? layer.gain : 1));
     const existing = SS.beds.get(layer.file);
     if (existing) {
@@ -1186,7 +1189,7 @@ async function applySoundscape() {
     }
     try {
       const buf = await loadBuffer(layer.url);
-      if (!SS.spec.includes(layer) || SS.beds.has(layer.file)) continue;  // spec moved on
+      if (SS.beds.has(layer.file) || !SS.spec.includes(layer)) continue;  // spec moved on
       const src = audioCtx.createBufferSource();
       src.buffer = buf; src.loop = true;
       const gain = audioCtx.createGain(); gain.gain.value = 0;
@@ -1197,6 +1200,51 @@ async function applySoundscape() {
       SS.beds.set(layer.file, { src, gain });
     } catch (e) { /* a missing/bad sound must never break play */ }
   }
+
+  const wantShots = new Map(shots.map(l => [l.file, l]));   // start/stop one-shot schedulers
+  for (const [file, sch] of [...SS.shots]) {
+    if (!wantShots.has(file)) { clearTimeout(sch.timer); SS.shots.delete(file); }
+  }
+  for (const layer of shots) {
+    const sch = SS.shots.get(layer.file);
+    if (sch) { sch.layer = layer; continue; }            // already scheduled; refresh params
+    startShot(layer);
+  }
+}
+
+// A one-shot fires at a random interval in [min_gap, max_gap], with gentle volume/pan
+// jitter so repeats never feel mechanical — the clinks, scrapes and gulls that breathe.
+function nextGap(layer) {
+  const lo = layer.min_gap != null ? layer.min_gap : 6;
+  const hi = Math.max(lo, layer.max_gap != null ? layer.max_gap : 16);
+  return (lo + Math.random() * (hi - lo)) * 1000;
+}
+function startShot(layer) {
+  const entry = { layer, timer: null };
+  const tick = () => { fireShot(entry.layer); entry.timer = setTimeout(tick, nextGap(entry.layer)); };
+  entry.timer = setTimeout(tick, nextGap(layer));       // staggered first fire (not on arrival)
+  SS.shots.set(layer.file, entry);
+}
+async function fireShot(layer) {
+  if (!soundOn) return;
+  try {
+    const buf = await loadBuffer(layer.url);
+    const src = audioCtx.createBufferSource(); src.buffer = buf;
+    const gain = audioCtx.createGain();
+    const base = Math.max(0, Math.min(1, layer.gain != null ? layer.gain : 1));
+    gain.gain.value = base * (0.82 + Math.random() * 0.18);
+    src.connect(gain);
+    let tail = gain;
+    if (audioCtx.createStereoPanner) {
+      const pan = audioCtx.createStereoPanner();
+      pan.pan.value = (Math.random() * 2 - 1) * 0.4;
+      gain.connect(pan); tail = pan;
+    }
+    tail.connect(layer.category === "music" ? musicGain : sfxGain);
+    src.onended = () => { try { src.disconnect(); gain.disconnect(); } catch (e) {} };
+    src.start();
+    SS.fires++;
+  } catch (e) { /* a missing/bad sound must never break play */ }
 }
 function setMusicVol(v) {
   musicVol = clamp01(v);

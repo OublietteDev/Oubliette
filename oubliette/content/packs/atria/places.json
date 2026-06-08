@@ -65,6 +65,14 @@
         "file": "placeholder_waves.wav",
         "kind": "bed",
         "category": "sfx"
+      },
+      {
+        "file": "placeholder_gull.wav",
+        "kind": "oneshot",
+        "category": "sfx",
+        "scope": "local",
+        "min_gap": 6,
+        "max_gap": 16
       }
     ]
   },
@@ -120,6 +128,22 @@
         "kind": "bed",
         "category": "music",
         "scope": "local"
+      },
+      {
+        "file": "placeholder_clink.wav",
+        "kind": "oneshot",
+        "category": "sfx",
+        "scope": "local",
+        "min_gap": 5,
+        "max_gap": 14
+      },
+      {
+        "file": "placeholder_chair.wav",
+        "kind": "oneshot",
+        "category": "sfx",
+        "scope": "local",
+        "min_gap": 14,
+        "max_gap": 34
       }
     ]
   }

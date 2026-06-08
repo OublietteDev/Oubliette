@@ -369,21 +369,26 @@ def _soundscape() -> list:
     while cur is not None and cur.id not in walked:       # current → ancestors
         walked.add(cur.id)
         for cue in getattr(cur, "sounds", ()):
-            if cue.get("kind", "bed") != "bed":
-                continue                                  # beds only for now
+            kind = cue.get("kind", "bed")
+            if kind not in ("bed", "oneshot"):
+                continue
             if not at_current and cue.get("scope", "local") != "passed_down":
                 continue                                  # ancestors give only passed-down cues
             name = cue.get("file")
             if not name or name in seen:
                 continue
             seen.add(name)
-            layers.append({
+            layer = {
                 "file": name,
                 "url": f"/api/audio/{quote(name)}",   # encode &, spaces, etc. in the filename
-                "kind": "bed",
+                "kind": kind,
                 "category": cue.get("category", "sfx"),
                 "gain": cue.get("gain", 1.0),
-            })
+            }
+            if kind == "oneshot":                         # sparse, randomized firing (S3)
+                layer["min_gap"] = cue.get("min_gap")
+                layer["max_gap"] = cue.get("max_gap")
+            layers.append(layer)
         cur = places.get(cur.parent)
         at_current = False
     return layers
