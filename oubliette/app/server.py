@@ -75,6 +75,15 @@ class _Game:
             self.pack_id = pack_id
         self._open()
 
+    def reload_world(self) -> None:
+        """Re-read the pack from disk and rebuild the session by replaying the save —
+        so edits made in The Forge (new sounds, art, places) show up in a running game
+        WITHOUT starting over. The event log is untouched; play state replays identically
+        on top of the refreshed pack baseline."""
+        self.store.close()
+        self.journal.close()
+        self._open()
+
 
 GAME = _Game()
 
@@ -590,6 +599,16 @@ class NewGameIn(BaseModel):
 async def post_new(body: NewGameIn | None = None) -> JSONResponse:
     async with GAME.lock:
         GAME.new_game(body.pack_id if body else None)
+        return JSONResponse({"state": _snapshot(), "model": GAME.client_name,
+                             "pack_id": GAME.pack_id, "soundscape": _soundscape()})
+
+
+@app.post("/api/reload")
+async def post_reload() -> JSONResponse:
+    """Re-read the pack from disk into the running game (keeps the save), so edits made
+    in The Forge appear without a New Game — the author→test convenience."""
+    async with GAME.lock:
+        GAME.reload_world()
         return JSONResponse({"state": _snapshot(), "model": GAME.client_name,
                              "pack_id": GAME.pack_id, "soundscape": _soundscape()})
 

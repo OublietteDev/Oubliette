@@ -327,6 +327,7 @@
       <div class="menu-pop hidden" id="menu-pop"></div>
     </div>
     <span class="badge" id="model-badge">…</span>
+    <button class="act" id="reload-btn" title="Re-read the world from The Forge — keeps your current game">↻ Reload world</button>
     <button class="act" id="new-btn">New Game</button>
   </header>
 
@@ -812,6 +813,17 @@ async function startNewGame(packId, packName) {
   setSoundscape(data.soundscape);
 }
 $("new-btn").addEventListener("click", () => { if (!busy) openNewGame(); });
+$("reload-btn").addEventListener("click", async () => {
+  if (busy) return;
+  const btn = $("reload-btn"); btn.disabled = true;
+  try {
+    const data = await (await fetch("/api/reload", { method: "POST" })).json();
+    if (data.state) renderState(data.state);
+    setSoundscape(data.soundscape);
+    addMessage("System", "World reloaded — edits from The Forge are now live.", "system");
+  } catch (e) { addMessage("System", "Reload failed: " + e, "system"); }
+  finally { btn.disabled = false; }
+});
 $("newgame-cancel").addEventListener("click", closeNewGame);
 $("newgame-overlay").addEventListener("click", (e) => { if (e.target.id === "newgame-overlay") closeNewGame(); });
 
