@@ -315,8 +315,10 @@
     <div class="sound-wrap">
       <button class="act" id="sound-btn" title="Sound">🔈 Enable sound</button>
       <div class="sound-pop hidden" id="sound-pop">
-        <div class="lbl">Master volume</div>
-        <input type="range" id="vol-master" min="0" max="100" value="70" />
+        <div class="lbl">Music</div>
+        <input type="range" id="vol-music" min="0" max="100" value="70" />
+        <div class="lbl">Sound effects</div>
+        <input type="range" id="vol-sfx" min="0" max="100" value="70" />
         <button class="act" id="sound-mute">Mute all</button>
       </div>
     </div>
@@ -1117,15 +1119,18 @@ async function equipToggle(charId, itemId, equip) {
 }
 $("inv-close").addEventListener("click", closeInventory);
 
-// --- soundscape mixer (S1: per-location ambient beds, crossfaded on travel) ---
-// Engine-resolved: the server hands us a flat list of beds for the current location and
-// we crossfade from what's playing to that list. Browsers block audio until a user
-// gesture, so a one-time "Enable sound" click resumes the context. Player surface (S1):
-// master volume + mute. (Music/SFX split, one-shots, time/weather arrive in later seams.)
-let audioCtx = null, masterGain = null;
-let soundOn = false, soundMuted = false, masterVol = 0.7;
+// --- soundscape mixer (S2: inherited beds, crossfaded on travel; music/sfx buses) ---
+// Engine-resolved: the server hands us a flat list of beds for the current location (its
+// own + any inherited theme) and we crossfade from what's playing to that list. Each bed
+// routes through a music or sfx bus → master (mute) → output, so the two player sliders
+// move whole categories. Browsers block audio until a user gesture, so a one-time "Enable
+// sound" click resumes the context. (One-shots, time/weather arrive in later seams.)
+let audioCtx = null, masterGain = null, musicGain = null, sfxGain = null;
+let soundOn = false, soundMuted = false, musicVol = 0.7, sfxVol = 0.7;
 const SS = { spec: [], beds: new Map(), buffers: new Map() };  // beds: file -> {src, gain}
-try { const v = localStorage.getItem("ob-vol"); if (v != null) masterVol = Math.max(0, Math.min(1, +v)); } catch (e) {}
+const clamp01 = v => Math.max(0, Math.min(1, v));
+try { const m = localStorage.getItem("ob-music"); if (m != null) musicVol = clamp01(+m); } catch (e) {}
+try { const s = localStorage.getItem("ob-sfx"); if (s != null) sfxVol = clamp01(+s); } catch (e) {}
 try { soundMuted = localStorage.getItem("ob-muted") === "1"; } catch (e) {}
 
 function enableSound() {
@@ -1133,9 +1138,12 @@ function enableSound() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return;
   audioCtx = new AC();
-  masterGain = audioCtx.createGain();
-  masterGain.gain.value = soundMuted ? 0 : masterVol;
+  masterGain = audioCtx.createGain();                  // master = the mute control
+  masterGain.gain.value = soundMuted ? 0 : 1;
   masterGain.connect(audioCtx.destination);
+  musicGain = audioCtx.createGain(); musicGain.gain.value = musicVol;   // the two player buses
+  sfxGain = audioCtx.createGain();   sfxGain.gain.value = sfxVol;
+  musicGain.connect(masterGain); sfxGain.connect(masterGain);
   soundOn = true;
   audioCtx.resume();
   updateSoundBtn();
@@ -1182,22 +1190,28 @@ async function applySoundscape() {
       const src = audioCtx.createBufferSource();
       src.buffer = buf; src.loop = true;
       const gain = audioCtx.createGain(); gain.gain.value = 0;
-      src.connect(gain); gain.connect(masterGain);
+      const bus = (layer.category === "music") ? musicGain : sfxGain;   // route by category
+      src.connect(gain); gain.connect(bus);
       src.start();
       gain.gain.linearRampToValueAtTime(target, audioCtx.currentTime + FADE);
       SS.beds.set(layer.file, { src, gain });
     } catch (e) { /* a missing/bad sound must never break play */ }
   }
 }
-function setMasterVol(v) {
-  masterVol = Math.max(0, Math.min(1, v));
-  try { localStorage.setItem("ob-vol", String(masterVol)); } catch (e) {}
-  if (masterGain && !soundMuted) masterGain.gain.linearRampToValueAtTime(masterVol, audioCtx.currentTime + 0.08);
+function setMusicVol(v) {
+  musicVol = clamp01(v);
+  try { localStorage.setItem("ob-music", String(musicVol)); } catch (e) {}
+  if (musicGain) musicGain.gain.linearRampToValueAtTime(musicVol, audioCtx.currentTime + 0.08);
+}
+function setSfxVol(v) {
+  sfxVol = clamp01(v);
+  try { localStorage.setItem("ob-sfx", String(sfxVol)); } catch (e) {}
+  if (sfxGain) sfxGain.gain.linearRampToValueAtTime(sfxVol, audioCtx.currentTime + 0.08);
 }
 function setMuted(m) {
   soundMuted = m;
   try { localStorage.setItem("ob-muted", m ? "1" : "0"); } catch (e) {}
-  if (masterGain) masterGain.gain.linearRampToValueAtTime(m ? 0 : masterVol, audioCtx.currentTime + 0.08);
+  if (masterGain) masterGain.gain.linearRampToValueAtTime(m ? 0 : 1, audioCtx.currentTime + 0.08);
   updateSoundBtn();
 }
 function updateSoundBtn() {
@@ -1205,14 +1219,16 @@ function updateSoundBtn() {
   if (!soundOn) { b.textContent = "🔈 Enable sound"; b.classList.add("attn"); }
   else { b.textContent = soundMuted ? "🔇 Sound" : "🔊 Sound"; b.classList.remove("attn"); }
   const mute = $("sound-mute"); if (mute) mute.textContent = soundMuted ? "Unmute" : "Mute all";
-  const vol = $("vol-master"); if (vol) vol.value = Math.round(masterVol * 100);
+  const vm = $("vol-music"); if (vm) vm.value = Math.round(musicVol * 100);
+  const vs = $("vol-sfx"); if (vs) vs.value = Math.round(sfxVol * 100);
 }
 $("sound-btn").addEventListener("click", (e) => {
   e.stopPropagation();
   if (!soundOn) { enableSound(); return; }              // first click is the autoplay gate
   $("sound-pop").classList.toggle("hidden");
 });
-$("vol-master").addEventListener("input", (e) => setMasterVol(+e.target.value / 100));
+$("vol-music").addEventListener("input", (e) => setMusicVol(+e.target.value / 100));
+$("vol-sfx").addEventListener("input", (e) => setSfxVol(+e.target.value / 100));
 $("sound-mute").addEventListener("click", () => setMuted(!soundMuted));
 document.addEventListener("click", (e) => {
   if (!$("sound-pop").classList.contains("hidden") && !e.target.closest(".sound-wrap")) $("sound-pop").classList.add("hidden");

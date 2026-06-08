@@ -356,24 +356,35 @@ async def map_image(filename: str) -> FileResponse | JSONResponse:
 
 def _soundscape() -> list:
     """The active audio layers at the party's current location — the flat list the
-    browser mixer renders (design oubliette-audio-mixer §2/§6). S1: just the location's
-    own *beds*; theme-inheritance (passed-down cues) and time/weather conditions arrive
-    in later seams. Resolution lives here in code so the client stays a dumb renderer."""
-    node = GAME.session.places.get(GAME.session.location)
-    layers = []
-    for cue in getattr(node, "sounds", ()) if node is not None else ():
-        if cue.get("kind", "bed") != "bed":
-            continue                                  # S1 plays beds only
-        name = cue.get("file")
-        if not name:
-            continue
-        layers.append({
-            "file": name,
-            "url": f"/api/audio/{name}",
-            "kind": "bed",
-            "category": cue.get("category", "sfx"),
-            "gain": cue.get("gain", 1.0),
-        })
+    browser mixer renders (design oubliette-audio-mixer §2/§3). Inheritance (S2): the
+    current place's beds, PLUS any ancestor bed marked scope='passed_down' — so a
+    top-level theme rides down into every child while local sounds stay put. Conditions
+    (time/weather) and one-shots arrive in later seams. Resolution lives here in code so
+    the client stays a dumb renderer."""
+    places = GAME.session.places
+    layers, seen, walked = [], set(), set()
+    cur = places.get(GAME.session.location)
+    at_current = True
+    while cur is not None and cur.id not in walked:       # current → ancestors
+        walked.add(cur.id)
+        for cue in getattr(cur, "sounds", ()):
+            if cue.get("kind", "bed") != "bed":
+                continue                                  # beds only for now
+            if not at_current and cue.get("scope", "local") != "passed_down":
+                continue                                  # ancestors give only passed-down cues
+            name = cue.get("file")
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            layers.append({
+                "file": name,
+                "url": f"/api/audio/{name}",
+                "kind": "bed",
+                "category": cue.get("category", "sfx"),
+                "gain": cue.get("gain", 1.0),
+            })
+        cur = places.get(cur.parent)
+        at_current = False
     return layers
 
 

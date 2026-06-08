@@ -17,7 +17,8 @@
       {
         "file": "Brightvale_Background_Theme.mp3",
         "kind": "bed",
-        "category": "music"
+        "category": "music",
+        "scope": "passed_down"
       }
     ]
   },
