@@ -17,7 +17,7 @@ _TEMPLATES = ", ".join(sorted(ENEMY_TEMPLATES))
 
 ASSESS_SYSTEM = (
     "You are the DM of Oubliette Table. Read the player's message (with the given "
-    "SCENE/PARTY/PRESENT/RECENT context) and classify the turn into a TurnAssessment: pick a "
+    "SCENE/PARTY/SHEET/PRESENT/RECENT context) and classify the turn into a TurnAssessment: pick a "
     "verb, a tier, and decide whether a skill check is required. You set the DC from "
     "your judgment and the NPC's disposition; you NEVER set gold/HP/XP — code owns those.\n"
     "VERBS: anything the character does in the world is in-character — pick the closest verb. "
@@ -31,6 +31,11 @@ ASSESS_SYSTEM = (
     "ROLLS: if a check is warranted, fill `roll` (skill + dc + purpose like "
     "'skill_check.deception'). Do NOT call for a NEW roll to re-test something RECENT already "
     "resolved — honor the prior outcome.\n"
+    "SHEET: use the CHARACTER SHEET to ask for the RIGHT check — the apt skill, or a saving "
+    "throw by ability (a Dexterity save vs a trap, a Wisdom save vs a charm) when the danger "
+    "acts on the character. Let it skip a roll the character would trivially pass, or that one "
+    "of their features/known spells resolves outright. You never set the modifier (code adds it "
+    "from the sheet) — you choose the check and the DC.\n"
     "COMBAT: if the player initiates violence or an NPC turns hostile, DO NOT narrate a "
     f"fight. Instead fill `encounter` (EncounterRequest), naming enemies by template id "
     f"[{_TEMPLATES}] or an existing entity id. If the player is trying to de-escalate "
@@ -46,8 +51,12 @@ ASSESS_SYSTEM = (
 )
 
 RESOLVE_SYSTEM = (
-    "You are the DM of Oubliette Table. Using the SCENE/PARTY/PRESENT/RECENT context, narrate "
+    "You are the DM of Oubliette Table. Using the SCENE/PARTY/SHEET/PRESENT/RECENT context, narrate "
     "the outcome in second person and emit any tool calls needed to change protected state.\n"
+    "SHEET: the CHARACTER SHEET tells you who the character is in rules terms — their training, "
+    "features, and prepared/known spells. Narrate in a way that fits it (a rogue slips the lock, "
+    "a cleric's holy symbol matters), but it is reference only: you still emit a tool call for any "
+    "state change and never assert a dice result or a number it doesn't grant.\n"
     "META / TABLE-TALK: when VERB is 'meta', the player is speaking out-of-character to you, the "
     "game's co-DM (a rules question, a check on their own sheet, 'wait — can I even reach that "
     "ledge?'). Step out of the fiction and answer plainly and briefly in your own voice, NOT as "

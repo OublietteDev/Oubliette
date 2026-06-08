@@ -306,9 +306,19 @@ International License."* Oubliette is non-commercial/open-source, so this is cle
     slots themselves are derived from level, so they already scale). Tests `tests/test_levelup.py`
     (16) + HTTP flow in `test_server_frontend.py`. The slice ships `champion` (fighter) +
     `evocation` (wizard) subclasses, so the subclass path is real & tested.
-- **CS6 — DM context integration.** Feed the mechanical sheet + features/spells
-  (reference) into `build_context` so the DM narrates rules-aware and calls for the
-  right saves/checks.
+- **CS6 — DM context integration. ✅ BUILT (2026-06-08, 216 tests green).** A compact,
+  always-on **character card** per sheeted PC, baked into `build_context` (`dm/context.py`,
+  new `_character_cards`): identity (race/class/subclass/level/background), ability mods,
+  **proficient skills only** (with expertise), save proficiencies, training summary,
+  features & known/prepared spells **by name**, spell save DC/attack + slot pool, class
+  resources, conditions. Names + key numbers, never full rulebook prose. Reuses `rules/derive`
+  so the numbers match the read-only sheet (CS3). The loop threads `session.ruleset` through;
+  the card degrades gracefully without it (drops slot pools/resources). Two prompt edits in
+  `dm/brain.py` point the DM at the `SHEET` section: ask for the *right* check/save and skip
+  rolls a feature/spell handles. Decision: shipped as the card, **not** the originally-floated
+  silent query tool — code already owns dice modifiers (`_build_spec`), so the DM needs to know
+  *who the character is*, not fetch a number; the card delivers that with zero extra round-trips.
+  Tests `tests/test_dm_sheet_card.py` (4).
 
 *Effects resolution (spell damage, conditions, buffs) is explicitly out of scope
 until the combat arc — by decision §1.*

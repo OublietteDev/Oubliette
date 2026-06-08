@@ -10,10 +10,119 @@ exposes internals the model shouldn't reason about as numbers it owns.
 from __future__ import annotations
 
 from ..canon.models import CanonRecord
+from ..enums import Ability, Skill
+from ..rules.derive import (class_resources, save_modifier, skill_modifier,
+                            spell_attack_bonus, spell_save_dc, spell_slots)
 from ..state.repository import Repository
 
 LORE_MAX = 3        # most lore entries surfaced in one turn's context
 LORE_CHARS = 1200   # per-entry budget — generous (lore is meant to be retold, not clipped)
+FEATURE_CAP = 14    # features listed by name before a "+N more" tail (keep the card bounded)
+
+
+def _mod(n: int) -> str:
+    return f"{n:+d}"
+
+
+def _ord(n: int) -> str:
+    return {1: "st", 2: "nd", 3: "rd"}.get(n, "th")
+
+
+def _character_cards(repo: Repository, ruleset) -> list[str]:
+    """A compact mechanical 'card' per sheeted PC (CS6): who they are, what they're
+    trained in, their features/spells/resources — names and key numbers, never the
+    full rulebook prose. The point is for the DM to call for the RIGHT check/save
+    and narrate rules-aware, NOT to own any number: code still rolls and owns state.
+
+    Sheet-less quick-start heroes get nothing here (the PARTY line already covers
+    their basics). Reuses `rules/derive` so the numbers match the read-only sheet
+    (CS3) exactly. `ruleset` may be None (custom seeds / tests): abilities, skills,
+    saves, features and the spell save DC still render; slot pools and class
+    resources, which need the ruleset to derive, are simply omitted."""
+    def nm(table_attr: str, ident):
+        if ident is None:
+            return None
+        if ruleset is None:
+            return ident
+        ent = getattr(ruleset, table_attr, {}).get(ident)
+        return ent.name if ent is not None else ident
+
+    def spell_nm(spell_id: str) -> str:
+        ent = ruleset.spells.get(spell_id) if ruleset is not None else None
+        return ent.name if ent is not None else spell_id
+
+    pcs = [c for c in repo.party() if c.sheet is not None]
+    if not pcs:
+        return []
+    out = [
+        "CHARACTER SHEET (mechanical reference — use it to call for the RIGHT check or "
+        "save and to skip rolls the character handles trivially or via a feature/spell; "
+        "you never roll, code applies these modifiers and owns all state):"
+    ]
+    for pc in pcs:
+        sheet = pc.sheet
+        race = nm("races", sheet.race)
+        subrace = nm("subraces", sheet.subrace)
+        race_label = f"{race} ({subrace})" if subrace else race
+        klass = nm("classes", sheet.char_class)
+        subclass = nm("subclasses", sheet.subclass)
+        class_label = f"{klass}/{subclass}" if subclass else klass
+        ident = f"  {pc.name} — level {pc.level} {race_label} {class_label}"
+        tail = ", ".join(p for p in [nm("backgrounds", sheet.background), sheet.alignment or None] if p)
+        out.append(ident + (f", {tail}" if tail else ""))
+        out.append("    Abilities: " + ", ".join(
+            f"{a.value.upper()} {_mod(pc.ability_mod(a))}" for a in Ability))
+        prof_skills = [
+            f"{s.value.replace('_', ' ').title()} {_mod(skill_modifier(pc, s))}"
+            f"{' (expertise)' if s in sheet.expertise else ''}"
+            for s in Skill if s in pc.skill_proficiencies
+        ]
+        if prof_skills:
+            out.append("    Proficient skills: " + ", ".join(prof_skills) + ".")
+        if sheet.saving_throw_proficiencies:
+            out.append("    Saving throws: " + ", ".join(
+                f"{a.value.upper()} {_mod(save_modifier(pc, a))}"
+                for a in Ability if a in sheet.saving_throw_proficiencies) + ".")
+        train = []
+        for label, vals in (("armor", sheet.armor_proficiencies),
+                            ("weapons", sheet.weapon_proficiencies),
+                            ("tools", sheet.tool_proficiencies),
+                            ("languages", sheet.languages)):
+            if vals:
+                train.append(f"{label}: " + ", ".join(vals))
+        if train:
+            out.append("    Trained — " + "; ".join(train) + ".")
+        feats = [f.name for f in sheet.features]
+        if feats:
+            shown = feats[:FEATURE_CAP]
+            more = len(feats) - len(shown)
+            out.append("    Features: " + ", ".join(shown) + (f" (+{more} more)." if more else "."))
+        if sheet.spellcasting_ability is not None:
+            bits = [f"Spellcasting ({sheet.spellcasting_ability.value.upper()})"]
+            dc, atk = spell_save_dc(pc), spell_attack_bonus(pc)
+            if dc is not None:
+                bits.append(f"save DC {dc}, attack {_mod(atk)}")
+            if ruleset is not None:
+                slots = spell_slots(pc, ruleset)
+                if slots:
+                    bits.append("slots " + ", ".join(
+                        f"{lvl}{_ord(lvl)}: {n}" for lvl, n in sorted(slots.items())))
+            if sheet.cantrips_known:
+                bits.append("cantrips " + ", ".join(spell_nm(s) for s in sheet.cantrips_known))
+            leveled = sheet.spells_prepared or sheet.spells_known
+            if leveled:
+                bits.append("spells " + ", ".join(spell_nm(s) for s in leveled))
+            out.append("    " + "; ".join(bits) + ".")
+        if ruleset is not None:
+            res = class_resources(pc, ruleset)
+            if res:
+                out.append("    Resources: " + ", ".join(
+                    f"{name} {'unlimited' if info.get('unlimited') else info.get('max')}"
+                    f"/{info.get('recharge', 'long')} rest"
+                    for name, info in res.items()) + ".")
+        if pc.conditions:
+            out.append("    Conditions: " + ", ".join(pc.conditions) + ".")
+    return out
 
 
 def _reachable(location: str | None, places: dict) -> list:
@@ -33,7 +142,8 @@ def _reachable(location: str | None, places: dict) -> list:
 def build_context(repo: Repository, scene: str = "", recent: list[str] | None = None,
                   canon: list[CanonRecord] | None = None, location: str | None = None,
                   places: dict | None = None, quests: list | None = None,
-                  time_of_day: str | None = None, weather: str | None = None) -> str:
+                  time_of_day: str | None = None, weather: str | None = None,
+                  ruleset=None) -> str:
     pc = repo.pc()
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
@@ -53,6 +163,9 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
         f"PARTY: {pc.name} (id: {pc.id}) — {pc.hp}/{pc.max_hp} HP, {pc.gold}g, {pc.xp} XP; "
         f"carrying {inv}."
     )
+    # CS6: the mechanical 'card(s)' — who the PC(s) are in rules terms, so the DM
+    # calls for the right checks/saves and narrates rules-aware (reference only).
+    lines.extend(_character_cards(repo, ruleset))
     # Only NPCs whose home is the party's current location are "present" in the
     # scene — this keeps the prompt scoped as the cast grows. An NPC with no home
     # is "nowhere in particular" and isn't placed in any scene. Everyone remains

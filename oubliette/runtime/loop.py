@@ -72,7 +72,8 @@ class TurnLoop:
             self.repo, scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits,
             location=self.session.location, places=self.session.places,
             quests=self.session.quests.active(),
-            time_of_day=self.session.time_of_day, weather=self.session.weather)
+            time_of_day=self.session.time_of_day, weather=self.session.weather,
+            ruleset=self.session.ruleset)
         # `ooc` is the player's explicit "out-of-character" signal (the composer
         # toggle). When set, the turn is table-talk — no model guessing, no combat
         # or trade — so in-character play is never mistaken for meta.
