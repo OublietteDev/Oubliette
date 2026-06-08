@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from pydantic import ValidationError
+
 from ..combat.boundary import CombatError, result_to_ops, run_encounter
 from ..combat.schemas import CombatResult
 from ..dm.brain import Brain
@@ -158,9 +160,18 @@ class TurnLoop:
         success = False
         for attempt in range(MAX_TOOL_RETRIES + 1):
             # Stream only the first attempt; a retry would double-stream narration.
-            resolution = await self.brain.resolve(
-                player_text, assessment, roll_result, context, feedback,
-                on_text=(on_text if attempt == 0 else None))
+            try:
+                resolution = await self.brain.resolve(
+                    player_text, assessment, roll_result, context, feedback,
+                    on_text=(on_text if attempt == 0 else None))
+            except (ValidationError, RuntimeError) as e:
+                # The model returned an empty/malformed resolution (e.g. an empty tool
+                # call). Treat it like a failed attempt: feed it back and retry, rather
+                # than crashing the player's turn.
+                feedback = ("Your last reply was empty or malformed. Reply again with a "
+                            "complete TurnResolution — narration is required.")
+                self.debug.append("anomaly", stage="resolve", attempt=attempt, error=str(e))
+                continue
             narration = resolution.narration
             try:
                 resolved = [self.dispatcher.resolve(c) for c in resolution.tool_calls]
@@ -195,6 +206,8 @@ class TurnLoop:
         meta_notice: str | None = None
         if not success:
             meta_notice = "the DM lost the thread — try rephrasing."
+            if not narration:        # all attempts failed to produce usable narration
+                narration = "The Phantom's gaze drifts a moment, the thread of the scene slipping."
             self.debug.append("anomaly", stage="turn", note="forced narration-only after retries")
 
         self.debug.append("narration", text=narration)

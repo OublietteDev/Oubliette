@@ -20,7 +20,7 @@ import urllib.error
 import urllib.request
 from typing import TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from .client import Msg, TextSink
 from .streaming import extract_string_field
@@ -34,7 +34,7 @@ _RETRYABLE = {429, 500, 502, 503, 529}
 
 class AnthropicLLMClient:
     def __init__(self, model: str = DEFAULT_MODEL, api_key: str | None = None,
-                 max_tokens: int = 1024, max_retries: int = 3) -> None:
+                 max_tokens: int = 2048, max_retries: int = 3) -> None:
         self._api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
         if not self._api_key:
             raise RuntimeError("ANTHROPIC_API_KEY is not set")
@@ -57,9 +57,14 @@ class AnthropicLLMClient:
             "tool_choice": {"type": "tool", "name": "emit"},
         }
         if on_text is not None:
-            payload["stream"] = True
-            inp = await asyncio.to_thread(self._post_stream, payload, on_text)
-            return schema.model_validate(inp)
+            inp = await asyncio.to_thread(self._post_stream, {**payload, "stream": True}, on_text)
+            try:
+                return schema.model_validate(inp)
+            except ValidationError:
+                # The streamed tool input came back empty/partial (e.g. the model emitted
+                # an empty `emit({})`). Fall through to one clean, non-streaming retry,
+                # which re-generates the turn and almost always yields a valid object.
+                pass
 
         data = await asyncio.to_thread(self._post, payload)
         for block in data.get("content", []):
