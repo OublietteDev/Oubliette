@@ -238,6 +238,120 @@ async def world_image(place_id: str) -> FileResponse:
                         headers={"Cache-Control": "no-cache"})
 
 
+def _visited_place_ids() -> set:
+    """Places the party has actually reached: the start location plus every travel
+    destination in the log. Movement is DM-driven (the `travel` tool), so this is the
+    full record of where they've been — the basis for map discovery."""
+    s = GAME.session
+    visited: set = set()
+    if s.start_location:
+        visited.add(s.start_location)
+    if s.location:
+        visited.add(s.location)
+    for ev in s.store.read_all():
+        if ev.kind == EventKind.LOCATION_CHANGED.value:
+            to = ev.payload.get("to")
+            if to:
+                visited.add(to)
+    return visited
+
+
+def _children_by_parent() -> dict:
+    """Group places by their parent id (None = top-level area)."""
+    kids: dict = {}
+    for node in GAME.session.places.values():
+        kids.setdefault(node.parent, []).append(node)
+    return kids
+
+
+def _subtree_visited(area_id: str, kids: dict, visited: set) -> bool:
+    """True if the area itself OR any place nested under it has been visited —
+    i.e. the party has set foot somewhere inside this area, so it's 'discovered'."""
+    stack, seen = [area_id], set()
+    while stack:
+        cur = stack.pop()
+        if cur in seen:
+            continue
+        seen.add(cur)
+        if cur in visited:
+            return True
+        for child in kids.get(cur, []):
+            stack.append(child.id)
+    return False
+
+
+def _map_image_url(filename: str | None) -> str | None:
+    """A served URL for a pack map background (world map or a place's sub-map), or None."""
+    return f"/api/map-image/{filename}" if filename else None
+
+
+@app.get("/api/map")
+async def get_map() -> JSONResponse:
+    """The player's world map: top-level areas, each a PIN at its authored position on
+    the world-map background. Hover reveals name + description; a discovered area can be
+    opened (double-click) to its own sub-map (`sub_map` background + child pins).
+
+    Discovery redaction is done HERE, server-side, so unvisited content never reaches
+    the browser. An area the party hasn't reached (itself or anything nested in it) comes
+    back with no name, no description, no children and no sub-map — only a placeholder
+    handle and its position (a bare 'Unknown' pin). It stays a mystery until visited; the
+    map shows the world's SHAPE from the start, but identities are earned by travelling.
+
+    DM-invented locations never appear: `travel` only resolves to pack places, so the
+    party can't stand on one, and the map iterates pack places only — a graceful no-op."""
+    s = GAME.session
+    kids = _children_by_parent()
+    visited = _visited_place_ids()
+    current_top = _top_location_id()
+    tops = kids.get(None, [])
+
+    areas = []
+    for i, node in enumerate(tops):
+        known = _subtree_visited(node.id, kids, visited)
+        child_nodes = kids.get(node.id, [])
+        children = [{
+            "handle": c.id,
+            "name": c.name,
+            "description": c.description,
+            "position": c.position,                  # pin on this area's sub-map
+            "visited": c.id in visited,
+            "current": c.id == s.location,
+        } for c in child_nodes] if known else []     # undiscovered areas reveal no rooms
+        areas.append({
+            "handle": node.id if known else f"hidden-{i}",
+            "known": known,
+            "name": node.name if known else None,
+            "description": node.description if known else None,
+            "position": node.position,               # {x,y} percent, or null (client falls back)
+            "current": node.id == current_top,
+            "has_children": known and bool(child_nodes),   # drillable only once discovered
+            "sub_map": _map_image_url(node.map_image) if known else None,
+            "children": children,
+        })
+
+    current_name = None
+    if current_top is not None:
+        node = s.places.get(current_top)
+        current_name = node.name if node is not None else None
+    return JSONResponse({
+        "world_map": _map_image_url(s.world_map),
+        "current_area_name": current_name,
+        "areas": areas,
+    })
+
+
+@app.get("/api/map-image/{filename}", response_model=None)
+async def map_image(filename: str) -> FileResponse | JSONResponse:
+    """Serve a pack map background (the world map, or a place's sub-map) by filename,
+    from the loaded pack's images/ folder."""
+    if "/" in filename or "\\" in filename or ".." in filename:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    path = _PACKS_ROOT / (GAME.pack_id or "") / "images" / filename
+    if not path.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(path, headers={"Cache-Control": "no-cache"})
+
+
 @app.post("/api/turn")
 async def post_turn(body: TurnIn) -> JSONResponse:
     text = body.text.strip()

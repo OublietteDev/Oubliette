@@ -253,6 +253,17 @@ The Forge is built well past this plan. Shipped (git tags in parens):
 - **Illustrations** (`forge-illustrations`): a place's Illustration field — pick an image
   and it's resized in the browser and stored in the pack's `images/` folder, with a
   preview frame that mirrors the game's quest-card framing so you see the fit.
+- **Map editor** (this session): the §7 "arrange your world" seam, built as **pins on
+  assignable map art**. A "🗺 Map" button opens the world board; "Set map image" assigns
+  a background — the **world map** (e.g. Atria) at the top level, a **sub-map** per area
+  when you drill in. Each place is a draggable **pin** on that art (hover shows its name
+  + description); its `position` is stored as a percentage of the image, so it stays put
+  across screen sizes and the game reuses it. Double-click a ★ area to arrange the places
+  inside it — **two levels only** (no grandchildren) — with a breadcrumb back. Authored
+  exits draw as edges. **Arrange-only** (exits stay in the per-place form); `world_map`
+  saves onto the manifest, `map_image`/`position` onto places, through the ordinary save
+  (with the usual timestamped backup). The map image upload reuses the illustration flow
+  (browser-side resize → pack `images/`).
 
 **Resolution of the open questions:** forms went **hand-built** (the §9.3 fallback, as
 anticipated). Layered base-SRD packs and character creation remain future arcs.

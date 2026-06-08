@@ -146,6 +146,53 @@
   .illus-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .illus-empty { color: var(--faint); font-size: 12px; font-style: italic; padding: 0 16px; text-align: center; }
 
+  /* map editor (arrange places spatially; positions persist into places.json) */
+  .map-scrim { position: fixed; inset: 0; display: none; z-index: 70;
+    background:
+      radial-gradient(1200px 600px at 70% -10%, #2a221b 0%, transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, #20302c 0%, transparent 55%),
+      var(--bg); }
+  .map-scrim.open { display: flex; flex-direction: column; }
+  .map-head { display: flex; align-items: center; gap: 12px; padding: 14px 22px;
+    border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(0,0,0,.3), transparent); }
+  .map-head h2 { font-family: var(--serif); color: var(--gold); margin: 0; font-size: 20px; }
+  .map-head .tag { font-size: 12px; color: var(--muted); font-style: italic; }
+  .map-head .spacer { flex: 1; }
+  .map-body { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 14px 22px 22px; }
+  .map-top { display: flex; align-items: baseline; gap: 16px; margin-bottom: 10px; flex-wrap: wrap; }
+  .crumbs { font-family: var(--serif); font-size: 15px; }
+  .crumb { color: var(--gold); cursor: pointer; }
+  .crumb:hover { text-decoration: underline; }
+  .crumb.here { color: var(--ink); cursor: default; }
+  .crumb.here:hover { text-decoration: none; }
+  .crumb-sep { color: var(--faint); margin: 0 7px; }
+  .map-hint { font-size: 12px; color: var(--muted); font-style: italic; }
+  .map-bgctl { display: flex; gap: 8px; align-items: center; }
+  .map-canvas { position: relative; flex: 1; min-height: 0; border: 1px solid var(--line);
+    border-radius: 14px; overflow: hidden;
+    background: radial-gradient(circle at 50% 35%, #1e2724 0%, #161311 72%); }
+  .map-stage { position: absolute; }                 /* the map image's contain-rect; pins are % of THIS */
+  .map-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+  .map-edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .map-edges line { stroke: #6f8473; stroke-width: 2; stroke-dasharray: 5 5; opacity: .8; }
+  .map-pin { position: absolute; transform: translate(-50%, -100%); cursor: grab; touch-action: none; z-index: 2; }
+  .map-pin.dragging { cursor: grabbing; z-index: 8; }
+  .pin-dot { width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+    background: var(--accent); border: 1.5px solid #1c130b; box-shadow: 0 3px 6px rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center; }
+  .map-pin.area .pin-dot { background: var(--gold); }
+  .map-pin:hover .pin-dot { filter: brightness(1.15); }
+  .pin-glyph { transform: rotate(45deg); font-size: 10px; line-height: 1; color: #1a1410; }
+  .map-pin .tip { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%);
+    display: none; width: max-content; min-width: 120px; max-width: 240px;
+    background: var(--panel-2); border: 1px solid var(--accent); border-radius: 8px; padding: 8px 11px;
+    box-shadow: var(--shadow); z-index: 9; text-align: left; pointer-events: none; }
+  .map-pin:hover .tip { display: block; }
+  .tip .tname { font-family: var(--serif); color: var(--gold); font-size: 13.5px; }
+  .tip .tdesc { color: var(--muted); font-size: 12px; margin-top: 4px; line-height: 1.4; max-height: 116px; overflow: hidden; }
+  .map-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-style: italic; padding: 0 40px; text-align: center; }
+
   .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
     background: #1b2118; border: 1px solid #3c4d35; color: var(--good);
     padding: 11px 18px; border-radius: 10px; box-shadow: var(--shadow); font-size: 13px;
@@ -159,6 +206,7 @@
     <span class="tag">— build a world the game can play</span>
     <span class="spacer"></span>
     <span id="dirty">● unsaved changes</span>
+    <button class="btn" id="mapBtn" disabled>🗺 Map</button>
     <button class="btn primary" id="saveBtn" disabled>Save world</button>
     <span class="badge" id="rootBadge"></span>
   </header>
@@ -173,6 +221,17 @@
   </main>
 
   <div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
+
+  <div class="map-scrim" id="mapScrim">
+    <div class="map-head">
+      <h2>World Map</h2>
+      <span class="tag">— drag to arrange your places</span>
+      <span class="spacer"></span>
+      <button class="btn" id="mapClose">Close</button>
+    </div>
+    <div class="map-body" id="mapBody"></div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
 <script>
@@ -331,6 +390,7 @@ function renderGroup(kind) {
 }
 function render() {
   const d = document.getElementById("detail");
+  document.getElementById("mapBtn").disabled = !state.contents;
   if (!state.contents) { d.innerHTML = '<div class="empty">Pick a world on the left to open it.</div>'; return; }
   // Per-section warning counts from the last validation (hidden while dirty — the
   // report is stale until the next save re-checks).
@@ -838,6 +898,195 @@ function commitEntry(kind, original, entry) {
   markDirty();
 }
 
+// --- map editor (pins on an assignable map image; positions persist to places.json) ---
+// A place is a PIN at {x, y} percent of the current map image's "stage" (its contain-
+// rect), so pins stay aligned to the art across screen sizes — the game reuses the same
+// percentages. Top-level pins sit on the world map (pack.world_map); double-click a ★
+// area to drill into ITS map (place.map_image) and arrange the places inside. Two levels
+// only — children of children aren't a thing. Exits are still edited in the per-place
+// form, but we DRAW them here so the board reads like a map.
+let mapPath = [];          // [] = world (top) level; [areaId] = inside that area
+
+const placeById = id => listOf("places").find(p => p.id === id);
+const childrenOf = areaId => listOf("places").filter(p => (p.parent || null) === (areaId || null));
+const hasChildren = id => listOf("places").some(p => p.parent === id);
+const currentAreaId = () => (mapPath.length ? mapPath[mapPath.length - 1] : null);
+const mapLevelPlaces = () => childrenOf(currentAreaId());
+
+// Deterministic fallback spot for a place with no authored position (a ring), so
+// unplaced places fan out instead of stacking — dragging then pins a real position.
+function fallbackPos(i, n) {
+  if (n <= 1) return { x: 50, y: 50 };
+  const ang = (i / n) * Math.PI * 2 - Math.PI / 2;
+  return { x: 50 + Math.cos(ang) * 30, y: 50 + Math.sin(ang) * 30 };
+}
+function nodePos(p, i, n) {
+  const q = p.position;
+  if (q && typeof q.x === "number" && typeof q.y === "number") return q;
+  return fallbackPos(i, n);
+}
+// The background image for the level we're viewing: the pack's world map at the top,
+// or the drilled-into area's own map_image.
+function currentBg() {
+  const a = currentAreaId();
+  if (a == null) return (state.contents.pack && state.contents.pack.world_map) || null;
+  const p = placeById(a); return p ? (p.map_image || null) : null;
+}
+
+function openMap() { if (!state.contents) return; mapPath = []; document.getElementById("mapScrim").classList.add("open"); renderMap(); }
+function closeMap() { document.getElementById("mapScrim").classList.remove("open"); }
+
+function renderMap() {
+  const body = document.getElementById("mapBody");
+  const places = mapLevelPlaces();
+  const n = places.length;
+  const inside = currentAreaId() != null;
+  const crumbs = [`<span class="crumb${inside ? "" : " here"}" data-crumb="-1">World map</span>`]
+    .concat(mapPath.map((id, idx) => {
+      const here = idx === mapPath.length - 1;
+      return `<span class="crumb-sep">▸</span><span class="crumb${here ? " here" : ""}" data-crumb="${idx}">${esc(placeName(id))}</span>`;
+    })).join("");
+  const bg = currentBg();
+  const bgImg = bg
+    ? `<img class="map-bg" id="mapBgImg" src="/api/pack/${encodeURIComponent(state.id)}/image/${encodeURIComponent(bg)}?b=${Date.now()}" alt="" />` : "";
+  const pins = places.map((p, i) => {
+    const pos = nodePos(p, i, n);
+    const isArea = !inside && hasChildren(p.id);   // drillable only from the top level
+    const tipDesc = p.description ? `<div class="tdesc">${esc(p.description)}</div>` : "";
+    const tipHint = isArea ? `<div class="tdesc" style="color:var(--gold)">▣ double-click to open its map</div>` : "";
+    return `<div class="map-pin${isArea ? " area" : ""}" data-node="${esc(p.id)}" style="left:${pos.x}%;top:${pos.y}%">
+      <div class="pin-dot"><span class="pin-glyph">${isArea ? "★" : ""}</span></div>
+      <div class="tip"><div class="tname">${esc(p.name)}</div>${tipDesc}${tipHint}</div></div>`;
+  }).join("");
+  const empty = pins ? "" : `<div class="map-empty">No places ${inside ? "inside this area" : "at the top level"} yet — add places (and set their “Part of (area)”) to see them here.</div>`;
+  body.innerHTML = `
+    <div class="map-top">
+      <div class="crumbs">${crumbs}</div>
+      <span style="flex:1"></span>
+      <div class="map-bgctl">
+        <button class="btn mini" id="mapBgSet">${bg ? "Replace map image" : "Set map image"}</button>
+        ${bg ? '<button class="btn mini danger" id="mapBgClear">Remove map image</button>' : ""}
+        <input type="file" id="mapBgFile" accept="image/png,image/jpeg,image/webp" style="display:none" />
+      </div>
+    </div>
+    <div class="map-hint" style="margin-bottom:8px">Drag pins to place them${inside ? "" : "; double-click a ★ area to arrange the places inside it"}. Hover a pin for its name &amp; description.</div>
+    <div class="map-canvas" id="mapCanvas">
+      <div class="map-stage" id="mapStage">${bgImg}<svg class="map-edges" id="mapEdges"></svg>${pins}</div>
+      ${empty}
+    </div>`;
+  body.querySelectorAll("[data-crumb]").forEach(c => c.addEventListener("click", () => {
+    const idx = +c.dataset.crumb; mapPath = idx < 0 ? [] : mapPath.slice(0, idx + 1); renderMap();
+  }));
+  body.querySelectorAll("[data-node]").forEach(el => {
+    el.addEventListener("pointerdown", e => startNodeDrag(e, el));
+    el.addEventListener("dblclick", () => { const id = el.dataset.node; if (currentAreaId() == null && hasChildren(id)) { mapPath = [id]; renderMap(); } });
+  });
+  document.getElementById("mapBgSet").addEventListener("click", () => document.getElementById("mapBgFile").click());
+  document.getElementById("mapBgFile").addEventListener("change", e => { if (e.target.files[0]) onChooseMapBg(e.target.files[0]); });
+  const clr = document.getElementById("mapBgClear");
+  if (clr) clr.addEventListener("click", clearCurrentBg);
+  const img = document.getElementById("mapBgImg");
+  if (img) img.addEventListener("load", layoutStage);
+  layoutStage();
+}
+
+// Size the stage to the map image's contain-rect (or the whole canvas when there's no
+// image), so pin percentages land on the same spot of the art everywhere.
+function layoutStage() {
+  const canvas = document.getElementById("mapCanvas"), stage = document.getElementById("mapStage");
+  if (!canvas || !stage) return;
+  const cw = canvas.clientWidth, ch = canvas.clientHeight;
+  const img = document.getElementById("mapBgImg");
+  let sw = cw, sh = ch;
+  if (img && img.naturalWidth && img.naturalHeight) {
+    const scale = Math.min(cw / img.naturalWidth, ch / img.naturalHeight);
+    sw = img.naturalWidth * scale; sh = img.naturalHeight * scale;
+  }
+  stage.style.width = sw + "px"; stage.style.height = sh + "px";
+  stage.style.left = ((cw - sw) / 2) + "px"; stage.style.top = ((ch - sh) / 2) + "px";
+  drawEdges();
+}
+
+function drawEdges() {
+  const stage = document.getElementById("mapStage");
+  if (!stage) return;
+  const places = mapLevelPlaces(), n = places.length;
+  const idx = new Map(places.map((p, i) => [p.id, { p, i }]));
+  const W = stage.clientWidth, H = stage.clientHeight;
+  const at = (p, i) => { const q = nodePos(p, i, n); return [q.x / 100 * W, q.y / 100 * H]; };
+  let lines = "";
+  places.forEach((p, i) => {
+    const [x1, y1] = at(p, i);
+    (p.exits || []).forEach(ex => {
+      const t = idx.get(ex.to); if (!t) return;     // only draw exits within this level
+      const [x2, y2] = at(t.p, t.i);
+      lines += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" />`;
+    });
+  });
+  const svg = document.getElementById("mapEdges");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = lines;
+}
+
+function startNodeDrag(e, el) {
+  if (e.button != null && e.button !== 0) return;
+  const stage = document.getElementById("mapStage");
+  const place = placeById(el.dataset.node);
+  const startX = e.clientX, startY = e.clientY;
+  let dragging = false;
+  el.setPointerCapture(e.pointerId);
+  const onMove = ev => {
+    if (!dragging && Math.hypot(ev.clientX - startX, ev.clientY - startY) < 4) return;  // let dbl-click through
+    dragging = true; el.classList.add("dragging");
+    const r = stage.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, (ev.clientX - r.left) / r.width * 100));
+    const y = Math.max(0, Math.min(100, (ev.clientY - r.top) / r.height * 100));
+    el.style.left = x + "%"; el.style.top = y + "%";
+    place.position = { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+    drawEdges();
+  };
+  const onUp = () => {
+    el.releasePointerCapture(e.pointerId);
+    el.removeEventListener("pointermove", onMove);
+    el.removeEventListener("pointerup", onUp);
+    el.classList.remove("dragging");
+    if (dragging) markDirty();    // re-renders the (background) detail; the map overlay stays put
+  };
+  el.addEventListener("pointermove", onMove);
+  el.addEventListener("pointerup", onUp);
+}
+
+// Assign / replace / clear the background map image for the current level (world map at
+// the top; the drilled area's map_image inside). Reuses the pack image upload + the
+// browser-side resize the illustration flow already uses.
+async function onChooseMapBg(file) {
+  try {
+    const dataUrl = await resizeToDataUrl(file, 1600);
+    const areaId = currentAreaId();
+    const baseName = areaId == null
+      ? slugify((state.contents.pack && state.contents.pack.name) || "world") + "_map"
+      : slugify(placeById(areaId).name) + "_map";
+    const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/image`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: baseName + ".jpg", data: dataUrl }),
+    })).json();
+    if (res.error) { toast(res.error); return; }
+    setCurrentBg(res.filename);
+  } catch (e) { toast(String(e.message || e)); }
+}
+function setCurrentBg(filename) {
+  const areaId = currentAreaId();
+  if (areaId == null) { state.contents.pack = state.contents.pack || {}; state.contents.pack.world_map = filename; }
+  else { const p = placeById(areaId); if (p) p.map_image = filename; }
+  markDirty(); renderMap();
+}
+function clearCurrentBg() {
+  const areaId = currentAreaId();
+  if (areaId == null) { if (state.contents.pack) delete state.contents.pack.world_map; }
+  else { const p = placeById(areaId); if (p) delete p.map_image; }
+  markDirty(); renderMap();
+}
+
 // --- save ------------------------------------------------------------------
 async function saveWorld() {
   if (!state.id || !state.dirty) return;
@@ -870,8 +1119,15 @@ async function newWorld() {
 
 document.getElementById("saveBtn").addEventListener("click", saveWorld);
 document.getElementById("newWorldBtn").addEventListener("click", newWorld);
+document.getElementById("mapBtn").addEventListener("click", openMap);
+document.getElementById("mapClose").addEventListener("click", closeMap);
 document.getElementById("scrim").addEventListener("click", e => { if (e.target.id === "scrim") closeEditor(); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && editorCtx) closeEditor(); });
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (editorCtx) closeEditor();
+  else if (document.getElementById("mapScrim").classList.contains("open")) closeMap();
+});
+window.addEventListener("resize", () => { if (document.getElementById("mapScrim").classList.contains("open")) layoutStage(); });
 document.getElementById("rootBadge").textContent = "reading from content/packs";
 loadWorlds();
 </script>

@@ -419,6 +419,19 @@ P1 shipped and the pipeline has grown (git tags in parens):
   graph is carried into the runtime to power the **travel** tool.
 - **Place illustrations** (`forge-illustrations`): optional `Place.image` (a filename in the
   pack's `images/` folder), served for quest cards; authored via The Forge.
+- **Map arc** (this session): the §6.2 map seam, realized end-to-end as **pins on map
+  art**. New optional fields (additive, schema_version still 1): `PackManifest.world_map`
+  (the top-level background) and `Place.map_image` (the background shown when you drill
+  INTO a place — its children's sub-map); `Place.position` `{x,y}` is the pin's spot as a
+  percentage of that image. All authored in The Forge, carried into the runtime
+  `PlaceNode` + session, and served to the game by `GET /api/map` (+ a `/api/map-image`
+  route). Discovery is computed server-side from the `LOCATION_CHANGED` log: an area is
+  "known" once the party has reached it or anything nested in it; until then the endpoint
+  **redacts** it entirely (synthetic handle, no name/description/children/sub-map — a bare
+  "Unknown" pin), so unvisited content never leaves the server. DM-invented locations
+  never appear: `travel` only resolves to authored places, so the party can't stand on
+  one and the map iterates pack places only. Positions/images are optional — the map
+  falls back to a deterministic ring layout and a plain backdrop.
 
 All additive — **schema_version is still 1**. Quests are now tracked at runtime (emergent,
 DM-created); **authored** quests in packs (the §9.5 item) remain a future addition.

@@ -37,6 +37,7 @@ class Session:
         self.location: str | None = None    # party's current Place id (scopes present NPCs)
         self.scene: str = DEFAULT_SCENE     # current location's prose
         self.pack_id: str | None = None     # which content pack this campaign is playing
+        self.world_map: str | None = None   # top-level map background image filename (pack)
         self.ended: bool = False            # the DM closed this session (end_session tool)
 
     def _scene_for(self, location: str | None) -> str:
@@ -64,6 +65,7 @@ class Session:
             start_location = world.location
             start_scene = world.scene
             chosen_pack = world.pack_id
+            world_map = world.world_map
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
         else:
             repo = seed()
@@ -71,6 +73,7 @@ class Session:
             places = {}
             start_location = None
             start_scene = DEFAULT_SCENE
+            world_map = None
             marker = {}
         canon = CanonStore()
         quests = QuestStore()
@@ -96,6 +99,7 @@ class Session:
         session.location = location
         session.scene = session._scene_for(location)
         session.pack_id = chosen_pack
+        session.world_map = world_map
         session.ended = ended
         if events:
             replay(events, repo, canon, quests)   # existing session: rebuild to current

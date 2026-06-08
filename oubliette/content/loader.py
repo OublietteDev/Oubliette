@@ -54,6 +54,8 @@ class PlaceNode:
     parent: str | None
     exits: tuple[str, ...]        # destination Place ids
     image: str | None = None     # illustration filename (in the pack's images/ folder)
+    map_image: str | None = None  # background map shown when drilled INTO this place
+    position: dict | None = None  # {x, y} percent coords for the map (authored in The Forge)
 
 
 @dataclass
@@ -71,6 +73,7 @@ class LoadedWorld:
     places: dict             # {place_id: PlaceNode}
     pack_id: str
     pack_version: str
+    world_map: str | None = None   # the top-level map background image filename (manifest)
 
 
 # --- file reading ------------------------------------------------------------
@@ -337,11 +340,11 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     scene = scenario.scene_override or place_by_id[scenario.start_location].description
     place_nodes = {p.id: PlaceNode(id=p.id, name=p.name, description=p.description,
                                    parent=p.parent, exits=tuple(e.to for e in p.exits),
-                                   image=p.image)
+                                   image=p.image, map_image=p.map_image, position=p.position)
                    for p in places}
 
     return LoadedWorld(
         repository=repo, canon=_authored_canon(npcs, places, lore), scene=scene,
         location=scenario.start_location, places=place_nodes,
-        pack_id=manifest.id, pack_version=manifest.version,
+        pack_id=manifest.id, pack_version=manifest.version, world_map=manifest.world_map,
     )

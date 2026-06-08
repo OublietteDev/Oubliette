@@ -63,12 +63,27 @@ rewrites. Everything runs with a **scripted (offline) DM** — no API key requir
   status-grouped entries (e.g. Quests → In-Progress / Completed) and markdown notes.
   The journal is **deliberately invisible to the DM** — stored in its own table,
   never read into context — so player notes can't induce hallucination or bloat the
-  prompt. (Map, Bestiary, Party Sheets are stubbed "soon" menu slots.)
+  prompt. (Bestiary & Party Sheets are stubbed "soon" menu slots; **Map** is now live —
+  see below.)
 - **Phase 9** (tag `phase-9`): the **Inventory panel**. Moved off the sidebar into a
   menu panel: a section per party member, items grouped into Weapons / Armor (with
   AC) / Gear / Consumables / Other, plus an **Equipped** section with equip/unequip
   toggles. Loadout changes are event-sourced (an `equip` op) so they persist and
   replay. (Total-AC-from-equipment is deferred to the rules pass.)
+- **Phase 10** (tag `phase-10`): the **world map**, both halves, as pins on
+  assignable map art. In **The Forge**, the map editor lets you assign a **world map
+  image** (e.g. Atria) and a **sub-map image** per top-level area, then drag each place
+  as a **pin** onto it (hover shows name + description); double-click a ★ area to arrange
+  the places inside it (two levels — no grandchildren). Pins store a `position` as a
+  percentage of the map image, so they stay aligned across screen sizes; `world_map`
+  (manifest) + `map_image`/`position` (places) persist via the normal save. In the
+  **game**, the Map menu opens those pins on the same art: hover a pin for its name +
+  description, double-click a discovered area to open its sub-map, breadcrumb back out.
+  Identities are **earned by visiting** — an area the party hasn't reached is just an
+  *Unknown* pin (no name, description, or contents) until they travel there. Redaction is
+  server-side in `/api/map`, so unvisited content never reaches the browser; DM-invented
+  locations simply don't appear (you can only `travel` to authored places). Fits the
+  DM-driven, location-to-location travel model (no free roam).
 
 ## Quickstart
 

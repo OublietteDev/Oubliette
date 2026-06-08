@@ -30,6 +30,8 @@ class PackManifest(_Strict):
     author: str = ""
     description: str = ""
     entry_scenario: str              # which Scenario a new campaign starts in
+    world_map: str | None = None     # background image (in images/) for the top-level
+                                     # map — the whole world, e.g. Atria; pins sit on it
 
 
 # --- items -------------------------------------------------------------------
@@ -126,9 +128,11 @@ class Place(_Strict):
                                      # Brightvale > Marketplace; dungeon > rooms)
     image: str | None = None         # illustration filename in the pack's images/ folder
                                      # (used for quest cards; top-level areas mainly)
+    map_image: str | None = None     # background map image (in images/) shown when you
+                                     # drill INTO this place — its children's sub-map
     tags: list[str] = Field(default_factory=list)
     exits: list[Exit] = Field(default_factory=list)           # the map's edges
-    position: dict | None = None     # {x,y} — reserved for the map UI; optional
+    position: dict | None = None     # {x,y} percent — this place's PIN on its parent's map
 
 
 # --- lore (authored world history/legend the DM can draw on) ----------------

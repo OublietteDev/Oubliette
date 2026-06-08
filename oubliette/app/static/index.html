@@ -250,6 +250,45 @@
   .trade-actions { display: flex; gap: 8px; }
   #trade-settle { font: inherit; font-weight: 600; cursor: pointer; border: none; border-radius: 9px; padding: 8px 16px; background: linear-gradient(180deg, var(--accent), #9c5f2e); color: #fff; }
   #trade-settle:disabled, #trade-haggle:disabled { opacity: .4; cursor: default; }
+
+  /* world map (player menu) — top-level areas as PINS on the world-map image; hover
+     reveals name + description; double-click a discovered area opens its sub-map.
+     Identities are redacted server-side until visited (shown "Unknown"). */
+  .map-modal { width: min(960px, 95vw); height: 88vh; display: flex; flex-direction: column;
+    background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .map-head { display: flex; align-items: center; gap: 12px; padding: 15px 18px; border-bottom: 1px solid var(--line); }
+  .map-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 18px; }
+  .map-crumbs { font-family: var(--serif); font-size: 14px; color: var(--muted); }
+  .map-crumb { color: var(--gold); cursor: pointer; }
+  .map-crumb:hover { text-decoration: underline; }
+  .map-crumb.here { color: var(--ink); cursor: default; }
+  .map-crumb.here:hover { text-decoration: none; }
+  .map-crumb-sep { color: var(--faint); margin: 0 7px; }
+  .map-head .here { font-size: 12px; color: var(--muted); font-style: italic; }
+  .map-head .spacer { flex: 1; }
+  .wm-canvas { position: relative; flex: 1; min-height: 0; overflow: hidden;
+    background: radial-gradient(circle at 50% 38%, #1e2724 0%, #161311 72%); }
+  .wm-stage { position: absolute; }                 /* the map image's contain-rect; pins are % of THIS */
+  .wm-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+  .wm-pin { position: absolute; transform: translate(-50%, -100%); cursor: default; z-index: 2; }
+  .wm-pin.openable { cursor: pointer; }
+  .wm-pin .pin-dot { width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+    background: var(--accent); border: 1.5px solid #1c130b; box-shadow: 0 3px 6px rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center; }
+  .wm-pin.unknown .pin-dot { background: #4a423a; border-style: dashed; }
+  .wm-pin.current .pin-dot { background: var(--gold); box-shadow: 0 0 0 3px rgba(217,178,90,.3), 0 3px 6px rgba(0,0,0,.5); }
+  .wm-pin .pin-glyph { transform: rotate(45deg); font-size: 10px; line-height: 1; color: #1a1410; }
+  .wm-pin:hover .pin-dot { filter: brightness(1.12); }
+  .wm-pin .tip { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); display: none;
+    width: max-content; min-width: 120px; max-width: 250px; background: var(--panel-2); border: 1px solid var(--accent);
+    border-radius: 8px; padding: 8px 11px; box-shadow: var(--shadow); z-index: 9; text-align: left; }
+  .wm-pin:hover .tip { display: block; }
+  .wm-pin .tip .tname { font-family: var(--serif); color: var(--gold); font-size: 13.5px; }
+  .wm-pin.unknown .tip .tname { color: var(--faint); font-style: italic; }
+  .wm-pin .tip .tdesc { color: var(--muted); font-size: 12px; margin-top: 4px; line-height: 1.4; max-height: 130px; overflow: hidden; }
+  .wm-pin .tip .topen { color: var(--gold); font-size: 11px; margin-top: 5px; }
+  .wm-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-style: italic; padding: 0 40px; text-align: center; }
 </style>
 </head>
 <body>
@@ -365,6 +404,19 @@
       <button class="act" id="inv-close">Close</button>
     </div>
     <div class="inv-body" id="inv-body"></div>
+  </div>
+</div>
+
+<div id="map-overlay" class="overlay hidden">
+  <div class="map-modal">
+    <div class="map-head">
+      <h2>World Map</h2>
+      <span class="map-crumbs" id="wm-crumbs"></span>
+      <div class="spacer"></div>
+      <span class="here" id="wm-here"></span>
+      <button class="act" id="map-close">Close</button>
+    </div>
+    <div class="wm-canvas" id="wm-canvas"></div>
   </div>
 </div>
 
@@ -573,7 +625,7 @@ $("trade-done").addEventListener("click", closeTrade);
 $("trade-settle").addEventListener("click", settle);
 $("trade-haggle").addEventListener("click", doHaggle);
 $("trade-overlay").addEventListener("click", (e) => { if (e.target.id === "trade-overlay") closeTrade(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeTrade(); closeJournal(); closeInventory(); closeMenu(); } });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeTrade(); closeJournal(); closeInventory(); closeWorldMap(); closeMenu(); } });
 
 let gameEnded = false;          // set when the DM ends the session (locks the composer)
 function renderState(s) {
@@ -743,7 +795,7 @@ const MENU_ITEMS = [
   { key: "inventory", label: "Inventory",        icon: "🎒", enabled: true,  open: () => openInventory() },
   { key: "party",     label: "Party Sheets",     icon: "👥", enabled: false },
   { key: "bestiary",  label: "Bestiary & Rules", icon: "📚", enabled: false },
-  { key: "map",       label: "Map",              icon: "🗺️", enabled: false },
+  { key: "map",       label: "Map",              icon: "🗺️", enabled: true,  open: () => openWorldMap() },
 ];
 const menuPop = $("menu-pop");
 function renderMenu() {
@@ -764,6 +816,92 @@ $("menu-btn").addEventListener("click", (e) => { e.stopPropagation(); toggleMenu
 document.addEventListener("click", (e) => {
   if (!menuPop.classList.contains("hidden") && !e.target.closest(".menu-wrap")) closeMenu();
 });
+
+// --- world map (pins on the world image; identities revealed by visiting) ---
+// The server redacts undiscovered places (no name/description/children), so this only
+// renders what the party may know: discovered areas as named pins you can open to their
+// sub-map; the rest as bare "Unknown" pins at their spot. Pins are % of the map image's
+// "stage" (its contain-rect) so they stay aligned to the art; placeless pins fall back
+// to a ring. Two levels: world map → an area's sub-map (no deeper).
+let worldMap = { areas: [] };
+let wmView = null;     // null = the world (top) level; otherwise the area object we opened
+function wmFallback(i, n) {
+  if (n <= 1) return { x: 50, y: 50 };
+  const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+  return { x: 50 + Math.cos(a) * 30, y: 50 + Math.sin(a) * 30 };
+}
+function wmPinPos(p, i, n) {
+  const q = p.position;
+  return (q && typeof q.x === "number" && typeof q.y === "number") ? q : wmFallback(i, n);
+}
+async function openWorldMap() {
+  try { worldMap = await (await fetch("/api/map")).json(); }
+  catch (e) { worldMap = { areas: [] }; }
+  wmView = null;
+  $("map-overlay").classList.remove("hidden");   // show first so the canvas has layout
+  renderWorldMap();                              // (the stage measures the canvas)
+}
+function closeWorldMap() { $("map-overlay").classList.add("hidden"); }
+
+function renderWorldMap() {
+  $("wm-here").textContent = worldMap.current_area_name ? `You are in ${worldMap.current_area_name}` : "";
+  const crumbs = $("wm-crumbs"); crumbs.innerHTML = "";
+  const root = el("span", "map-crumb" + (wmView ? "" : " here"), "World Map");
+  root.addEventListener("click", () => { if (wmView) { wmView = null; renderWorldMap(); } });
+  crumbs.appendChild(root);
+  if (wmView) {
+    crumbs.appendChild(el("span", "map-crumb-sep", "▸"));
+    crumbs.appendChild(el("span", "map-crumb here", wmView.name || "Unknown"));
+  }
+
+  const canvas = $("wm-canvas");
+  const bg = wmView ? wmView.sub_map : worldMap.world_map;
+  const pins = wmView ? (wmView.children || []) : (worldMap.areas || []);
+  canvas.innerHTML = `<div class="wm-stage" id="wm-stage">${bg ? `<img class="wm-bg" id="wm-bg" alt="" />` : ""}</div>` +
+    (pins.length ? "" : `<div class="wm-empty">${wmView ? "Nothing charted within here." : "No places on the map yet."}</div>`);
+  const stage = $("wm-stage");
+  const n = pins.length;
+  pins.forEach((p, i) => {
+    const pos = wmPinPos(p, i, n);
+    const known = wmView ? true : p.known;            // children of an open area are all known
+    const openable = !wmView && p.has_children;       // only top-level discovered areas open
+    const node = el("div", "wm-pin" + (known ? "" : " unknown") + (openable ? " openable" : "") + (p.current ? " current" : ""));
+    node.style.left = pos.x + "%"; node.style.top = pos.y + "%";
+    const dot = el("div", "pin-dot"); dot.appendChild(el("span", "pin-glyph", p.current ? "◉" : "")); node.appendChild(dot);
+    const tip = el("div", "tip");
+    tip.appendChild(el("div", "tname", known ? (p.name || "Unknown") : "Unknown"));
+    if (known && p.description) tip.appendChild(el("div", "tdesc", p.description));
+    if (!known) tip.appendChild(el("div", "tdesc", "You haven't travelled here yet."));
+    if (p.current) tip.appendChild(el("div", "topen", "You are here"));
+    else if (openable) tip.appendChild(el("div", "topen", "▣ double-click to open its map"));
+    node.appendChild(tip);
+    if (openable) node.addEventListener("dblclick", () => { wmView = p; renderWorldMap(); });
+    stage.appendChild(node);
+  });
+  const bgImg = $("wm-bg");
+  if (bgImg) { bgImg.addEventListener("load", wmLayoutStage); bgImg.src = bg; }
+  wmLayoutStage();
+}
+
+// Size the stage to the map image's contain-rect (or the whole canvas with no image),
+// so pin percentages land on the same spot of the art everywhere.
+function wmLayoutStage() {
+  const canvas = $("wm-canvas"), stage = $("wm-stage");
+  if (!canvas || !stage) return;
+  const cw = canvas.clientWidth, ch = canvas.clientHeight;
+  const img = $("wm-bg");
+  let sw = cw, sh = ch;
+  if (img && img.naturalWidth && img.naturalHeight) {
+    const scale = Math.min(cw / img.naturalWidth, ch / img.naturalHeight);
+    sw = img.naturalWidth * scale; sh = img.naturalHeight * scale;
+  }
+  stage.style.width = sw + "px"; stage.style.height = sh + "px";
+  stage.style.left = ((cw - sw) / 2) + "px"; stage.style.top = ((ch - sh) / 2) + "px";
+}
+
+$("map-close").addEventListener("click", closeWorldMap);
+$("map-overlay").addEventListener("click", (e) => { if (e.target.id === "map-overlay") closeWorldMap(); });
+window.addEventListener("resize", () => { if (!$("map-overlay").classList.contains("hidden")) wmLayoutStage(); });
 
 // --- journal (player-owned; never seen by the DM) -------------------------
 let journal = { sections: [] };
