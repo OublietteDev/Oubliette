@@ -56,6 +56,7 @@ class PlaceNode:
     image: str | None = None     # illustration filename (in the pack's images/ folder)
     map_image: str | None = None  # background map shown when drilled INTO this place
     position: dict | None = None  # {x, y} percent coords for the map (authored in The Forge)
+    sounds: tuple = ()           # soundscape cues (AudioCue dicts) — the location's audio
 
 
 @dataclass
@@ -340,7 +341,8 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     scene = scenario.scene_override or place_by_id[scenario.start_location].description
     place_nodes = {p.id: PlaceNode(id=p.id, name=p.name, description=p.description,
                                    parent=p.parent, exits=tuple(e.to for e in p.exits),
-                                   image=p.image, map_image=p.map_image, position=p.position)
+                                   image=p.image, map_image=p.map_image, position=p.position,
+                                   sounds=tuple(c.model_dump() for c in p.sounds))
                    for p in places}
 
     return LoadedWorld(

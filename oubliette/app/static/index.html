@@ -177,6 +177,15 @@
   .menu-wrap { position: relative; }
   .menu-pop { position: absolute; right: 0; top: 44px; min-width: 230px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; z-index: 60; }
   .menu-pop.hidden { display: none; }
+  .sound-wrap { position: relative; }
+  .sound-pop { position: absolute; right: 0; top: 44px; width: 200px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); padding: 12px;
+    z-index: 60; display: flex; flex-direction: column; gap: 10px; }
+  .sound-pop.hidden { display: none; }
+  .sound-pop .lbl { font-size: 12px; color: var(--muted); }
+  .sound-pop input[type=range] { width: 100%; accent-color: var(--accent); }
+  .sound-pop .act { font-size: 12px; padding: 6px 10px; }
+  #sound-btn.attn { border-color: var(--gold); color: var(--gold); }
   .menu-item { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 8px; cursor: pointer; color: var(--ink); font-size: 14px; }
   .menu-item:hover:not(.disabled) { background: #2a231d; }
   .menu-item.disabled { color: var(--faint); cursor: default; }
@@ -290,7 +299,7 @@
   .wm-pin.x-right .tip { left: auto; right: 50%; transform: none; }
   .wm-pin .tip .tname { font-family: var(--serif); color: var(--gold); font-size: 13.5px; }
   .wm-pin.unknown .tip .tname { color: var(--faint); font-style: italic; }
-  .wm-pin .tip .tdesc { color: var(--muted); font-size: 12px; margin-top: 4px; line-height: 1.4; max-height: 130px; overflow: hidden; }
+  .wm-pin .tip .tdesc { color: var(--muted); font-size: 12px; margin-top: 4px; line-height: 1.4; max-height: 300px; overflow: hidden; }
   .wm-pin .tip .topen { color: var(--gold); font-size: 11px; margin-top: 5px; }
   .wm-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     color: var(--muted); font-style: italic; padding: 0 40px; text-align: center; }
@@ -303,6 +312,14 @@
       <div class="tag">Join the Phantom's Table</div>
     </div>
     <div class="spacer"></div>
+    <div class="sound-wrap">
+      <button class="act" id="sound-btn" title="Sound">🔈 Enable sound</button>
+      <div class="sound-pop hidden" id="sound-pop">
+        <div class="lbl">Master volume</div>
+        <input type="range" id="vol-master" min="0" max="100" value="70" />
+        <button class="act" id="sound-mute">Mute all</button>
+      </div>
+    </div>
     <div class="menu-wrap">
       <button class="act" id="menu-btn">☰ Menu</button>
       <div class="menu-pop hidden" id="menu-pop"></div>
@@ -712,6 +729,7 @@ async function send(textOverride) {
       body.innerHTML = md(acc);
       addChips(bubble, data);
       if (data.state) renderState(data.state);
+      if (data.soundscape) setSoundscape(data.soundscape);   // travel may have changed the mix
       if (data.trade) openTrade(data.trade);
       (data.quest_beats || []).forEach(addQuestCard);
     } else if (data.t === "error") {
@@ -789,6 +807,7 @@ async function startNewGame(packId, packName) {
   log.innerHTML = "";
   addMessage("System", `A new tale begins in ${packName}. Describe what you do.`, "system");
   renderState(data.state);
+  setSoundscape(data.soundscape);
 }
 $("new-btn").addEventListener("click", () => { if (!busy) openNewGame(); });
 $("newgame-cancel").addEventListener("click", closeNewGame);
@@ -1098,11 +1117,114 @@ async function equipToggle(charId, itemId, equip) {
 }
 $("inv-close").addEventListener("click", closeInventory);
 
+// --- soundscape mixer (S1: per-location ambient beds, crossfaded on travel) ---
+// Engine-resolved: the server hands us a flat list of beds for the current location and
+// we crossfade from what's playing to that list. Browsers block audio until a user
+// gesture, so a one-time "Enable sound" click resumes the context. Player surface (S1):
+// master volume + mute. (Music/SFX split, one-shots, time/weather arrive in later seams.)
+let audioCtx = null, masterGain = null;
+let soundOn = false, soundMuted = false, masterVol = 0.7;
+const SS = { spec: [], beds: new Map(), buffers: new Map() };  // beds: file -> {src, gain}
+try { const v = localStorage.getItem("ob-vol"); if (v != null) masterVol = Math.max(0, Math.min(1, +v)); } catch (e) {}
+try { soundMuted = localStorage.getItem("ob-muted") === "1"; } catch (e) {}
+
+function enableSound() {
+  if (soundOn) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  audioCtx = new AC();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = soundMuted ? 0 : masterVol;
+  masterGain.connect(audioCtx.destination);
+  soundOn = true;
+  audioCtx.resume();
+  updateSoundBtn();
+  applySoundscape();                       // begin whatever the current location calls for
+}
+async function loadBuffer(url) {
+  if (SS.buffers.has(url)) return SS.buffers.get(url);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("audio " + res.status);
+  const buf = await audioCtx.decodeAudioData(await res.arrayBuffer());
+  SS.buffers.set(url, buf);
+  return buf;
+}
+function setSoundscape(spec) {
+  SS.spec = Array.isArray(spec) ? spec : [];
+  if (soundOn) applySoundscape();
+}
+async function applySoundscape() {
+  if (!soundOn) return;
+  const FADE = 1.2;
+  const want = new Map(SS.spec.map(l => [l.file, l]));
+  for (const [file, node] of [...SS.beds]) {            // fade out beds no longer wanted
+    if (!want.has(file)) {
+      const g = node.gain.gain;
+      g.cancelScheduledValues(audioCtx.currentTime);
+      g.setValueAtTime(g.value, audioCtx.currentTime);
+      g.linearRampToValueAtTime(0, audioCtx.currentTime + FADE);
+      const src = node.src;
+      setTimeout(() => { try { src.stop(); } catch (e) {} }, FADE * 1000 + 80);
+      SS.beds.delete(file);
+    }
+  }
+  for (const layer of SS.spec) {                        // fade in / update wanted beds
+    const target = Math.max(0, Math.min(1, layer.gain != null ? layer.gain : 1));
+    const existing = SS.beds.get(layer.file);
+    if (existing) {
+      existing.gain.gain.cancelScheduledValues(audioCtx.currentTime);
+      existing.gain.gain.linearRampToValueAtTime(target, audioCtx.currentTime + FADE);
+      continue;
+    }
+    try {
+      const buf = await loadBuffer(layer.url);
+      if (!SS.spec.includes(layer) || SS.beds.has(layer.file)) continue;  // spec moved on
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf; src.loop = true;
+      const gain = audioCtx.createGain(); gain.gain.value = 0;
+      src.connect(gain); gain.connect(masterGain);
+      src.start();
+      gain.gain.linearRampToValueAtTime(target, audioCtx.currentTime + FADE);
+      SS.beds.set(layer.file, { src, gain });
+    } catch (e) { /* a missing/bad sound must never break play */ }
+  }
+}
+function setMasterVol(v) {
+  masterVol = Math.max(0, Math.min(1, v));
+  try { localStorage.setItem("ob-vol", String(masterVol)); } catch (e) {}
+  if (masterGain && !soundMuted) masterGain.gain.linearRampToValueAtTime(masterVol, audioCtx.currentTime + 0.08);
+}
+function setMuted(m) {
+  soundMuted = m;
+  try { localStorage.setItem("ob-muted", m ? "1" : "0"); } catch (e) {}
+  if (masterGain) masterGain.gain.linearRampToValueAtTime(m ? 0 : masterVol, audioCtx.currentTime + 0.08);
+  updateSoundBtn();
+}
+function updateSoundBtn() {
+  const b = $("sound-btn");
+  if (!soundOn) { b.textContent = "🔈 Enable sound"; b.classList.add("attn"); }
+  else { b.textContent = soundMuted ? "🔇 Sound" : "🔊 Sound"; b.classList.remove("attn"); }
+  const mute = $("sound-mute"); if (mute) mute.textContent = soundMuted ? "Unmute" : "Mute all";
+  const vol = $("vol-master"); if (vol) vol.value = Math.round(masterVol * 100);
+}
+$("sound-btn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (!soundOn) { enableSound(); return; }              // first click is the autoplay gate
+  $("sound-pop").classList.toggle("hidden");
+});
+$("vol-master").addEventListener("input", (e) => setMasterVol(+e.target.value / 100));
+$("sound-mute").addEventListener("click", () => setMuted(!soundMuted));
+document.addEventListener("click", (e) => {
+  if (!$("sound-pop").classList.contains("hidden") && !e.target.closest(".sound-wrap")) $("sound-pop").classList.add("hidden");
+});
+updateSoundBtn();
+
 async function boot() {
   const res = await fetch("/api/state");
   const data = await res.json();
   $("model-badge").textContent = (data.model === "anthropic" ? "● live DM" : "○ scripted DM");
   renderState(data.state);
+  setSoundscape(data.soundscape);          // queued; plays once sound is enabled
   addMessage("System", "The Phantom waits at the head of the table. Describe what you do to begin.", "system");
   input.focus();
 }

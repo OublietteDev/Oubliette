@@ -120,6 +120,22 @@ class Exit(_Strict):
     label: str = ""                  # prose ("north toward the gate")
 
 
+# --- audio cues (the location-driven soundscape; design oubliette-audio-mixer) -
+# The full authoring shape lands now so later phases add *behaviour*, not schema
+# churn (spec §14 — build through the seams). S1 only plays beds; category/scope/
+# time/weather/gaps are read by S2/S3/S5 as those phases ship.
+class AudioCue(_Strict):
+    file: str                        # filename in the pack's audio/ folder
+    kind: Literal["bed", "oneshot"] = "bed"            # continuous loop vs sparse one-shot
+    category: Literal["music", "sfx"] = "sfx"          # which player volume slider owns it
+    scope: Literal["passed_down", "local"] = "local"   # inherited by children, or this place only (S2)
+    time: Literal["any", "day", "night"] = "any"       # when it's active (S5)
+    weather: Literal["any", "clear", "rain", "storm", "wind"] = "any"  # (S5)
+    gain: float = 1.0                # 0..1 layer volume
+    min_gap: float | None = None     # one-shot interval seconds (S3)
+    max_gap: float | None = None
+
+
 class Place(_Strict):
     id: str
     name: str
@@ -133,6 +149,7 @@ class Place(_Strict):
     tags: list[str] = Field(default_factory=list)
     exits: list[Exit] = Field(default_factory=list)           # the map's edges
     position: dict | None = None     # {x,y} percent — this place's PIN on its parent's map
+    sounds: list[AudioCue] = Field(default_factory=list)      # the place's soundscape cues
 
 
 # --- lore (authored world history/legend the DM can draw on) ----------------

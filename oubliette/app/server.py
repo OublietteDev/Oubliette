@@ -202,6 +202,7 @@ def _turn_payload(report) -> dict:
         "verb": report.assessment.intent.verb.value,
         "tier": report.assessment.tier.value,
         "state": _snapshot(),
+        "soundscape": _soundscape(),   # the party may have travelled — refresh the mix
     }
 
 
@@ -220,7 +221,8 @@ async def index() -> FileResponse:
 
 @app.get("/api/state")
 async def get_state() -> JSONResponse:
-    return JSONResponse({"state": _snapshot(), "model": GAME.client_name})
+    return JSONResponse({"state": _snapshot(), "model": GAME.client_name,
+                         "soundscape": _soundscape()})
 
 
 @app.get("/api/world-image/{place_id}")
@@ -350,6 +352,46 @@ async def map_image(filename: str) -> FileResponse | JSONResponse:
     if not path.is_file():
         return JSONResponse({"error": "not found"}, status_code=404)
     return FileResponse(path, headers={"Cache-Control": "no-cache"})
+
+
+def _soundscape() -> list:
+    """The active audio layers at the party's current location — the flat list the
+    browser mixer renders (design oubliette-audio-mixer §2/§6). S1: just the location's
+    own *beds*; theme-inheritance (passed-down cues) and time/weather conditions arrive
+    in later seams. Resolution lives here in code so the client stays a dumb renderer."""
+    node = GAME.session.places.get(GAME.session.location)
+    layers = []
+    for cue in getattr(node, "sounds", ()) if node is not None else ():
+        if cue.get("kind", "bed") != "bed":
+            continue                                  # S1 plays beds only
+        name = cue.get("file")
+        if not name:
+            continue
+        layers.append({
+            "file": name,
+            "url": f"/api/audio/{name}",
+            "kind": "bed",
+            "category": cue.get("category", "sfx"),
+            "gain": cue.get("gain", 1.0),
+        })
+    return layers
+
+
+@app.get("/api/soundscape")
+async def get_soundscape() -> JSONResponse:
+    return JSONResponse({"soundscape": _soundscape()})
+
+
+@app.get("/api/audio/{filename}", response_model=None)
+async def audio_file(filename: str) -> FileResponse | JSONResponse:
+    """Serve a pack sound (a bed loop or one-shot) by filename, from the loaded pack's
+    audio/ folder."""
+    if "/" in filename or "\\" in filename or ".." in filename:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    path = _PACKS_ROOT / (GAME.pack_id or "") / "audio" / filename
+    if not path.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(path)
 
 
 @app.post("/api/turn")
@@ -531,7 +573,8 @@ class NewGameIn(BaseModel):
 async def post_new(body: NewGameIn | None = None) -> JSONResponse:
     async with GAME.lock:
         GAME.new_game(body.pack_id if body else None)
-        return JSONResponse({"state": _snapshot(), "model": GAME.client_name, "pack_id": GAME.pack_id})
+        return JSONResponse({"state": _snapshot(), "model": GAME.client_name,
+                             "pack_id": GAME.pack_id, "soundscape": _soundscape()})
 
 
 def main() -> None:
