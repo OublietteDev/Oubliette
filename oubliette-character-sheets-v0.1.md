@@ -236,8 +236,28 @@ International License."* Oubliette is non-commercial/open-source, so this is cle
   resources_used`; derive gained pact-slot handling, `class_resources`, `slots_recharge`.
   **Grounding technique confirmed:** WebFetch on 5thsrd.org transcribes full tables
   verbatim IF the prompt demands every cell (no summarizing) — the fleet recipe.
-- **CS2 — Chargen.** Backend build-validator + the multi-step UI; `CHARACTER_CREATED`;
-  New Game integration; quick-start. (Uses the slice; grows with content.)
+- **CS2 — Chargen.**
+  - **Backend (the firewall) — ✅ BUILT (2026-06-08, 180 tests green).** `rules/chargen.py`:
+    `CharacterBuild` (strict — the player's choices) + `build_character()`, which
+    validates the whole build against the ruleset (aggregating every violation into
+    one `ChargenError`) and returns a fully code-derived level-1 `Character` + the
+    granted SRD gear. Enforces: ability method (standard array / point-buy ≤27 /
+    rolled 3–18), class skill allotment (count + from-list + no background overlap),
+    expertise needs proficiency, background free-language count, caster cantrip/spell
+    counts + on-list + castable-level (non-casters get none), subrace required-iff-
+    defined + race match, subclass only when the class grants it by this level,
+    equipment choices complete + in range. Numbers (HP/AC/saves/attack) come from
+    `rules.derive` — added `spells_known_count()`. `EventKind.CHARACTER_CREATED` +
+    shared `install_character()` apply path (live + replay); `Repository.register_item`
+    /`install_pc`; `Session.emit_character_created()` (record-then-apply). Quick-start
+    = simply don't emit the event (falls back to `default_party`). Replay round-trip
+    proven byte-identical. Tests `tests/test_chargen.py` (18).
+    *(Known content-slice gaps, not validator gaps: only 2 wizard cantrips ship of 3
+    needed, and sorcerer/warlock spell lists are empty — CS4 fills them. Racial skill/
+    weapon proficiencies and extra languages that live in trait TEXT aren't auto-applied;
+    wizard spellbook-vs-prepared is folded for now. All land with CS4/CS5.)*
+  - **UI + New Game integration — ⬜ TODO.** The multi-step wizard, the New Game flow
+    (pick world → set the table → create your character → begin), and the quick-start button.
 - **CS3 — Sheet panel.** The full read-only sheet.
 - **CS4 — SRD content fill (the slog).** Author the full backbone into
   `content/srd/*.json`, in chunks — I draft, OublietteDev verifies. Runs alongside CS1–CS3

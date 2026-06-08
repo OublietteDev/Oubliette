@@ -27,6 +27,8 @@ class Repository(Protocol):
     def resolve_item_id(self, ref: str) -> str: ...
     def npcs(self) -> list[Character]: ...
     def set_equipped(self, char_id: str, item_ids: list[str]) -> None: ...
+    def register_item(self, item: Item) -> None: ...
+    def install_pc(self, char: Character) -> None: ...
 
     # --- protected mutators (dispatcher- and combat-boundary-only) ---
     def adjust_gold(self, char_id: str, delta: int) -> None: ...
@@ -144,3 +146,19 @@ class InMemoryRepository:
     def set_equipped(self, char_id: str, item_ids: list[str]) -> None:
         """Absolute equipped loadout (item ids the character wears/wields)."""
         self.get_character(char_id).equipped = list(item_ids)
+
+    # --- chargen seams (CHARACTER_CREATED apply/replay) -----------------------
+    def register_item(self, item: Item) -> None:
+        """Add an item to the campaign catalog. Idempotent: a created character's
+        granted SRD gear is registered here (design §2.1), and replay re-registers
+        it, so a repeated id simply overwrites with the same definition."""
+        self._items[item.id] = item
+
+    def install_pc(self, char: Character) -> None:
+        """Replace the player character with a chargen-built one: drop the stopgap
+        default-party PC(s) and make `char` the sole PC. PC-only for now (design
+        §10.6), built to hold a party later."""
+        for cid in [c.id for c in self._chars.values() if c.kind == "pc"]:
+            del self._chars[cid]
+        self._chars[char.id] = char
+        self._pc_id = char.id

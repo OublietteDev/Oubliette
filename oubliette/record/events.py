@@ -35,6 +35,7 @@ class EventKind(str, Enum):
     QUEST_STARTED = "quest_started"     # a new quest the DM introduced
     QUEST_UPDATED = "quest_updated"     # quest status change and/or an appended note
     CONTRACT_SET = "contract_set"       # per-campaign table contract (tone + lines/veils)
+    CHARACTER_CREATED = "character_created"  # chargen output: the built PC + granted SRD gear
 
 
 class StateOp(BaseModel):
@@ -98,6 +99,17 @@ def apply_ops(ops: list[StateOp], repo: "Repository") -> None:
         op.apply(repo)
 
 
+def install_character(payload: dict, repo: "Repository") -> None:
+    """Apply a CHARACTER_CREATED payload: register the granted SRD gear into the
+    campaign catalog, then install the built PC (replacing the stopgap default
+    party). The single apply path shared by live emit and replay — replay trusts
+    the recorded character verbatim and never re-derives (D9)."""
+    from ..state.models import Character, Item
+    for raw in payload.get("items", []):
+        repo.register_item(Item.model_validate(raw))
+    repo.install_pc(Character.model_validate(payload["character"]))
+
+
 class Event(BaseModel):
     """An append-only, immutable record. `seq` is the monotonic, gap-free order
     within a session (also serves as the event id in Phase 2)."""
@@ -134,6 +146,9 @@ def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = N
         if quests is not None:
             quests.update(event.payload["quest_id"], status=event.payload.get("status"),
                           note=event.payload.get("note"))
+        return
+    if event.kind == EventKind.CHARACTER_CREATED.value:
+        install_character(event.payload, repo)
         return
     apply_ops(event.state_ops(), repo)
 

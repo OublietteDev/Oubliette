@@ -10,18 +10,24 @@ byte (D9).
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 from ..canon.models import CanonDraft, CanonRecord
 from ..canon.store import CanonStore
 from ..content.loader import DEFAULT_PACK, load_pack
 from ..quest.models import Quest, QuestStatus
 from ..quest.store import QuestStore
-from ..record.events import Event, EventKind, StateOp, apply_ops, replay
+from ..record.events import (Event, EventKind, StateOp, apply_ops,
+                             install_character, replay)
 from ..record.store import EventStore
+from ..rules.chargen import build_character
 from ..seed import DEFAULT_SCENE
+from ..state.models import Character
 from ..state.repository import Repository
 from ..table import DEFAULT_TABLE, TableContract, normalize_contract
+
+if TYPE_CHECKING:
+    from ..rules.chargen import CharacterBuild
 
 
 class Session:
@@ -176,6 +182,25 @@ class Session:
         self.store.append(EventKind.QUEST_UPDATED,
                           {"quest_id": quest_id, "status": status, "note": note, "reason": reason})
         self.quests.update(quest_id, status=status, note=note)
+
+    def emit_character_created(self, build: "CharacterBuild",
+                               reason: str = "character created") -> Character:
+        """Run chargen (design §6): validate the build against the ruleset, then
+        record-then-apply a CHARACTER_CREATED event carrying the built PC + the SRD
+        gear it was granted. Replaces the scenario's default-party stopgap with the
+        player's character; replay re-registers the gear and re-installs the PC.
+        Raises `ChargenError` if the build breaks the rules."""
+        if self.ruleset is None:
+            raise RuntimeError("this campaign has no ruleset loaded; cannot create a character")
+        char, items = build_character(build, self.ruleset)
+        payload = {
+            "character": char.model_dump(mode="json"),
+            "items": [it.model_dump(mode="json") for it in items],
+            "reason": reason,
+        }
+        self.store.append(EventKind.CHARACTER_CREATED, payload)
+        install_character(payload, self.repo)
+        return char
 
     def emit_log(self, kind: "str | EventKind", **payload) -> Event:
         """Append a non-state event (player message, roll, marker). No ops."""

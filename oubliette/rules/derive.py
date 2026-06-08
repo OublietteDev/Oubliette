@@ -181,6 +181,20 @@ def prepared_spell_count(char: Character, ruleset: Ruleset) -> int | None:
     return max(1, char.ability_mod(_akey(cc.spellcasting.ability)) + char.level)
 
 
+def spells_known_count(char: Character, ruleset: Ruleset) -> int | None:
+    """How many leveled spells the caster has access to at its current level —
+    the count chargen enforces. 'Prepared' casters → prepared_spell_count (mod +
+    level); 'known'/pact casters → the progression table's spells_known. None for
+    non-casters (the firewall then forbids any leveled-spell picks)."""
+    cc = _class(char, ruleset)
+    if cc is None or cc.spellcasting is None:
+        return None
+    if cc.spellcasting.preparation == "prepared":
+        return prepared_spell_count(char, ruleset)
+    row = _vancian_row(char, ruleset) or _pact_row(char, ruleset)
+    return row.spells_known if row is not None else None
+
+
 def _resource_at(by_level: dict[int, int], level: int) -> int:
     """The amount in effect at `level`: the value of the highest listed level <= it
     (0 if none). A -1 (unlimited) passes straight through."""
