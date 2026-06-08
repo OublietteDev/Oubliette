@@ -31,6 +31,9 @@ def test_full_race_and_condition_sets_present():
     rs = load_ruleset()
     assert set(rs.races) == {"human", "elf", "dwarf", "halfling", "dragonborn",
                              "gnome", "half_elf", "half_orc", "tiefling"}
+    # SRD 5.1 ships exactly one subrace per applicable race.
+    assert set(rs.subraces) == {"high_elf", "hill_dwarf", "lightfoot_halfling", "rock_gnome"}
+    assert {s.race for s in rs.subraces.values()} == {"elf", "dwarf", "halfling", "gnome"}
     assert len(rs.conditions) == 15
     assert {"exhaustion", "unconscious", "petrified", "blinded"} <= set(rs.conditions)
 
