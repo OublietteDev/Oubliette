@@ -177,6 +177,7 @@
   .map-edges line { stroke: #6f8473; stroke-width: 2; stroke-dasharray: 5 5; opacity: .8; }
   .map-pin { position: absolute; transform: translate(-50%, -100%); cursor: grab; touch-action: none; z-index: 2; }
   .map-pin.dragging { cursor: grabbing; z-index: 8; }
+  .map-pin:hover { z-index: 30; }    /* lift the whole pin so its tooltip clears other pins */
   .pin-dot { width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
     background: var(--accent); border: 1.5px solid #1c130b; box-shadow: 0 3px 6px rgba(0,0,0,.5);
     display: flex; align-items: center; justify-content: center; }
