@@ -135,6 +135,14 @@
   .subform .sftitle { font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
     color: var(--faint); margin-bottom: 10px; }
   .exit-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .cue { border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; margin-bottom: 9px; background: rgba(0,0,0,.12); }
+  .cue-row { display: flex; gap: 8px; align-items: center; margin-bottom: 7px; }
+  .cue-row:last-child { margin-bottom: 0; }
+  .cue-row select { flex: 1; min-width: 0; font-size: 13px; }
+  .cue-vol { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); flex: 1; }
+  .cue-vol input[type=range] { flex: 1; accent-color: var(--accent); }
+  .cue-gap { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .cue-gap input { width: 52px; font-size: 13px; }
   .loot-row { display: grid; grid-template-columns: 1fr 70px auto; gap: 8px; margin-bottom: 8px; align-items: center; }
   .shop-row { display: grid; grid-template-columns: 1fr 64px 80px auto; gap: 8px; margin-bottom: 8px; align-items: center; }
   .ability-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -300,7 +308,8 @@ async function tryOpenWorld(id) {
 async function openWorld(id) {
   const data = await (await fetch(`/api/pack/${encodeURIComponent(id)}`)).json();
   if (data.error) { toast(data.error); return; }
-  state = { id, contents: data.contents, validation: data.validation, dirty: false };
+  state = { id, contents: data.contents, validation: data.validation, dirty: false,
+            audioFiles: data.audio_files || [] };
   document.getElementById("dirty").style.display = "none";
   document.getElementById("saveBtn").disabled = true;
   render(); loadWorlds();
@@ -342,7 +351,8 @@ function describe(kind, e) {
   if (kind === "places") {
     const inside = e.parent ? `in ${placeName(e.parent)} · ` : "";
     const exits = (e.exits || []).map(x => x.label || placeName(x.to)).join(", ");
-    return inside + (e.description || "") + (exits ? `  ↪ exits: ${exits}` : "");
+    const snd = (e.sounds || []).length;
+    return inside + (e.description || "") + (exits ? `  ↪ exits: ${exits}` : "") + (snd ? `  · ♪ ${snd}` : "");
   }
   if (kind === "scenarios") {
     const party = (e.default_party || []).length;
@@ -436,6 +446,7 @@ function openEditor(kind, index) {
   if (kind === "places") {
     editorCtx.exits = ((original?.exits) || []).map(x => ({ ...x }));
     editorCtx.image = original?.image || null;
+    editorCtx.sounds = ((original?.sounds) || []).map(c => ({ ...c }));
   }
   if (kind === "statblocks") editorCtx.loot = ((original?.loot) || []).filter(l => l.item).map(l => ({ item: l.item, qty: l.qty || 1 }));
   if (kind === "npcs") editorCtx.inv = buildInvRows(original);
@@ -571,6 +582,13 @@ function placeForm(pl) {
         </div>
         <div class="help" style="margin-top:8px">Shown on quest cards while the party is in this area (top-level areas mainly). It's resized for the web automatically; the preview shows how it sits in a card.</div>
       </div>
+      <div class="subform">
+        <div class="sftitle">Soundscape</div>
+        <div id="soundList"></div>
+        <button class="btn mini" id="addSound" type="button">+ Add a sound</button>
+        <input type="file" id="audioFile" accept="audio/*" style="display:none" />
+        <div class="help" style="margin-top:8px">Looping <b>beds</b> set the ambience; <b>occasional sounds</b> fire now and then. Mark a sound <b>“plays in sub-locations”</b> to pass it down to places inside this one (e.g. a city theme). “Music” vs “sound effect” chooses which volume slider controls it. ▶ previews; sounds are copied into the pack.</div>
+      </div>
       <div class="invalid" id="f_err"></div>
     </div>
     <div class="mfoot">
@@ -647,10 +665,101 @@ async function onChooseIllus(file) {
     renderIllus();
   } catch (e) { toast(String(e.message || e)); }
 }
+// ---- soundscape cues (design oubliette-audio-mixer §4) ----
+// time/weather conditions (the "when" fields) are deferred to S5, when the engine
+// actually tracks them — authoring controls that did nothing would only mislead.
+function audioOptions(selected) {
+  const files = state.audioFiles || [];
+  const opts = files.map(f => `<option value="${esc(f)}"${f === selected ? " selected" : ""}>${esc(f)}</option>`).join("");
+  return `<option value="">(choose a sound)</option>${opts}<option value="__upload__">＋ Upload a sound file…</option>`;
+}
+function renderSounds() {
+  const box = document.getElementById("soundList");
+  box.innerHTML = editorCtx.sounds.map((c, i) => {
+    const shot = c.kind === "oneshot";
+    return `<div class="cue">
+      <div class="cue-row">
+        <select data-cue-file="${i}" style="flex:1">${audioOptions(c.file)}</select>
+        <button class="btn mini" type="button" data-cue-play="${i}" title="Preview">▶</button>
+        <button class="btn mini danger" type="button" data-cue-del="${i}">✕</button>
+      </div>
+      <div class="cue-row">
+        <select data-cue-kind="${i}"><option value="bed"${!shot ? " selected" : ""}>looping bed</option><option value="oneshot"${shot ? " selected" : ""}>occasional sound</option></select>
+        <select data-cue-cat="${i}"><option value="music"${c.category === "music" ? " selected" : ""}>music</option><option value="sfx"${c.category !== "music" ? " selected" : ""}>sound effect</option></select>
+        <select data-cue-scope="${i}"><option value="local"${c.scope !== "passed_down" ? " selected" : ""}>only here</option><option value="passed_down"${c.scope === "passed_down" ? " selected" : ""}>plays in sub-locations</option></select>
+      </div>
+      <div class="cue-row">
+        <label class="cue-vol">vol <input type="range" min="0" max="100" data-cue-gain="${i}" value="${Math.round((c.gain != null ? c.gain : 1) * 100)}" /></label>
+        ${shot ? `<span class="cue-gap">every <input type="number" min="1" data-cue-min="${i}" value="${c.min_gap ?? 6}" />–<input type="number" min="1" data-cue-max="${i}" value="${c.max_gap ?? 16}" /> s</span>` : ""}
+      </div>
+    </div>`;
+  }).join("") || '<div class="nothing" style="margin-bottom:8px">No sounds yet.</div>';
+  const on = (sel, ev, fn) => box.querySelectorAll(sel).forEach(el => el.addEventListener(ev, fn));
+  on("[data-cue-file]", "change", e => {
+    const i = +e.target.dataset.cueFile;
+    if (e.target.value === "__upload__") { e.target.value = editorCtx.sounds[i].file || ""; _audioUploadIdx = i; document.getElementById("audioFile").click(); return; }
+    editorCtx.sounds[i].file = e.target.value;
+  });
+  on("[data-cue-kind]", "change", e => { editorCtx.sounds[+e.target.dataset.cueKind].kind = e.target.value; renderSounds(); });
+  on("[data-cue-cat]", "change", e => { editorCtx.sounds[+e.target.dataset.cueCat].category = e.target.value; });
+  on("[data-cue-scope]", "change", e => { editorCtx.sounds[+e.target.dataset.cueScope].scope = e.target.value; });
+  on("[data-cue-gain]", "input", e => { editorCtx.sounds[+e.target.dataset.cueGain].gain = +e.target.value / 100; });
+  on("[data-cue-min]", "input", e => { editorCtx.sounds[+e.target.dataset.cueMin].min_gap = +e.target.value; });
+  on("[data-cue-max]", "input", e => { editorCtx.sounds[+e.target.dataset.cueMax].max_gap = +e.target.value; });
+  on("[data-cue-del]", "click", e => { editorCtx.sounds.splice(+e.target.dataset.cueDel, 1); renderSounds(); });
+  on("[data-cue-play]", "click", e => previewCue(+e.target.dataset.cuePlay));
+}
+let _audioUploadIdx = null, _preview = null;
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error("could not read that file"));
+    r.readAsDataURL(file);
+  });
+}
+async function onUploadAudio(file) {
+  const i = _audioUploadIdx; _audioUploadIdx = null;
+  try {
+    const dataUrl = await fileToDataUrl(file);
+    const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/audio`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: file.name, data: dataUrl }),
+    })).json();
+    if (res.error) { toast(res.error); return; }
+    state.audioFiles = state.audioFiles || [];
+    if (!state.audioFiles.includes(res.filename)) { state.audioFiles.push(res.filename); state.audioFiles.sort(); }
+    if (i != null && editorCtx.sounds[i]) editorCtx.sounds[i].file = res.filename;
+    renderSounds();
+    toast("Sound added: " + res.filename);
+  } catch (e) { toast(String(e.message || e)); }
+}
+function previewCue(i) {
+  const c = editorCtx.sounds[i];
+  if (!c || !c.file) { toast("Pick a sound first."); return; }
+  if (_preview) { _preview.pause(); _preview = null; }
+  _preview = new Audio(`/api/pack/${encodeURIComponent(state.id)}/audio/${encodeURIComponent(c.file)}`);
+  _preview.volume = Math.max(0, Math.min(1, c.gain != null ? c.gain : 1));
+  _preview.play().catch(e => toast("Couldn't play that sound: " + (e.message || e)));
+}
+function cleanCue(c) {
+  const o = { file: c.file, kind: c.kind || "bed", category: c.category || "sfx" };
+  if (c.scope === "passed_down") o.scope = "passed_down";
+  if (c.gain != null && Math.abs(c.gain - 1) > 1e-6) o.gain = Math.round(c.gain * 100) / 100;
+  if (o.kind === "oneshot") {
+    if (c.min_gap != null) o.min_gap = c.min_gap;
+    if (c.max_gap != null) o.max_gap = c.max_gap;
+  }
+  return o;
+}
+
 function wirePlaceForm() {
   renderExits();
   renderIllus();
+  renderSounds();
   document.getElementById("addExit").addEventListener("click", () => { editorCtx.exits.push({ to: "", label: "" }); renderExits(); });
+  document.getElementById("addSound").addEventListener("click", () => { editorCtx.sounds.push({ file: "", kind: "bed", category: "sfx", scope: "local", gain: 1 }); renderSounds(); });
+  document.getElementById("audioFile").addEventListener("change", e => { if (e.target.files[0]) onUploadAudio(e.target.files[0]); e.target.value = ""; });
   document.getElementById("illusChoose").addEventListener("click", () => document.getElementById("illusFile").click());
   document.getElementById("illusFile").addEventListener("change", e => { if (e.target.files[0]) onChooseIllus(e.target.files[0]); });
   document.getElementById("illusRemove").addEventListener("click", () => { editorCtx.image = null; renderIllus(); });
@@ -663,6 +772,8 @@ function confirmPlace(original) {
   if (!desc) { err.textContent = "Please write a scene description — it's what players read here."; return; }
   const exits = editorCtx.exits.filter(e => e.to);
   if (exits.length !== editorCtx.exits.length) { err.textContent = "Every exit needs a destination chosen (or remove it)."; return; }
+  const sounds = editorCtx.sounds.filter(c => c.file);
+  if (sounds.length !== editorCtx.sounds.length) { err.textContent = "Every sound needs a file chosen (or remove it)."; return; }
 
   const base = original ? { ...original } : {};
   if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("places").map(x => x.id)));
@@ -674,6 +785,7 @@ function confirmPlace(original) {
   if (tags.length) base.tags = tags; else delete base.tags;
   if (exits.length) base.exits = exits.map(e => e.label ? { to: e.to, label: e.label } : { to: e.to });
   else delete base.exits;
+  if (sounds.length) base.sounds = sounds.map(cleanCue); else delete base.sounds;
   commitEntry("places", original, base);
 }
 

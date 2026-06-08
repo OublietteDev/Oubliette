@@ -211,7 +211,10 @@ async def read_pack(pack_id: str) -> JSONResponse:
     if d is None:
         return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
     contents = {name: _read_json(d / f"{name}.json") for name in PACK_FILES}
-    return JSONResponse({"id": pack_id, "contents": contents, "validation": _validate(pack_id)})
+    audio_dir = d / "audio"
+    audio_files = sorted(p.name for p in audio_dir.iterdir() if p.is_file()) if audio_dir.is_dir() else []
+    return JSONResponse({"id": pack_id, "contents": contents, "validation": _validate(pack_id),
+                         "audio_files": audio_files})
 
 
 class SaveIn(BaseModel):
@@ -273,6 +276,50 @@ async def get_image(pack_id: str, filename: str) -> FileResponse | JSONResponse:
     if d is None or not _SAFE_NAME.match(filename):
         return JSONResponse({"error": "not found"}, status_code=404)
     path = d / "images" / filename
+    if not path.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(path, headers={"Cache-Control": "no-cache"})
+
+
+def _safe_leaf(name: str) -> bool:
+    """A filename that can't escape its folder — looser than _SAFE_NAME so audio files
+    can keep author-friendly names (spaces, &, parentheses), just no path separators."""
+    return bool(name) and "/" not in name and "\\" not in name and ".." not in name
+
+
+class AudioIn(BaseModel):
+    filename: str                  # the author's own file name (kept as-is)
+    data: str                      # a data URL or bare base64 of the audio bytes
+
+
+@app.post("/api/pack/{pack_id}/audio")
+async def upload_audio(pack_id: str, body: AudioIn) -> JSONResponse:
+    """Save a sound into the pack's audio/ folder (copied in, so the pack stays
+    self-contained and shareable — like illustrations)."""
+    d = _pack_dir(pack_id)
+    if d is None:
+        return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
+    name = body.filename.strip()
+    if not _safe_leaf(name):
+        return JSONResponse({"error": "unsafe filename"}, status_code=400)
+    raw = body.data.split(",", 1)[-1]        # tolerate a "data:audio/...;base64," prefix
+    try:
+        blob = base64.b64decode(raw, validate=True)
+    except Exception:
+        return JSONResponse({"error": "bad audio data"}, status_code=400)
+    audio = d / "audio"
+    audio.mkdir(exist_ok=True)
+    (audio / name).write_bytes(blob)
+    return JSONResponse({"ok": True, "filename": name})
+
+
+@app.get("/api/pack/{pack_id}/audio/{filename}", response_model=None)
+async def get_audio(pack_id: str, filename: str) -> FileResponse | JSONResponse:
+    """Serve a pack sound (for The Forge's preview play button)."""
+    d = _pack_dir(pack_id)
+    if d is None or not _safe_leaf(filename):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    path = d / "audio" / filename
     if not path.is_file():
         return JSONResponse({"error": "not found"}, status_code=404)
     return FileResponse(path, headers={"Cache-Control": "no-cache"})
