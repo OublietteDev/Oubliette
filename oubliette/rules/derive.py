@@ -131,32 +131,75 @@ def spell_attack_bonus(char: Character) -> int | None:
     return None if sa is None else char.proficiency_bonus + char.ability_mod(sa)
 
 
-def _progression_row(char: Character, ruleset: Ruleset):
+def _vancian_row(char: Character, ruleset: Ruleset):
     cc = _class(char, ruleset)
     if cc is None or not cc.spell_progression:
         return None
     return next((r for r in cc.spell_progression if r.level == char.level), None)
 
 
+def _pact_row(char: Character, ruleset: Ruleset):
+    cc = _class(char, ruleset)
+    if cc is None or not cc.pact_magic_progression:
+        return None
+    return next((r for r in cc.pact_magic_progression if r.level == char.level), None)
+
+
+def _is_pact(char: Character, ruleset: Ruleset) -> bool:
+    cc = _class(char, ruleset)
+    return bool(cc and cc.spellcasting and cc.spellcasting.caster_type == "pact")
+
+
 def spell_slots(char: Character, ruleset: Ruleset) -> dict[int, int]:
-    """Max spell slots by spell level at the character's current level: {1: n, …}."""
-    row = _progression_row(char, ruleset)
+    """Max spell slots by spell level. Warlock Pact Magic returns its single-level
+    pool (e.g. {3: 2}); every other caster returns the Vancian table row."""
+    if _is_pact(char, ruleset):
+        row = _pact_row(char, ruleset)
+        return {row.slot_level: row.slots} if row and row.slots else {}
+    row = _vancian_row(char, ruleset)
     if row is None:
         return {}
     return {i + 1: n for i, n in enumerate(row.spell_slots) if n}
 
 
+def slots_recharge(char: Character, ruleset: Ruleset) -> str:
+    """Which rest restores spell slots: 'short' for pact magic, 'long' otherwise."""
+    return "short" if _is_pact(char, ruleset) else "long"
+
+
 def cantrips_known(char: Character, ruleset: Ruleset) -> int | None:
-    row = _progression_row(char, ruleset)
+    row = _vancian_row(char, ruleset) or _pact_row(char, ruleset)
     return row.cantrips_known if row is not None else None
 
 
 def prepared_spell_count(char: Character, ruleset: Ruleset) -> int | None:
-    """For 'prepared' casters: ability modifier + class level (min 1)."""
+    """For 'prepared' casters: ability modifier + class level (min 1). 'Known' casters
+    (and pact casters) return None — they don't prepare."""
     cc = _class(char, ruleset)
     if cc is None or not cc.spellcasting or cc.spellcasting.preparation != "prepared":
         return None
     return max(1, char.ability_mod(_akey(cc.spellcasting.ability)) + char.level)
+
+
+def _resource_at(by_level: dict[int, int], level: int) -> int:
+    """The amount in effect at `level`: the value of the highest listed level <= it
+    (0 if none). A -1 (unlimited) passes straight through."""
+    applicable = [lv for lv in by_level if lv <= level]
+    return by_level[max(applicable)] if applicable else 0
+
+
+def class_resources(char: Character, ruleset: Ruleset) -> dict[str, dict]:
+    """Leveled class-resource maxima at the character's level — sorcery points, ki,
+    rage, channel divinity: {name: {max, recharge, unlimited}}."""
+    cc = _class(char, ruleset)
+    if cc is None:
+        return {}
+    out: dict[str, dict] = {}
+    for res in cc.resources:
+        amt = _resource_at(res.by_level, char.level)
+        if amt != 0:
+            out[res.name] = {"max": amt, "recharge": res.recharge, "unlimited": amt == -1}
+    return out
 
 
 # --- a full snapshot for the sheet / API / DM context ------------------------
@@ -173,6 +216,8 @@ def sheet_stats(char: Character, ruleset: Ruleset, equipped_items: list[Item]) -
         "spell_save_dc": spell_save_dc(char),
         "spell_attack_bonus": spell_attack_bonus(char),
         "spell_slots": spell_slots(char, ruleset),
+        "spell_slots_recharge": slots_recharge(char, ruleset),
         "cantrips_known": cantrips_known(char, ruleset),
         "prepared_count": prepared_spell_count(char, ruleset),
+        "class_resources": class_resources(char, ruleset),
     }

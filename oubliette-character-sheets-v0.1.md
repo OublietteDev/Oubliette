@@ -227,6 +227,15 @@ International License."* Oubliette is non-commercial/open-source, so this is cle
   (16) vs known SRD characters. NOTE: feature HP bonuses (Tough/Hill Dwarf) + fighting-
   style AC are CS5 refinements; hard-class schema stress (warlock pact/sorcerer/half-
   casters) pending the SRD source.
+- **Schema-stress pass — ✅ DONE (2026-06-08, 162 tests green).** Before CS2/the
+  content fleet, authored the hard classes from 5thsrd.org to lock the schema:
+  Sorcerer (full caster + **Sorcery Points**), Warlock (**Pact Magic** — separate
+  `PactProgressionRow`, short-rest recharge), Barbarian (**Rage** + unarmored defense,
+  -1=unlimited at 20). Added `ClassResource` (sorcery points/ki/rage/channel divinity,
+  sparse per-level) + `pact_magic_progression` to `CharClass`; `CharacterSheet.
+  resources_used`; derive gained pact-slot handling, `class_resources`, `slots_recharge`.
+  **Grounding technique confirmed:** WebFetch on 5thsrd.org transcribes full tables
+  verbatim IF the prompt demands every cell (no summarizing) — the fleet recipe.
 - **CS2 — Chargen.** Backend build-validator + the multi-step UI; `CHARACTER_CREATED`;
   New Game integration; quick-start. (Uses the slice; grows with content.)
 - **CS3 — Sheet panel.** The full read-only sheet.

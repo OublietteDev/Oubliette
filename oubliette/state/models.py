@@ -107,6 +107,7 @@ class Character(BaseModel):
     sheet: CharacterSheet | None = None
     spell_slots_used: dict[int, int] = Field(default_factory=dict)   # {spell_level: used}
     hit_dice_used: int = 0
+    resources_used: dict[str, int] = Field(default_factory=dict)     # {resource_name: spent}
     # OPEN (flavor; not event-sourced — D-OPEN-1) -----------------------------
     description: str = ""
     disposition: str = ""    # NPC demeanor — context for the DM's DC-setting (D8)

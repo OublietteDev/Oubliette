@@ -150,3 +150,65 @@ def test_sheet_stats_snapshot():
     assert stats["saves"]["str"] == 5
     assert stats["skills"]["athletics"] == 5
     assert stats["proficiency_bonus"] == 2
+
+
+# --- hard classes (schema-stress) -------------------------------------------
+def _barbarian(level: int = 1) -> Character:
+    return Character(id="pc", name="Grog", kind="pc", level=level,
+                     abilities={Ability.STR: 16, Ability.DEX: 14, Ability.CON: 16,
+                                Ability.INT: 8, Ability.WIS: 12, Ability.CHA: 10},
+                     sheet=CharacterSheet(race="human", char_class="barbarian", background="soldier"))
+
+
+def _warlock(level: int = 1) -> Character:
+    return Character(id="pc", name="Vex", kind="pc", level=level,
+                     abilities={Ability.CHA: 16, Ability.DEX: 14, Ability.CON: 14, Ability.WIS: 10},
+                     sheet=CharacterSheet(race="human", char_class="warlock", background="acolyte",
+                                          spellcasting_ability=Ability.CHA))
+
+
+def _sorcerer(level: int = 1) -> Character:
+    return Character(id="pc", name="Tann", kind="pc", level=level,
+                     abilities={Ability.CHA: 16, Ability.DEX: 14, Ability.CON: 13},
+                     sheet=CharacterSheet(race="human", char_class="sorcerer", background="acolyte",
+                                          spellcasting_ability=Ability.CHA))
+
+
+def test_barbarian_unarmored_defense_uses_constitution():
+    b = _barbarian()
+    assert derive.armor_class(b, []) == 15            # 10 + DEX 2 + CON 3
+    assert derive.armor_class(b, [SHIELD]) == 17      # barbarian KEEPS it with a shield
+
+
+def test_barbarian_rage_resource_scales_and_goes_unlimited():
+    assert derive.class_resources(_barbarian(1), RS)["Rage"] == {
+        "max": 2, "recharge": "long", "unlimited": False}
+    assert derive.class_resources(_barbarian(3), RS)["Rage"]["max"] == 3
+    assert derive.class_resources(_barbarian(6), RS)["Rage"]["max"] == 4
+    twenty = derive.class_resources(_barbarian(20), RS)["Rage"]
+    assert twenty["max"] == -1 and twenty["unlimited"] is True
+
+
+def test_warlock_pact_magic_slots_and_short_rest():
+    assert derive.spell_slots(_warlock(1), RS) == {1: 1}
+    assert derive.spell_slots(_warlock(3), RS) == {2: 2}
+    assert derive.spell_slots(_warlock(5), RS) == {3: 2}
+    assert derive.spell_slots(_warlock(11), RS) == {5: 3}
+    assert derive.spell_slots(_warlock(17), RS) == {5: 4}
+    assert derive.slots_recharge(_warlock(5), RS) == "short"   # pact magic recharges on a short rest
+    assert derive.cantrips_known(_warlock(1), RS) == 2
+    assert derive.prepared_spell_count(_warlock(5), RS) is None   # known caster, not prepared
+
+
+def test_warlock_spell_dc_uses_charisma():
+    assert derive.spell_save_dc(_warlock(1)) == 13     # 8 + prof 2 + CHA 3
+    assert derive.spell_attack_bonus(_warlock(1)) == 5
+
+
+def test_sorcerer_sorcery_points_and_full_slots():
+    assert "Sorcery Points" not in derive.class_resources(_sorcerer(1), RS)   # none at level 1
+    assert derive.class_resources(_sorcerer(5), RS)["Sorcery Points"]["max"] == 5
+    assert derive.class_resources(_sorcerer(20), RS)["Sorcery Points"]["max"] == 20
+    assert derive.spell_slots(_sorcerer(5), RS) == {1: 4, 2: 3, 3: 2}   # full caster
+    assert derive.slots_recharge(_sorcerer(5), RS) == "long"
+    assert derive.cantrips_known(_sorcerer(1), RS) == 4

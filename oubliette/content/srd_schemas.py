@@ -125,6 +125,31 @@ class SpellProgressionRow(_Strict):
     spell_slots: list[int] = Field(default_factory=list)  # slots by spell level at THIS level
 
 
+class PactProgressionRow(_Strict):
+    """Warlock Pact Magic — a different slot model: a few slots that are ALL of the
+    same (rising) level and recharge on a SHORT rest. Used when spellcasting.caster_
+    type == 'pact', instead of spell_progression."""
+
+    level: int
+    cantrips_known: int | None = None
+    spells_known: int | None = None
+    slots: int = 0                   # number of pact slots
+    slot_level: int = 0              # the (single) level those slots are cast at
+    invocations_known: int | None = None
+
+
+class ClassResource(_Strict):
+    """A leveled class resource pool — sorcery points, ki, rage uses, channel divinity.
+    `by_level` is sparse: the amount applies from that level until the next listed one
+    (-1 = unlimited, e.g. barbarian rage at 20). Spending/recharge mechanics land in
+    CS5; this just defines the maxima."""
+
+    name: str
+    recharge: Literal["short", "long", "none"] = "long"
+    by_level: dict[int, int] = Field(default_factory=dict)   # level -> amount (-1 = unlimited)
+    text: str = ""
+
+
 class CharClass(_Strict):
     id: str
     name: str
@@ -142,6 +167,8 @@ class CharClass(_Strict):
     spellcasting: SpellcastingProfile | None = None
     features: list[Feature] = Field(default_factory=list)
     spell_progression: list[SpellProgressionRow] = Field(default_factory=list)
+    pact_magic_progression: list[PactProgressionRow] = Field(default_factory=list)  # warlock
+    resources: list[ClassResource] = Field(default_factory=list)   # sorcery points, ki, rage…
 
     @model_validator(mode="after")
     def _saves(self) -> "CharClass":

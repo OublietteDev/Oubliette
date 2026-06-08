@@ -47,6 +47,24 @@ def test_fighter_is_martial_with_two_saves():
     assert fig.skill_choices.choose == 2 and "athletics" in fig.skill_choices.from_
 
 
+def test_hard_classes_loaded_with_their_mechanics():
+    rs = load_ruleset()
+    # warlock: pact magic, no Vancian table
+    wl = rs.classes["warlock"]
+    assert wl.spellcasting.caster_type == "pact"
+    assert len(wl.pact_magic_progression) == 20 and not wl.spell_progression
+    assert wl.pact_magic_progression[0].slots == 1 and wl.pact_magic_progression[0].slot_level == 1
+    # sorcerer: full caster + a Sorcery Points resource
+    sor = rs.classes["sorcerer"]
+    assert any(r.name == "Sorcery Points" for r in sor.resources)
+    assert len(sor.spell_progression) == 20
+    # barbarian: a Rage resource that ends unlimited, no spellcasting
+    bar = rs.classes["barbarian"]
+    assert bar.spellcasting is None
+    rage = next(r for r in bar.resources if r.name == "Rage")
+    assert rage.by_level[20] == -1
+
+
 def test_lookups():
     rs = load_ruleset()
     assert [s.id for s in rs.subclasses_for("fighter")] == ["champion"]
