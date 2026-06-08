@@ -283,6 +283,10 @@
     width: max-content; min-width: 120px; max-width: 250px; background: var(--panel-2); border: 1px solid var(--accent);
     border-radius: 8px; padding: 8px 11px; box-shadow: var(--shadow); z-index: 9; text-align: left; }
   .wm-pin:hover .tip { display: block; }
+  /* keep the tooltip on-canvas: flip above for low pins, nudge in at the L/R edges */
+  .wm-pin.flip-up .tip { top: auto; bottom: calc(100% + 6px); }
+  .wm-pin.x-left .tip { left: 50%; right: auto; transform: none; }
+  .wm-pin.x-right .tip { left: auto; right: 50%; transform: none; }
   .wm-pin .tip .tname { font-family: var(--serif); color: var(--gold); font-size: 13.5px; }
   .wm-pin.unknown .tip .tname { color: var(--faint); font-style: italic; }
   .wm-pin .tip .tdesc { color: var(--muted); font-size: 12px; margin-top: 4px; line-height: 1.4; max-height: 130px; overflow: hidden; }
@@ -834,6 +838,11 @@ function wmPinPos(p, i, n) {
   const q = p.position;
   return (q && typeof q.x === "number" && typeof q.y === "number") ? q : wmFallback(i, n);
 }
+// Keep a pin's hover tooltip inside the canvas: flip above for low pins, anchor inward
+// near the left/right edges.
+function wmFlip(x, y) {
+  return (y > 55 ? " flip-up" : "") + (x < 18 ? " x-left" : (x > 82 ? " x-right" : ""));
+}
 async function openWorldMap() {
   try { worldMap = await (await fetch("/api/map")).json(); }
   catch (e) { worldMap = { areas: [] }; }
@@ -865,7 +874,7 @@ function renderWorldMap() {
     const pos = wmPinPos(p, i, n);
     const known = wmView ? true : p.known;            // children of an open area are all known
     const openable = !wmView && p.has_children;       // only top-level discovered areas open
-    const node = el("div", "wm-pin" + (known ? "" : " unknown") + (openable ? " openable" : "") + (p.current ? " current" : ""));
+    const node = el("div", "wm-pin" + (known ? "" : " unknown") + (openable ? " openable" : "") + (p.current ? " current" : "") + wmFlip(pos.x, pos.y));
     node.style.left = pos.x + "%"; node.style.top = pos.y + "%";
     const dot = el("div", "pin-dot"); dot.appendChild(el("span", "pin-glyph", p.current ? "◉" : "")); node.appendChild(dot);
     const tip = el("div", "tip");

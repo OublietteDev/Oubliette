@@ -188,6 +188,10 @@
     background: var(--panel-2); border: 1px solid var(--accent); border-radius: 8px; padding: 8px 11px;
     box-shadow: var(--shadow); z-index: 9; text-align: left; pointer-events: none; }
   .map-pin:hover .tip { display: block; }
+  /* keep the tooltip on-canvas: flip above for low pins, nudge in at the L/R edges */
+  .map-pin.flip-up .tip { top: auto; bottom: calc(100% + 6px); }
+  .map-pin.x-left .tip { left: 50%; right: auto; transform: none; }
+  .map-pin.x-right .tip { left: auto; right: 50%; transform: none; }
   .tip .tname { font-family: var(--serif); color: var(--gold); font-size: 13.5px; }
   .tip .tdesc { color: var(--muted); font-size: 12px; margin-top: 4px; line-height: 1.4; max-height: 116px; overflow: hidden; }
   .map-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -925,6 +929,11 @@ function nodePos(p, i, n) {
   if (q && typeof q.x === "number" && typeof q.y === "number") return q;
   return fallbackPos(i, n);
 }
+// Keep a pin's hover tooltip inside the canvas: flip it above the pin when the pin is
+// low, and anchor it inward when the pin is near the left/right edge.
+function flipClasses(x, y) {
+  return (y > 55 ? " flip-up" : "") + (x < 18 ? " x-left" : (x > 82 ? " x-right" : ""));
+}
 // The background image for the level we're viewing: the pack's world map at the top,
 // or the drilled-into area's own map_image.
 function currentBg() {
@@ -954,7 +963,7 @@ function renderMap() {
     const isArea = !inside && hasChildren(p.id);   // drillable only from the top level
     const tipDesc = p.description ? `<div class="tdesc">${esc(p.description)}</div>` : "";
     const tipHint = isArea ? `<div class="tdesc" style="color:var(--gold)">▣ double-click to open its map</div>` : "";
-    return `<div class="map-pin${isArea ? " area" : ""}" data-node="${esc(p.id)}" style="left:${pos.x}%;top:${pos.y}%">
+    return `<div class="map-pin${isArea ? " area" : ""}${flipClasses(pos.x, pos.y)}" data-node="${esc(p.id)}" style="left:${pos.x}%;top:${pos.y}%">
       <div class="pin-dot"><span class="pin-glyph">${isArea ? "★" : ""}</span></div>
       <div class="tip"><div class="tname">${esc(p.name)}</div>${tipDesc}${tipHint}</div></div>`;
   }).join("");
@@ -1042,6 +1051,9 @@ function startNodeDrag(e, el) {
     const x = Math.max(0, Math.min(100, (ev.clientX - r.left) / r.width * 100));
     const y = Math.max(0, Math.min(100, (ev.clientY - r.top) / r.height * 100));
     el.style.left = x + "%"; el.style.top = y + "%";
+    el.classList.toggle("flip-up", y > 55);
+    el.classList.toggle("x-left", x < 18);
+    el.classList.toggle("x-right", x > 82);
     place.position = { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
     drawEdges();
   };
