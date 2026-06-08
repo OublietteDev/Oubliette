@@ -63,7 +63,8 @@ class CharacterBuild(BaseModel):
     languages: list[str] = Field(default_factory=list)                 # background free picks
     race_ability_choices: list[Ability] = Field(default_factory=list)  # flexible racial ASI picks (Half-Elf)
     race_skills: list[Skill] = Field(default_factory=list)             # racial skill picks (Half-Elf Versatility)
-    race_languages: list[str] = Field(default_factory=list)            # racial extra-language picks (Human, Half-Elf)
+    race_languages: list[str] = Field(default_factory=list)            # race/subrace extra-language picks
+    race_cantrips: list[str] = Field(default_factory=list)            # subrace bonus cantrips (High Elf)
     cantrips: list[str] = Field(default_factory=list)                  # spell ids (level 0)
     spells: list[str] = Field(default_factory=list)                    # spell ids (level 1+)
     equipment_choices: list[list[int]] = Field(default_factory=list)   # per class choice: option idxs
@@ -138,12 +139,13 @@ def _final_abilities(build: CharacterBuild, race, subrace) -> dict:
     return abilities
 
 
-def _validate_race_choices(build: CharacterBuild, race, taken_skills: set,
-                           errors: list[str]) -> None:
-    """A race may grant the player choices the fixed fields can't hold: a flexible
-    ability increase (+1 to N abilities *other* than the fixed ones), bonus skill
-    proficiencies, and extra languages. Validate count/membership/distinctness, and
-    that picks don't duplicate proficiencies already granted elsewhere."""
+def _validate_race_choices(build: CharacterBuild, race, subrace, ruleset: Ruleset,
+                           taken_skills: set, errors: list[str]) -> None:
+    """A race/subrace may grant the player choices the fixed fields can't hold: a
+    flexible ability increase (+1 to N abilities *other* than the fixed ones), bonus
+    skill proficiencies, extra languages (race + subrace, pooled), and bonus cantrips
+    from another class's list (High Elf). Validate count/membership/distinctness, and
+    that picks don't duplicate proficiencies or cantrips already granted elsewhere."""
     # flexible ability-score increase
     asc = race.ability_score_choices
     picks = build.race_ability_choices
@@ -177,10 +179,29 @@ def _validate_race_choices(build: CharacterBuild, race, taken_skills: set,
             if sk in taken_skills:
                 errors.append(f"race skills: {sk.value!r} is already granted — pick another")
 
-    # extra languages of choice (Human, Half-Elf)
-    if len(build.race_languages) != race.language_choices:
-        errors.append(f"race languages: {race.name} grants {race.language_choices} "
+    # extra languages of choice — race + subrace pooled (Human, Half-Elf, High Elf)
+    lang_needed = race.language_choices + (subrace.language_choices if subrace else 0)
+    if len(build.race_languages) != lang_needed:
+        errors.append(f"race languages: {race.name} grants {lang_needed} "
                       f"language(s) of choice, got {len(build.race_languages)}")
+
+    # bonus cantrips from another class's list (High Elf: one wizard cantrip)
+    bc = subrace.bonus_cantrips if subrace else None
+    cpicks = build.race_cantrips
+    if bc is None or not bc.choose:
+        if cpicks:
+            errors.append(f"race cantrips: {race.name} grants no bonus cantrip")
+    else:
+        allowed = {s.id for s in ruleset.spells_for(bc.spell_list) if s.level == 0}
+        if len(cpicks) != bc.choose:
+            errors.append(f"race cantrips: {subrace.name} grants {bc.choose}, got {len(cpicks)}")
+        for cid in _dupes(cpicks):
+            errors.append(f"race cantrips: {cid!r} chosen more than once")
+        for cid in cpicks:
+            if cid not in allowed:
+                errors.append(f"race cantrips: {cid!r} is not a {bc.spell_list} cantrip")
+            if cid in build.cantrips:
+                errors.append(f"race cantrips: {cid!r} is already a class cantrip — pick another")
 
 
 # --- equipment ----------------------------------------------------------------
@@ -341,9 +362,10 @@ def build_character(build: CharacterBuild, ruleset: Ruleset, char_id: str = "pc"
             if sk in bg_skills:
                 errors.append(f"skills: {sk.value!r} is already granted by your background — pick another")
 
-    # race choices: flexible ASI, bonus skills, extra languages (Half-Elf, Human).
+    # race/subrace choices: flexible ASI, bonus skills, extra languages, bonus cantrips.
     if race is not None:
-        _validate_race_choices(build, race, set(build.skills) | bg_skills, errors)
+        _validate_race_choices(build, race, subrace, ruleset,
+                               set(build.skills) | bg_skills, errors)
 
     # expertise (rare at level 1): must be a skill you're actually proficient in.
     proficient = set(build.skills) | bg_skills | set(build.race_skills)
@@ -422,7 +444,7 @@ def _assemble(build: CharacterBuild, cc: CharClass, race, subrace, subclass, bg,
         personality_traits=list(build.personality_traits), ideals=list(build.ideals),
         bonds=list(build.bonds), flaws=list(build.flaws),
         spellcasting_ability=spell_ability,
-        cantrips_known=list(build.cantrips),
+        cantrips_known=list(build.cantrips) + list(build.race_cantrips),
         spells_known=list(build.spells),
         spells_prepared=(list(build.spells) if cc.spellcasting
                          and cc.spellcasting.preparation == "prepared" else []),

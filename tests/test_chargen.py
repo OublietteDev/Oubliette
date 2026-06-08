@@ -91,10 +91,13 @@ def test_fighter_build_is_fully_derived():
 
 
 def test_subrace_traits_and_abilities_fold_in():
-    char, _ = build_character(_fighter(race="elf", subrace="high_elf", race_languages=[]), RS)
+    # base _fighter supplies 1 race_language ("Orc") — High Elf grants exactly 1.
+    char, _ = build_character(
+        _fighter(race="elf", subrace="high_elf", race_cantrips=["fire_bolt"]), RS)
     assert char.abilities[Ability.DEX] == 16    # base 14 + elf 2
     assert char.abilities[Ability.INT] == 13    # base 12 + high-elf 1
-    assert "Elvish" in char.sheet.languages
+    assert "Elvish" in char.sheet.languages and "Orc" in char.sheet.languages   # high-elf extra
+    assert "fire_bolt" in char.sheet.cantrips_known                              # high-elf cantrip
     sources = {f.source for f in char.sheet.features}
     assert "race" in sources and "subrace" in sources
 
@@ -202,6 +205,17 @@ def test_half_elf_skill_choice_count_and_dups_enforced():
 
 def test_human_requires_its_extra_language():
     assert "language(s) of choice" in _why(_fighter(race_languages=[]))
+
+
+def _high_elf(**over) -> CharacterBuild:
+    base = dict(race="elf", subrace="high_elf", race_cantrips=["fire_bolt"])
+    base.update(over)
+    return _fighter(**base)   # base _fighter already supplies 1 race_language for High Elf's grant
+
+
+def test_high_elf_bonus_cantrip_count_and_list_enforced():
+    assert "grants 1" in _why(_high_elf(race_cantrips=[]))                    # wrong count
+    assert "not a wizard cantrip" in _why(_high_elf(race_cantrips=["made_up"]))  # off the list
 
 
 def test_non_caster_cannot_take_spells():

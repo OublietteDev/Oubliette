@@ -212,11 +212,23 @@ class Race(_Strict):
     traits: list[Feature] = Field(default_factory=list)
 
 
+class BonusCantrips(_Strict):
+    """A race/subrace grant of cantrip(s) the player chooses from another class's
+    list (e.g. High Elf: one cantrip of your choice from the wizard list, cast with
+    Intelligence). Independent of the character's own class spellcasting."""
+
+    choose: int = 0
+    spell_list: str = ""             # -> CharClass id whose cantrip list to choose from
+    ability: AbilityKey | None = None  # the spellcasting ability for these cantrips
+
+
 class Subrace(_Strict):
     id: str
     name: str
     race: str                        # -> Race id
     ability_increases: dict[AbilityKey, int] = Field(default_factory=dict)
+    language_choices: int = 0        # extra languages of the player's choice (High Elf)
+    bonus_cantrips: BonusCantrips | None = None   # High Elf: a wizard cantrip of choice
     traits: list[Feature] = Field(default_factory=list)
 
 

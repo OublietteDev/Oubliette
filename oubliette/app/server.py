@@ -696,7 +696,11 @@ def _chargen_options() -> dict:
         "language_choices": r.language_choices,
         "skill_choices": {"choose": r.skill_choices.choose, "from": list(r.skill_choices.from_)},
         "subraces": [{"id": s.id, "name": s.name,
-                      "ability_increases": dict(s.ability_increases)}
+                      "ability_increases": dict(s.ability_increases),
+                      "language_choices": s.language_choices,
+                      "bonus_cantrips": ({"choose": s.bonus_cantrips.choose,
+                                          "spell_list": s.bonus_cantrips.spell_list}
+                                         if s.bonus_cantrips else None)}
                      for s in rs.subraces_for(r.id)],
     } for r in rs.races.values()]
     backgrounds = [{

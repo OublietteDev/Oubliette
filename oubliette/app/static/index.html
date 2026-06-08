@@ -1088,13 +1088,16 @@ const abilMod = (s) => Math.floor((s - 10) / 2);
 const signed = (n) => (n >= 0 ? "+" : "") + n;
 const cgClass = () => cgOpt.classes.find(c => c.id === cg.char_class);
 const cgRace = () => cgOpt.races.find(r => r.id === cg.race);
+const cgSubrace = () => (cgRace().subraces || []).find(s => s.id === cg.subrace) || null;
 const cgBg = () => cgOpt.backgrounds.find(b => b.id === cg.background);
+// extra languages of choice = race's + the selected subrace's (High Elf adds one)
+const raceLangCount = () => (cgRace().language_choices || 0) + (cgSubrace()?.language_choices || 0);
 
 async function ngToCharacter() {
   if (!cgOpt) cgOpt = await (await fetch("/api/chargen/options")).json();
   cg = { name: "", race: "", subrace: null, char_class: "", subclass: null, background: "",
          ability_method: "standard_array", base_abilities: {}, skills: [], expertise: [],
-         languages: [], race_ability_choices: [], race_skills: [], race_languages: [],
+         languages: [], race_ability_choices: [], race_skills: [], race_languages: [], race_cantrips: [],
          cantrips: [], spells: [], equipment_choices: [], alignment: "",
          description: "", personality_traits: [], ideals: [], bonds: [], flaws: [], _pool: [] };
   selectRace(cgOpt.races[0].id);
@@ -1112,7 +1115,13 @@ function selectRace(id) {
   cg.subrace = r.subraces.length ? r.subraces[0].id : null;
   cg.race_ability_choices = [];
   cg.race_skills = [];
-  cg.race_languages = Array(r.language_choices || 0).fill("");
+  cg.race_cantrips = [];
+  cg.race_languages = Array(raceLangCount()).fill("");
+}
+function selectSubrace(id) {
+  cg.subrace = id;
+  cg.race_cantrips = [];
+  cg.race_languages = Array(raceLangCount()).fill("");
 }
 function selectClass(id, silent) {
   cg.char_class = id;
@@ -1183,7 +1192,7 @@ function renderCgForm() {
   if (subs.length) {
     orow.appendChild(selectField("Subrace", cg.subrace || "",
       subs.map(s => ({ value: s.id, label: s.name })),
-      v => { cg.subrace = v; cgPreview(); }));
+      v => { selectSubrace(v); renderCgForm(); cgPreview(); }));
   }
   orow.appendChild(selectField("Class", cg.char_class,
     cgOpt.classes.map(c => ({ value: c.id, label: c.name })),
@@ -1217,6 +1226,7 @@ function renderCgForm() {
   // Languages
   if (cgBg().languages > 0) root.appendChild(renderLanguages());
   const raceLang = renderRaceLanguages(); if (raceLang) root.appendChild(raceLang);
+  const raceCan = renderRaceCantrips(); if (raceCan) root.appendChild(raceCan);
 }
 
 // Race-granted choices the fixed fields can't hold (Half-Elf flexible ASI + skills,
@@ -1266,17 +1276,37 @@ function renderRaceSkills() {
 }
 
 function renderRaceLanguages() {
-  const r = cgRace();
-  if (!r.language_choices) return null;
-  const sec = secEl(`${r.name} languages — choose ${r.language_choices}`);
+  const n = raceLangCount();        // race + subrace extra languages, pooled
+  if (!n) return null;
+  const sec = secEl(`Racial languages — choose ${n}`);
   const row = el("div", "cg-row");
-  for (let i = 0; i < r.language_choices; i++) {
+  for (let i = 0; i < n; i++) {
     const f = el("label", "cg-field"); f.appendChild(el("span", null, `Language ${i + 1}`));
     const inp = el("input"); inp.type = "text"; inp.value = cg.race_languages[i] || ""; inp.placeholder = "e.g. Orc";
     inp.addEventListener("input", () => { cg.race_languages[i] = inp.value; cgPreview(); });
     f.appendChild(inp); row.appendChild(f);
   }
   sec.appendChild(row);
+  return sec;
+}
+
+function renderRaceCantrips() {
+  const sr = cgSubrace(), bc = sr && sr.bonus_cantrips;
+  if (!bc || !bc.choose) return null;
+  const list = (cgOpt.spells_by_class[bc.spell_list] || { cantrips: [] }).cantrips;
+  const sec = secEl(`${sr.name} cantrip — choose ${bc.choose} (${bc.spell_list} list)`);
+  const checks = el("div", "cg-checks");
+  list.forEach(sp => {
+    const lab = el("label", "cg-check");
+    const cb = el("input"); cb.type = "checkbox"; cb.checked = cg.race_cantrips.includes(sp.id);
+    cb.addEventListener("change", () => {
+      if (cb.checked) cg.race_cantrips.push(sp.id); else cg.race_cantrips = cg.race_cantrips.filter(x => x !== sp.id);
+      cgPreview();
+    });
+    lab.appendChild(cb); lab.appendChild(el("span", null, sp.name));
+    checks.appendChild(lab);
+  });
+  sec.appendChild(checks);
   return sec;
 }
 

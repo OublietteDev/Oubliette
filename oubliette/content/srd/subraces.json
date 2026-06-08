@@ -4,10 +4,10 @@
     "name": "High Elf",
     "race": "elf",
     "ability_increases": {"int": 1},
+    "language_choices": 1,
+    "bonus_cantrips": {"choose": 1, "spell_list": "wizard", "ability": "int"},
     "traits": [
-      {"name": "Elf Weapon Training", "text": "You have proficiency with the longsword, shortsword, shortbow, and longbow."},
-      {"name": "Cantrip", "text": "You know one cantrip of your choice from the wizard spell list. Intelligence is your spellcasting ability for it."},
-      {"name": "Extra Language", "text": "You can speak, read, and write one extra language of your choice."}
+      {"name": "Elf Weapon Training", "text": "You have proficiency with the longsword, shortsword, shortbow, and longbow."}
     ]
   },
   {
