@@ -30,6 +30,7 @@ from ..runtime.loop import TurnLoop
 from ..runtime.session import Session
 from ..dm.brain import Brain
 from ..state.repository import StateError
+from ..table import TONE_PRESETS, TableContract
 from ..tools.dispatch import ToolApplyError
 from ..trade.service import build_state, buy_transact, checkout_transact, sell_transact
 from .repl import _load_dotenv, _pick_client
@@ -64,9 +65,11 @@ class _Game:
         client, self.client_name = _pick_client(force_scripted=False)
         self.loop.brain = Brain(client)
 
-    def new_game(self, pack_id: str | None = None) -> None:
+    def new_game(self, pack_id: str | None = None,
+                 table: TableContract | None = None) -> None:
         """Erase the save and start fresh — in `pack_id` if given, else the same
-        world as before."""
+        world as before. `table` sets the campaign's contract (tone + boundaries)
+        agreed at New Game time; it's recorded so it persists and reaches the DM."""
         self.store.close()
         self.journal.close()
         if os.path.exists(DB_PATH):
@@ -74,6 +77,8 @@ class _Game:
         if pack_id:
             self.pack_id = pack_id
         self._open()
+        if table is not None:
+            self.session.emit_contract(table, reason="new game")
 
     def reload_world(self) -> None:
         """Re-read the pack from disk and rebuild the session by replaying the save —
@@ -125,6 +130,14 @@ def _snapshot() -> dict:
             for r in GAME.session.canon.all() if r.origin != "authored"
         ],
     }
+
+
+def _has_progress() -> bool:
+    """True if the current save has been played at all (the player has taken at least
+    one turn) — drives the start menu's 'Continue'. A brand-new save has only the
+    session-start marker and, optionally, a contract, so it has nothing to resume."""
+    return any(ev.kind == EventKind.PLAYER_MESSAGE.value
+               for ev in GAME.session.store.read_all())
 
 
 def _build_inventory() -> dict:
@@ -234,7 +247,22 @@ async def index() -> FileResponse:
 @app.get("/api/state")
 async def get_state() -> JSONResponse:
     return JSONResponse({"state": _snapshot(), "model": GAME.client_name,
-                         "soundscape": _soundscape()})
+                         "has_progress": _has_progress(), "soundscape": _soundscape()})
+
+
+@app.get("/api/table")
+async def get_table() -> JSONResponse:
+    """This campaign's table contract + the available tone presets (for Settings)."""
+    return JSONResponse({"table": GAME.session.table.model_dump(), "presets": TONE_PRESETS})
+
+
+@app.put("/api/table")
+async def put_table(body: TableContract) -> JSONResponse:
+    """Update the campaign's table contract from Settings — recorded so it persists
+    and reaches the DM next turn."""
+    async with GAME.lock:
+        stored = GAME.session.emit_contract(body, reason="settings edit")
+        return JSONResponse({"ok": True, "table": stored.model_dump()})
 
 
 @app.get("/api/world-image/{place_id}")
@@ -598,15 +626,17 @@ async def get_packs() -> JSONResponse:
 
 
 class NewGameIn(BaseModel):
-    pack_id: str | None = None     # which world to start; None keeps the current one
+    pack_id: str | None = None              # which world to start; None keeps the current one
+    table: TableContract | None = None      # the table contract agreed at New Game (optional)
 
 
 @app.post("/api/new")
 async def post_new(body: NewGameIn | None = None) -> JSONResponse:
     async with GAME.lock:
-        GAME.new_game(body.pack_id if body else None)
+        GAME.new_game(body.pack_id if body else None, body.table if body else None)
         return JSONResponse({"state": _snapshot(), "model": GAME.client_name,
-                             "pack_id": GAME.pack_id, "soundscape": _soundscape()})
+                             "pack_id": GAME.pack_id, "has_progress": _has_progress(),
+                             "soundscape": _soundscape()})
 
 
 @app.post("/api/reload")

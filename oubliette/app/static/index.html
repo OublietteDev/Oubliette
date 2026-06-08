@@ -152,6 +152,28 @@
   .world-card.current { border-color: var(--accent-2); }
   .world-card .wc-name { font-family: var(--serif); font-size: 16px; color: var(--gold); }
   .world-card .wc-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .hidden { display: none; }
+  /* start menu (front door) */
+  .start-modal { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; width: min(420px, 92vw); box-shadow: var(--shadow); padding: 30px 26px; text-align: center; }
+  .start-modal h2 { font-family: var(--serif); color: var(--gold); margin: 0 0 4px; font-size: 27px; }
+  .start-modal .sub { color: var(--muted); font-style: italic; font-size: 13px; margin-bottom: 24px; }
+  .start-actions { display: flex; flex-direction: column; gap: 10px; }
+  .start-btn { padding: 12px 14px; font-size: 15px; font-family: var(--serif); cursor: pointer; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; color: var(--ink); transition: border-color .15s, background .15s; }
+  .start-btn:hover:not(:disabled) { border-color: var(--gold); background: #2a231d; }
+  .start-btn.primary { border-color: var(--accent-2); color: var(--gold); }
+  .start-btn:disabled { opacity: .4; cursor: not-allowed; }
+  /* table-contract form (New Game + Settings) */
+  .contract-form { display: flex; flex-direction: column; gap: 3px; text-align: left; }
+  .contract-form label { font-size: 12px; color: var(--gold); margin-top: 12px; }
+  .contract-form .hint { font-size: 11px; color: var(--faint); font-style: italic; margin-bottom: 4px; }
+  .contract-form select, .contract-form input[type=text], .contract-form textarea {
+    width: 100%; box-sizing: border-box; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 8px; color: var(--ink); font: inherit; font-size: 13px; padding: 8px 10px; }
+  .contract-form select:focus, .contract-form input:focus, .contract-form textarea:focus { outline: none; border-color: var(--accent); }
+  .contract-form textarea { resize: vertical; min-height: 44px; }
+  .ng-foot { display: flex; align-items: center; gap: 10px; padding: 16px 20px 20px; }
+  .ng-foot .spacer { flex: 1; }
+  .ng-foot .primary { background: linear-gradient(180deg, var(--accent), #9c5f2e); color: #fff; border: none; font-weight: 600; }
   .trade-modal { width: min(740px, 92vw); max-height: 86vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
   .trade-head { display: flex; align-items: center; gap: 14px; padding: 15px 18px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(0,0,0,.25), transparent); }
   .trade-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 18px; }
@@ -372,13 +394,50 @@
     </aside>
   </main>
 
+<div id="start-overlay" class="overlay">
+  <div class="start-modal">
+    <h2>Oubliette Table</h2>
+    <div class="sub">Join the Phantom's Table</div>
+    <div class="start-actions">
+      <button class="start-btn primary" id="start-continue">Continue</button>
+      <button class="start-btn" id="start-new">New Game</button>
+      <button class="start-btn" id="start-settings">Settings</button>
+    </div>
+  </div>
+</div>
+
 <div id="newgame-overlay" class="overlay hidden">
   <div class="newgame-modal">
-    <div class="newgame-head"><h2>Choose a world</h2>
+    <div class="newgame-head"><h2 id="newgame-title">Choose a world</h2>
       <div class="spacer"></div>
       <button class="act" id="newgame-cancel">Cancel</button></div>
-    <div class="newgame-note">Starting a new game erases your current save.</div>
-    <div class="newgame-list" id="newgame-list"></div>
+    <div id="ng-step-world">
+      <div class="newgame-note">Starting a new game erases your current save.</div>
+      <div class="newgame-list" id="newgame-list"></div>
+    </div>
+    <div id="ng-step-contract" class="hidden">
+      <div class="newgame-note">Set the table: the tone of the telling and any boundaries. All optional — you can change it later in Settings.</div>
+      <div class="newgame-list"><div class="contract-form" id="ng-contract"></div></div>
+      <div class="ng-foot">
+        <button class="act" id="ng-back">‹ Back</button>
+        <div class="spacer"></div>
+        <button class="act primary" id="ng-begin">Begin adventure</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="settings-overlay" class="overlay hidden">
+  <div class="newgame-modal">
+    <div class="newgame-head"><h2>Settings</h2>
+      <div class="spacer"></div>
+      <button class="act" id="settings-cancel">Close</button></div>
+    <div class="newgame-note">The table contract for this campaign — tone and content boundaries. Changes take effect on your next turn.</div>
+    <div class="newgame-list"><div class="contract-form" id="settings-contract"></div></div>
+    <div class="ng-foot">
+      <div class="spacer"></div>
+      <button class="act primary" id="settings-save">Save</button>
+    </div>
   </div>
 </div>
 
@@ -652,7 +711,7 @@ $("trade-done").addEventListener("click", closeTrade);
 $("trade-settle").addEventListener("click", settle);
 $("trade-haggle").addEventListener("click", doHaggle);
 $("trade-overlay").addEventListener("click", (e) => { if (e.target.id === "trade-overlay") closeTrade(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeTrade(); closeJournal(); closeInventory(); closeWorldMap(); closeMenu(); } });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeTrade(); closeJournal(); closeInventory(); closeWorldMap(); closeMenu(); closeSettings(); closeNewGame(); } });
 
 let gameEnded = false;          // set when the DM ends the session (locks the composer)
 function envLabel(t, w) {
@@ -791,6 +850,59 @@ function setOoc(v) {
                         : "What do you do?  (Enter to send · Shift+Enter for a new line)";
 }
 oocToggle.addEventListener("click", () => setOoc(!oocMode));
+// --- table contract form (shared by New Game + Settings) ------------------
+let tonePresets = null;          // { label: text } from the server, fetched once
+async function ensurePresets() {
+  if (tonePresets) return tonePresets;
+  try { tonePresets = (await (await fetch("/api/table")).json()).presets || { Balanced: "" }; }
+  catch (e) { tonePresets = { Balanced: "" }; }
+  return tonePresets;
+}
+function buildContractForm(root, presets) {
+  root.innerHTML = `
+    <label>Tone of the telling</label>
+    <select class="cf-tone"></select>
+    <input type="text" class="cf-tone-custom hidden" placeholder="Describe the tone you want…" />
+    <label>Lines — content to rule out entirely</label>
+    <div class="hint">Never depicted, on screen or off. One per line.</div>
+    <textarea class="cf-lines"></textarea>
+    <label>Veils — keep off the page</label>
+    <div class="hint">If the story nears these, the DM fades to black. One per line.</div>
+    <textarea class="cf-veils"></textarea>
+    <label>Anything else for the DM</label>
+    <textarea class="cf-freeform"></textarea>`;
+  const sel = root.querySelector(".cf-tone");
+  Object.keys(presets).forEach(label => {
+    const o = el("option"); o.value = label; o.textContent = label; sel.appendChild(o);
+  });
+  const custom = root.querySelector(".cf-tone-custom");
+  sel.addEventListener("change", () => custom.classList.toggle("hidden", sel.value !== "Custom"));
+}
+function fillContractForm(root, table) {
+  const sel = root.querySelector(".cf-tone");
+  const custom = root.querySelector(".cf-tone-custom");
+  sel.value = (table && table.tone_label) || "Balanced";
+  if (!sel.value) sel.value = "Balanced";
+  custom.value = (table && table.tone_label === "Custom") ? (table.tone_text || "") : "";
+  custom.classList.toggle("hidden", sel.value !== "Custom");
+  root.querySelector(".cf-lines").value = ((table && table.lines) || []).join("\n");
+  root.querySelector(".cf-veils").value = ((table && table.veils) || []).join("\n");
+  root.querySelector(".cf-freeform").value = (table && table.freeform) || "";
+}
+function readContractForm(root) {
+  const sel = root.querySelector(".cf-tone");
+  const split = s => s.split("\n").map(x => x.trim()).filter(Boolean);
+  return {
+    tone_label: sel.value,
+    tone_text: sel.value === "Custom" ? root.querySelector(".cf-tone-custom").value.trim() : "",
+    lines: split(root.querySelector(".cf-lines").value),
+    veils: split(root.querySelector(".cf-veils").value),
+    freeform: root.querySelector(".cf-freeform").value.trim(),
+  };
+}
+
+// --- New Game: choose a world, then set the table -------------------------
+let ngPack = null;               // { id, name } chosen in step 1
 async function openNewGame() {
   const { packs, current } = await (await fetch("/api/packs")).json();
   const list = $("newgame-list");
@@ -799,28 +911,74 @@ async function openNewGame() {
     const card = el("button", "world-card" + (p.id === current ? " current" : ""));
     card.innerHTML = `<div class="wc-name">${escapeHtml(p.name)}</div>
       <div class="wc-meta">v${escapeHtml(p.version || "?")}${p.id === current ? " · current world" : ""}</div>`;
-    card.addEventListener("click", () => startNewGame(p.id, p.name));
+    card.addEventListener("click", () => ngToContract(p.id, p.name));
     list.appendChild(card);
   });
+  ngShowStep("world");
   $("newgame-overlay").classList.remove("hidden");
 }
+function ngShowStep(step) {
+  $("ng-step-world").classList.toggle("hidden", step !== "world");
+  $("ng-step-contract").classList.toggle("hidden", step !== "contract");
+  $("newgame-title").textContent = step === "contract" ? "Set the table" : "Choose a world";
+}
+async function ngToContract(packId, packName) {
+  ngPack = { id: packId, name: packName };
+  buildContractForm($("ng-contract"), await ensurePresets());
+  fillContractForm($("ng-contract"), null);     // fresh defaults
+  ngShowStep("contract");
+}
 function closeNewGame() { $("newgame-overlay").classList.add("hidden"); }
-async function startNewGame(packId, packName) {
-  if (!confirm(`Start a new game in “${packName}”? This erases the current save.`)) return;
+async function beginNewGame() {
+  if (!ngPack) return;
+  if (!confirm(`Start a new game in “${ngPack.name}”? This erases the current save.`)) return;
+  const table = readContractForm($("ng-contract"));
   closeNewGame();
+  hideStart();
   const res = await fetch("/api/new", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pack_id: packId }),
+    body: JSON.stringify({ pack_id: ngPack.id, table }),
   });
   const data = await res.json();
   closeTrade();
   gameEnded = false;            // a fresh game clears any prior end-of-session lock
   log.innerHTML = "";
-  addMessage("System", `A new tale begins in ${packName}. Describe what you do.`, "system");
+  addMessage("System", `A new tale begins in ${ngPack.name}. Describe what you do.`, "system");
   renderState(data.state);
   setSoundscape(data.soundscape);
 }
 $("new-btn").addEventListener("click", () => { if (!busy) openNewGame(); });
+$("ng-back").addEventListener("click", () => ngShowStep("world"));
+$("ng-begin").addEventListener("click", beginNewGame);
+
+// --- Settings (edit this campaign's table contract mid-game) --------------
+async function openSettings() {
+  const presets = await ensurePresets();
+  const d = await (await fetch("/api/table")).json();
+  buildContractForm($("settings-contract"), presets);
+  fillContractForm($("settings-contract"), d.table);
+  $("settings-overlay").classList.remove("hidden");
+}
+function closeSettings() { $("settings-overlay").classList.add("hidden"); }
+async function saveSettings() {
+  const table = readContractForm($("settings-contract"));
+  await fetch("/api/table", {
+    method: "PUT", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(table),
+  });
+  closeSettings();
+  addMessage("System", "The table contract is updated — it takes effect on your next turn.", "system");
+}
+$("settings-cancel").addEventListener("click", closeSettings);
+$("settings-save").addEventListener("click", saveSettings);
+$("settings-overlay").addEventListener("click", (e) => { if (e.target.id === "settings-overlay") closeSettings(); });
+
+// --- start menu (front door) ---------------------------------------------
+function hideStart() { $("start-overlay").classList.add("hidden"); }
+function showStart() { $("start-overlay").classList.remove("hidden"); }
+$("start-continue").addEventListener("click", () => { if (!$("start-continue").disabled) hideStart(); });
+$("start-new").addEventListener("click", () => { hideStart(); openNewGame(); });
+$("start-settings").addEventListener("click", openSettings);
 $("reload-btn").addEventListener("click", async () => {
   if (busy) return;
   const btn = $("reload-btn"); btn.disabled = true;
@@ -842,6 +1000,7 @@ const MENU_ITEMS = [
   { key: "party",     label: "Party Sheets",     icon: "👥", enabled: false },
   { key: "bestiary",  label: "Bestiary & Rules", icon: "📚", enabled: false },
   { key: "map",       label: "Map",              icon: "🗺️", enabled: true,  open: () => openWorldMap() },
+  { key: "settings",  label: "Settings",         icon: "⚙️", enabled: true,  open: () => openSettings() },
 ];
 const menuPop = $("menu-pop");
 function renderMenu() {
@@ -1310,7 +1469,10 @@ async function boot() {
   renderState(data.state);
   setSoundscape(data.soundscape);          // queued; plays once sound is enabled
   addMessage("System", "The Phantom waits at the head of the table. Describe what you do to begin.", "system");
-  input.focus();
+  // Front door: Continue resumes only a game already underway (at least one turn taken).
+  const cont = $("start-continue");
+  cont.disabled = !data.has_progress;
+  cont.title = data.has_progress ? "Resume your game" : "No game in progress yet — start a New Game";
 }
 boot();
 </script>

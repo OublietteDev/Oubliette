@@ -197,6 +197,42 @@ def test_journal_roundtrips_and_is_invisible_to_the_dm():
     assert GAME.session.store.of_kind(EventKind.TOOL_APPLIED) == []
 
 
+def test_table_endpoint_reports_contract_and_presets():
+    _new()
+    d = client.get("/api/table").json()
+    assert d["table"]["tone_label"] == "Balanced"      # fresh game = default contract
+    assert "Cinematic" in d["presets"] and "Custom" in d["presets"]
+
+
+def test_table_put_updates_contract():
+    _new()
+    r = client.put("/api/table", json={"tone_label": "Gritty", "lines": ["torture", "  "]})
+    body = r.json()
+    assert body["ok"] is True
+    # normalized: preset tone_text filled, blank line dropped
+    assert body["table"]["tone_text"]
+    assert body["table"]["lines"] == ["torture"]
+    assert client.get("/api/table").json()["table"]["tone_label"] == "Gritty"
+
+
+def test_new_game_accepts_table_and_it_reaches_the_dm():
+    client.post("/api/new", json={"table": {"tone_label": "Ominous", "veils": ["gore"]}})
+    assert client.get("/api/table").json()["table"]["tone_label"] == "Ominous"
+    # the contract is rendered into the resolve system prompt the DM is given
+    from oubliette.app.server import GAME
+    from oubliette.table import render_table_prompt
+    prompt = render_table_prompt(GAME.session.table)
+    assert "gore" in prompt and "TONE" in prompt
+    _new()   # reset to a default contract so other tests aren't affected
+
+
+def test_has_progress_flips_after_a_turn():
+    _new()
+    assert client.get("/api/state").json()["has_progress"] is False
+    client.post("/api/turn", json={"text": "I look around the market."})
+    assert client.get("/api/state").json()["has_progress"] is True
+
+
 def test_index_page_served():
     r = client.get("/")
     assert r.status_code == 200

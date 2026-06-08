@@ -34,6 +34,7 @@ class EventKind(str, Enum):
     ENVIRONMENT_CHANGED = "environment_changed"  # time-of-day / weather (DM-reported)
     QUEST_STARTED = "quest_started"     # a new quest the DM introduced
     QUEST_UPDATED = "quest_updated"     # quest status change and/or an appended note
+    CONTRACT_SET = "contract_set"       # per-campaign table contract (tone + lines/veils)
 
 
 class StateOp(BaseModel):

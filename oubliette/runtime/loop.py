@@ -23,6 +23,7 @@ from ..record.rng import Rng, RollOutcome
 from ..rules.checks import resolve_check
 from ..schemas import Intent, RollRequest, TurnAssessment
 from ..state.repository import StateError
+from ..table import render_table_prompt
 from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
 from ..trade.schemas import TradeState
 from ..trade.service import build_state, has_stock
@@ -155,6 +156,9 @@ class TurnLoop:
             roll_result = resolve_check(roll_outcome.total, assessment.roll.dc)
 
         # --- resolve + apply, bounded by D6. Validate ALL tools before applying any.
+        # The campaign's table contract (tone + content boundaries) rides the resolve
+        # system prompt every turn, so the DM honors it without ever setting it.
+        table_prompt = render_table_prompt(self.session.table)
         feedback: str | None = None
         narration = ""
         applied: list[ResolvedTool] = []
@@ -164,7 +168,7 @@ class TurnLoop:
             try:
                 resolution = await self.brain.resolve(
                     player_text, assessment, roll_result, context, feedback,
-                    on_text=(on_text if attempt == 0 else None))
+                    on_text=(on_text if attempt == 0 else None), table_prompt=table_prompt)
             except (ValidationError, RuntimeError) as e:
                 # The model returned an empty/malformed resolution (e.g. an empty tool
                 # call). Treat it like a failed attempt: feed it back and retry, rather

@@ -21,6 +21,7 @@ from ..record.events import Event, EventKind, StateOp, apply_ops, replay
 from ..record.store import EventStore
 from ..seed import DEFAULT_SCENE
 from ..state.repository import Repository
+from ..table import DEFAULT_TABLE, TableContract, normalize_contract
 
 
 class Session:
@@ -41,6 +42,7 @@ class Session:
         self.pack_id: str | None = None     # which content pack this campaign is playing
         self.world_map: str | None = None   # top-level map background image filename (pack)
         self.ended: bool = False            # the DM closed this session (end_session tool)
+        self.table: TableContract = DEFAULT_TABLE   # campaign's tone + content boundaries
 
     def _scene_for(self, location: str | None) -> str:
         """The prose for a location — the pack's opening text at the start spot
@@ -88,6 +90,7 @@ class Session:
         # it — so reload lands the party exactly where they last travelled to.
         location = start_location
         time_of_day, weather = "day", "clear"
+        table = DEFAULT_TABLE
         ended = False
         for event in sorted(events, key=lambda e: e.seq):
             if event.kind == EventKind.LOCATION_CHANGED.value:
@@ -95,6 +98,8 @@ class Session:
             elif event.kind == EventKind.ENVIRONMENT_CHANGED.value:
                 time_of_day = event.payload.get("time_of_day", time_of_day)
                 weather = event.payload.get("weather", weather)
+            elif event.kind == EventKind.CONTRACT_SET.value:
+                table = TableContract.model_validate(event.payload["table"])
             elif event.kind == EventKind.SESSION_MARKER.value and event.payload.get("marker") == "end":
                 ended = True
 
@@ -109,6 +114,7 @@ class Session:
         session.pack_id = chosen_pack
         session.world_map = world_map
         session.ended = ended
+        session.table = table
         if events:
             replay(events, repo, canon, quests)   # existing session: rebuild to current
         else:
@@ -135,6 +141,15 @@ class Session:
             self.weather = weather
         self.store.append(EventKind.ENVIRONMENT_CHANGED,
                           {"time_of_day": self.time_of_day, "weather": self.weather, "reason": reason})
+
+    def emit_contract(self, table: TableContract, reason: str = "table set") -> TableContract:
+        """Set this campaign's table contract (tone + content boundaries). Records a
+        CONTRACT_SET event (folded last-write-wins on reload) and applies it. Returns
+        the normalized contract actually stored."""
+        normalized = normalize_contract(table)
+        self.store.append(EventKind.CONTRACT_SET, {"table": normalized.model_dump(), "reason": reason})
+        self.table = normalized
+        return normalized
 
     def emit_end(self, reason: str) -> None:
         """Close the session (the DM's `end_session` tool). Records an end marker
