@@ -174,6 +174,48 @@
   .ng-foot { display: flex; align-items: center; gap: 10px; padding: 16px 20px 20px; }
   .ng-foot .spacer { flex: 1; }
   .ng-foot .primary { background: linear-gradient(180deg, var(--accent), #9c5f2e); color: #fff; border: none; font-weight: 600; }
+  .ng-foot .primary:disabled { opacity: .45; cursor: default; }
+  .cg-status { font-size: 12px; color: var(--faint); font-style: italic; }
+  .cg-status.bad { color: #d98b6a; }
+  .cg-status.ok { color: #8db870; }
+  .linklike { background: none; border: none; color: var(--accent); font: inherit; font-style: italic; cursor: pointer; padding: 0; text-decoration: underline; }
+  /* --- chargen wizard --- */
+  .newgame-modal.wide { width: min(900px, 96vw); }
+  .cg-grid { display: grid; grid-template-columns: 1fr 300px; gap: 18px; padding: 12px 20px 4px; }
+  @media (max-width: 760px) { .cg-grid { grid-template-columns: 1fr; } }
+  .cg-form { display: flex; flex-direction: column; gap: 14px; text-align: left; min-width: 0; }
+  .cg-sec { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--panel-2); }
+  .cg-sec > h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); }
+  .cg-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .cg-field { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 120px; }
+  .cg-field > span { font-size: 11px; color: var(--muted); }
+  .cg-form select, .cg-form input[type=text], .cg-form input[type=number] {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font: inherit; padding: 7px 9px; }
+  .cg-form select:focus, .cg-form input:focus { outline: none; border-color: var(--accent); }
+  .cg-hint { font-size: 11px; color: var(--faint); font-style: italic; margin-top: 6px; }
+  .cg-checks { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .cg-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); }
+  .cg-check.locked { color: var(--faint); }
+  .cg-opt { display: block; margin: 4px 0; font-size: 13px; }
+  .cg-pool { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .cg-chip { background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--gold); }
+  .cg-methods { display: flex; gap: 8px; margin-bottom: 10px; }
+  .cg-methods button { flex: 1; }
+  .cg-methods button.on { border-color: var(--accent); color: var(--gold); }
+  .cg-preview { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--panel-2); align-self: start; position: sticky; top: 0; font-size: 13px; }
+  .cg-preview h3 { margin: 0 0 2px; font-family: var(--serif); color: var(--gold); font-size: 17px; }
+  .cg-preview .cg-sub { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+  .cg-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+  .cg-stat { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px; text-align: center; }
+  .cg-stat b { display: block; font-size: 17px; color: var(--ink); }
+  .cg-stat span { font-size: 10px; color: var(--faint); text-transform: uppercase; letter-spacing: .03em; }
+  .cg-abils { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-bottom: 10px; }
+  .cg-abil { text-align: center; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 0; }
+  .cg-abil b { display: block; font-size: 14px; } .cg-abil span { font-size: 9px; color: var(--faint); text-transform: uppercase; }
+  .cg-abil em { font-size: 10px; color: var(--muted); font-style: normal; }
+  .cg-errs { list-style: none; margin: 6px 0 0; padding: 0; }
+  .cg-errs li { font-size: 12px; color: #d98b6a; padding: 2px 0 2px 14px; text-indent: -10px; }
+  .cg-plist { margin: 4px 0 0; padding-left: 16px; color: var(--muted); font-size: 12px; }
   .trade-modal { width: min(740px, 92vw); max-height: 86vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
   .trade-head { display: flex; align-items: center; gap: 14px; padding: 15px 18px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(0,0,0,.25), transparent); }
   .trade-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 18px; }
@@ -421,7 +463,21 @@
       <div class="ng-foot">
         <button class="act" id="ng-back">‹ Back</button>
         <div class="spacer"></div>
-        <button class="act primary" id="ng-begin">Begin adventure</button>
+        <button class="act primary" id="ng-to-char">Create your character ›</button>
+      </div>
+    </div>
+    <div id="ng-step-character" class="hidden">
+      <div class="newgame-note">Build your hero. Every number is computed by the rules from your choices — or
+        <button class="linklike" id="cg-quickstart">skip and play a pre-made hero ›</button></div>
+      <div class="cg-grid">
+        <div class="cg-form" id="cg-form"></div>
+        <div class="cg-preview" id="cg-preview"></div>
+      </div>
+      <div class="ng-foot">
+        <button class="act" id="cg-back">‹ Back</button>
+        <div class="spacer"></div>
+        <span class="cg-status" id="cg-status"></span>
+        <button class="act primary" id="ng-begin" disabled>Begin adventure</button>
       </div>
     </div>
   </div>
@@ -920,7 +976,10 @@ async function openNewGame() {
 function ngShowStep(step) {
   $("ng-step-world").classList.toggle("hidden", step !== "world");
   $("ng-step-contract").classList.toggle("hidden", step !== "contract");
-  $("newgame-title").textContent = step === "contract" ? "Set the table" : "Choose a world";
+  $("ng-step-character").classList.toggle("hidden", step !== "character");
+  $("newgame-overlay").querySelector(".newgame-modal").classList.toggle("wide", step === "character");
+  $("newgame-title").textContent =
+    step === "contract" ? "Set the table" : step === "character" ? "Create your character" : "Choose a world";
 }
 async function ngToContract(packId, packName) {
   ngPack = { id: packId, name: packName };
@@ -929,17 +988,19 @@ async function ngToContract(packId, packName) {
   ngShowStep("contract");
 }
 function closeNewGame() { $("newgame-overlay").classList.add("hidden"); }
-async function beginNewGame() {
+async function beginNewGame(build) {
   if (!ngPack) return;
-  if (!confirm(`Start a new game in “${ngPack.name}”? This erases the current save.`)) return;
+  const who = build ? `“${build.name}”` : "a pre-made hero";
+  if (!confirm(`Begin in “${ngPack.name}” as ${who}? This erases the current save.`)) return;
   const table = readContractForm($("ng-contract"));
-  closeNewGame();
-  hideStart();
   const res = await fetch("/api/new", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pack_id: ngPack.id, table }),
+    body: JSON.stringify({ pack_id: ngPack.id, table, build: build || null }),
   });
   const data = await res.json();
+  if (!data.ok) { alert("Could not start: " + (data.errors || ["unknown error"]).join("; ")); return; }
+  closeNewGame();
+  hideStart();
   closeTrade();
   gameEnded = false;            // a fresh game clears any prior end-of-session lock
   log.innerHTML = "";
@@ -947,9 +1008,387 @@ async function beginNewGame() {
   renderState(data.state);
   setSoundscape(data.soundscape);
 }
+
+// --- chargen wizard (CS2) -------------------------------------------------
+let cgOpt = null;          // ruleset options from the server
+let cg = null;             // the in-progress build
+let cgValid = false, cgTimer = null, cgSeq = 0;
+const abilMod = (s) => Math.floor((s - 10) / 2);
+const signed = (n) => (n >= 0 ? "+" : "") + n;
+const cgClass = () => cgOpt.classes.find(c => c.id === cg.char_class);
+const cgRace = () => cgOpt.races.find(r => r.id === cg.race);
+const cgBg = () => cgOpt.backgrounds.find(b => b.id === cg.background);
+
+async function ngToCharacter() {
+  if (!cgOpt) cgOpt = await (await fetch("/api/chargen/options")).json();
+  cg = { name: "", race: "", subrace: null, char_class: "", subclass: null, background: "",
+         ability_method: "standard_array", base_abilities: {}, skills: [], expertise: [],
+         languages: [], cantrips: [], spells: [], equipment_choices: [], alignment: "",
+         description: "", personality_traits: [], ideals: [], bonds: [], flaws: [], _pool: [] };
+  selectRace(cgOpt.races[0].id);
+  selectClass(cgOpt.classes[0].id, true);
+  selectBackground(cgOpt.backgrounds[0].id, true);
+  resetAbilities("standard_array");
+  renderCgForm();
+  ngShowStep("character");
+  cgPreview();
+}
+
+function selectRace(id) {
+  cg.race = id;
+  const subs = cgRace().subraces;
+  cg.subrace = subs.length ? subs[0].id : null;
+}
+function selectClass(id, silent) {
+  cg.char_class = id;
+  const cc = cgClass();
+  cg.subclass = null;
+  cg.skills = []; cg.cantrips = []; cg.spells = [];
+  cg.equipment_choices = cc.equipment.choices.map(() => [0]);   // a valid default pick
+  if (!silent) renderCgForm();
+}
+function selectBackground(id, silent) {
+  cg.background = id;
+  cg.languages = Array(cgBg().languages).fill("");
+  if (!silent) renderCgForm();
+}
+function resetAbilities(method) {
+  cg.ability_method = method;
+  if (method === "point_buy") {
+    cg.base_abilities = {}; cgOpt.abilities.forEach(a => cg.base_abilities[a] = 8);
+    cg._pool = [];
+  } else if (method === "standard_array") {
+    cg._pool = cgOpt.standard_array.slice();
+    cg.base_abilities = {};
+    cgOpt.abilities.forEach((a, i) => cg.base_abilities[a] = cg._pool[i]);   // a valid default
+  } else {  // roll
+    cg._pool = []; cg.base_abilities = {};
+  }
+}
+
+function cgBuild() {
+  const b = { ...cg }; delete b._pool;
+  return b;
+}
+
+// --- rendering ---
+function secEl(title) { const s = el("div", "cg-sec"); s.appendChild(el("h4", null, title)); return s; }
+function selectField(label, value, options, onChange) {
+  const f = el("label", "cg-field"); f.appendChild(el("span", null, label));
+  const sel = el("select");
+  options.forEach(o => { const opt = el("option"); opt.value = o.value; opt.textContent = o.label; sel.appendChild(opt); });
+  sel.value = value;
+  sel.addEventListener("change", () => onChange(sel.value));
+  f.appendChild(sel); return f;
+}
+
+function renderCgForm() {
+  const root = $("cg-form"); root.innerHTML = "";
+
+  // Identity
+  const idn = secEl("Identity");
+  const r1 = el("div", "cg-row");
+  const nameF = el("label", "cg-field"); nameF.appendChild(el("span", null, "Name"));
+  const nameI = el("input"); nameI.type = "text"; nameI.value = cg.name; nameI.placeholder = "Your hero's name";
+  nameI.addEventListener("input", () => { cg.name = nameI.value; cgPreview(); });
+  nameF.appendChild(nameI); r1.appendChild(nameF);
+  const alignF = el("label", "cg-field"); alignF.appendChild(el("span", null, "Alignment (optional)"));
+  const alignI = el("input"); alignI.type = "text"; alignI.value = cg.alignment; alignI.placeholder = "e.g. Neutral Good";
+  alignI.addEventListener("input", () => { cg.alignment = alignI.value; cgPreview(); });
+  alignF.appendChild(alignI); r1.appendChild(alignF);
+  idn.appendChild(r1); root.appendChild(idn);
+
+  // Origin: race + subrace + class + background
+  const org = secEl("Origin");
+  const orow = el("div", "cg-row");
+  orow.appendChild(selectField("Race", cg.race,
+    cgOpt.races.map(r => ({ value: r.id, label: r.name })),
+    v => { selectRace(v); renderCgForm(); cgPreview(); }));
+  const subs = cgRace().subraces;
+  if (subs.length) {
+    orow.appendChild(selectField("Subrace", cg.subrace || "",
+      subs.map(s => ({ value: s.id, label: s.name })),
+      v => { cg.subrace = v; cgPreview(); }));
+  }
+  orow.appendChild(selectField("Class", cg.char_class,
+    cgOpt.classes.map(c => ({ value: c.id, label: c.name })),
+    v => { selectClass(v); renderCgForm(); cgPreview(); }));
+  orow.appendChild(selectField("Background", cg.background,
+    cgOpt.backgrounds.map(b => ({ value: b.id, label: b.name })),
+    v => { selectBackground(v); renderCgForm(); cgPreview(); }));
+  org.appendChild(orow);
+  const cc = cgClass(), bg = cgBg();
+  org.appendChild(el("div", "cg-hint",
+    `${cc.name}: d${cc.hit_die} hit die · saves ${cc.saving_throws.map(s => s.toUpperCase()).join(", ")}. ` +
+    `${bg.name} grants: ${bg.skills.join(", ")}${bg.languages ? ` · ${bg.languages} language(s)` : ""}.`));
+  if (cc.subclass_level && cc.subclass_level > 1)
+    org.appendChild(el("div", "cg-hint", `${cc.subclass_label} is chosen at level ${cc.subclass_level}.`));
+  root.appendChild(org);
+
+  // Abilities
+  root.appendChild(renderAbilities());
+
+  // Skills
+  root.appendChild(renderSkills());
+
+  // Spells (casters only)
+  if (cgClass().is_caster) root.appendChild(renderSpells());
+
+  // Equipment
+  root.appendChild(renderEquipment());
+
+  // Languages
+  if (cgBg().languages > 0) root.appendChild(renderLanguages());
+}
+
+function renderAbilities() {
+  const sec = secEl("Ability scores");
+  const methods = el("div", "cg-methods");
+  [["standard_array", "Standard array"], ["point_buy", "Point buy"], ["roll", "Roll 4d6"]].forEach(([m, label]) => {
+    const b = el("button", "act" + (cg.ability_method === m ? " on" : ""), label);
+    b.addEventListener("click", () => { resetAbilities(m); renderCgForm(); cgPreview(); });
+    methods.appendChild(b);
+  });
+  sec.appendChild(methods);
+  const body = el("div"); body.id = "cg-abilities-body";
+
+  if (cg.ability_method === "point_buy") {
+    const cost = cgOpt.point_buy.cost;
+    const hint = el("div", "cg-hint"); hint.id = "cg-pb-hint";
+    const pbHint = () => {
+      const spent = cgOpt.abilities.reduce((t, a) => t + (cost[cg.base_abilities[a]] || 0), 0);
+      hint.textContent = `Points spent ${spent} / ${cgOpt.point_buy.budget}. Each score 8–15 before racial bonuses.`;
+    };
+    pbHint(); body.appendChild(hint);
+    const row = el("div", "cg-row");
+    cgOpt.abilities.forEach(a => {
+      const f = el("label", "cg-field"); f.appendChild(el("span", null, a.toUpperCase()));
+      const inp = el("input"); inp.type = "number"; inp.min = 8; inp.max = 15; inp.value = cg.base_abilities[a];
+      inp.addEventListener("input", () => { cg.base_abilities[a] = parseInt(inp.value || "0", 10); pbHint(); cgPreview(); });
+      f.appendChild(inp); row.appendChild(f);
+    });
+    body.appendChild(row);
+  } else {
+    if (cg.ability_method === "roll") {
+      const rollBtn = el("button", "act", cg._pool.length ? "Re-roll" : "Roll dice");
+      rollBtn.addEventListener("click", () => { rollPool(); renderCgForm(); cgPreview(); });
+      body.appendChild(rollBtn);
+    }
+    const pool = cg._pool;
+    const counts = {}; pool.forEach(v => counts[v] = (counts[v] || 0) + 1);
+    const used = {}; cgOpt.abilities.forEach(a => { const v = cg.base_abilities[a]; if (v != null) used[v] = (used[v] || 0) + 1; });
+    const poolRow = el("div", "cg-pool");
+    if (!pool.length) poolRow.appendChild(el("span", "cg-hint", "Roll to generate six scores, then assign them."));
+    Object.keys(counts).sort((a, b) => b - a).forEach(v => {
+      const left = counts[v] - (used[v] || 0);
+      poolRow.appendChild(el("span", "cg-chip", `${v}${left !== 1 ? ` ×${counts[v]}` : ""}${left > 0 ? "" : " (used)"}`));
+    });
+    body.appendChild(poolRow);
+    const row = el("div", "cg-row");
+    const opts = [{ value: "", label: "—" }].concat(
+      [...new Set(pool)].sort((a, b) => b - a).map(v => ({ value: String(v), label: String(v) })));
+    cgOpt.abilities.forEach(a => {
+      row.appendChild(selectField(a.toUpperCase(), String(cg.base_abilities[a] ?? ""),
+        opts, v => { if (v === "") delete cg.base_abilities[a]; else cg.base_abilities[a] = parseInt(v, 10); renderAbilitiesBody(); cgPreview(); }));
+    });
+    body.appendChild(row);
+  }
+  sec.appendChild(body);
+  return sec;
+}
+function renderAbilitiesBody() {           // refresh just the pool/points readout
+  const sec = $("cg-abilities-body"); if (!sec) return;
+  const fresh = renderAbilities();
+  sec.replaceWith(fresh.querySelector("#cg-abilities-body"));
+}
+function rollPool() {
+  const roll1 = () => { const d = [0,0,0,0].map(() => 1 + Math.floor(Math.random() * 6)).sort((a, b) => b - a); return d[0] + d[1] + d[2]; };
+  cg._pool = [0,0,0,0,0,0].map(roll1).sort((a, b) => b - a);
+  cg.base_abilities = {};
+  cgOpt.abilities.forEach((a, i) => cg.base_abilities[a] = cg._pool[i]);   // default assignment
+}
+
+function renderSkills() {
+  const cc = cgClass(), bg = cgBg();
+  const sec = secEl(`Skills — choose ${cc.skill_choose}`);
+  const bgSkills = new Set(bg.skills);
+  const checks = el("div", "cg-checks");
+  // background-granted (locked, always on)
+  bg.skills.forEach(s => {
+    const lab = el("label", "cg-check locked");
+    const cb = el("input"); cb.type = "checkbox"; cb.checked = true; cb.disabled = true;
+    lab.appendChild(cb); lab.appendChild(el("span", null, `${prettySkill(s)} (background)`));
+    checks.appendChild(lab);
+  });
+  cc.skill_from.forEach(s => {
+    if (bgSkills.has(s)) return;            // already granted — not a class option to spend
+    const lab = el("label", "cg-check");
+    const cb = el("input"); cb.type = "checkbox"; cb.checked = cg.skills.includes(s);
+    cb.addEventListener("change", () => {
+      if (cb.checked) cg.skills.push(s); else cg.skills = cg.skills.filter(x => x !== s);
+      cgPreview();
+    });
+    lab.appendChild(cb); lab.appendChild(el("span", null, prettySkill(s)));
+    checks.appendChild(lab);
+  });
+  sec.appendChild(checks);
+  return sec;
+}
+const prettySkill = (s) => s.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+function renderSpells() {
+  const cc = cgClass();
+  const lists = cgOpt.spells_by_class[cc.id] || { cantrips: [], leveled: [] };
+  const sec = secEl("Spells");
+  const wantCantrips = cc.cantrips_at_1;
+  const wantSpells = cc.caster_prep === "prepared"
+    ? Math.max(1, abilMod(finalAbility(cc.spell_ability)) + 1)
+    : (cc.spells_known_at_1 || 0);
+  sec.appendChild(el("div", "cg-hint", `Cantrips: choose ${wantCantrips}. ` +
+    `${cc.caster_prep === "prepared" ? "Prepared" : "Known"} spells: choose ${wantSpells} (level 1).`));
+  const cRow = el("div", "cg-checks");
+  lists.cantrips.forEach(sp => cRow.appendChild(spellCheck(sp, cg.cantrips)));
+  sec.appendChild(labeledBlock("Cantrips", cRow));
+  const sRow = el("div", "cg-checks");
+  lists.leveled.filter(sp => sp.level <= cc.max_spell_level).forEach(sp => sRow.appendChild(spellCheck(sp, cg.spells)));
+  sec.appendChild(labeledBlock("Spells", sRow));
+  return sec;
+}
+function finalAbility(key) {
+  let v = cg.base_abilities[key] || 10;
+  const r = cgRace(); if (r && r.ability_increases[key]) v += r.ability_increases[key];
+  const sr = (r.subraces || []).find(s => s.id === cg.subrace);
+  if (sr && sr.ability_increases[key]) v += sr.ability_increases[key];
+  return v;
+}
+function labeledBlock(label, node) { const w = el("div"); w.appendChild(el("div", "cg-hint", label)); w.appendChild(node); return w; }
+function spellCheck(sp, arr) {
+  const lab = el("label", "cg-check");
+  const cb = el("input"); cb.type = "checkbox"; cb.checked = arr.includes(sp.id);
+  cb.addEventListener("change", () => {
+    if (cb.checked) arr.push(sp.id); else { const i = arr.indexOf(sp.id); if (i >= 0) arr.splice(i, 1); }
+    cgPreview();
+  });
+  lab.appendChild(cb); lab.appendChild(el("span", null, sp.name));
+  return lab;
+}
+
+function renderEquipment() {
+  const cc = cgClass();
+  const sec = secEl("Starting equipment");
+  if (cc.equipment.fixed.length)
+    sec.appendChild(el("div", "cg-hint", "Granted: " + cc.equipment.fixed.map(g => grantLabel(g)).join(", ")));
+  cc.equipment.choices.forEach((ch, i) => {
+    const block = el("div"); block.appendChild(el("div", "cg-hint", `Choose ${ch.choose}:`));
+    ch.options.forEach((opt, oi) => {
+      const lab = el("label", "cg-opt");
+      const inp = el("input"); inp.type = ch.choose === 1 ? "radio" : "checkbox"; inp.name = `cg-eq-${i}`;
+      inp.checked = (cg.equipment_choices[i] || []).includes(oi);
+      inp.addEventListener("change", () => {
+        let sel = cg.equipment_choices[i] || [];
+        if (ch.choose === 1) sel = [oi];
+        else if (inp.checked) sel = sel.concat(oi); else sel = sel.filter(x => x !== oi);
+        cg.equipment_choices[i] = sel; cgPreview();
+      });
+      lab.appendChild(inp); lab.appendChild(el("span", null, " " + opt.map(g => grantLabel(g)).join(" + ")));
+      block.appendChild(lab);
+    });
+    sec.appendChild(block);
+  });
+  return sec;
+}
+const grantLabel = (g) => g.name + (g.qty > 1 ? ` ×${g.qty}` : "");
+
+function renderLanguages() {
+  const bg = cgBg();
+  const sec = secEl(`Languages — choose ${bg.languages}`);
+  const row = el("div", "cg-row");
+  for (let i = 0; i < bg.languages; i++) {
+    const f = el("label", "cg-field"); f.appendChild(el("span", null, `Language ${i + 1}`));
+    const inp = el("input"); inp.type = "text"; inp.value = cg.languages[i] || ""; inp.placeholder = "e.g. Elvish";
+    inp.addEventListener("input", () => { cg.languages[i] = inp.value; cgPreview(); });
+    f.appendChild(inp); row.appendChild(f);
+  }
+  sec.appendChild(row);
+  return sec;
+}
+
+// --- live preview (the firewall, surfaced) ---
+function cgPreview() {
+  clearTimeout(cgTimer);
+  cgTimer = setTimeout(async () => {
+    const seq = ++cgSeq;                  // tag this request; ignore stale responses
+    let data;
+    try {
+      data = await (await fetch("/api/chargen/preview", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cgBuild()),
+      })).json();
+    } catch (e) { return; }
+    if (seq !== cgSeq) return;            // a newer preview superseded this one
+    renderPreview(data);
+  }, 200);
+}
+function renderPreview(data) {
+  const root = $("cg-preview"); root.innerHTML = "";
+  const nameOk = (cg.name || "").trim().length > 0;
+  cgValid = data.ok && nameOk;
+  $("ng-begin").disabled = !cgValid;
+  const status = $("cg-status");
+  if (!data.ok) { status.className = "cg-status bad"; status.textContent = `${data.errors.length} to fix`; }
+  else if (!nameOk) { status.className = "cg-status bad"; status.textContent = "Name your hero"; }
+  else { status.className = "cg-status ok"; status.textContent = "Ready to begin"; }
+
+  if (!data.ok) {
+    root.appendChild(el("h3", null, "Not yet valid"));
+    const ul = el("ul", "cg-errs");
+    data.errors.forEach(e => ul.appendChild(el("li", null, "• " + e)));
+    root.appendChild(ul);
+    return;
+  }
+  const p = data.preview, d = p.derived;
+  root.appendChild(el("h3", null, p.name || "Unnamed hero"));
+  const cc = cgClass(), r = cgRace();
+  root.appendChild(el("div", "cg-sub", `Level 1 ${r.name}${cg.subrace ? " (" + (r.subraces.find(s=>s.id===cg.subrace)||{}).name + ")" : ""} ${cc.name}`));
+
+  const stats = el("div", "cg-stats");
+  const stat = (lbl, val) => { const s = el("div", "cg-stat"); s.appendChild(el("b", null, String(val))); s.appendChild(el("span", null, lbl)); return s; };
+  stats.appendChild(stat("AC", d.armor_class));
+  stats.appendChild(stat("HP", p.max_hp));
+  stats.appendChild(stat("Speed", p.speed));
+  stats.appendChild(stat("Init", signed(d.initiative)));
+  stats.appendChild(stat("Prof", signed(d.proficiency_bonus)));
+  if (d.spell_save_dc != null) stats.appendChild(stat("Spell DC", d.spell_save_dc));
+  root.appendChild(stats);
+
+  const abils = el("div", "cg-abils");
+  Object.keys(p.abilities).forEach(a => {
+    const cell = el("div", "cg-abil");
+    cell.appendChild(el("b", null, String(p.abilities[a])));
+    cell.appendChild(el("span", null, a.toUpperCase()));
+    cell.appendChild(el("em", null, " " + signed(abilMod(p.abilities[a]))));
+    abils.appendChild(cell);
+  });
+  root.appendChild(abils);
+
+  if (p.features.length) {
+    root.appendChild(el("div", "cg-hint", "Features"));
+    const ul = el("ul", "cg-plist");
+    p.features.forEach(f => ul.appendChild(el("li", null, f.name)));
+    root.appendChild(ul);
+  }
+  root.appendChild(el("div", "cg-hint", `Gear (${p.gold} gp)`));
+  const gl = el("ul", "cg-plist");
+  p.inventory.forEach(it => gl.appendChild(el("li", null, `${it.name}${it.qty > 1 ? " ×" + it.qty : ""}${p.equipped.includes(it.name) ? " (equipped)" : ""}`)));
+  root.appendChild(gl);
+}
+
 $("new-btn").addEventListener("click", () => { if (!busy) openNewGame(); });
 $("ng-back").addEventListener("click", () => ngShowStep("world"));
-$("ng-begin").addEventListener("click", beginNewGame);
+$("ng-to-char").addEventListener("click", ngToCharacter);
+$("cg-back").addEventListener("click", () => ngShowStep("contract"));
+$("ng-begin").addEventListener("click", () => { if (cgValid) beginNewGame(cgBuild()); });
+$("cg-quickstart").addEventListener("click", () => beginNewGame(null));
 
 // --- Settings (edit this campaign's table contract mid-game) --------------
 async function openSettings() {

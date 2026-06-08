@@ -256,8 +256,21 @@ International License."* Oubliette is non-commercial/open-source, so this is cle
     needed, and sorcerer/warlock spell lists are empty — CS4 fills them. Racial skill/
     weapon proficiencies and extra languages that live in trait TEXT aren't auto-applied;
     wizard spellbook-vs-prepared is folded for now. All land with CS4/CS5.)*
-  - **UI + New Game integration — ⬜ TODO.** The multi-step wizard, the New Game flow
-    (pick world → set the table → create your character → begin), and the quick-start button.
+  - **UI + New Game integration — ✅ BUILT (2026-06-08, 186 tests green).** New Game is now
+    pick world → set the table → **create your character** → begin. The wizard (`ng-step-character`
+    in the SPA) renders entirely from the ruleset — three new endpoints: `GET /api/chargen/options`
+    (classes/races/backgrounds/per-class spells+equipment + ability constants, no SRD hardcoded in
+    the browser), `POST /api/chargen/preview` (runs the firewall live → aggregated errors OR the
+    fully code-derived sheet), and `POST /api/new` extended with an optional `build` (pre-validated
+    BEFORE the save is erased — an invalid build can't cost you your game; absent = quick-start).
+    Form covers identity, origin (race/subrace/class/background), all three ability methods
+    (standard-array & rolled pool assignment, point-buy with live budget), skills (background grants
+    locked), spells (casters), equipment choices, languages. Live preview panel shows AC/HP/saves/
+    abilities/features/gear as you build; **Begin** stays disabled until the build is valid + named.
+    Quick-start ("play a pre-made hero") skips it. Verified end-to-end in-browser (race-condition on
+    out-of-order preview responses found & fixed with request sequencing). Tests in
+    `tests/test_server_frontend.py` (+6): options, preview accept/reject, new-with-build, invalid-
+    build-preserves-save, quick-start.
 - **CS3 — Sheet panel.** The full read-only sheet.
 - **CS4 — SRD content fill (the slog).** Author the full backbone into
   `content/srd/*.json`, in chunks — I draft, OublietteDev verifies. Runs alongside CS1–CS3

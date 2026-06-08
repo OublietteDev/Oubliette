@@ -237,3 +237,74 @@ def test_index_page_served():
     r = client.get("/")
     assert r.status_code == 200
     assert "Oubliette Table" in r.text
+
+
+# --- chargen (CS2) ----------------------------------------------------------
+_FIGHTER_BUILD = {
+    "name": "Bron", "race": "human", "char_class": "fighter", "background": "soldier",
+    "ability_method": "standard_array",
+    "base_abilities": {"str": 15, "dex": 14, "con": 13, "int": 12, "wis": 10, "cha": 8},
+    "skills": ["perception", "survival"],
+    "equipment_choices": [[0], [0], [0]],
+}
+
+
+def test_chargen_options_serialize_the_ruleset():
+    opt = client.get("/api/chargen/options").json()
+    ids = {c["id"] for c in opt["classes"]}
+    assert {"fighter", "wizard"} <= ids
+    fighter = next(c for c in opt["classes"] if c["id"] == "fighter")
+    assert fighter["skill_choose"] == 2 and not fighter["is_caster"]
+    assert fighter["equipment"]["fixed"][0]["name"] == "Explorer's Pack"
+    wizard = next(c for c in opt["classes"] if c["id"] == "wizard")
+    assert wizard["is_caster"] and wizard["caster_prep"] == "prepared"
+    assert {r["id"] for r in opt["races"]} >= {"human", "elf", "dwarf"}
+    elf = next(r for r in opt["races"] if r["id"] == "elf")
+    assert any(s["id"] == "high_elf" for s in elf["subraces"])
+    assert opt["standard_array"] == [15, 14, 13, 12, 10, 8]
+
+
+def test_chargen_preview_accepts_a_valid_build():
+    d = client.post("/api/chargen/preview", json=_FIGHTER_BUILD).json()
+    assert d["ok"] is True and d["errors"] == []
+    p = d["preview"]
+    assert p["max_hp"] == 12                       # d10 + CON 2
+    assert p["derived"]["armor_class"] == 18       # chain mail + shield
+    assert p["abilities"]["str"] == 16             # 15 + human 1
+    assert "chain_mail" not in p["equipped"]       # shown by name, not id
+    assert "Chain Mail" in p["equipped"]
+
+
+def test_chargen_preview_reports_errors():
+    bad = {**_FIGHTER_BUILD, "skills": ["perception", "arcana"]}   # arcana off-list
+    d = client.post("/api/chargen/preview", json=bad).json()
+    assert d["ok"] is False
+    assert any("Fighter skill option" in e for e in d["errors"])
+
+
+def test_new_game_with_a_build_installs_the_pc():
+    d = client.post("/api/new", json={"pack_id": "brightvale", "build": _FIGHTER_BUILD}).json()
+    assert d["ok"] is True
+    pc = d["state"]["pc"]
+    assert pc["name"] == "Bron" and pc["max_hp"] == 12 and pc["armor_class"] == 18
+    assert any(i["id"] == "chain_mail" for i in pc["inventory"])   # SRD gear registered
+    _new()   # reset to default-party quick-start for other tests
+
+
+def test_new_game_with_invalid_build_is_rejected_and_save_survives():
+    # play a turn so there's progress to lose, then attempt an invalid new game
+    _new()
+    client.post("/api/turn", json={"text": "I look around the market."})
+    bad = {**_FIGHTER_BUILD, "base_abilities": {"str": 18, "dex": 14, "con": 13,
+                                                "int": 12, "wis": 10, "cha": 8}}
+    r = client.post("/api/new", json={"build": bad})
+    assert r.status_code == 400
+    assert any("standard array" in e for e in r.json()["errors"])
+    # the prior save is untouched — the bad build never erased it
+    assert client.get("/api/state").json()["has_progress"] is True
+    _new()
+
+
+def test_quick_start_keeps_the_default_party():
+    d = client.post("/api/new", json={"pack_id": "brightvale"}).json()   # no build
+    assert d["state"]["pc"]["gold"] == 15        # brightvale's default-party hero

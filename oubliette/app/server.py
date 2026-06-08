@@ -22,13 +22,19 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from ..content.loader import DEFAULT_PACK, _PACKS_ROOT, available_packs
+from ..content.ruleset import Ruleset, load_ruleset
 from ..journal.store import Journal, JournalStore
 from ..record.events import EventKind, StateOp
 from ..record.store import SqliteEventStore
 from ..record.rng import Rng
+from ..rules import derive
+from ..rules.chargen import (POINT_BUY_BUDGET, POINT_BUY_COST, STANDARD_ARRAY,
+                             CharacterBuild, ChargenError, build_character)
 from ..runtime.loop import TurnLoop
 from ..runtime.session import Session
 from ..dm.brain import Brain
+from ..enums import Ability
+from ..state.models import Character, CharacterSheet
 from ..state.repository import StateError
 from ..table import TONE_PRESETS, TableContract
 from ..tools.dispatch import ToolApplyError
@@ -625,16 +631,156 @@ async def get_packs() -> JSONResponse:
     return JSONResponse({"packs": available_packs(), "current": GAME.pack_id})
 
 
+# --- chargen (CS2): serialize the ruleset for the wizard, and validate live ---
+def _ruleset() -> Ruleset:
+    """The SRD ruleset for chargen — the session's (global, pack-independent), with a
+    load fallback for the custom-seed case."""
+    return GAME.session.ruleset or load_ruleset()
+
+
+def _item_name(rs: Ruleset, item_id: str) -> str:
+    it = rs.equipment.get(item_id)
+    return it.name if it is not None else item_id
+
+
+def _grant_view(rs: Ruleset, grants) -> list[dict]:
+    return [{"item": g.item, "name": _item_name(rs, g.item), "qty": g.qty} for g in grants]
+
+
+def _class_view(rs: Ruleset, cc) -> dict:
+    """One class, with everything the wizard needs to render its choices and the
+    level-1 caster facts (counts the firewall enforces). Prepared-caster spell counts
+    depend on the chosen ability, so the client computes those and /preview is the
+    final word — here we just flag preparation mode."""
+    temp = Character(id="_", name="_", kind="pc", level=1,
+                     sheet=CharacterSheet(race="_", char_class=cc.id, background="_",
+                                          spellcasting_ability=(Ability(cc.spellcasting.ability)
+                                                                if cc.spellcasting else None)))
+    sc = cc.spellcasting
+    return {
+        "id": cc.id, "name": cc.name, "hit_die": cc.hit_die,
+        "saving_throws": list(cc.saving_throws),
+        "skill_choose": cc.skill_choices.choose, "skill_from": list(cc.skill_choices.from_),
+        "subclass_level": cc.subclass_level, "subclass_label": cc.subclass_label,
+        "is_caster": sc is not None,
+        "caster_prep": (sc.preparation if sc else None),
+        "spell_ability": (sc.ability if sc else None),
+        "cantrips_at_1": derive.cantrips_known(temp, rs) or 0,
+        "spells_known_at_1": (None if sc and sc.preparation == "prepared"
+                              else derive.spells_known_count(temp, rs)),
+        "max_spell_level": max(derive.spell_slots(temp, rs), default=0),
+        "equipment": {
+            "fixed": _grant_view(rs, cc.starting_equipment.fixed),
+            "choices": [{"choose": ch.choose,
+                         "options": [_grant_view(rs, opt) for opt in ch.options]}
+                        for ch in cc.starting_equipment.choices],
+        },
+        "subclasses": [{"id": s.id, "name": s.name} for s in rs.subclasses_for(cc.id)],
+    }
+
+
+def _chargen_options() -> dict:
+    """Everything the chargen wizard renders, straight from the ruleset (no SRD data
+    hardcoded in the browser)."""
+    rs = _ruleset()
+    classes = [_class_view(rs, cc) for cc in rs.classes.values()]
+    races = [{
+        "id": r.id, "name": r.name, "speed": r.speed, "size": r.size,
+        "ability_increases": dict(r.ability_increases),
+        "languages": list(r.languages),
+        "subraces": [{"id": s.id, "name": s.name,
+                      "ability_increases": dict(s.ability_increases)}
+                     for s in rs.subraces_for(r.id)],
+    } for r in rs.races.values()]
+    backgrounds = [{
+        "id": b.id, "name": b.name, "skills": list(b.skill_proficiencies),
+        "languages": b.languages, "tool_proficiencies": list(b.tool_proficiencies),
+        "starting_gold": b.starting_gold,
+        "equipment": _grant_view(rs, b.equipment),
+        "feature": ({"name": b.feature.name, "text": b.feature.text} if b.feature else None),
+        "flavor": {"personality_traits": list(b.personality_traits), "ideals": list(b.ideals),
+                   "bonds": list(b.bonds), "flaws": list(b.flaws)},
+    } for b in rs.backgrounds.values()]
+    spells_by_class: dict = {}
+    for cc in rs.classes.values():
+        spells = rs.spells_for(cc.id)
+        spells_by_class[cc.id] = {
+            "cantrips": [{"id": s.id, "name": s.name} for s in spells if s.level == 0],
+            "leveled": [{"id": s.id, "name": s.name, "level": s.level} for s in spells if s.level >= 1],
+        }
+    return {
+        "classes": classes, "races": races, "backgrounds": backgrounds,
+        "spells_by_class": spells_by_class,
+        "abilities": [a.value for a in Ability],
+        "standard_array": STANDARD_ARRAY,
+        "point_buy": {"budget": POINT_BUY_BUDGET, "cost": POINT_BUY_COST},
+    }
+
+
+def _preview_payload(char: Character, items, rs: Ruleset) -> dict:
+    """A built character rendered for the wizard's live preview — every number
+    code-derived, the whole point of the project."""
+    by_id = {it.id: it for it in items}
+    equipped_items = [by_id[i] for i in char.equipped if i in by_id]
+    return {
+        "name": char.name,
+        "abilities": {a.value: char.abilities.get(a, 10) for a in Ability},
+        "max_hp": char.max_hp, "speed": char.sheet.speed, "size": char.sheet.size,
+        "gold": char.gold,
+        "derived": derive.sheet_stats(char, rs, equipped_items),
+        "inventory": [{"name": _item_name(rs, s.item_id), "qty": s.qty} for s in char.inventory],
+        "equipped": [_item_name(rs, i) for i in char.equipped],
+        "features": [{"source": f.source, "name": f.name, "text": f.text}
+                     for f in char.sheet.features],
+        "cantrips": [_spell_name(rs, s) for s in char.sheet.cantrips_known],
+        "spells": [_spell_name(rs, s) for s in char.sheet.spells_prepared or char.sheet.spells_known],
+    }
+
+
+def _spell_name(rs: Ruleset, spell_id: str) -> str:
+    s = rs.spells.get(spell_id)
+    return s.name if s is not None else spell_id
+
+
+@app.get("/api/chargen/options")
+async def get_chargen_options() -> JSONResponse:
+    return JSONResponse(_chargen_options())
+
+
+@app.post("/api/chargen/preview")
+async def post_chargen_preview(body: CharacterBuild) -> JSONResponse:
+    """Run the firewall live: validate the in-progress build and return either the
+    aggregated errors or the fully-derived preview sheet. Never mutates state."""
+    rs = _ruleset()
+    try:
+        char, items = build_character(body, rs)
+    except ChargenError as e:
+        return JSONResponse({"ok": False, "errors": e.errors})
+    return JSONResponse({"ok": True, "errors": [], "preview": _preview_payload(char, items, rs)})
+
+
 class NewGameIn(BaseModel):
     pack_id: str | None = None              # which world to start; None keeps the current one
     table: TableContract | None = None      # the table contract agreed at New Game (optional)
+    build: CharacterBuild | None = None     # the chargen character; None = quick-start (default party)
 
 
 @app.post("/api/new")
 async def post_new(body: NewGameIn | None = None) -> JSONResponse:
     async with GAME.lock:
+        build = body.build if body else None
+        # Validate the character BEFORE erasing the save — an invalid build must not
+        # cost the player their game. The ruleset is global, so the current session's
+        # serves regardless of which world we're about to start.
+        if build is not None:
+            try:
+                build_character(build, _ruleset())
+            except ChargenError as e:
+                return JSONResponse({"ok": False, "errors": e.errors}, status_code=400)
         GAME.new_game(body.pack_id if body else None, body.table if body else None)
-        return JSONResponse({"state": _snapshot(), "model": GAME.client_name,
+        if build is not None:
+            GAME.session.emit_character_created(build)   # replaces the default-party stopgap
+        return JSONResponse({"ok": True, "state": _snapshot(), "model": GAME.client_name,
                              "pack_id": GAME.pack_id, "has_progress": _has_progress(),
                              "soundscape": _soundscape()})
 
