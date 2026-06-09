@@ -5,6 +5,7 @@ the schemas before the full SRD content fill (CS4)."""
 from __future__ import annotations
 
 import json
+from collections import Counter
 
 import pytest
 
@@ -36,6 +37,30 @@ def test_full_race_and_condition_sets_present():
     assert {s.race for s in rs.subraces.values()} == {"elf", "dwarf", "halfling", "gnome"}
     assert len(rs.conditions) == 15
     assert {"exhaustion", "unconscious", "petrified", "blinded"} <= set(rs.conditions)
+
+
+def test_full_equipment_catalog_present():
+    """CS4 Gate 3: the complete SRD equipment chapter is loaded (the slice shipped
+    only 10 items). Transcribed deterministically from the 5e-database 2014 dataset:
+    37 weapons, 13 armor, plus adventuring gear / tools / mounts & vehicles, and a
+    Potion of Healing. Count tripwire so a future edit can't silently drop a row."""
+    rs = load_ruleset()
+    eq = rs.equipment
+    assert len(eq) == 238
+    by_cat = Counter(e.category for e in eq.values())
+    assert by_cat == {"gear": 141, "misc": 40, "weapon": 37, "armor": 13,
+                      "consumable": 7}
+    # the 13-piece armor set, each with the right type for the AC engine
+    armor_types = Counter(e.armor.type for e in eq.values() if e.armor)
+    assert armor_types == {"light": 3, "medium": 5, "heavy": 4, "shield": 1}
+    # only medium armor caps DEX (=2); light/heavy leave it unset (derive.py rules)
+    assert all(e.armor.dex_cap == 2 for e in eq.values()
+               if e.armor and e.armor.type == "medium")
+    assert all(e.armor.dex_cap is None for e in eq.values()
+               if e.armor and e.armor.type != "medium")
+    # regression guard: the WebFetch reader had scrambled these artisan-tool prices
+    assert eq["jewelers_tools"].cost == 25 and eq["cooks_utensils"].cost == 1
+    assert eq["cartographers_tools"].cost == 15 and eq["glassblowers_tools"].cost == 30
 
 
 def test_only_srd_legal_backgrounds_and_feats():
