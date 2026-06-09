@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+from unittest.mock import patch
 
+from oubliette.combat import arena_launch
 from oubliette.dm.brain import Brain
 from oubliette.llm.scripted import ScriptedLLMClient
 from oubliette.record.events import EventKind, replay
@@ -42,9 +44,34 @@ def _snapshot(repo: Repository) -> str:
     return json.dumps(out, sort_keys=True)
 
 
+def _canned_victory(pending) -> dict:
+    """Deterministic Arena result for the staged bandit fight: enemy down, PC up.
+    Combat now stages (Stage 3) and is played in The Arena; here we stand in for
+    that subprocess so the COMBAT_RESULT is recorded for the replay contract."""
+    combatants = []
+    for c in pending.plan.encounter.combatants:
+        cd = c.creature_data
+        enemy = c.team == "enemy"
+        combatants.append({
+            "id": c.name_override, "name": c.name_override, "team": c.team,
+            "is_pc": c.team == "player",
+            "hp": 0 if enemy else max(1, cd.max_hit_points - 4),
+            "max_hp": cd.max_hit_points, "temp_hp": 0, "conditions": [],
+            "is_conscious": not enemy,
+            "xp": int(getattr(cd, "experience_points", 0) or 0),
+        })
+    return {"schema": 1, "winner": "player", "outcome": "victory",
+            "rounds": 2, "combatants": combatants}
+
+
 def _play(loop):
     for line in TRANSCRIPT:
         asyncio.run(loop.take_turn(line))
+    # The closing line stages a fight; play it out (mocked Arena) so its single
+    # COMBAT_RESULT lands in the log and replay can reproduce it.
+    if loop.session.pending_combat is not None:
+        with patch.object(arena_launch, "run_arena", _canned_victory):
+            asyncio.run(loop.enter_combat())
 
 
 def test_reload_rebuilds_byte_identical_state(tmp_path):

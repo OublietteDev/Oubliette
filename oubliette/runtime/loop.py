@@ -12,7 +12,9 @@ from dataclasses import dataclass, field
 
 from pydantic import ValidationError
 
-from ..combat.boundary import CombatError, result_to_ops, run_encounter
+from ..combat import arena_launch
+from ..combat.arena_launch import stage_combat
+from ..combat.boundary import CombatError, result_to_ops
 from ..combat.schemas import CombatResult
 from ..dm.brain import Brain
 from ..dm.context import build_context
@@ -44,6 +46,7 @@ class TurnReport:
     applied: list[ResolvedTool] = field(default_factory=list)
     meta_notice: str | None = None         # set when the D6 fallback fires
     combat_result: CombatResult | None = None
+    combat_pending: bool = False           # a fight is staged, awaiting "⚔ Enter the Arena"
     trade_open: TradeState | None = None   # set when a trade window is summoned
     session_ended: bool = False            # the DM closed the game (end_session)
 
@@ -233,10 +236,16 @@ class TurnLoop:
         )
 
     def _run_combat(self, player_text: str, assessment: TurnAssessment) -> TurnReport:
-        """Summoned-tool branch: live state in → CombatResult → ONE COMBAT_RESULT
-        event applied via the session (§8). Engine internals are a placeholder."""
+        """Summoned-tool branch (§8). Stage the fight: a non-combat exit
+        (parley/flee/bribe) resolves instantly; a real fight is STAGED — written
+        to an encounter file and held on the session — and the turn returns with
+        the "⚔ Enter the Arena" signal. The fight is played (and its single
+        COMBAT_RESULT recorded) later, in `enter_combat`, when the player enters."""
         try:
-            result = run_encounter(assessment.encounter, self.repo, self.rng, self.debug)
+            outcome = stage_combat(
+                assessment.encounter, self.repo, self.session,
+                assessment=assessment, player_text=player_text,
+            )
         except CombatError as e:
             self.debug.append("anomaly", stage="combat", error=str(e))
             narration = "The threat dissolves into confusion before anything is struck."
@@ -246,6 +255,27 @@ class TurnLoop:
                 meta_notice=f"combat could not be staged: {e}",
             )
 
+        # Non-combat exit — resolved without the Arena, recorded immediately.
+        if outcome.result is not None:
+            return self._emit_combat_result(outcome.result, player_text, assessment)
+
+        # A real fight: hold it pending and prompt the player to enter the Arena.
+        self.session.pending_combat = outcome.pending
+        names = ", ".join(c.name_override for c in outcome.pending.plan.encounter.combatants
+                          if c.team == "enemy")
+        narration = (f"Steel rings out — the fight is upon you ({names}). "
+                     "Enter the Arena to play it out.")
+        self.debug.append("narration", text=narration)
+        return TurnReport(
+            player_text=player_text, assessment=assessment, narration=narration,
+            combat_pending=True,
+        )
+
+    def _emit_combat_result(
+        self, result: CombatResult, player_text: str, assessment: TurnAssessment
+    ) -> TurnReport:
+        """Record a resolved fight as the ONE COMBAT_RESULT event (§8) and build
+        its report. Shared by the instant non-combat-exit path and `enter_combat`."""
         ops = result_to_ops(result)
         self.session.emit_state(
             EventKind.COMBAT_RESULT, ops, outcome=result.outcome,
@@ -263,6 +293,29 @@ class TurnLoop:
             player_text=player_text, assessment=assessment, narration=narration,
             combat_result=result,
         )
+
+    async def enter_combat(self) -> TurnReport:
+        """Play the staged fight: spawn The Arena (blocking, in a thread so the web
+        server stays responsive), map the result back through the bridge, and record
+        it as the single COMBAT_RESULT event. Clears the pending lock."""
+        import asyncio
+
+        pending = self.session.pending_combat
+        if pending is None:
+            raise CombatError("no combat is staged")
+        loop = asyncio.get_running_loop()
+        try:
+            handoff = await loop.run_in_executor(None, arena_launch.run_arena, pending)
+            result = arena_launch.resolve_to_combat_result(pending, handoff)
+        finally:
+            arena_launch.cleanup(pending)
+            self.session.pending_combat = None
+
+        report = self._emit_combat_result(
+            result, pending.player_text or "⚔ (entered the Arena)", pending.assessment
+        )
+        self._record_beat(report)
+        return report
 
     def _record_beat(self, report: TurnReport) -> None:
         """Append a compact, factual summary of the turn for short-term continuity."""

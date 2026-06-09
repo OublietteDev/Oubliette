@@ -116,6 +116,7 @@ def _snapshot() -> dict:
     return {
         "scene": GAME.session.scene,
         "ended": GAME.session.ended,
+        "combat_pending": GAME.session.pending_combat is not None,
         "time_of_day": GAME.session.time_of_day,
         "weather": GAME.session.weather,
         "pc": {
@@ -234,6 +235,7 @@ def _turn_payload(report) -> dict:
         "combat": combat,
         "trade": report.trade_open.model_dump() if report.trade_open is not None else None,
         "meta_notice": report.meta_notice,
+        "combat_pending": getattr(report, "combat_pending", False),
         "session_ended": report.session_ended,
         "verb": report.assessment.intent.verb.value,
         "tier": report.assessment.tier.value,
@@ -472,6 +474,10 @@ async def post_turn(body: TurnIn) -> JSONResponse:
         return JSONResponse({"error": "empty message"}, status_code=400)
     if GAME.session.ended:
         return JSONResponse({"error": "the DM has ended this session", "ended": True}, status_code=409)
+    if GAME.session.pending_combat is not None:
+        return JSONResponse(
+            {"error": "a fight is underway — enter the Arena to resolve it", "combat_pending": True},
+            status_code=409)
     async with GAME.lock:  # serialize turns; combat/state mutation isn't reentrant
         report = await GAME.loop.take_turn(text, ooc=body.ooc)
         return JSONResponse(_turn_payload(report))
@@ -486,6 +492,10 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
         return JSONResponse({"error": "empty message"}, status_code=400)
     if GAME.session.ended:
         return JSONResponse({"error": "the DM has ended this session", "ended": True}, status_code=409)
+    if GAME.session.pending_combat is not None:
+        return JSONResponse(
+            {"error": "a fight is underway — enter the Arena to resolve it", "combat_pending": True},
+            status_code=409)
 
     loop = asyncio.get_running_loop()
     queue: asyncio.Queue = asyncio.Queue()
@@ -521,6 +531,19 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
             await task
 
     return StreamingResponse(events(), media_type="text/event-stream")
+
+
+@app.post("/api/combat/enter")
+async def post_combat_enter() -> JSONResponse:
+    """Play the staged tactical fight: launches The Arena (a desktop window),
+    blocks until the player exits, then folds the outcome back into the story as
+    one COMBAT_RESULT event and clears the combat lock."""
+    if GAME.session.pending_combat is None:
+        return JSONResponse(
+            {"error": "no combat is staged", "combat_pending": False}, status_code=409)
+    async with GAME.lock:
+        report = await GAME.loop.enter_combat()
+        return JSONResponse(_turn_payload(report))
 
 
 class TradeActionIn(BaseModel):

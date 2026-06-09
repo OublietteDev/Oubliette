@@ -50,6 +50,11 @@ class Session:
         self.statblocks: tuple = ()         # the pack's authored StatBlocks (this-world bestiary)
         self.world_map: str | None = None   # top-level map background image filename (pack)
         self.ended: bool = False            # the DM closed this session (end_session tool)
+        # A staged-but-unresolved tactical fight awaiting "⚔ Enter the Arena"
+        # (combat Stage 3). Transient runtime state — set while a fight is pending,
+        # cleared when the Arena returns; never event-sourced. While set, the turn
+        # endpoints reject normal input (the D-COMBAT-3 hard lock).
+        self.pending_combat = None          # combat.arena_launch.PendingCombat | None
         self.table: TableContract = DEFAULT_TABLE   # campaign's tone + content boundaries
         self.ruleset = None                  # the global SRD ruleset (chargen/sheet/derivation)
 

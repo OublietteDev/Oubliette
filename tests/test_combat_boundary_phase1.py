@@ -36,24 +36,21 @@ def _turn(loop, text):
     return asyncio.run(loop.take_turn(text))
 
 
-def test_attack_resolves_and_applies_as_one_event():
+def test_attack_stages_a_fight_and_waits_for_the_arena():
+    """Stage 3: a real fight no longer auto-resolves inline — it STAGES (the
+    '⚔ Enter the Arena' two-step, D-COMBAT-3). The turn returns pending; nothing
+    is written until the player enters the Arena (see test_combat_arena_launch)."""
     session, loop = _make_loop()
     pc = session.repo.pc()
     assert pc.xp == 0 and pc.gold == 15
 
     r = _turn(loop, "I draw my knife and attack the bandit.")
 
-    cr = r.combat_result
-    assert cr is not None
-    assert cr.outcome == "victory"
-    assert cr.xp_award == 25
-    assert pc.xp == 25
-    assert pc.gold == 15 + 8                        # bandit loot: 8g
-    assert 0 < pc.hp <= pc.max_hp
-    # exactly one COMBAT_RESULT event (the §8 single-event rule)
-    assert len(session.store.of_kind(EventKind.COMBAT_RESULT)) == 1
-    # the fight's swings were recorded as ROLL events
-    assert len(session.store.of_kind(EventKind.ROLL)) > 0
+    assert r.combat_pending is True and r.combat_result is None
+    assert session.pending_combat is not None
+    # nothing resolved or recorded yet — the fight is held, not fought
+    assert pc.xp == 0 and pc.gold == 15 and pc.hp == 24
+    assert len(session.store.of_kind(EventKind.COMBAT_RESULT)) == 0
 
 
 def test_ephemeral_combatant_never_touches_the_entity_table():
@@ -61,7 +58,7 @@ def test_ephemeral_combatant_never_touches_the_entity_table():
     _turn(loop, "I draw my knife and attack the bandit.")
 
     with pytest.raises(StateError):
-        session.repo.get_character("bandit#1")
+        session.repo.get_character("road bandit")
 
 
 def test_parley_is_a_first_class_non_combat_exit():
