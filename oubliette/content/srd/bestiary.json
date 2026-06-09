@@ -46,7 +46,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "awakened-shrub"
+  "srd_ref": "awakened-shrub",
+  "description": "A gnarled bush stirred to eerie life, indistinguishable from ordinary scrub until its branches lash out and rake."
  },
  {
   "id": "baboon",
@@ -90,7 +91,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "baboon"
+  "srd_ref": "baboon",
+  "description": "A scrappy, dog-faced ape that screeches and bares its fangs, emboldened to fury when its troop closes in."
  },
  {
   "id": "badger",
@@ -135,7 +137,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "badger"
+  "srd_ref": "badger",
+  "description": "A low, stout digger with a striped face and a foul temper, following its keen nose into any burrow."
  },
  {
   "id": "bat",
@@ -181,7 +184,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "bat"
+  "srd_ref": "bat",
+  "description": "A flittering scrap of leather and squeak, navigating the blackness by sound and nipping at the unwary."
  },
  {
   "id": "cat",
@@ -233,7 +237,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "cat"
+  "srd_ref": "cat",
+  "description": "A small, sleek hunter that pads silently on soft paws, all patient stillness until claws flash."
  },
  {
   "id": "commoner",
@@ -273,7 +278,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "commoner"
+  "srd_ref": "commoner",
+  "description": "An ordinary townsfolk with calloused hands and a worn club, no warrior but capable of desperate violence."
  },
  {
   "id": "crab",
@@ -325,7 +331,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "crab"
+  "srd_ref": "crab",
+  "description": "A flat, scuttling shellbacked thing that sidles over wet stone, snapping its pincer at anything close."
  },
  {
   "id": "deer",
@@ -365,7 +372,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "deer"
+  "srd_ref": "deer",
+  "description": "A graceful, wary woodland grazer, all flicking ears and trembling flanks, ready to bolt at a snapped twig."
  },
  {
   "id": "eagle",
@@ -415,7 +423,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "eagle"
+  "srd_ref": "eagle",
+  "description": "A proud raptor riding the high winds, spotting the smallest movement far below before stooping with bared talons."
  },
  {
   "id": "frog",
@@ -460,7 +469,8 @@
    "Amphibious. The frog can breathe air and water",
    "Standing Leap. The frog's long jump is up to 10 ft. and its high jump is up to 5 ft., with or without a running start."
   ],
-  "srd_ref": "frog"
+  "srd_ref": "frog",
+  "description": "A slick, bulge-eyed amphibian crouched at the water's edge, hurling itself in sudden astonishing leaps."
  },
  {
   "id": "giant_fire_beetle",
@@ -505,7 +515,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "giant-fire-beetle"
+  "srd_ref": "giant-fire-beetle",
+  "description": "A crawling beetle the size of a fist whose glands glow a steady red, casting a dim crimson light."
  },
  {
   "id": "goat",
@@ -549,7 +560,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "goat"
+  "srd_ref": "goat",
+  "description": "A surefooted, bristly browser that clatters across rocky ledges and lowers its horns to charge at a challenge."
  },
  {
   "id": "hawk",
@@ -599,7 +611,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "hawk"
+  "srd_ref": "hawk",
+  "description": "A swift, sharp-eyed bird of prey that hangs on the wind, then plummets with outstretched talons."
  },
  {
   "id": "homunculus",
@@ -652,7 +665,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "homunculus"
+  "srd_ref": "homunculus",
+  "description": "A tiny, leathery winged construct fashioned from blood and arcane labor, bound silently to its maker's mind."
  },
  {
   "id": "hyena",
@@ -701,7 +715,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "hyena"
+  "srd_ref": "hyena",
+  "description": "A hunched, cackling scavenger with crushing jaws, growing bold and vicious when its cackling pack gathers."
  },
  {
   "id": "jackal",
@@ -751,7 +766,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "jackal"
+  "srd_ref": "jackal",
+  "description": "A lean, skulking canine with pricked ears and a sharp nose, hunting in furtive, darting packs."
  },
  {
   "id": "lemure",
@@ -808,7 +824,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "lemure"
+  "srd_ref": "lemure",
+  "description": "A wretched, half-formed blob of molten flesh, a damned soul oozing forward in mindless, eternal hatred."
  },
  {
   "id": "lizard",
@@ -850,7 +867,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "lizard"
+  "srd_ref": "lizard",
+  "description": "A small, cold-blooded reptile that basks motionless on warm stone, then skitters away in a blur."
  },
  {
   "id": "octopus",
@@ -910,7 +928,8 @@
     "attack_bonus": 0
    }
   ],
-  "srd_ref": "octopus"
+  "srd_ref": "octopus",
+  "description": "A boneless drifter of the deep that melts against the rocks, lashing with tentacles and fleeing in a cloud of ink."
  },
  {
   "id": "owl",
@@ -964,7 +983,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "owl"
+  "srd_ref": "owl",
+  "description": "A silent ghost of feathers that glides through the dark on noiseless wings, all-seeing and all-hearing."
  },
  {
   "id": "quipper",
@@ -1009,7 +1029,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "quipper"
+  "srd_ref": "quipper",
+  "description": "A small, razor-toothed fish that hunts in frenzied schools, whipped to a thrashing frenzy by the scent of blood."
  },
  {
   "id": "rat",
@@ -1053,7 +1074,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "rat"
+  "srd_ref": "rat",
+  "description": "A filthy, quick-footed vermin with restless whiskers, thriving in sewers and ruins by sheer numbers."
  },
  {
   "id": "raven",
@@ -1103,7 +1125,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "raven"
+  "srd_ref": "raven",
+  "description": "A glossy black bird of ill omen, croaking and clever, mimicking sounds to unsettle the listener."
  },
  {
   "id": "scorpion",
@@ -1145,7 +1168,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "scorpion"
+  "srd_ref": "scorpion",
+  "description": "A small armored stalker that scuttles low with pincers raised and a venom-tipped tail curled to strike."
  },
  {
   "id": "sea_horse",
@@ -1179,7 +1203,8 @@
   "traits": [
    "Water Breathing. The sea horse can breathe only underwater."
   ],
-  "srd_ref": "sea-horse"
+  "srd_ref": "sea-horse",
+  "description": "A delicate, curl-tailed swimmer that bobs among the reeds, harmless and strange in the dappled shallows."
  },
  {
   "id": "shrieker",
@@ -1225,7 +1250,8 @@
     "desc": "When bright light or a creature is within 30 feet of the shrieker, it emits a shriek audible within 300 feet of it. The shrieker continues to shriek until the disturbance moves out of range and for 1d4 of the shrieker's turns afterward"
    }
   ],
-  "srd_ref": "shrieker"
+  "srd_ref": "shrieker",
+  "description": "A pallid cavern fungus that stands silent until light or movement wakes its piercing, alarm-raising wail."
  },
  {
   "id": "spider",
@@ -1278,7 +1304,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "spider"
+  "srd_ref": "spider",
+  "description": "A patient eight-legged weaver lurking at the edge of its web, sensing every tremble before it strikes."
  },
  {
   "id": "vulture",
@@ -1329,7 +1356,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "vulture"
+  "srd_ref": "vulture",
+  "description": "A bald, hunched carrion-eater that circles patiently overhead, gathering with its fellows where death draws near."
  },
  {
   "id": "weasel",
@@ -1380,7 +1408,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "weasel"
+  "srd_ref": "weasel",
+  "description": "A slinking, sinuous little predator with bright eyes and a sharp nose, darting fearlessly after prey."
  },
  {
   "id": "bandit",
@@ -1428,7 +1457,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "bandit"
+  "srd_ref": "bandit",
+  "description": "A rough-clad highwayman with a notched scimitar and a loaded crossbow, hungry for whatever a traveler carries."
  },
  {
   "id": "blood_hawk",
@@ -1479,7 +1509,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "blood-hawk"
+  "srd_ref": "blood-hawk",
+  "description": "A red-feathered raptor with a wicked beak, descending in screeching flocks to tear at living flesh."
  },
  {
   "id": "camel",
@@ -1519,7 +1550,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "camel"
+  "srd_ref": "camel",
+  "description": "A tall, humped beast of burden plodding through the wastes, ill-tempered and quick to spit and bite."
  },
  {
   "id": "cultist",
@@ -1571,7 +1603,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "cultist"
+  "srd_ref": "cultist",
+  "description": "A robed zealot with fervor burning in their eyes, clutching a scimitar in service to some dark master."
  },
  {
   "id": "flying_snake",
@@ -1617,7 +1650,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "flying-snake"
+  "srd_ref": "flying-snake",
+  "description": "A slender, jewel-scaled serpent with feathered wings that flits through the air and darts in to bite."
  },
  {
   "id": "giant_crab",
@@ -1669,7 +1703,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "giant-crab"
+  "srd_ref": "giant-crab",
+  "description": "A dog-sized crab the color of wet shale, scuttling sideways through the shallows with pincers raised and clicking."
  },
  {
   "id": "giant_rat",
@@ -1714,7 +1749,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "giant-rat"
+  "srd_ref": "giant-rat",
+  "description": "A vermin grown to the size of a small dog, with yellow teeth and a naked, dragging tail, hunting in skittering packs."
  },
  {
   "id": "giant_rat_diseased",
@@ -1759,7 +1795,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "giant-rat-diseased"
+  "srd_ref": "giant-rat-diseased",
+  "description": "An oversized rat with matted, weeping fur and fevered eyes, its bite carrying the sickness that festers in its blood."
  },
  {
   "id": "giant_weasel",
@@ -1811,7 +1848,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "giant-weasel"
+  "srd_ref": "giant-weasel",
+  "description": "A sleek, low-slung predator the length of a man's arm, slipping through the underbrush on a scent only it can follow."
  },
  {
   "id": "guard",
@@ -1856,7 +1894,8 @@
     "attack_bonus": 3
    }
   ],
-  "srd_ref": "guard"
+  "srd_ref": "guard",
+  "description": "A watchful soldier in worn livery, spear couched and eyes tracking every stranger who passes the gate."
  },
  {
   "id": "kobold",
@@ -1908,7 +1947,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "kobold"
+  "srd_ref": "kobold",
+  "description": "A small, scaly reptilian schemer that swarms in numbers and flinches from open daylight, dangerous only in a pack."
  },
  {
   "id": "mastiff",
@@ -1957,7 +1997,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "mastiff"
+  "srd_ref": "mastiff",
+  "description": "A broad-chested hunting dog, ears pricked and nose working, trained to corner prey and hold it fast."
  },
  {
   "id": "merfolk",
@@ -2005,7 +2046,8 @@
     "attack_bonus": 2
    }
   ],
-  "srd_ref": "merfolk"
+  "srd_ref": "merfolk",
+  "description": "A fish-tailed dweller of the shallows, spear in webbed hand, equally at home cresting the waves or breathing the air above them."
  },
  {
   "id": "mule",
@@ -2049,7 +2091,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "mule"
+  "srd_ref": "mule",
+  "description": "A stubborn, sure-footed pack animal, plodding and patient, content to bear any burden up the meanest mountain trail."
  },
  {
   "id": "noble",
@@ -2106,7 +2149,8 @@
     "desc": "The noble adds 2 to its AC against one melee attack that would hit it. To do so, the noble must see the attacker and be wielding a melee weapon."
    }
   ],
-  "srd_ref": "noble"
+  "srd_ref": "noble",
+  "description": "A finely dressed aristocrat dripping with silks and contempt, rapier at the hip and a sneer ready for lessers."
  },
  {
   "id": "poisonous_snake",
@@ -2148,7 +2192,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "poisonous-snake"
+  "srd_ref": "poisonous-snake",
+  "description": "A small, coiled serpent half-hidden in the grass, its venom far deadlier than its slender body suggests."
  },
  {
   "id": "pony",
@@ -2188,7 +2233,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "pony"
+  "srd_ref": "pony",
+  "description": "A shaggy, short-legged little horse, gentle and willing, well-suited to small riders and narrow paths."
  },
  {
   "id": "stirge",
@@ -2231,7 +2277,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "stirge"
+  "srd_ref": "stirge",
+  "description": "A bloated mosquito the size of a bird, droning on leathery wings, hungry to latch on and drink its fill of blood."
  },
  {
   "id": "tribal_warrior",
@@ -2273,7 +2320,8 @@
     "attack_bonus": 3
    }
   ],
-  "srd_ref": "tribal-warrior"
+  "srd_ref": "tribal-warrior",
+  "description": "A hardened fighter painted with the marks of the clan, spear ready, fiercest when shoulder to shoulder with kin."
  },
  {
   "id": "acolyte",
@@ -2324,7 +2372,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "acolyte"
+  "srd_ref": "acolyte",
+  "description": "A devout junior priest in plain robes, clutching a holy symbol and murmuring the borrowed prayers of a greater faith."
  },
  {
   "id": "axe_beak",
@@ -2364,7 +2413,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "axe-beak"
+  "srd_ref": "axe-beak",
+  "description": "A flightless bird tall as a horse, all powerful legs and a heavy, axe-edged beak that splits flesh with a single snap."
  },
  {
   "id": "blink_dog",
@@ -2419,7 +2469,8 @@
     "desc": "The dog magically teleports, along with any equipment it is wearing or carrying, up to 40 ft. to an unoccupied space it can see. Before or after teleporting, the dog can make one bite attack."
    }
   ],
-  "srd_ref": "blink-dog"
+  "srd_ref": "blink-dog",
+  "description": "A noble, fox-eared hound of the fey wilds that winks in and out of sight, flickering across the field to flank its quarry."
  },
  {
   "id": "boar",
@@ -2453,7 +2504,7 @@
   "xp": 50,
   "traits": [
    "Charge. If the boar moves at least 20 ft. straight toward a target and then hits it with a tusk attack on the same turn, the target takes an extra 3 (1d6) slashing damage. If the target is a creature, it must succeed on a DC 11 Strength saving throw or be knocked prone.",
-   "Relentless. If the boar takes 7 damage or less that would reduce it to 0 hit points, it is reduced to 1 hit point instead."
+   "Relentless (Recharges after a Short or Long Rest). If the boar takes 7 damage or less that would reduce it to 0 hit points, it is reduced to 1 hit point instead."
   ],
   "actions": [
    {
@@ -2464,7 +2515,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "boar"
+  "srd_ref": "boar",
+  "description": "A bristling, ill-tempered tusker that lowers its head and charges, too stubborn and furious to fall easily."
  },
  {
   "id": "constrictor_snake",
@@ -2513,7 +2565,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "constrictor-snake"
+  "srd_ref": "constrictor-snake",
+  "description": "A thick, muscular serpent draped from a branch, patient and slow, ready to loop its coils and squeeze the breath away."
  },
  {
   "id": "draft_horse",
@@ -2553,7 +2606,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "draft-horse"
+  "srd_ref": "draft-horse",
+  "description": "A massive, broad-backed workhorse, calm and tireless, bred to haul plow and wagon without complaint."
  },
  {
   "id": "dretch",
@@ -2621,7 +2675,8 @@
     "desc": "A 10-foot radius of disgusting green gas extends out from the dretch. The gas spreads around corners, and its area is lightly obscured. It lasts for 1 minute or until a strong wind disperses it. Any creature that starts its turn in that area must succeed on a DC 11 Constitution saving throw or be poisoned until the start of its next turn. While poisoned in this way, the target can take either an action or a bonus action on its turn, not both, and can't take reactions."
    }
   ],
-  "srd_ref": "dretch"
+  "srd_ref": "dretch",
+  "description": "A squat, pot-bellied demon with drooping flesh and idiot malice, the lowest dreg of the Abyss whining for cruelty."
  },
  {
   "id": "drow",
@@ -2683,7 +2738,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "drow"
+  "srd_ref": "drow",
+  "description": "A dark elf with ashen skin and white hair, beautiful and cold, weaving shadow-magic and recoiling from the hated sun."
  },
  {
   "id": "elk",
@@ -2733,7 +2789,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "elk"
+  "srd_ref": "elk",
+  "description": "A proud stag crowned with sweeping antlers, lowering its rack to charge any beast that threatens the herd."
  },
  {
   "id": "flying_sword",
@@ -2797,7 +2854,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "flying-sword"
+  "srd_ref": "flying-sword",
+  "description": "A blade that hangs in the air on its own, point gleaming and ready, lifeless steel animated by some unseen will."
  },
  {
   "id": "giant_badger",
@@ -2853,7 +2911,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "giant-badger"
+  "srd_ref": "giant-badger",
+  "description": "A burly, badger-shaped digger with raking claws and a foul temper, fearless when cornered in its tunnels."
  },
  {
   "id": "giant_bat",
@@ -2899,7 +2958,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "giant-bat"
+  "srd_ref": "giant-bat",
+  "description": "A leathery-winged horror the size of a man, screeching through the dark and steering by sound through the blackest cavern."
  },
  {
   "id": "giant_centipede",
@@ -2942,7 +3002,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "giant-centipede"
+  "srd_ref": "giant-centipede",
+  "description": "A long, armored crawler bristling with legs, its mandibles dripping a venom that drops creatures many times its size."
  },
  {
   "id": "giant_frog",
@@ -3000,7 +3061,8 @@
     "desc": "The frog makes one bite attack against a Small or smaller target it is grappling. If the attack hits, the target is swallowed, and the grapple ends. The swallowed target is blinded and restrained, it has total cover against attacks and other effects outside the frog, and it takes 5 (2d4) acid damage at the start of each of the frog's turns. The frog can have only one target swallowed at a time. If the frog dies, a swallowed creature is no longer restrained by it and can escape from the corpse using 5 ft. of movement, exiting prone."
    }
   ],
-  "srd_ref": "giant-frog"
+  "srd_ref": "giant-frog",
+  "description": "A bloated amphibian big enough to swallow a halfling whole, lurking half-sunk in the muck with bulging, patient eyes."
  },
  {
   "id": "giant_lizard",
@@ -3043,7 +3105,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "giant-lizard"
+  "srd_ref": "giant-lizard",
+  "description": "A heavy-bodied reptile the size of a pony, flicking its tongue and dragging its scaled bulk through cave and swamp."
  },
  {
   "id": "giant_owl",
@@ -3097,7 +3160,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "giant-owl"
+  "srd_ref": "giant-owl",
+  "description": "A wise, watchful owl broad as a barn door, gliding without a sound and seeing keenly through the deepest night."
  },
  {
   "id": "giant_poisonous_snake",
@@ -3145,7 +3209,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "giant-poisonous-snake"
+  "srd_ref": "giant-poisonous-snake",
+  "description": "A long, sinuous serpent thick as a man's leg, its swaying head and dripping fangs promising a swift, agonizing death."
  },
  {
   "id": "giant_wolf_spider",
@@ -3201,7 +3266,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "giant-wolf-spider"
+  "srd_ref": "giant-wolf-spider",
+  "description": "A hairy, fast-footed hunting spider the size of a dog, springing from ambush rather than waiting in any web."
  },
  {
   "id": "goblin",
@@ -3259,7 +3325,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "goblin"
+  "srd_ref": "goblin",
+  "description": "A small, black-hearted humanoid that lairs in caves and ruins, raiding for food and treasure."
  },
  {
   "id": "grimlock",
@@ -3318,7 +3385,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "grimlock"
+  "srd_ref": "grimlock",
+  "description": "A sightless, gray-skinned cave dweller that hunts by sound and smell, melting against the stone before it strikes with its jagged club."
  },
  {
   "id": "panther",
@@ -3378,7 +3446,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "panther"
+  "srd_ref": "panther",
+  "description": "A sleek shadow of muscle and silence, dropping from above before its prey ever senses the danger."
  },
  {
   "id": "pseudodragon",
@@ -3442,7 +3511,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "pseudodragon"
+  "srd_ref": "pseudodragon",
+  "description": "A cat-sized dragon with mischievous eyes and a barbed tail, clever enough to whisper thoughts into a trusted mind."
  },
  {
   "id": "riding_horse",
@@ -3482,7 +3552,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "riding-horse"
+  "srd_ref": "riding-horse",
+  "description": "A sturdy, even-tempered mount bred for the road, content to carry a rider mile after patient mile."
  },
  {
   "id": "skeleton",
@@ -3541,7 +3612,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "skeleton"
+  "srd_ref": "skeleton",
+  "description": "A clattering frame of yellowed bone, animated by dark will and clutching a rusted blade with mindless purpose."
  },
  {
   "id": "sprite",
@@ -3606,7 +3678,8 @@
     "desc": "The sprite magically turns invisible until it attacks or casts a spell, or until its concentration ends (as if concentrating on a spell). Any equipment the sprite wears or carries is invisible with it."
    }
   ],
-  "srd_ref": "sprite"
+  "srd_ref": "sprite",
+  "description": "A tiny winged fey no bigger than a hand, fierce and wary, guarding its woodland glade with a needle-thin bow."
  },
  {
   "id": "steam_mephit",
@@ -3665,7 +3738,8 @@
     "damage_type": "fire"
    }
   ],
-  "srd_ref": "steam-mephit"
+  "srd_ref": "steam-mephit",
+  "description": "A squat, sniggering imp of boiling vapor, hissing and dripping as scalding clouds curl from its grinning maw."
  },
  {
   "id": "swarm_of_bats",
@@ -3727,7 +3801,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "swarm-of-bats"
+  "srd_ref": "swarm-of-bats",
+  "description": "A shrieking storm of leathery wings that boils out of the dark, all flapping panic and snapping little teeth."
  },
  {
   "id": "swarm_of_rats",
@@ -3787,7 +3862,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "swarm-of-rats"
+  "srd_ref": "swarm-of-rats",
+  "description": "A living carpet of matted fur and glinting eyes, squealing and surging over everything in a tide of tiny teeth."
  },
  {
   "id": "swarm_of_ravens",
@@ -3846,7 +3922,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "swarm-of-ravens"
+  "srd_ref": "swarm-of-ravens",
+  "description": "A churning black cloud of beating wings and harsh croaks, pecking and clawing at every exposed face and eye."
  },
  {
   "id": "violet_fungus",
@@ -3899,7 +3976,8 @@
     "damage_type": "necrotic"
    }
   ],
-  "srd_ref": "violet-fungus"
+  "srd_ref": "violet-fungus",
+  "description": "A clump of sickly purple stalks that sways without wind, lashing out with rot-dripping tendrils at anything near."
  },
  {
   "id": "wolf",
@@ -3952,7 +4030,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "wolf"
+  "srd_ref": "wolf",
+  "description": "A lean pack hunter, bright-eyed and tireless on the trail, circling with low growls until the moment to strike."
  },
  {
   "id": "zombie",
@@ -4005,7 +4084,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "zombie"
+  "srd_ref": "zombie",
+  "description": "A shambling corpse with milky eyes and slack jaw, dragging itself forward with relentless, groaning hunger."
  },
  {
   "id": "ape",
@@ -4065,7 +4145,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "ape"
+  "srd_ref": "ape",
+  "description": "A powerful, broad-shouldered beast that bares its teeth and hurls stones with startling, bone-cracking force."
  },
  {
   "id": "black_bear",
@@ -4121,7 +4202,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "black-bear"
+  "srd_ref": "black-bear",
+  "description": "A shaggy forest bear, usually shy but fearsome when cornered, swatting with heavy claws and snapping jaws."
  },
  {
   "id": "cockatrice",
@@ -4163,7 +4245,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "cockatrice"
+  "srd_ref": "cockatrice",
+  "description": "An ugly feathered horror with a reptile's tail, its hooked beak carrying a curse that turns flesh to cold stone."
  },
  {
   "id": "crocodile",
@@ -4214,7 +4297,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "crocodile"
+  "srd_ref": "crocodile",
+  "description": "A patient horror of armored hide and yellow eyes, lurking just beneath the water until its jaws snap shut."
  },
  {
   "id": "darkmantle",
@@ -4270,7 +4354,8 @@
     "desc": "A 15-foot radius of magical darkness extends out from the darkmantle, moves with it, and spreads around corners. The darkness lasts as long as the darkmantle maintains concentration, up to 10 minutes (as if concentrating on a spell). Darkvision can't penetrate this darkness, and no natural light can illuminate it. If any of the darkness overlaps with an area of light created by a spell of 2nd level or lower, the spell creating the light is dispelled."
    }
   ],
-  "srd_ref": "darkmantle"
+  "srd_ref": "darkmantle",
+  "description": "A lumpy thing that hangs like ordinary stone until it drops, smothering its prey in sudden, swallowing darkness."
  },
  {
   "id": "deep_gnome_svirfneblin",
@@ -4334,7 +4419,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "deep-gnome-svirfneblin"
+  "srd_ref": "deep-gnome-svirfneblin",
+  "description": "A wiry, gray-skinned dweller of the deep stone, sharp-eyed and secretive, vanishing against rock at the first threat."
  },
  {
   "id": "dust_mephit",
@@ -4401,7 +4487,8 @@
     "desc": "The mephit exhales a 15-foot cone of blinding dust. Each creature in that area must succeed on a DC 10 Dexterity saving throw or be blinded for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
    }
   ],
-  "srd_ref": "dust-mephit"
+  "srd_ref": "dust-mephit",
+  "description": "A gritty, flaking imp of grey grit and dry air, leaving a haze of choking, blinding dust in its wake."
  },
  {
   "id": "giant_goat",
@@ -4445,7 +4532,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "giant-goat"
+  "srd_ref": "giant-goat",
+  "description": "A massive, sure-footed mountain goat with curling horns, lowering its head to charge anything blocking its crag."
  },
  {
   "id": "giant_sea_horse",
@@ -4491,7 +4579,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "giant-sea-horse"
+  "srd_ref": "giant-sea-horse",
+  "description": "A horse-sized seahorse in shimmering scales, darting through the reef and ramming intruders with surprising power."
  },
  {
   "id": "giant_wasp",
@@ -4533,7 +4622,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "giant-wasp"
+  "srd_ref": "giant-wasp",
+  "description": "A horse-fly-droning horror the size of a dog, its segmented body tipped with a long, venom-dripping sting."
  },
  {
   "id": "gnoll",
@@ -4590,7 +4680,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "gnoll"
+  "srd_ref": "gnoll",
+  "description": "A hunched, hyena-headed marauder that cackles as it kills, driven by a ravenous, blood-mad hunger for slaughter."
  },
  {
   "id": "gray_ooze",
@@ -4656,7 +4747,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "gray-ooze"
+  "srd_ref": "gray-ooze",
+  "description": "A slick puddle of stone-colored slime, easily mistaken for wet rock until it rears to gnaw the metal from your gear."
  },
  {
   "id": "hobgoblin",
@@ -4706,7 +4798,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "hobgoblin"
+  "srd_ref": "hobgoblin",
+  "description": "A disciplined, hard-eyed warrior in battered armor, fighting with grim coordination and a soldier's cruel efficiency."
  },
  {
   "id": "ice_mephit",
@@ -4778,7 +4871,8 @@
     "damage_type": "cold"
    }
   ],
-  "srd_ref": "ice-mephit"
+  "srd_ref": "ice-mephit",
+  "description": "A jagged little imp of blue-white frost, crackling with cold and exhaling a shard-laden breath of bitter winter."
  },
  {
   "id": "lizardfolk",
@@ -4858,7 +4952,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "lizardfolk"
+  "srd_ref": "lizardfolk",
+  "description": "A scaled, cold-eyed reptilian hunter from the marsh, pragmatic and merciless, weighing every creature as meat."
  },
  {
   "id": "magma_mephit",
@@ -4927,7 +5022,8 @@
     "damage_type": "fire"
    }
   ],
-  "srd_ref": "magma-mephit"
+  "srd_ref": "magma-mephit",
+  "description": "A crusted little imp of cooling lava, glowing red through its cracks and spitting gouts of molten fire when riled."
  },
  {
   "id": "magmin",
@@ -4979,7 +5075,8 @@
     "damage_type": "fire"
    }
   ],
-  "srd_ref": "magmin"
+  "srd_ref": "magmin",
+  "description": "A capering creature of living coal and flame, leaving smoldering footprints and igniting whatever its touch finds."
  },
  {
   "id": "orc",
@@ -5037,7 +5134,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "orc"
+  "srd_ref": "orc",
+  "description": "A brutish, tusked warrior with corded muscle and a heavy axe, charging into battle with savage, snarling fury."
  },
  {
   "id": "reef_shark",
@@ -5089,7 +5187,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "reef-shark"
+  "srd_ref": "reef-shark",
+  "description": "A sleek grey predator that circles the shallows in packs, drawn to thrashing and blood with single-minded hunger."
  },
  {
   "id": "rust_monster",
@@ -5139,7 +5238,8 @@
     "desc": "The rust monster corrodes a nonmagical ferrous metal object it can see within 5 feet of it. If the object isn't being worn or carried, the touch destroys a 1-foot cube of it. If the object is being worn or carried by a creature, the creature can make a DC 11 Dexterity saving throw to avoid the rust monster's touch.\nIf the object touched is either metal armor or a metal shield being worn or carried, its takes a permanent and cumulative -1 penalty to the AC it offers. Armor reduced to an AC of 10 or a shield that drops to a +0 bonus is destroyed. If the object touched is a held metal weapon, it rusts as described in the Rust Metal trait."
    }
   ],
-  "srd_ref": "rust-monster"
+  "srd_ref": "rust-monster",
+  "description": "A beetle-like scuttler with feathery antennae, twitching toward iron and crumbling armor and blades to red flakes."
  },
  {
   "id": "sahuagin",
@@ -5209,7 +5309,8 @@
     "attack_bonus": 3
    }
   ],
-  "srd_ref": "sahuagin"
+  "srd_ref": "sahuagin",
+  "description": "A finned, shark-toothed sea devil with cold black eyes, surging from the deep in a frenzy at the scent of blood."
  },
  {
   "id": "satyr",
@@ -5277,7 +5378,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "satyr"
+  "srd_ref": "satyr",
+  "description": "A goat-legged reveler with a sly grin and curling horns, quick to dance, drink, and lower its head for a sudden butt."
  },
  {
   "id": "scout",
@@ -5344,7 +5446,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "scout"
+  "srd_ref": "scout",
+  "description": "A wary wilderness tracker in worn leathers, reading every snapped twig and listening for footfalls others would miss."
  },
  {
   "id": "shadow",
@@ -5421,7 +5524,8 @@
     "damage_type": "necrotic"
    }
   ],
-  "srd_ref": "shadow"
+  "srd_ref": "shadow",
+  "description": "A creeping smear of living darkness that drinks the strength from the living and slinks away from any light."
  },
  {
   "id": "swarm_of_beetles",
@@ -5483,7 +5587,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "swarm-of-beetles"
+  "srd_ref": "swarm-of-beetles",
+  "description": "A seething carpet of glossy, clicking beetles that pours over everything in its path with countless tiny jaws."
  },
  {
   "id": "swarm_of_centipedes",
@@ -5544,7 +5649,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "swarm-of-centipedes"
+  "srd_ref": "swarm-of-centipedes",
+  "description": "A writhing mass of many-legged centipedes flooding across stone, each tiny bite leaving a sting of venom."
  },
  {
   "id": "swarm_of_insects",
@@ -5605,7 +5711,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "swarm-of-insects"
+  "srd_ref": "swarm-of-insects",
+  "description": "A droning, blinding cloud of biting insects that engulfs the unwary in a frenzy of stings and crawling wings."
  },
  {
   "id": "swarm_of_spiders",
@@ -5668,7 +5775,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "swarm-of-spiders"
+  "srd_ref": "swarm-of-spiders",
+  "description": "A skittering tide of spiders spilling from the walls, racing up sheer surfaces on a thousand tiny legs."
  },
  {
   "id": "swarm_of_wasps",
@@ -5729,7 +5837,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "swarm-of-wasps"
+  "srd_ref": "swarm-of-wasps",
+  "description": "A furious, humming cloud of wasps that descends in a stinging storm, relentless once its rage is roused."
  },
  {
   "id": "thug",
@@ -5790,7 +5899,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "thug"
+  "srd_ref": "thug",
+  "description": "A hard-eyed bruiser with scarred knuckles, the kind hired to break legs and never works alone."
  },
  {
   "id": "warhorse",
@@ -5833,7 +5943,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "warhorse"
+  "srd_ref": "warhorse",
+  "description": "A powerful destrier bred for battle, fearless amid the clamor, hooves trained to trample anything that stands before it."
  },
  {
   "id": "warhorse_skeleton",
@@ -5885,7 +5996,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "warhorse-skeleton"
+  "srd_ref": "warhorse-skeleton",
+  "description": "The bleached, clattering frame of a battle steed, still saddled and charging tirelessly with hollow, fleshless purpose."
  },
  {
   "id": "worg",
@@ -5936,7 +6048,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "worg"
+  "srd_ref": "worg",
+  "description": "A great wolf-beast with cruel intelligence behind its eyes, savage enough to bear goblin riders to the hunt."
  },
  {
   "id": "animated_armor",
@@ -6000,7 +6113,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "animated-armor"
+  "srd_ref": "animated-armor",
+  "description": "An empty suit of plate that stands and swings of its own accord, hollow within yet moving with grim purpose."
  },
  {
   "id": "brass_dragon_wyrmling",
@@ -6066,7 +6180,8 @@
     "desc": "The dragon uses one of the following breath weapons.\nFire Breath. The dragon exhales fire in an 20-foot line that is 5 feet wide. Each creature in that line must make a DC 11 Dexterity saving throw, taking 14 (4d6) fire damage on a failed save, or half as much damage on a successful one.\nSleep Breath. The dragon exhales sleep gas in a 15-foot cone. Each creature in that area must succeed on a DC 11 Constitution saving throw or fall unconscious for 1 minute. This effect ends for a creature if the creature takes damage or someone uses an action to wake it."
    }
   ],
-  "srd_ref": "brass-dragon-wyrmling"
+  "srd_ref": "brass-dragon-wyrmling",
+  "description": "A young, talkative dragon of warm brassy scales, endlessly curious and prone to chatter even as it bares its teeth."
  },
  {
   "id": "brown_bear",
@@ -6128,7 +6243,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "brown-bear"
+  "srd_ref": "brown-bear",
+  "description": "A massive shaggy bruiser of the wild, slow to anger but devastating when it rears and roars."
  },
  {
   "id": "bugbear",
@@ -6189,7 +6305,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "bugbear"
+  "srd_ref": "bugbear",
+  "description": "A hulking, hairy goblinoid that creeps with unnerving stealth before bursting from the dark to overwhelm its prey."
  },
  {
   "id": "copper_dragon_wyrmling",
@@ -6255,7 +6372,8 @@
     "desc": "The dragon uses one of the following breath weapons.\nAcid Breath. The dragon exhales acid in an 20-foot line that is 5 feet wide. Each creature in that line must make a DC 11 Dexterity saving throw, taking 18 (4d8) acid damage on a failed save, or half as much damage on a successful one.\nSlowing Breath. The dragon exhales gas in a 15-foot cone. Each creature in that area must succeed on a DC 11 Constitution saving throw. On a failed save, the creature can't use reactions, its speed is halved, and it can't make more than one attack on its turn. In addition, the creature can use either an action or a bonus action on its turn, but not both. These effects last for 1 minute. The creature can repeat the saving throw at the end of each of its turns, ending the effect on itself with a successful save."
    }
   ],
-  "srd_ref": "copper-dragon-wyrmling"
+  "srd_ref": "copper-dragon-wyrmling",
+  "description": "A mischievous young dragon of gleaming copper scales, fond of riddles and tricks even as its claws flex."
  },
  {
   "id": "death_dog",
@@ -6311,7 +6429,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "death-dog"
+  "srd_ref": "death-dog",
+  "description": "A gaunt, two-headed hound prowling the wastes, both pairs of jaws snapping and dripping with foul disease."
  },
  {
   "id": "dire_wolf",
@@ -6364,7 +6483,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "dire-wolf"
+  "srd_ref": "dire-wolf",
+  "description": "A wolf grown to monstrous size, shoulders thick with muscle, hunting in a pack that drags down even armored prey."
  },
  {
   "id": "dryad",
@@ -6423,7 +6543,8 @@
     "desc": "The dryad targets one humanoid or beast that she can see within 30 feet of her. If the target can see the dryad, it must succeed on a DC 14 Wisdom saving throw or be magically charmed. The charmed creature regards the dryad as a trusted friend to be heeded and protected. Although the target isn't under the dryad's control, it takes the dryad's requests or actions in the most favorable way it can.\nEach time the dryad or its allies do anything harmful to the target, it can repeat the saving throw, ending the effect on itself on a success. Otherwise, the effect lasts 24 hours or until the dryad dies, is on a different plane of existence from the target, or ends the effect as a bonus action. If a target's saving throw is successful, the target is immune to the dryad's Fey Charm for the next 24 hours.\nThe dryad can have no more than one humanoid and up to three beasts charmed at a time."
    }
   ],
-  "srd_ref": "dryad"
+  "srd_ref": "dryad",
+  "description": "A graceful spirit of the woods, her skin like bark and hair like leaves, fiercely bound to her chosen tree."
  },
  {
   "id": "duergar",
@@ -6487,7 +6608,8 @@
     "desc": "The duergar magically turns invisible until it attacks, casts a spell, or uses its Enlarge, or until its concentration is broken, up to 1 hour (as if concentrating on a spell). Any equipment the duergar wears or carries is invisible with it."
    }
   ],
-  "srd_ref": "duergar"
+  "srd_ref": "duergar",
+  "description": "A grim, gray-skinned dwarf of the deep places, sullen and cruel, able to swell to looming size in battle."
  },
  {
   "id": "ghoul",
@@ -6543,7 +6665,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "ghoul"
+  "srd_ref": "ghoul",
+  "description": "A gaunt, ravenous corpse with filthy claws and a hunger for living flesh, its touch leaving limbs frozen and still."
  },
  {
   "id": "giant_eagle",
@@ -6604,7 +6727,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "giant-eagle"
+  "srd_ref": "giant-eagle",
+  "description": "A noble raptor of vast wingspan, keen-eyed and proud, wheeling high above the peaks on the wind."
  },
  {
   "id": "giant_hyena",
@@ -6653,7 +6777,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "giant-hyena"
+  "srd_ref": "giant-hyena",
+  "description": "A monstrous, cackling scavenger that works itself into a slavering frenzy the moment it tastes blood."
  },
  {
   "id": "giant_octopus",
@@ -6712,7 +6837,8 @@
     "desc": "A 20-foot-radius cloud of ink extends all around the octopus if it is underwater. The area is heavily obscured for 1 minute, although a significant current can disperse the ink. After releasing the ink, the octopus can use the Dash action as a bonus action."
    }
   ],
-  "srd_ref": "giant-octopus"
+  "srd_ref": "giant-octopus",
+  "description": "A huge, boneless hunter of the depths, eight grasping arms and a wary eye, vanishing behind a cloud of ink."
  },
  {
   "id": "giant_spider",
@@ -6772,7 +6898,8 @@
     "attack_bonus": 5
    }
   ],
-  "srd_ref": "giant-spider"
+  "srd_ref": "giant-spider",
+  "description": "A horror of hairy legs and dripping fangs lurking at the heart of its web, sensing every tremble of the silk."
  },
  {
   "id": "giant_toad",
@@ -6822,7 +6949,8 @@
     "desc": "The toad makes one bite attack against a Medium or smaller target it is grappling. If the attack hits, the target is swallowed, and the grapple ends. The swallowed target is blinded and restrained, it has total cover against attacks and other effects outside the toad, and it takes 10 (3d6) acid damage at the start of each of the toad's turns. The toad can have only one target swallowed at a time.\nIf the toad dies, a swallowed creature is no longer restrained by it and can escape from the corpse using 5 feet of movement, exiting prone."
    }
   ],
-  "srd_ref": "giant-toad"
+  "srd_ref": "giant-toad",
+  "description": "A bloated, warty amphibian with a vast sticky tongue, big enough to gulp down a victim whole."
  },
  {
   "id": "giant_vulture",
@@ -6884,7 +7012,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "giant-vulture"
+  "srd_ref": "giant-vulture",
+  "description": "A foul, oversized carrion bird with cruel cunning in its eyes, circling the dying in patient, hungry company."
  },
  {
   "id": "harpy",
@@ -6940,7 +7069,8 @@
     "desc": "The harpy sings a magical melody. Every humanoid and giant within 300 ft. of the harpy that can hear the song must succeed on a DC 11 Wisdom saving throw or be charmed until the song ends. The harpy must take a bonus action on its subsequent turns to continue singing. It can stop singing at any time. The song ends if the harpy is incapacitated.\nWhile charmed by the harpy, a target is incapacitated and ignores the songs of other harpies. If the charmed target is more than 5 ft. away from the harpy, the must move on its turn toward the harpy by the most direct route. It doesn't avoid opportunity attacks, but before moving into damaging terrain, such as lava or a pit, and whenever it takes damage from a source other than the harpy, a target can repeat the saving throw. A creature can also repeat the saving throw at the end of each of its turns. If a creature's saving throw is successful, the effect ends on it.\nA target that successfully saves is immune to this harpy's song for the next 24 hours."
    }
   ],
-  "srd_ref": "harpy"
+  "srd_ref": "harpy",
+  "description": "A vile creature with the body of a vulture and a hag's leering face, luring travelers to ruin with its haunting song."
  },
  {
   "id": "hippogriff",
@@ -7001,7 +7131,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "hippogriff"
+  "srd_ref": "hippogriff",
+  "description": "A fierce beast with an eagle's head and wings joined to a horse's body, screeching as it dives upon prey."
  },
  {
   "id": "imp",
@@ -7075,7 +7206,8 @@
     "desc": "The imp magically turns invisible until it attacks, or until its concentration ends (as if concentrating on a spell). Any equipment the imp wears or carries is invisible with it."
    }
   ],
-  "srd_ref": "imp"
+  "srd_ref": "imp",
+  "description": "A tiny, red-skinned devil with a barbed tail and a sly grin, slipping unseen to whisper temptations and sting in the dark."
  },
  {
   "id": "lion",
@@ -7136,7 +7268,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "lion"
+  "srd_ref": "lion",
+  "description": "A tawny, golden-maned hunter of the plains, patient in the grass before exploding into a roaring charge."
  },
  {
   "id": "quasit",
@@ -7207,7 +7340,8 @@
     "desc": "The quasit magically turns invisible until it attacks or uses Scare, or until its concentration ends (as if concentrating on a spell). Any equipment the quasit wears or carries is invisible with it."
    }
   ],
-  "srd_ref": "quasit"
+  "srd_ref": "quasit",
+  "description": "A wicked little demon of warty hide and needle claws, shifting shape and shrieking terror into the hearts of the brave."
  },
  {
   "id": "specter",
@@ -7277,7 +7411,8 @@
     "damage_type": "necrotic"
    }
   ],
-  "srd_ref": "specter"
+  "srd_ref": "specter",
+  "description": "A malevolent, translucent ghost drifting through wall and stone, its chill touch draining the warmth of life away."
  },
  {
   "id": "spy",
@@ -7348,7 +7483,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "spy"
+  "srd_ref": "spy",
+  "description": "An unremarkable figure with watchful eyes and a hidden blade, trading in secrets and slipping away before suspicion lands."
  },
  {
   "id": "swarm_of_quippers",
@@ -7410,7 +7546,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "swarm-of-quippers"
+  "srd_ref": "swarm-of-quippers",
+  "description": "A churning silver knot of needle-toothed fish, whipped into a feeding frenzy by the faintest taste of blood."
  },
  {
   "id": "tiger",
@@ -7470,7 +7607,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "tiger"
+  "srd_ref": "tiger",
+  "description": "A massive striped hunter that flows through the underbrush in silence, then explodes upon its prey in a flash of fang and claw."
  },
  {
   "id": "ankheg",
@@ -7520,7 +7658,8 @@
     "damage_type": "acid"
    }
   ],
-  "srd_ref": "ankheg"
+  "srd_ref": "ankheg",
+  "description": "A burrowing horror of chitin and grasping mandibles that erupts from the soil to drag victims into its tunnels."
  },
  {
   "id": "awakened_tree",
@@ -7571,7 +7710,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "awakened-tree"
+  "srd_ref": "awakened-tree",
+  "description": "A gnarled old tree that stands as any other until its bark twists into a scowling face and its limbs reach for you."
  },
  {
   "id": "azer",
@@ -7627,7 +7767,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "azer"
+  "srd_ref": "azer",
+  "description": "A stout, brass-skinned dwarf wreathed in living flame, its beard and weapons glowing with the heat of the forge."
  },
  {
   "id": "bandit_captain",
@@ -7698,7 +7839,8 @@
     "desc": "The captain adds 2 to its AC against one melee attack that would hit it. To do so, the captain must see the attacker and be wielding a melee weapon."
    }
   ],
-  "srd_ref": "bandit-captain"
+  "srd_ref": "bandit-captain",
+  "description": "A swaggering cutthroat with a sharp blade and sharper grin, commanding lesser thieves through swagger and steel."
  },
  {
   "id": "berserker",
@@ -7742,7 +7884,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "berserker"
+  "srd_ref": "berserker",
+  "description": "A scarred, wild-eyed warrior who throws aside all caution, hewing with a great axe in a froth of battle-fury."
  },
  {
   "id": "black_dragon_wyrmling",
@@ -7813,7 +7956,8 @@
     "damage_type": "acid"
    }
   ],
-  "srd_ref": "black-dragon-wyrmling"
+  "srd_ref": "black-dragon-wyrmling",
+  "description": "A young, swamp-dwelling reptile with oily black scales, already cruel and reeking of the acid it spits."
  },
  {
   "id": "bronze_dragon_wyrmling",
@@ -7882,7 +8026,8 @@
     "desc": "The dragon uses one of the following breath weapons.\nLightning Breath. The dragon exhales lightning in a 40-foot line that is 5 feet wide. Each creature in that line must make a DC 12 Dexterity saving throw, taking 16 (3d10) lightning damage on a failed save, or half as much damage on a successful one.\nRepulsion Breath. The dragon exhales repulsion energy in a 30-foot cone. Each creature in that area must succeed on a DC 12 Strength saving throw. On a failed save, the creature is pushed 30 feet away from the dragon."
    }
   ],
-  "srd_ref": "bronze-dragon-wyrmling"
+  "srd_ref": "bronze-dragon-wyrmling",
+  "description": "A curious young dragon of gleaming bronze scales, at home in the surf and quick to test itself against intruders."
  },
  {
   "id": "centaur",
@@ -7953,7 +8098,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "centaur"
+  "srd_ref": "centaur",
+  "description": "A proud creature with the torso of a warrior rising from the powerful body of a charging horse."
  },
  {
   "id": "cult_fanatic",
@@ -8012,7 +8158,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "cult-fanatic"
+  "srd_ref": "cult-fanatic",
+  "description": "A fervent zealot with feverish eyes and a dagger, channeling dark prayers to whatever power it serves in shadow."
  },
  {
   "id": "druid",
@@ -8063,7 +8210,8 @@
     "attack_bonus": 2
    }
   ],
-  "srd_ref": "druid"
+  "srd_ref": "druid",
+  "description": "A weathered keeper of the wild places, robed in hide and leaf, calling on nature's quiet and terrible power."
  },
  {
   "id": "ettercap",
@@ -8137,7 +8285,8 @@
     "attack_bonus": 4
    }
   ],
-  "srd_ref": "ettercap"
+  "srd_ref": "ettercap",
+  "description": "A hunched, spider-like horror with clawed hands and dripping fangs, lurking amid the webs it spins to snare prey."
  },
  {
   "id": "gargoyle",
@@ -8205,7 +8354,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "gargoyle"
+  "srd_ref": "gargoyle",
+  "description": "A grotesque stone figure crouched among the statuary, indistinguishable from carved rock until its eyes open and it lunges."
  },
  {
   "id": "gelatinous_cube",
@@ -8264,7 +8414,8 @@
     "damage_type": "acid"
    }
   ],
-  "srd_ref": "gelatinous-cube"
+  "srd_ref": "gelatinous-cube",
+  "description": "A near-invisible block of quivering ooze that fills the corridor, dissolving everything it slides over."
  },
  {
   "id": "ghast",
@@ -8327,7 +8478,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "ghast"
+  "srd_ref": "ghast",
+  "description": "A ravenous corpse-thing whose reek of carrion fouls the air as it claws toward warm, living flesh."
  },
  {
   "id": "giant_boar",
@@ -8361,7 +8513,7 @@
   "xp": 450,
   "traits": [
    "Charge. If the boar moves at least 20 ft. straight toward a target and then hits it with a tusk attack on the same turn, the target takes an extra 7 (2d6) slashing damage. If the target is a creature, it must succeed on a DC 13 Strength saving throw or be knocked prone.",
-   "Relentless. If the boar takes 10 damage or less that would reduce it to 0 hit points, it is reduced to 1 hit point instead."
+   "Relentless (Recharges after a Short or Long Rest). If the boar takes 10 damage or less that would reduce it to 0 hit points, it is reduced to 1 hit point instead."
   ],
   "actions": [
    {
@@ -8372,7 +8524,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "giant-boar"
+  "srd_ref": "giant-boar",
+  "description": "A bristling, foul-tempered swine the size of a horse, goring all who cross it and refusing to fall."
  },
  {
   "id": "giant_constrictor_snake",
@@ -8427,7 +8580,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "giant-constrictor-snake"
+  "srd_ref": "giant-constrictor-snake",
+  "description": "An immense serpent thick as a tree trunk, looping silent coils to crush the breath from its prey."
  },
  {
   "id": "giant_elk",
@@ -8484,7 +8638,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "giant-elk"
+  "srd_ref": "giant-elk",
+  "description": "A noble, towering stag whose sweeping antlers crown it like a king of the high wilds."
  },
  {
   "id": "gibbering_mouther",
@@ -8541,7 +8696,8 @@
     "desc": "The mouther spits a chemical glob at a point it can see within 15 feet of it. The glob explodes in a blinding flash of light on impact. Each creature within 5 feet of the flash must succeed on a DC 13 Dexterity saving throw or be blinded until the end of the mouther's next turn."
    }
   ],
-  "srd_ref": "gibbering-mouther"
+  "srd_ref": "gibbering-mouther",
+  "description": "A writhing heap of fused mouths and eyes that babbles maddening nonsense as it oozes hungrily forward."
  },
  {
   "id": "green_dragon_wyrmling",
@@ -8615,7 +8771,8 @@
     "damage_type": "poison"
    }
   ],
-  "srd_ref": "green-dragon-wyrmling"
+  "srd_ref": "green-dragon-wyrmling",
+  "description": "A sly young dragon of emerald scales, lurking in the forest gloom and already fond of cruel games and poison."
  },
  {
   "id": "grick",
@@ -8675,7 +8832,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "grick"
+  "srd_ref": "grick",
+  "description": "A wormlike predator with rasping tentacles and a cruel beak, blending with the stone of cavern walls until it strikes."
  },
  {
   "id": "griffon",
@@ -8737,7 +8895,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "griffon"
+  "srd_ref": "griffon",
+  "description": "A majestic predator with an eagle's head and wings joined to a lion's powerful body, fierce and proud in flight."
  },
  {
   "id": "hunter_shark",
@@ -8788,7 +8947,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "hunter-shark"
+  "srd_ref": "hunter-shark",
+  "description": "A sleek and tireless killer of the deep, its black eyes rolling white as the scent of blood drives it wild."
  },
  {
   "id": "merrow",
@@ -8852,7 +9012,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "merrow"
+  "srd_ref": "merrow",
+  "description": "A monstrous, deformed merfolk twisted by dark magic, all fangs and claws and ravenous malice beneath the waves."
  },
  {
   "id": "mimic",
@@ -8919,7 +9080,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "mimic"
+  "srd_ref": "mimic",
+  "description": "A patient, shapeshifting predator that waits as an innocent chest or door, then seizes its victim with a clinging, toothy maw."
  },
  {
   "id": "minotaur_skeleton",
@@ -8981,7 +9143,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "minotaur-skeleton"
+  "srd_ref": "minotaur-skeleton",
+  "description": "The bleached, bull-horned bones of a fallen brute, still charging with a rusted axe and the memory of rage."
  },
  {
   "id": "ochre_jelly",
@@ -9048,7 +9211,8 @@
     "desc": "When a jelly that is Medium or larger is subjected to lightning or slashing damage, it splits into two new jellies if it has at least 10 hit points. Each new jelly has hit points equal to half the original jelly's, rounded down. New jellies are one size smaller than the original jelly."
    }
   ],
-  "srd_ref": "ochre-jelly"
+  "srd_ref": "ochre-jelly",
+  "description": "A glistening mound of yellow slime that creeps up walls and splits into smaller horrors when struck."
  },
  {
   "id": "ogre",
@@ -9097,7 +9261,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "ogre"
+  "srd_ref": "ogre",
+  "description": "A dim-witted brute the size of two men, lured by food and shiny things."
  },
  {
   "id": "ogre_zombie",
@@ -9150,7 +9315,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "ogre-zombie"
+  "srd_ref": "ogre-zombie",
+  "description": "The shambling, rotting hulk of a slain ogre, refusing to die as it swings a crude weapon with mindless force."
  },
  {
   "id": "pegasus",
@@ -9202,7 +9368,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "pegasus"
+  "srd_ref": "pegasus",
+  "description": "A radiant winged horse of pure white, wild and shy, beating the air with feathered wings as it takes flight."
  },
  {
   "id": "plesiosaurus",
@@ -9255,7 +9422,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "plesiosaurus"
+  "srd_ref": "plesiosaurus",
+  "description": "A long-necked leviathan gliding through dark water, its small head darting up to snap at anything within reach."
  },
  {
   "id": "polar_bear",
@@ -9317,7 +9485,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "polar-bear"
+  "srd_ref": "polar-bear",
+  "description": "A towering white-furred giant of the frozen wastes, deceptively swift and savage when its territory is breached."
  },
  {
   "id": "priest",
@@ -9372,7 +9541,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "priest"
+  "srd_ref": "priest",
+  "description": "A solemn figure in vestments who raises holy symbol and mace alike, calling down the favor of a watching god."
  },
  {
   "id": "rhinoceros",
@@ -9416,7 +9586,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "rhinoceros"
+  "srd_ref": "rhinoceros",
+  "description": "A massive, armor-hided brute with a single deadly horn, lowering its head to charge anything that crosses its path."
  },
  {
   "id": "rug_of_smothering",
@@ -9473,7 +9644,8 @@
     "attack_bonus": 5
    }
   ],
-  "srd_ref": "rug-of-smothering"
+  "srd_ref": "rug-of-smothering",
+  "description": "An innocent-looking carpet that lies utterly still until something walks across it, then rears up to wrap and smother."
  },
  {
   "id": "saber_toothed_tiger",
@@ -9532,7 +9704,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "saber-toothed-tiger"
+  "srd_ref": "saber-toothed-tiger",
+  "description": "A heavy-muscled prehistoric cat with curved fangs like daggers, dropping silently from a ledge onto unwary prey."
  },
  {
   "id": "sea_hag",
@@ -9587,7 +9760,8 @@
     "desc": "The hag covers herself and anything she is wearing or carrying with a magical illusion that makes her look like an ugly creature of her general size and humanoid shape. The effect ends if the hag takes a bonus action to end it or if she dies.\nThe changes wrought by this effect fail to hold up to physical inspection. For example, the hag could appear to have no claws, but someone touching her hand might feel the claws. Otherwise, a creature must take an action to visually inspect the illusion and succeed on a DC 16 Intelligence (Investigation) check to discern that the hag is disguised."
    }
   ],
-  "srd_ref": "sea-hag"
+  "srd_ref": "sea-hag",
+  "description": "A withered, weed-tangled crone risen from the brine, her face so hideous a single glimpse can stop a heart."
  },
  {
   "id": "silver_dragon_wyrmling",
@@ -9652,7 +9826,8 @@
     "desc": "The dragon uses one of the following breath weapons.\nCold Breath. The dragon exhales an icy blast in a 15-foot cone. Each creature in that area must make a DC 13 Constitution saving throw, taking 18 (4d8) cold damage on a failed save, or half as much damage on a successful one.\nParalyzing Breath. The dragon exhales paralyzing gas in a 15-foot cone. Each creature in that area must succeed on a DC 13 Constitution saving throw or be paralyzed for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
    }
   ],
-  "srd_ref": "silver-dragon-wyrmling"
+  "srd_ref": "silver-dragon-wyrmling",
+  "description": "A young dragon of gleaming mirrored scales, curious and noble even now, with frost and paralyzing breath at its command."
  },
  {
   "id": "swarm_of_poisonous_snakes",
@@ -9712,7 +9887,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "swarm-of-poisonous-snakes"
+  "srd_ref": "swarm-of-poisonous-snakes",
+  "description": "A writhing knot of venomous serpents, hissing and striking from every direction at once across the ground."
  },
  {
   "id": "wererat_human",
@@ -9778,7 +9954,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "wererat-human"
+  "srd_ref": "wererat-human",
+  "description": "An ordinary, twitchy townsfolk with darting eyes and a sniffing nose, hiding the rat that festers beneath the skin."
  },
  {
   "id": "wererat_hybrid",
@@ -9852,7 +10029,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "wererat-hybrid"
+  "srd_ref": "wererat-hybrid",
+  "description": "A hunched man-rat with matted fur, yellow incisors, and a naked tail, lurking in sewers and shadowed alleys."
  },
  {
   "id": "wererat_rat",
@@ -9909,7 +10087,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "wererat-rat"
+  "srd_ref": "wererat-rat",
+  "description": "An overlarge, cunning rat with unsettling intelligence in its beady eyes, scurrying through filth toward the kill."
  },
  {
   "id": "white_dragon_wyrmling",
@@ -9978,7 +10157,8 @@
     "damage_type": "cold"
    }
   ],
-  "srd_ref": "white-dragon-wyrmling"
+  "srd_ref": "white-dragon-wyrmling",
+  "description": "A young dragon of glistening icy scales, feral and savage even at this size, exhaling a killing breath of cold."
  },
  {
   "id": "will_o_wisp",
@@ -10052,7 +10232,8 @@
     "desc": "The will-o'-wisp and its light magically become invisible until it attacks or uses its Consume Life, or until its concentration ends (as if concentrating on a spell)."
    }
   ],
-  "srd_ref": "will-o-wisp"
+  "srd_ref": "will-o-wisp",
+  "description": "A flickering mote of cold light that drifts through bog and ruin, luring the lost toward a fatal embrace."
  },
  {
   "id": "basilisk",
@@ -10097,7 +10278,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "basilisk"
+  "srd_ref": "basilisk",
+  "description": "A squat, eight-legged reptile dragging its bulk over stone, its dull eyes able to turn living flesh to rock."
  },
  {
   "id": "bearded_devil",
@@ -10171,7 +10353,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "bearded-devil"
+  "srd_ref": "bearded-devil",
+  "description": "A gaunt, scaly fiend wreathed in writhing barbed whiskers, clutching a wicked glaive and grinning with infernal malice."
  },
  {
   "id": "blue_dragon_wyrmling",
@@ -10239,7 +10422,8 @@
     "damage_type": "lightning"
    }
   ],
-  "srd_ref": "blue-dragon-wyrmling"
+  "srd_ref": "blue-dragon-wyrmling",
+  "description": "A young dragon of cobalt scales crackling with static, arrogant and cruel, its breath a searing bolt of lightning."
  },
  {
   "id": "doppelganger",
@@ -10304,7 +10488,8 @@
     "desc": "The doppelganger magically reads the surface thoughts of one creature within 60 ft. of it. The effect can penetrate barriers, but 3 ft. of wood or dirt, 2 ft. of stone, 2 inches of metal, or a thin sheet of lead blocks it. While the target is in range, the doppelganger can continue reading its thoughts, as long as the doppelganger's concentration isn't broken (as if concentrating on a spell). While reading the target's mind, the doppelganger has advantage on Wisdom (Insight) and Charisma (Deception, Intimidation, and Persuasion) checks against the target."
    }
   ],
-  "srd_ref": "doppelganger"
+  "srd_ref": "doppelganger",
+  "description": "A featureless gray humanoid with blank eyes, wearing a stolen face and reading your every thought to deceive you."
  },
  {
   "id": "giant_scorpion",
@@ -10357,7 +10542,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "giant-scorpion"
+  "srd_ref": "giant-scorpion",
+  "description": "A horse-sized arachnid clattering on armored legs, twin pincers spread wide and a venom-tipped tail arched to strike."
  },
  {
   "id": "gold_dragon_wyrmling",
@@ -10426,7 +10612,8 @@
     "desc": "The dragon uses one of the following breath weapons.\nFire Breath. The dragon exhales fire in a 15-foot cone. Each creature in that area must make a DC 13 Dexterity saving throw, taking 22 (4d10) fire damage on a failed save, or half as much damage on a successful one.\nWeakening Breath. The dragon exhales gas in a 15-foot cone. Each creature in that area must succeed on a DC 13 Strength saving throw or have disadvantage on Strength-based attack rolls, Strength checks, and Strength saving throws for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
    }
   ],
-  "srd_ref": "gold-dragon-wyrmling"
+  "srd_ref": "gold-dragon-wyrmling",
+  "description": "A young dragon of radiant golden scales, wise and proud beyond its years, commanding fire and weakening breath."
  },
  {
   "id": "green_hag",
@@ -10493,7 +10680,8 @@
     "desc": "The hag magically turns invisible until she attacks or casts a spell, or until her concentration ends (as if concentrating on a spell). While invisible, she leaves no physical evidence of her passage, so she can be tracked only by magic. Any equipment she wears or carries is invisible with her."
    }
   ],
-  "srd_ref": "green-hag"
+  "srd_ref": "green-hag",
+  "description": "A warty, green-skinned crone of the fens, weaving illusions and mimicked cries to lure travelers to their doom."
  },
  {
   "id": "hell_hound",
@@ -10554,7 +10742,8 @@
     "damage_type": "fire"
    }
   ],
-  "srd_ref": "hell-hound"
+  "srd_ref": "hell-hound",
+  "description": "A coal-black mastiff with embers glowing in its throat and eyes, hunting in packs and breathing gouts of flame."
  },
  {
   "id": "killer_whale",
@@ -10607,7 +10796,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "killer-whale"
+  "srd_ref": "killer-whale",
+  "description": "A colossal black-and-white hunter knifing through the deep, clicking and calling as it closes on its prey."
  },
  {
   "id": "knight",
@@ -10676,7 +10866,8 @@
     "desc": "The knight adds 2 to its AC against one melee attack that would hit it. To do so, the knight must see the attacker and be wielding a melee weapon."
    }
   ],
-  "srd_ref": "knight"
+  "srd_ref": "knight",
+  "description": "An armored warrior of grim resolve, plate gleaming and greatsword ready, unshaken by fear in the thick of battle."
  },
  {
   "id": "manticore",
@@ -10740,7 +10931,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "manticore"
+  "srd_ref": "manticore",
+  "description": "A lion-bodied horror with a leathery wingspan and a human-like face, flinging volleys of barbed spikes from its tail."
  },
  {
   "id": "minotaur",
@@ -10800,7 +10992,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "minotaur"
+  "srd_ref": "minotaur",
+  "description": "A towering bull-headed brute that never loses its way in the maze, lowering its horns to gore in a reckless charge."
  },
  {
   "id": "mummy",
@@ -10870,7 +11063,8 @@
     "desc": "The mummy targets one creature it can see within 60 ft. of it. If the target can see the mummy, it must succeed on a DC 11 Wisdom saving throw against this magic or become frightened until the end of the mummy's next turn. If the target fails the saving throw by 5 or more, it is also paralyzed for the same duration. A target that succeeds on the saving throw is immune to the Dreadful Glare of all mummies (but not mummy lords) for the next 24 hours."
    }
   ],
-  "srd_ref": "mummy"
+  "srd_ref": "mummy",
+  "description": "A bandage-wrapped corpse shambling from its tomb, its withering touch and dreadful glare carrying an ancient curse."
  },
  {
   "id": "nightmare",
@@ -10923,7 +11117,8 @@
     "desc": "The nightmare and up to three willing creatures within 5 feet of it magically enter the Ethereal Plane from the Material Plane, or vice versa."
    }
   ],
-  "srd_ref": "nightmare"
+  "srd_ref": "nightmare",
+  "description": "A skeletal black steed wreathed in flame, hooves smoking as it gallops between the planes on errands of evil."
  },
  {
   "id": "owlbear",
@@ -10985,7 +11180,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "owlbear"
+  "srd_ref": "owlbear",
+  "description": "A monstrous fusion of bear and owl, feathered and fanged, shrieking with a hooting roar as it rends with beak and claw."
  },
  {
   "id": "phase_spider",
@@ -11039,7 +11235,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "phase-spider"
+  "srd_ref": "phase-spider",
+  "description": "A great spider that flickers between worlds, vanishing into the ethereal and lunging from nowhere to bite with venom."
  },
  {
   "id": "veteran",
@@ -11104,7 +11301,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "veteran"
+  "srd_ref": "veteran",
+  "description": "A battle-scarred warrior who has survived a hundred fights, calm and deadly with a blade in either hand."
  },
  {
   "id": "werewolf_human",
@@ -11159,7 +11357,8 @@
     "attack_bonus": 4
    }
   ],
-  "srd_ref": "werewolf-human"
+  "srd_ref": "werewolf-human",
+  "description": "An unremarkable villager with a restless, haunted look, the beast within waiting only for the moon to surface."
  },
  {
   "id": "werewolf_hybrid",
@@ -11224,7 +11423,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "werewolf-hybrid"
+  "srd_ref": "werewolf-hybrid",
+  "description": "A towering man-wolf of bristling fur and slavering jaws, claws raking as it howls beneath the rising moon."
  },
  {
   "id": "werewolf_wolf",
@@ -11278,7 +11478,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "werewolf-wolf"
+  "srd_ref": "werewolf-wolf",
+  "description": "A great wolf with an unnatural cunning behind its eyes, hunting by scent with a hunger no true beast could match."
  },
  {
   "id": "wight",
@@ -11358,7 +11559,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "wight"
+  "srd_ref": "wight",
+  "description": "A withered, malevolent corpse that retains a cruel intelligence, draining the life from any it strikes down."
  },
  {
   "id": "winter_wolf",
@@ -11421,7 +11623,8 @@
     "damage_type": "cold"
    }
   ],
-  "srd_ref": "winter-wolf"
+  "srd_ref": "winter-wolf",
+  "description": "A huge frost-white wolf nearly invisible in the snow, hunting in packs and exhaling a deadly blast of cold."
  },
  {
   "id": "black_pudding",
@@ -11487,7 +11690,8 @@
     "desc": "When a pudding that is Medium or larger is subjected to lightning or slashing damage, it splits into two new puddings if it has at least 10 hit points. Each new pudding has hit points equal to half the original pudding's, rounded down. New puddings are one size smaller than the original pudding."
    }
   ],
-  "srd_ref": "black-pudding"
+  "srd_ref": "black-pudding",
+  "description": "A shapeless mound of glistening black slime oozing across floor and wall, dissolving metal, wood, and flesh alike."
  },
  {
   "id": "chuul",
@@ -11554,7 +11758,8 @@
     "desc": "One creature grappled by the chuul must succeed on a DC 13 Constitution saving throw or be poisoned for 1 minute. Until this poison ends, the target is paralyzed. The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
    }
   ],
-  "srd_ref": "chuul"
+  "srd_ref": "chuul",
+  "description": "A lobster-like horror of the deep, scuttling on crab legs and groping for prey with writhing facial tendrils."
  },
  {
   "id": "couatl",
@@ -11625,7 +11830,8 @@
     "desc": "The couatl magically polymorphs into a humanoid or beast that has a challenge rating equal to or less than its own, or back into its true form. It reverts to its true form if it dies. Any equipment it is wearing or carrying is absorbed or borne by the new form (the couatl's choice).\nIn a new form, the couatl retains its game statistics and ability to speak, but its AC, movement modes, Strength, Dexterity, and other actions are replaced by those of the new form, and it gains any statistics and capabilities (except class features, legendary actions, and lair actions) that the new form has but that it lacks. If the new form has a bite attack, the couatl can use its bite in that form."
    }
   ],
-  "srd_ref": "couatl"
+  "srd_ref": "couatl",
+  "description": "A radiant feathered serpent, its rainbow plumage shimmering with the serene wisdom of an ancient guardian."
  },
  {
   "id": "elephant",
@@ -11676,7 +11882,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "elephant"
+  "srd_ref": "elephant",
+  "description": "A mountain of gray hide and tusk, gentle until roused, then an unstoppable wall of trampling muscle."
  },
  {
   "id": "ettin",
@@ -11739,7 +11946,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "ettin"
+  "srd_ref": "ettin",
+  "description": "A foul, two-headed giant whose squabbling skulls bicker endlessly between swings of axe and morningstar."
  },
  {
   "id": "ghost",
@@ -11821,7 +12029,8 @@
     "desc": "One humanoid that the ghost can see within 5 ft. of it must succeed on a DC 13 Charisma saving throw or be possessed by the ghost; the ghost then disappears, and the target is incapacitated and loses control of its body. The ghost now controls the body but doesn't deprive the target of awareness. The ghost can't be targeted by any attack, spell, or other effect, except ones that turn undead, and it retains its alignment, Intelligence, Wisdom, Charisma, and immunity to being charmed and frightened. It otherwise uses the possessed target's statistics, but doesn't gain access to the target's knowledge, class features, or proficiencies.\nThe possession lasts until the body drops to 0 hit points, the ghost ends it as a bonus action, or the ghost is turned or forced out by an effect like the dispel evil and good spell. When the possession ends, the ghost reappears in an unoccupied space within 5 ft. of the body. The target is immune to this ghost's Possession for 24 hours after succeeding on the saving throw or after the possession ends."
    }
   ],
-  "srd_ref": "ghost"
+  "srd_ref": "ghost",
+  "description": "A pale, mournful figure drifting half-seen through the walls, cold sorrow trailing from its withering touch."
  },
  {
   "id": "lamia",
@@ -11892,7 +12101,8 @@
     "attack_bonus": 5
    }
   ],
-  "srd_ref": "lamia"
+  "srd_ref": "lamia",
+  "description": "A seductive predator with a woman's torso atop a great lion's body, weaving cruel illusions and hungry charm."
  },
  {
   "id": "red_dragon_wyrmling",
@@ -11960,7 +12170,8 @@
     "damage_type": "fire"
    }
   ],
-  "srd_ref": "red-dragon-wyrmling"
+  "srd_ref": "red-dragon-wyrmling",
+  "description": "A young firedrake already arrogant and crimson-scaled, smoke curling from its nostrils as it eyes you hungrily."
  },
  {
   "id": "succubus_incubus",
@@ -12042,7 +12253,8 @@
     "desc": "The fiend magically enters the Ethereal Plane from the Material Plane, or vice versa."
    }
   ],
-  "srd_ref": "succubus-incubus"
+  "srd_ref": "succubus-incubus",
+  "description": "A breathtaking figure of impossible allure, its honeyed whispers masking the talons and damnation beneath."
  },
  {
   "id": "wereboar_boar",
@@ -12086,7 +12298,7 @@
   "traits": [
    "Shapechanger. The wereboar can use its action to polymorph into a boar-humanoid hybrid or into a boar, or back into its true form, which is humanoid. Its statistics, other than its AC, are the same in each form. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies.",
    "Charge (Boar or Hybrid Form Only). If the wereboar moves at least 15 feet straight toward a target and then hits it with its tusks on the same turn, the target takes an extra 7 (2d6) slashing damage. If the target is a creature, it must succeed on a DC 13 Strength saving throw or be knocked prone.",
-   "Relentless. If the wereboar takes 14 damage or less that would reduce it to 0 hit points, it is reduced to 1 hit point instead."
+   "Relentless (Recharges after a Short or Long Rest). If the wereboar takes 14 damage or less that would reduce it to 0 hit points, it is reduced to 1 hit point instead."
   ],
   "actions": [
    {
@@ -12097,7 +12309,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "wereboar-boar"
+  "srd_ref": "wereboar-boar",
+  "description": "A monstrous bristled boar, eyes glinting with cruel human malice, charging with relentless, foam-flecked fury."
  },
  {
   "id": "wereboar_human",
@@ -12139,7 +12352,7 @@
   "xp": 1100,
   "traits": [
    "Shapechanger. The wereboar can use its action to polymorph into a boar-humanoid hybrid or into a boar, or back into its true form, which is humanoid. Its statistics, other than its AC, are the same in each form. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies.",
-   "Relentless. If the wereboar takes 14 damage or less that would reduce it to 0 hit points, it is reduced to 1 hit point instead."
+   "Relentless (Recharges after a Short or Long Rest). If the wereboar takes 14 damage or less that would reduce it to 0 hit points, it is reduced to 1 hit point instead."
   ],
   "actions": [
    {
@@ -12154,7 +12367,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "wereboar-human"
+  "srd_ref": "wereboar-human",
+  "description": "A thickset, brutish figure with coarse hair and small dark eyes, its temper as savage as any beast's."
  },
  {
   "id": "wereboar_hybrid",
@@ -12198,7 +12412,7 @@
   "traits": [
    "Shapechanger. The wereboar can use its action to polymorph into a boar-humanoid hybrid or into a boar, or back into its true form, which is humanoid. Its statistics, other than its AC, are the same in each form. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies.",
    "Charge (Boar or Hybrid Form Only). If the wereboar moves at least 15 feet straight toward a target and then hits it with its tusks on the same turn, the target takes an extra 7 (2d6) slashing damage. If the target is a creature, it must succeed on a DC 13 Strength saving throw or be knocked prone.",
-   "Relentless. If the wereboar takes 14 damage or less that would reduce it to 0 hit points, it is reduced to 1 hit point instead."
+   "Relentless (Recharges after a Short or Long Rest). If the wereboar takes 14 damage or less that would reduce it to 0 hit points, it is reduced to 1 hit point instead."
   ],
   "actions": [
    {
@@ -12220,7 +12434,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "wereboar-hybrid"
+  "srd_ref": "wereboar-hybrid",
+  "description": "A hulking man-boar abomination, tusked and bristling, that crashes forward with unstoppable, snorting rage."
  },
  {
   "id": "weretiger_human",
@@ -12287,7 +12502,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "weretiger-human"
+  "srd_ref": "weretiger-human",
+  "description": "A lithe, watchful hunter with feline grace, gold eyes betraying the great cat that prowls within."
  },
  {
   "id": "weretiger_hybrid",
@@ -12369,7 +12585,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "weretiger-hybrid"
+  "srd_ref": "weretiger-hybrid",
+  "description": "A towering tiger-headed warrior, striped fur rippling over corded muscle as it stalks forward on silent paws."
  },
  {
   "id": "weretiger_tiger",
@@ -12434,7 +12651,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "weretiger-tiger"
+  "srd_ref": "weretiger-tiger",
+  "description": "A massive, burning-eyed tiger that moves with eerie cunning, far too clever for any ordinary beast."
  },
  {
   "id": "air_elemental",
@@ -12505,7 +12723,8 @@
     "desc": "Each creature in the elemental's space must make a DC 13 Strength saving throw. On a failure, a target takes 15 (3d8 + 2) bludgeoning damage and is flung up 20 feet away from the elemental in a random direction and knocked prone. If a thrown target strikes an object, such as a wall or floor, the target takes 3 (1d6) bludgeoning damage for every 10 feet it was thrown. If the target is thrown at another creature, that creature must succeed on a DC 13 Dexterity saving throw or take the same damage and be knocked prone.\nIf the saving throw is successful, the target takes half the bludgeoning damage and isn't flung away or knocked prone."
    }
   ],
-  "srd_ref": "air-elemental"
+  "srd_ref": "air-elemental",
+  "description": "A howling vortex of living wind, near-invisible save for the dust and debris caught spinning in its fury."
  },
  {
   "id": "barbed_devil",
@@ -12597,7 +12816,8 @@
     "damage_type": "fire"
    }
   ],
-  "srd_ref": "barbed-devil"
+  "srd_ref": "barbed-devil",
+  "description": "A red-scaled fiend bristling with cruel spikes from horns to tail, its burning gaze missing nothing in the dark."
  },
  {
   "id": "bulette",
@@ -12654,7 +12874,8 @@
     "desc": "If the bulette jumps at least 15 ft. as part of its movement, it can then use this action to land on its feet in a space that contains one or more other creatures. Each of those creatures must succeed on a DC 16 Strength or Dexterity saving throw (target's choice) or be knocked prone and take 14 (3d6 + 4) bludgeoning damage plus 14 (3d6 + 4) slashing damage. On a successful save, the creature takes only half the damage, isn't knocked prone, and is pushed 5 ft. out of the bulette's space into an unoccupied space of the creature's choice. If no unoccupied space is within range, the creature instead falls prone in the bulette's space."
    }
   ],
-  "srd_ref": "bulette"
+  "srd_ref": "bulette",
+  "description": "An armored land-shark that erupts from the earth in a spray of dirt, fins slicing the soil as it hunts."
  },
  {
   "id": "earth_elemental",
@@ -12722,7 +12943,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "earth-elemental"
+  "srd_ref": "earth-elemental",
+  "description": "A lumbering mass of stone and soil that rises from the very ground, fists like crumbling boulders."
  },
  {
   "id": "fire_elemental",
@@ -12789,7 +13011,8 @@
     "damage_type": "fire"
    }
   ],
-  "srd_ref": "fire-elemental"
+  "srd_ref": "fire-elemental",
+  "description": "A roaring pillar of living flame that crackles and gutters, scorching everything its blazing form brushes against."
  },
  {
   "id": "flesh_golem",
@@ -12855,7 +13078,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "flesh-golem"
+  "srd_ref": "flesh-golem",
+  "description": "A shambling patchwork of stitched corpses, dead-eyed and lurching, its mismatched limbs twitching with stolen life."
  },
  {
   "id": "giant_crocodile",
@@ -12917,7 +13141,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "giant-crocodile"
+  "srd_ref": "giant-crocodile",
+  "description": "A monstrous reptile lurking just beneath the murky surface, all armored hide, lashing tail, and bone-crushing jaws."
  },
  {
   "id": "giant_shark",
@@ -12969,7 +13194,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "giant-shark"
+  "srd_ref": "giant-shark",
+  "description": "A colossal gray hunter of the deep, drawn to blood and driven to a frenzy by the first taste of it."
  },
  {
   "id": "gladiator",
@@ -13042,7 +13268,8 @@
     "desc": "The gladiator adds 3 to its AC against one melee attack that would hit it. To do so, the gladiator must see the attacker and be wielding a melee weapon."
    }
   ],
-  "srd_ref": "gladiator"
+  "srd_ref": "gladiator",
+  "description": "A scarred, battle-hardened fighter who has bled for crowds, wielding spear and shield with brutal, practiced flair."
  },
  {
   "id": "gorgon",
@@ -13107,7 +13334,8 @@
     "desc": "The gorgon exhales petrifying gas in a 30-foot cone. Each creature in that area must succeed on a DC 13 Constitution saving throw. On a failed save, a target begins to turn to stone and is restrained. The restrained target must repeat the saving throw at the end of its next turn. On a success, the effect ends on the target. On a failure, the target is petrified until freed by the greater restoration spell or other magic."
    }
   ],
-  "srd_ref": "gorgon"
+  "srd_ref": "gorgon",
+  "description": "An iron-plated bull snorting clouds of petrifying vapor, lowering its horns for a thunderous, ground-shaking charge."
  },
  {
   "id": "half_red_dragon_veteran",
@@ -13175,7 +13403,8 @@
     "damage_type": "fire"
    }
   ],
-  "srd_ref": "half-red-dragon-veteran"
+  "srd_ref": "half-red-dragon-veteran",
+  "description": "A grim warrior marked by draconic blood, red-tinged scales at the neck and a soldier's lethal discipline."
  },
  {
   "id": "hill_giant",
@@ -13233,7 +13462,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "hill-giant"
+  "srd_ref": "hill-giant",
+  "description": "A massive, slovenly brute reeking of filth, swinging an uprooted tree with dim-witted, hungry malice."
  },
  {
   "id": "night_hag",
@@ -13312,7 +13542,8 @@
     "desc": "While on the Ethereal Plane, the hag magically touches a sleeping humanoid on the Material Plane. A protection from evil and good spell cast on the target prevents this contact, as does a magic circle. As long as the contact persists, the target has dreadful visions. If these visions last for at least 1 hour, the target gains no benefit from its rest, and its hit point maximum is reduced by 5 (1d10). If this effect reduces the target's hit point maximum to 0, the target dies, and if the target was evil, its soul is trapped in the hag's soul bag. The reduction to the target's hit point maximum lasts until removed by the greater restoration spell or similar magic."
    }
   ],
-  "srd_ref": "night-hag"
+  "srd_ref": "night-hag",
+  "description": "A withered crone with blue-black skin and burning eyes, who stalks the dreams of sleepers to feed on their souls."
  },
  {
   "id": "otyugh",
@@ -13375,7 +13606,8 @@
     "desc": "The otyugh slams creatures grappled by it into each other or a solid surface. Each creature must succeed on a DC 14 Constitution saving throw or take 10 (2d6 + 3) bludgeoning damage and be stunned until the end of the otyugh's next turn. On a successful save, the target takes half the bludgeoning damage and isn't stunned."
    }
   ],
-  "srd_ref": "otyugh"
+  "srd_ref": "otyugh",
+  "description": "A bloated, foul-smelling thing of the deep refuse, hauling itself forward on stubby legs with grasping, eye-tipped tentacles."
  },
  {
   "id": "roper",
@@ -13444,7 +13676,8 @@
     "desc": "The roper pulls each creature grappled by it up to 25 ft. straight toward it."
    }
   ],
-  "srd_ref": "roper"
+  "srd_ref": "roper",
+  "description": "A craggy stone pillar that suddenly sprouts sticky tendrils and a fanged maw, dragging victims into its grinding mouth."
  },
  {
   "id": "salamander",
@@ -13510,7 +13743,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "salamander"
+  "srd_ref": "salamander",
+  "description": "A serpentine fire-creature wreathed in heat, its molten coils searing the air as it coils around a glowing spear."
  },
  {
   "id": "shambling_mound",
@@ -13582,7 +13816,8 @@
     "desc": "The shambling mound engulfs a Medium or smaller creature grappled by it. The engulfed target is blinded, restrained, and unable to breathe, and it must succeed on a DC 14 Constitution saving throw at the start of each of the mound's turns or take 13 (2d8 + 4) bludgeoning damage. If the mound moves, the engulfed target moves with it. The mound can have only one creature engulfed at a time."
    }
   ],
-  "srd_ref": "shambling-mound"
+  "srd_ref": "shambling-mound",
+  "description": "A hulking heap of rotting vines and dripping moss that lurches upright to smother and devour the living."
  },
  {
   "id": "triceratops",
@@ -13633,7 +13868,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "triceratops"
+  "srd_ref": "triceratops",
+  "description": "A living fortress of horn and frill, lowering its three great spikes for a charge that flattens everything before it."
  },
  {
   "id": "troll",
@@ -13696,7 +13932,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "troll"
+  "srd_ref": "troll",
+  "description": "A gangly, green-skinned horror with rending claws and a hunger that knits its wounds closed almost as fast as you open them."
  },
  {
   "id": "unicorn",
@@ -13784,7 +14021,8 @@
     "desc": "The unicorn magically regains 11 (2d8 + 2) hit points."
    }
   ],
-  "srd_ref": "unicorn"
+  "srd_ref": "unicorn",
+  "description": "A shining white steed of the deep woods, its spiraled horn gleaming with gentle, otherworldly magic and untamed grace."
  },
  {
   "id": "vampire_spawn",
@@ -13858,7 +14096,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "vampire-spawn"
+  "srd_ref": "vampire-spawn",
+  "description": "A pale, predatory thrall with reddened eyes and lengthening fangs, scaling walls like a spider in hungry silence."
  },
  {
   "id": "water_elemental",
@@ -13932,7 +14171,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "water-elemental"
+  "srd_ref": "water-elemental",
+  "description": "A churning surge of living water that rises into a man-shape, dragging and drowning whatever it engulfs."
  },
  {
   "id": "werebear_bear",
@@ -13998,7 +14238,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "werebear-bear"
+  "srd_ref": "werebear-bear",
+  "description": "A massive bear of unusual cunning, its gaze too knowing, a gentle soul roused to terrible strength."
  },
  {
   "id": "werebear_human",
@@ -14055,7 +14296,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "werebear-human"
+  "srd_ref": "werebear-human",
+  "description": "A broad, brawny woodsman with a wild beard and watchful eyes, calm until something threatens those he guards."
  },
  {
   "id": "werebear_hybrid",
@@ -14128,7 +14370,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "werebear-hybrid"
+  "srd_ref": "werebear-hybrid",
+  "description": "A towering man-bear of bristling fur and slashing claws, fearsome yet driven by a fiercely protective heart."
  },
  {
   "id": "wraith",
@@ -14201,7 +14444,8 @@
     "desc": "The wraith targets a humanoid within 10 feet of it that has been dead for no longer than 1 minute and died violently. The target's spirit rises as a specter in the space of its corpse or in the nearest unoccupied space. The specter is under the wraith's control. The wraith can have no more than seven specters under its control at one time."
    }
   ],
-  "srd_ref": "wraith"
+  "srd_ref": "wraith",
+  "description": "A robed darkness given malice, drifting cold and soundless, hungry to snuff the warmth from living things."
  },
  {
   "id": "xorn",
@@ -14272,7 +14516,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "xorn"
+  "srd_ref": "xorn",
+  "description": "A squat, three-armed creature of living stone that swims through earth, sniffing greedily after gold and gems."
  },
  {
   "id": "chimera",
@@ -14345,7 +14590,8 @@
     "damage_type": "fire"
    }
   ],
-  "srd_ref": "chimera"
+  "srd_ref": "chimera",
+  "description": "A monstrous fusion of lion, goat, and dragon, three heads roaring as fire smolders in its throat."
  },
  {
   "id": "drider",
@@ -14419,7 +14665,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "drider"
+  "srd_ref": "drider",
+  "description": "A dark elf cursed into a spider's bloated body, half humanoid above and chitinous horror below, bitter and venomous."
  },
  {
   "id": "invisible_stalker",
@@ -14494,7 +14741,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "invisible-stalker"
+  "srd_ref": "invisible-stalker",
+  "description": "An unseen elemental of stirring air, betrayed only by displaced dust as it hunts its quarry without rest or mercy."
  },
  {
   "id": "mage",
@@ -14549,7 +14797,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "mage"
+  "srd_ref": "mage",
+  "description": "A robed spellcaster with ink-stained fingers and a wary gaze, arcane power humming just behind the eyes."
  },
  {
   "id": "mammoth",
@@ -14600,7 +14849,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "mammoth"
+  "srd_ref": "mammoth",
+  "description": "A shaggy mountain of muscle and tusk, trumpeting across the cold steppe, unstoppable when it charges."
  },
  {
   "id": "medusa",
@@ -14675,7 +14925,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "medusa"
+  "srd_ref": "medusa",
+  "description": "A cursed beauty whose hair writhes with serpents and whose gaze turns the unwary to cold, silent stone."
  },
  {
   "id": "vrock",
@@ -14757,7 +15008,8 @@
     "desc": "The vrock emits a horrific screech. Each creature within 20 feet of it that can hear it and that isn't a demon must succeed on a DC 14 Constitution saving throw or be stunned until the end of the vrock's next turn ."
    }
   ],
-  "srd_ref": "vrock"
+  "srd_ref": "vrock",
+  "description": "A reeking vulture-demon of rotting feathers and raking talons, shrieking with a cruelty that delights in suffering."
  },
  {
   "id": "wyvern",
@@ -14824,7 +15076,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "wyvern"
+  "srd_ref": "wyvern",
+  "description": "A lean, two-legged dragon-kin whose barbed tail drips venom, screeching as it stoops from the sky."
  },
  {
   "id": "young_brass_dragon",
@@ -14903,7 +15156,8 @@
     "desc": "The dragon uses one of the following breath weapons.\nFire Breath. The dragon exhales fire in a 40-foot line that is 5 feet wide. Each creature in that line must make a DC 14 Dexterity saving throw, taking 42 (12d6) fire damage on a failed save, or half as much damage on a successful one.\nSleep Breath. The dragon exhales sleep gas in a 30-foot cone. Each creature in that area must succeed on a DC 14 Constitution saving throw or fall unconscious for 5 minutes. This effect ends for a creature if the creature takes damage or someone uses an action to wake it."
    }
   ],
-  "srd_ref": "young-brass-dragon"
+  "srd_ref": "young-brass-dragon",
+  "description": "A talkative, sun-loving dragon of gleaming brass scales, curious and clever, never short of questions."
  },
  {
   "id": "young_white_dragon",
@@ -14986,7 +15240,8 @@
     "damage_type": "cold"
    }
   ],
-  "srd_ref": "young-white-dragon"
+  "srd_ref": "young-white-dragon",
+  "description": "A savage, cold-blooded predator of icy white scales, low cunning glinting in its frost-rimed eyes."
  },
  {
   "id": "giant_ape",
@@ -15046,7 +15301,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "giant-ape"
+  "srd_ref": "giant-ape",
+  "description": "A colossal ape of thunderous strength, beating its chest and hurling boulders with terrifying ease."
  },
  {
   "id": "oni",
@@ -15125,7 +15381,8 @@
     "desc": "The oni magically polymorphs into a Small or Medium humanoid, into a Large giant, or back into its true form. Other than its size, its statistics are the same in each form. The only equipment that is transformed is its glaive, which shrinks so that it can be wielded in humanoid form. If the oni dies, it reverts to its true form, and its glaive reverts to its normal size."
    }
   ],
-  "srd_ref": "oni"
+  "srd_ref": "oni",
+  "description": "A blue-skinned ogre-mage with jutting tusks and cold eyes, cloaking cruelty beneath illusion and silken words."
  },
  {
   "id": "shield_guardian",
@@ -15193,7 +15450,8 @@
     "desc": "When a creature makes an attack against the wearer of the guardian's amulet, the guardian grants a +2 bonus to the wearer's AC if the guardian is within 5 feet of the wearer."
    }
   ],
-  "srd_ref": "shield-guardian"
+  "srd_ref": "shield-guardian",
+  "description": "A hulking construct of metal and runes that lumbers tirelessly beside its master, absorbing every blow meant for them."
  },
  {
   "id": "stone_giant",
@@ -15268,7 +15526,8 @@
     "desc": "If a rock or similar object is hurled at the giant, the giant can, with a successful DC 10 Dexterity saving throw, catch the missile and take no bludgeoning damage from it."
    }
   ],
-  "srd_ref": "stone-giant"
+  "srd_ref": "stone-giant",
+  "description": "A lean, gray-skinned giant who moves with eerie grace, melting into cliffs and hurling stones with deadly aim."
  },
  {
   "id": "young_black_dragon",
@@ -15350,7 +15609,8 @@
     "damage_type": "acid"
    }
   ],
-  "srd_ref": "young-black-dragon"
+  "srd_ref": "young-black-dragon",
+  "description": "A cruel, swamp-dwelling dragon of slick black scales, reeking of acid and delighting in slow torment."
  },
  {
   "id": "young_copper_dragon",
@@ -15429,7 +15689,8 @@
     "desc": "The dragon uses one of the following breath weapons.\nAcid Breath. The dragon exhales acid in an 40-foot line that is 5 feet wide. Each creature in that line must make a DC 14 Dexterity saving throw, taking 40 (9d8) acid damage on a failed save, or half as much damage on a successful one.\nSlowing Breath. The dragon exhales gas in a 30-foot cone. Each creature in that area must succeed on a DC 14 Constitution saving throw. On a failed save, the creature can't use reactions, its speed is halved, and it can't make more than one attack on its turn. In addition, the creature can use either an action or a bonus action on its turn, but not both. These effects last for 1 minute. The creature can repeat the saving throw at the end of each of its turns, ending the effect on itself with a successful save."
    }
   ],
-  "srd_ref": "young-copper-dragon"
+  "srd_ref": "young-copper-dragon",
+  "description": "A trickster dragon of ruddy copper scales, fond of riddles and pranks, with a sly glimmer in its eye."
  },
  {
   "id": "assassin",
@@ -15505,7 +15766,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "assassin"
+  "srd_ref": "assassin",
+  "description": "A cold-eyed killer who moves like a shadow, every blade poised to find the gap with lethal precision."
  },
  {
   "id": "chain_devil",
@@ -15581,7 +15843,8 @@
     "desc": "When a creature the devil can see starts its turn within 30 feet of the devil, the devil can create the illusion that it looks like one of the creature's departed loved ones or bitter enemies. If the creature can see the devil, it must succeed on a DC 14 Wisdom saving throw or be frightened until the end of its turn."
    }
   ],
-  "srd_ref": "chain-devil"
+  "srd_ref": "chain-devil",
+  "description": "A gaunt fiend wreathed in barbed, rattling chains that lash and slither of their own cruel accord."
  },
  {
   "id": "cloaker",
@@ -15654,7 +15917,8 @@
     "desc": "The cloaker magically creates three illusory duplicates of itself if it isn't in bright light. The duplicates move with it and mimic its actions, shifting position so as to make it impossible to track which cloaker is the real one. If the cloaker is ever in an area of bright light, the duplicates disappear.\nWhenever any creature targets the cloaker with an attack or a harmful spell while a duplicate remains, that creature rolls randomly to determine whether it targets the cloaker or one of the duplicates. A creature is unaffected by this magical effect if it can't see or if it relies on senses other than sight.\nA duplicate has the cloaker's AC and uses its saving throws. If an attack hits a duplicate, or if a duplicate fails a saving throw against an effect that deals damage, the duplicate disappears."
    }
   ],
-  "srd_ref": "cloaker"
+  "srd_ref": "cloaker",
+  "description": "A creature like a black leather cloak that hangs unnoticed until it unfurls, smothering its prey in clammy darkness."
  },
  {
   "id": "frost_giant",
@@ -15722,7 +15986,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "frost-giant"
+  "srd_ref": "frost-giant",
+  "description": "A towering raider with ice-blue skin and a frost-caked beard, roaring as it swings a greataxe like a falling tree."
  },
  {
   "id": "hezrou",
@@ -15796,7 +16061,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "hezrou"
+  "srd_ref": "hezrou",
+  "description": "A bloated, toad-like demon that stinks of rot and brine, lashing out with mindless, ravenous fury."
  },
  {
   "id": "hydra",
@@ -15855,7 +16121,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "hydra"
+  "srd_ref": "hydra",
+  "description": "A many-headed reptile of immense bulk, every severed neck writhing as fresh heads sprout to take its place."
  },
  {
   "id": "spirit_naga",
@@ -15914,7 +16181,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "spirit-naga"
+  "srd_ref": "spirit-naga",
+  "description": "A serpent with a hateful humanlike face, hissing dark spells, returning again and again from death to take revenge."
  },
  {
   "id": "tyrannosaurus_rex",
@@ -15972,7 +16240,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "tyrannosaurus-rex"
+  "srd_ref": "tyrannosaurus-rex",
+  "description": "A monstrous reptile of bone-crushing jaws, shaking the ground with each stride as it hunts anything that moves."
  },
  {
   "id": "young_bronze_dragon",
@@ -16054,7 +16323,8 @@
     "desc": "The dragon uses one of the following breath weapons.\nLightning Breath. The dragon exhales lightning in a 60-foot line that is 5 feet wide. Each creature in that line must make a DC 15 Dexterity saving throw, taking 55 (10d10) lightning damage on a failed save, or half as much damage on a successful one.\nRepulsion Breath. The dragon exhales repulsion energy in a 30-foot cone. Each creature in that area must succeed on a DC 15 Strength saving throw. On a failed save, the creature is pushed 40 feet away from the dragon."
    }
   ],
-  "srd_ref": "young-bronze-dragon"
+  "srd_ref": "young-bronze-dragon",
+  "description": "A noble, sea-loving dragon of burnished bronze scales, fierce against tyranny and curious about the affairs of folk."
  },
  {
   "id": "young_green_dragon",
@@ -16141,7 +16411,8 @@
     "damage_type": "poison"
    }
   ],
-  "srd_ref": "young-green-dragon"
+  "srd_ref": "young-green-dragon",
+  "description": "A cunning, manipulative dragon of emerald scales that haunts deep forests, weaving lies and breathing choking poison."
  },
  {
   "id": "bone_devil",
@@ -16223,7 +16494,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "bone-devil"
+  "srd_ref": "bone-devil",
+  "description": "A gaunt, skeletal fiend with a barbed, dripping tail, reeking of decay and radiating cold, calculating malice."
  },
  {
   "id": "clay_golem",
@@ -16294,7 +16566,8 @@
     "desc": "Until the end of its next turn, the golem magically gains a +2 bonus to its AC, has advantage on Dexterity saving throws, and can use its slam attack as a bonus action."
    }
   ],
-  "srd_ref": "clay-golem"
+  "srd_ref": "clay-golem",
+  "description": "A lumbering man-shape of damp red earth, mute and tireless, its crude limbs hardening into something that strikes with terrible force."
  },
  {
   "id": "cloud_giant",
@@ -16363,7 +16636,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "cloud-giant"
+  "srd_ref": "cloud-giant",
+  "description": "A towering, regal figure wreathed in mist, half-noble and half-tyrant, sniffing the wind from a castle in the sky."
  },
  {
   "id": "fire_giant",
@@ -16431,7 +16705,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "fire-giant"
+  "srd_ref": "fire-giant",
+  "description": "A black-bearded titan of soot-stained iron and ember-bright eyes, forged in the heat of volcanic war-forges."
  },
  {
   "id": "glabrezu",
@@ -16506,7 +16781,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "glabrezu"
+  "srd_ref": "glabrezu",
+  "description": "A monstrous four-armed horror crowned with snapping pincers, whispering honeyed bargains even as it lumbers forward to crush."
  },
  {
   "id": "treant",
@@ -16573,7 +16849,8 @@
     "desc": "The treant magically animates one or two trees it can see within 60 feet of it. These trees have the same statistics as a treant, except they have Intelligence and Charisma scores of 1, they can't speak, and they have only the Slam action option. An animated tree acts as an ally of the treant. The tree remains animate for 1 day or until it dies; until the treant dies or is more than 120 feet from the tree; or until the treant takes a bonus action to turn it back into an inanimate tree. The tree then takes root if possible."
    }
   ],
-  "srd_ref": "treant"
+  "srd_ref": "treant",
+  "description": "An ancient, slow-waking tree given a grave face and groaning voice, rooted in centuries of patient woodland wrath."
  },
  {
   "id": "young_blue_dragon",
@@ -16652,7 +16929,8 @@
     "damage_type": "lightning"
    }
   ],
-  "srd_ref": "young-blue-dragon"
+  "srd_ref": "young-blue-dragon",
+  "description": "A proud, sand-scaled predator crackling faintly with static, already learning to herd prey beneath a desert storm."
  },
  {
   "id": "young_silver_dragon",
@@ -16732,7 +17010,8 @@
     "desc": "The dragon uses one of the following breath weapons.\nCold Breath. The dragon exhales an icy blast in a 30-foot cone. Each creature in that area must make a DC 17 Constitution saving throw, taking 54 (12d8) cold damage on a failed save, or half as much damage on a successful one.\nParalyzing Breath. The dragon exhales paralyzing gas in a 30-foot cone. Each creature in that area must succeed on a DC 17 Constitution saving throw or be paralyzed for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
    }
   ],
-  "srd_ref": "young-silver-dragon"
+  "srd_ref": "young-silver-dragon",
+  "description": "A gleaming, mirror-bright dragon with cool eyes and a noble bearing, curious about the small folk it deigns to watch."
  },
  {
   "id": "aboleth",
@@ -16824,7 +17103,8 @@
     "damage_type": "psychic"
    }
   ],
-  "srd_ref": "aboleth"
+  "srd_ref": "aboleth",
+  "description": "A vast, eel-like horror from the lightless deep, its slime-clouded mind older than the gods and hungry to enslave."
  },
  {
   "id": "deva",
@@ -16905,7 +17185,8 @@
     "desc": "The deva magically polymorphs into a humanoid or beast that has a challenge rating equal to or less than its own, or back into its true form. It reverts to its true form if it dies. Any equipment it is wearing or carrying is absorbed or borne by the new form (the deva's choice).\nIn a new form, the deva retains its game statistics and ability to speak, but its AC, movement modes, Strength, Dexterity, and special senses are replaced by those of the new form, and it gains any statistics and capabilities (except class features, legendary actions, and lair actions) that the new form has but that it lacks."
    }
   ],
-  "srd_ref": "deva"
+  "srd_ref": "deva",
+  "description": "A radiant winged figure of serene and terrible beauty, its presence warming the air like sunlight made flesh."
  },
  {
   "id": "guardian_naga",
@@ -16970,7 +17251,8 @@
     "attack_bonus": 8
    }
   ],
-  "srd_ref": "guardian-naga"
+  "srd_ref": "guardian-naga",
+  "description": "A great serpent with a wise, watchful face, coiled in eternal vigil over some sacred trust it will not abandon."
  },
  {
   "id": "stone_golem",
@@ -17038,7 +17320,8 @@
     "desc": "The golem targets one or more creatures it can see within 10 ft. of it. Each target must make a DC 17 Wisdom saving throw against this magic. On a failed save, a target can't use reactions, its speed is halved, and it can't make more than one attack on its turn. In addition, the target can take either an action or a bonus action on its turn, not both. These effects last for 1 minute. A target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
    }
   ],
-  "srd_ref": "stone-golem"
+  "srd_ref": "stone-golem",
+  "description": "A carved colossus of grim, weathered granite, standing motionless until commanded, then grinding forward with relentless weight."
  },
  {
   "id": "young_gold_dragon",
@@ -17122,7 +17405,8 @@
     "desc": "The dragon uses one of the following breath weapons.\nFire Breath. The dragon exhales fire in a 30-foot cone. Each creature in that area must make a DC 17 Dexterity saving throw, taking 55 (10d10) fire damage on a failed save, or half as much damage on a successful one.\nWeakening Breath. The dragon exhales gas in a 30-foot cone. Each creature in that area must succeed on a DC 17 Strength saving throw or have disadvantage on Strength-based attack rolls, Strength checks, and Strength saving throws for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success."
    }
   ],
-  "srd_ref": "young-gold-dragon"
+  "srd_ref": "young-gold-dragon",
+  "description": "A magnificent dragon of burnished gold scales and keen, kindly eyes, proud and unafraid to test a hero's heart."
  },
  {
   "id": "young_red_dragon",
@@ -17201,7 +17485,8 @@
     "damage_type": "fire"
    }
   ],
-  "srd_ref": "young-red-dragon"
+  "srd_ref": "young-red-dragon",
+  "description": "A cocky, swaggering predator already grown to terrible size, its scales a deepening crimson and its breath smoke."
  },
  {
   "id": "behir",
@@ -17278,7 +17563,8 @@
     "damage_type": "acid"
    }
   ],
-  "srd_ref": "behir"
+  "srd_ref": "behir",
+  "description": "A serpentine horror of glistening blue scales and countless legs, scaling cavern walls to drop upon prey with crushing coils."
  },
  {
   "id": "djinni",
@@ -17342,7 +17628,8 @@
     "desc": "A 5-foot-radius, 30-foot-tall cylinder of swirling air magically forms on a point the djinni can see within 120 feet of it. The whirlwind lasts as long as the djinni maintains concentration (as if concentrating on a spell). Any creature but the djinni that enters the whirlwind must succeed on a DC 18 Strength saving throw or be restrained by it. The djinni can move the whirlwind up to 60 feet as an action, and creatures restrained by the whirlwind move with it. The whirlwind ends if the djinni loses sight of it.\nA creature can use its action to free a creature restrained by the whirlwind, including itself, by succeeding on a DC 18 Strength check. If the check succeeds, the creature is no longer restrained and moves to the nearest space outside the whirlwind."
    }
   ],
-  "srd_ref": "djinni"
+  "srd_ref": "djinni",
+  "description": "A towering figure of swirling air and bright robes, proud and capricious, the wind itself bending to its whim."
  },
  {
   "id": "efreeti",
@@ -17408,7 +17695,8 @@
     "damage_type": "fire"
    }
   ],
-  "srd_ref": "efreeti"
+  "srd_ref": "efreeti",
+  "description": "A fearsome giant of blackened skin and dancing flame, cruel and proud, trailing the reek of brimstone and ash."
  },
  {
   "id": "gynosphinx",
@@ -17496,7 +17784,8 @@
     "desc": "The sphinx casts a spell from its list of prepared spells, using a spell slot as normal."
    }
   ],
-  "srd_ref": "gynosphinx"
+  "srd_ref": "gynosphinx",
+  "description": "A lion-bodied, eagle-winged keeper of secrets with a woman's inscrutable face, delighting in riddles and forbidden lore."
  },
  {
   "id": "horned_devil",
@@ -17578,7 +17867,8 @@
     "damage_type": "fire"
    }
   ],
-  "srd_ref": "horned-devil"
+  "srd_ref": "horned-devil",
+  "description": "A winged brute of crimson hide and cruel horns, lashing a barbed tail and reeking of the burning pit."
  },
  {
   "id": "remorhaz",
@@ -17633,7 +17923,8 @@
     "desc": "The remorhaz makes one bite attack against a Medium or smaller creature it is grappling. If the attack hits, that creature takes the bite's damage and is swallowed, and the grapple ends. While swallowed, the creature is blinded and restrained, it has total cover against attacks and other effects outside the remorhaz, and it takes 21 (6d6) acid damage at the start of each of the remorhaz's turns.\nIf the remorhaz takes 30 damage or more on a single turn from a creature inside it, the remorhaz must succeed on a DC 15 Constitution saving throw at the end of that turn or regurgitate all swallowed creatures, which fall prone in a space within 10 feet of the remorhaz. If the remorhaz dies, a swallowed creature is no longer restrained by it and can escape from the corpse using 15 feet of movement, exiting prone."
    }
   ],
-  "srd_ref": "remorhaz"
+  "srd_ref": "remorhaz",
+  "description": "A vast burrowing horror of segmented plates that glow molten as it surfaces, snow hissing to steam around its bulk."
  },
  {
   "id": "roc",
@@ -17701,7 +17992,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "roc"
+  "srd_ref": "roc",
+  "description": "A bird of impossible size whose shadow swallows whole hillsides, talons spread wide enough to seize an ox."
  },
  {
   "id": "archmage",
@@ -17761,7 +18053,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "archmage"
+  "srd_ref": "archmage",
+  "description": "A keen-eyed master of the arcane, robed and unhurried, the air around them humming with barely-leashed power."
  },
  {
   "id": "erinyes",
@@ -17842,7 +18135,8 @@
     "desc": "The erinyes adds 4 to its AC against one melee attack that would hit it. To do so, the erinyes must see the attacker and be wielding a melee weapon."
    }
   ],
-  "srd_ref": "erinyes"
+  "srd_ref": "erinyes",
+  "description": "A fallen angel of terrible beauty, raven-winged and armored, loosing arrows that pierce both flesh and resolve."
  },
  {
   "id": "adult_brass_dragon",
@@ -17900,7 +18194,7 @@
   "languages": "Common, Draconic",
   "xp": 10000,
   "traits": [
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -17953,7 +18247,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "adult-brass-dragon"
+  "srd_ref": "adult-brass-dragon",
+  "description": "A sun-bronzed dragon of endless talk and desert wisdom, sociable yet immense, its breath a withering blast of heat."
  },
  {
   "id": "adult_white_dragon",
@@ -18009,7 +18304,7 @@
   "xp": 10000,
   "traits": [
    "Ice Walk. The dragon can move across and climb icy surfaces without needing to make an ability check. Additionally, difficult terrain composed of ice or snow doesn't cost it extra movement.",
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -18064,7 +18359,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "adult-white-dragon"
+  "srd_ref": "adult-white-dragon",
+  "description": "A frost-rimed predator of feral cunning and savage hunger, prowling glacier and cavern with breath of killing cold."
  },
  {
   "id": "nalfeshnee",
@@ -18147,7 +18443,8 @@
     "desc": "The nalfeshnee magically teleports, along with any equipment it is wearing or carrying, up to 120 feet to an unoccupied space it can see."
    }
   ],
-  "srd_ref": "nalfeshnee"
+  "srd_ref": "nalfeshnee",
+  "description": "A bloated, boar-faced abomination on too-small wings, radiating idiot malice and the stench of the Abyss."
  },
  {
   "id": "rakshasa",
@@ -18211,7 +18508,8 @@
     "damage_type": "slashing"
    }
   ],
-  "srd_ref": "rakshasa"
+  "srd_ref": "rakshasa",
+  "description": "A tiger-faced fiend in fine silks, its backward-curling hands betraying the cruelty beneath its courtly charm."
  },
  {
   "id": "storm_giant",
@@ -18299,7 +18597,8 @@
     "damage_type": "lightning"
    }
   ],
-  "srd_ref": "storm-giant"
+  "srd_ref": "storm-giant",
+  "description": "A serene colossus with sea-green skin and thunder in its voice, dwelling apart and reading omens in the storm."
  },
  {
   "id": "vampire_bat",
@@ -18352,7 +18651,7 @@
   "xp": 10000,
   "traits": [
    "Shapechanger. If the vampire isn't in sun light or running water, it can use its action to polymorph into a Tiny bat or a Medium cloud of mist, or back into its true form.\nWhile in bat form, the vampire can't speak, its walking speed is 5 feet, and it has a flying speed of 30 feet. Its statistics, other than its size and speed, are unchanged. Anything it is wearing transforms with it, but nothing it is carrying does. It reverts to its true form if it dies.\nWhile in mist form, the vampire can't take any actions, speak, or manipulate objects. It is weightless, has a flying speed of 20 feet, can hover, and can enter a hostile creature's space and stop there. In addition, if air can pass through a space, the mist can do so without squeezing, and it can't pass through water. It has advantage on Strength, Dexterity, and Constitution saving throws, and it is immune to all nonmagical damage, except the damage it takes from sunlight.",
-   "Legendary Resistance. If the vampire fails a saving throw, it can choose to succeed instead.",
+   "Legendary Resistance (3/Day). If the vampire fails a saving throw, it can choose to succeed instead.",
    "Misty Escape. When it drops to 0 hit points outside its resting place, the vampire transforms into a cloud of mist (as in the Shapechanger trait) instead of falling unconscious, provided that it isn't in sunlight or running water. If it can't transform, it is destroyed.\nWhile it has 0 hit points in mist form, it can't revert to its vampire form, and it must reach its resting place within 2 hours or be destroyed. Once in its resting place, it reverts to its vampire form. It is then paralyzed until it regains at least 1 hit point. After spending 1 hour in its resting place with 0 hit points, it regains 1 hit point.",
    "Regeneration. The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn.",
    "Spider Climb. The vampire can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check.",
@@ -18392,7 +18691,8 @@
     "attack_bonus": 0
    }
   ],
-  "srd_ref": "vampire-bat"
+  "srd_ref": "vampire-bat",
+  "description": "A great leathern bat with cruel red eyes, its flutter the only warning before it falls upon a throat."
  },
  {
   "id": "vampire_mist",
@@ -18444,7 +18744,7 @@
   "xp": 10000,
   "traits": [
    "Shapechanger. If the vampire isn't in sun light or running water, it can use its action to polymorph into a Tiny bat or a Medium cloud of mist, or back into its true form.\nWhile in bat form, the vampire can't speak, its walking speed is 5 feet, and it has a flying speed of 30 feet. Its statistics, other than its size and speed, are unchanged. Anything it is wearing transforms with it, but nothing it is carrying does. It reverts to its true form if it dies.\nWhile in mist form, the vampire can't take any actions, speak, or manipulate objects. It is weightless, has a flying speed of 20 feet, can hover, and can enter a hostile creature's space and stop there. In addition, if air can pass through a space, the mist can do so without squeezing, and it can't pass through water. It has advantage on Strength, Dexterity, and Constitution saving throws, and it is immune to all nonmagical damage, except the damage it takes from sunlight.",
-   "Legendary Resistance. If the vampire fails a saving throw, it can choose to succeed instead.",
+   "Legendary Resistance (3/Day). If the vampire fails a saving throw, it can choose to succeed instead.",
    "Misty Escape. When it drops to 0 hit points outside its resting place, the vampire transforms into a cloud of mist (as in the Shapechanger trait) instead of falling unconscious, provided that it isn't in sunlight or running water. If it can't transform, it is destroyed.\nWhile it has 0 hit points in mist form, it can't revert to its vampire form, and it must reach its resting place within 2 hours or be destroyed. Once in its resting place, it reverts to its vampire form. It is then paralyzed until it regains at least 1 hit point. After spending 1 hour in its resting place with 0 hit points, it regains 1 hit point.",
    "Regeneration. The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn.",
    "Spider Climb. The vampire can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check.",
@@ -18467,7 +18767,8 @@
     "attack_bonus": 0
    }
   ],
-  "srd_ref": "vampire-mist"
+  "srd_ref": "vampire-mist",
+  "description": "A creeping bank of unnatural fog with a hunger behind it, pouring through cracks where no solid thing could pass."
  },
  {
   "id": "vampire_vampire",
@@ -18519,7 +18820,7 @@
   "xp": 10000,
   "traits": [
    "Shapechanger. If the vampire isn't in sun light or running water, it can use its action to polymorph into a Tiny bat or a Medium cloud of mist, or back into its true form.\nWhile in bat form, the vampire can't speak, its walking speed is 5 feet, and it has a flying speed of 30 feet. Its statistics, other than its size and speed, are unchanged. Anything it is wearing transforms with it, but nothing it is carrying does. It reverts to its true form if it dies.\nWhile in mist form, the vampire can't take any actions, speak, or manipulate objects. It is weightless, has a flying speed of 20 feet, can hover, and can enter a hostile creature's space and stop there. In addition, if air can pass through a space, the mist can do so without squeezing, and it can't pass through water. It has advantage on Strength, Dexterity, and Constitution saving throws, and it is immune to all nonmagical damage, except the damage it takes from sunlight.",
-   "Legendary Resistance. If the vampire fails a saving throw, it can choose to succeed instead.",
+   "Legendary Resistance (3/Day). If the vampire fails a saving throw, it can choose to succeed instead.",
    "Misty Escape. When it drops to 0 hit points outside its resting place, the vampire transforms into a cloud of mist (as in the Shapechanger trait) instead of falling unconscious, provided that it isn't in sunlight or running water. If it can't transform, it is destroyed.\nWhile it has 0 hit points in mist form, it can't revert to its vampire form, and it must reach its resting place within 2 hours or be destroyed. Once in its resting place, it reverts to its vampire form. It is then paralyzed until it regains at least 1 hit point. After spending 1 hour in its resting place with 0 hit points, it regains 1 hit point.",
    "Regeneration. The vampire regains 20 hit points at the start of its turn if it has at least 1 hit point and isn't in sunlight or running water. If the vampire takes radiant damage or damage from holy water, this trait doesn't function at the start of the vampire's next turn.",
    "Spider Climb. The vampire can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check.",
@@ -18570,7 +18871,8 @@
     "attack_bonus": 0
    }
   ],
-  "srd_ref": "vampire-vampire"
+  "srd_ref": "vampire-vampire",
+  "description": "A pale, magnetic lord of the night, gracious and predatory, hungering for blood behind a charming, ageless smile."
  },
  {
   "id": "adult_black_dragon",
@@ -18625,7 +18927,7 @@
   "xp": 11500,
   "traits": [
    "Amphibious. The dragon can breathe air and water.",
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -18680,7 +18982,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "adult-black-dragon"
+  "srd_ref": "adult-black-dragon",
+  "description": "A gaunt, acid-dripping tyrant of swamp and ruin, cruel and patient, its lair stinking of rot and bone."
  },
  {
   "id": "adult_copper_dragon",
@@ -18736,7 +19039,7 @@
   "languages": "Common, Draconic",
   "xp": 11500,
   "traits": [
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -18789,7 +19092,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "adult-copper-dragon"
+  "srd_ref": "adult-copper-dragon",
+  "description": "A trickster dragon of verdigris scales and sly humor, hoarding jokes and riddles as eagerly as gold."
  },
  {
   "id": "ice_devil",
@@ -18874,7 +19178,8 @@
     "desc": "The devil magically forms an opaque wall of ice on a solid surface it can see within 60 feet of it. The wall is 1 foot thick and up to 30 feet long and 10 feet high, or it's a hemispherical dome up to 20 feet in diameter.\nWhen the wall appears, each creature in its space is pushed out of it by the shortest route. The creature chooses which side of the wall to end up on, unless the creature is incapacitated. The creature then makes a DC 17 Dexterity saving throw, taking 35 (10d6) cold damage on a failed save, or half as much damage on a successful one.\nThe wall lasts for 1 minute or until the devil is incapacitated or dies. The wall can be damaged and breached; each 10-foot section has AC 5, 30 hit points, vulnerability to fire damage, and immunity to acid, cold, necrotic, poison, and psychic damage. If a section is destroyed, it leaves behind a sheet of frigid air in the space the wall occupied. Whenever a creature finishes moving through the frigid air on a turn, willingly or otherwise, the creature must make a DC 17 Constitution saving throw, taking 17 (5d6) cold damage on a failed save, or half as much damage on a successful one. The frigid air dissipates when the rest of the wall vanishes."
    }
   ],
-  "srd_ref": "ice-devil"
+  "srd_ref": "ice-devil",
+  "description": "A towering insectoid horror sheathed in frost, soldier of the hells, dragging killing cold in its wake."
  },
  {
   "id": "adult_bronze_dragon",
@@ -18931,7 +19236,7 @@
   "xp": 13000,
   "traits": [
    "Amphibious. The dragon can breathe air and water.",
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -18984,7 +19289,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "adult-bronze-dragon"
+  "srd_ref": "adult-bronze-dragon",
+  "description": "A storm-loving dragon of sea-bright scales and noble temper, patrolling the coasts as a self-appointed guardian."
  },
  {
   "id": "adult_green_dragon",
@@ -19048,7 +19354,7 @@
   "xp": 13000,
   "traits": [
    "Amphibious. The dragon can breathe air and water.",
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -19103,7 +19409,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "adult-green-dragon"
+  "srd_ref": "adult-green-dragon",
+  "description": "A cunning, serpentine tyrant of the deep forest, emerald scales glistening as poison curls from its grinning jaws."
  },
  {
   "id": "mummy_lord",
@@ -19209,7 +19516,8 @@
     "desc": "The mummy lord magically transforms into a whirlwind of sand, moves up to 60 feet, and reverts to its normal form. While in whirlwind form, the mummy lord is immune to all damage, and it can't be grappled, petrified, knocked prone, restrained, or stunned. Equipment worn or carried by the mummy lord remain in its possession."
    }
   ],
-  "srd_ref": "mummy-lord"
+  "srd_ref": "mummy-lord",
+  "description": "A withered high priest wrapped in funerary linens, eyes burning with the cold fury of a kingdom long entombed."
  },
  {
   "id": "purple_worm",
@@ -19271,7 +19579,8 @@
     "damage_type": "piercing"
    }
   ],
-  "srd_ref": "purple-worm"
+  "srd_ref": "purple-worm",
+  "description": "A monstrous burrowing leviathan that erupts from the earth, all gnashing maw and lashing, venom-tipped tail."
  },
  {
   "id": "adult_blue_dragon",
@@ -19325,7 +19634,7 @@
   "languages": "Common, Draconic",
   "xp": 15000,
   "traits": [
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -19380,7 +19689,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "adult-blue-dragon"
+  "srd_ref": "adult-blue-dragon",
+  "description": "An arrogant desert sovereign of indigo scale and jutting horn, the air around it crackling with caged lightning."
  },
  {
   "id": "adult_silver_dragon",
@@ -19437,7 +19747,7 @@
   "languages": "Common, Draconic",
   "xp": 15000,
   "traits": [
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -19490,7 +19800,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "adult-silver-dragon"
+  "srd_ref": "adult-silver-dragon",
+  "description": "A regal, frost-pale dragon with a noble bearing, watching mortals with the patient curiosity of an old friend."
  },
  {
   "id": "iron_golem",
@@ -19569,7 +19880,8 @@
     "damage_type": "poison"
    }
   ],
-  "srd_ref": "iron-golem"
+  "srd_ref": "iron-golem",
+  "description": "A towering juggernaut of black iron, its every ponderous step shaking the floor as it grips an enormous blade."
  },
  {
   "id": "marilith",
@@ -19655,7 +19967,8 @@
     "desc": "The marilith adds 5 to its AC against one melee attack that would hit it. To do so, the marilith must see the attacker and be wielding a melee weapon."
    }
   ],
-  "srd_ref": "marilith"
+  "srd_ref": "marilith",
+  "description": "A six-armed serpent-demoness of terrible beauty, each fist gripping a blade, her coiled tail forever in motion."
  },
  {
   "id": "planetar",
@@ -19732,7 +20045,8 @@
     "desc": "The planetar touches another creature. The target magically regains 30 (6d8 + 3) hit points and is freed from any curse, disease, poison, blindness, or deafness."
    }
   ],
-  "srd_ref": "planetar"
+  "srd_ref": "planetar",
+  "description": "A radiant emerald-skinned angel, winged and grave, its greatsword blazing with the righteous certainty of the heavens."
  },
  {
   "id": "adult_gold_dragon",
@@ -19791,7 +20105,7 @@
   "xp": 18000,
   "traits": [
    "Amphibious. The dragon can breathe air and water.",
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -19844,7 +20158,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "adult-gold-dragon"
+  "srd_ref": "adult-gold-dragon",
+  "description": "A magnificent, kingly dragon sheathed in burnished gold, its gaze weighing every soul with calm, ancient wisdom."
  },
  {
   "id": "adult_red_dragon",
@@ -19898,7 +20213,7 @@
   "languages": "Common, Draconic",
   "xp": 18000,
   "traits": [
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -19953,7 +20268,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "adult-red-dragon"
+  "srd_ref": "adult-red-dragon",
+  "description": "A swaggering crimson tyrant wreathed in heat-shimmer, smoke seeping between fangs as it surveys its smoldering domain."
  },
  {
   "id": "androsphinx",
@@ -20047,7 +20363,8 @@
     "desc": "The sphinx casts a spell from its list of prepared spells, using a spell slot as normal."
    }
   ],
-  "srd_ref": "androsphinx"
+  "srd_ref": "androsphinx",
+  "description": "A great lion-bodied guardian with a stern human face, its booming voice carrying riddles older than the desert sands."
  },
  {
   "id": "dragon_turtle",
@@ -20125,7 +20442,8 @@
     "damage_type": "fire"
    }
   ],
-  "srd_ref": "dragon-turtle"
+  "srd_ref": "dragon-turtle",
+  "description": "A mountainous reptile rising from the depths, barnacled shell breaking the waves as steam hisses from its jaws."
  },
  {
   "id": "balor",
@@ -20207,7 +20525,8 @@
     "desc": "The balor magically teleports, along with any equipment it is wearing or carrying, up to 120 feet to an unoccupied space it can see."
    }
   ],
-  "srd_ref": "balor"
+  "srd_ref": "balor",
+  "description": "A towering demon-lord wrapped in living flame, cracking a fiery whip in one hand and a vast burning sword in the other."
  },
  {
   "id": "ancient_brass_dragon",
@@ -20265,7 +20584,7 @@
   "languages": "Common, Draconic",
   "xp": 25000,
   "traits": [
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -20322,7 +20641,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "ancient-brass-dragon"
+  "srd_ref": "ancient-brass-dragon",
+  "description": "A vast, sun-warmed dragon of gleaming brass, as fond of endless conversation as it is of the scorching desert wind."
  },
  {
   "id": "ancient_white_dragon",
@@ -20378,7 +20698,7 @@
   "xp": 25000,
   "traits": [
    "Ice Walk. The dragon can move across and climb icy surfaces without needing to make an ability check. Additionally, difficult terrain composed of ice or snow doesn't cost it extra movement.",
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -20433,7 +20753,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "ancient-white-dragon"
+  "srd_ref": "ancient-white-dragon",
+  "description": "A glacial titan of jagged ice-white scale, primal and savage, trailing a killing frost across the frozen wastes."
  },
  {
   "id": "pit_fiend",
@@ -20523,7 +20844,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "pit-fiend"
+  "srd_ref": "pit-fiend",
+  "description": "An archdevil of monstrous wingspan and infernal authority, dread radiating from it like heat from a forge."
  },
  {
   "id": "ancient_black_dragon",
@@ -20578,7 +20900,7 @@
   "xp": 33000,
   "traits": [
    "Amphibious. The dragon can breathe air and water.",
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -20633,7 +20955,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "ancient-black-dragon"
+  "srd_ref": "ancient-black-dragon",
+  "description": "A cruel, decaying horror of the swamp, its tattered black hide reeking of acid and the bones of the drowned."
  },
  {
   "id": "ancient_copper_dragon",
@@ -20689,7 +21012,7 @@
   "languages": "Common, Draconic",
   "xp": 33000,
   "traits": [
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -20746,7 +21069,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "ancient-copper-dragon"
+  "srd_ref": "ancient-copper-dragon",
+  "description": "An immense, mischievous dragon of weathered copper, its sly eyes glinting with riddles, jests, and ancient cunning."
  },
  {
   "id": "lich",
@@ -20813,7 +21137,7 @@
   "languages": "Common plus up to five other languages",
   "xp": 33000,
   "traits": [
-   "Legendary Resistance. If the lich fails a saving throw, it can choose to succeed instead.",
+   "Legendary Resistance (3/Day). If the lich fails a saving throw, it can choose to succeed instead.",
    "Rejuvenation. If it has a phylactery, a destroyed lich gains a new body in 1d10 days, regaining all its hit points and becoming active again. The new body appears within 5 feet of the phylactery.",
    "Spellcasting. The lich is an 18th-level spellcaster. Its spellcasting ability is Intelligence (spell save DC 20, +12 to hit with spell attacks). The lich has the following wizard spells prepared:\n\n- Cantrips (at will): mage hand, prestidigitation, ray of frost\n- 1st level (4 slots): detect magic, magic missile, shield, thunderwave\n- 2nd level (3 slots): acid arrow, detect thoughts, invisibility, mirror image\n- 3rd level (3 slots): animate dead, counterspell, dispel magic, fireball\n- 4th level (3 slots): blight, dimension door\n- 5th level (3 slots): cloudkill, scrying\n- 6th level (1 slot): disintegrate, globe of invulnerability\n- 7th level (1 slot): finger of death, plane shift\n- 8th level (1 slot): dominate monster, power word stun\n- 9th level (1 slot): power word kill",
    "Turn Resistance. The lich has advantage on saving throws against any effect that turns undead."
@@ -20847,7 +21171,8 @@
     "damage_type": "necrotic"
    }
   ],
-  "srd_ref": "lich"
+  "srd_ref": "lich",
+  "description": "A skeletal archmage clad in mouldering finery, pinpoints of cold light burning in its sockets above a deathless smile."
  },
  {
   "id": "solar",
@@ -20956,7 +21281,8 @@
     "desc": "The solar targets one creature it can see within 30 ft. of it. If the target can see it, the target must succeed on a DC 15 Constitution saving throw or be blinded until magic such as the lesser restoration spell removes the blindness."
    }
   ],
-  "srd_ref": "solar"
+  "srd_ref": "solar",
+  "description": "A blindingly resplendent archangel, wings spanning the heavens, its very presence a hymn of unbearable holy light."
  },
  {
   "id": "ancient_bronze_dragon",
@@ -21013,7 +21339,7 @@
   "xp": 41000,
   "traits": [
    "Amphibious. The dragon can breathe air and water.",
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -21070,7 +21396,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "ancient-bronze-dragon"
+  "srd_ref": "ancient-bronze-dragon",
+  "description": "A storm-grey leviathan of the coasts, noble and martial, its bronze hide flecked with sea-salt and lightning's tang."
  },
  {
   "id": "ancient_green_dragon",
@@ -21134,7 +21461,7 @@
   "xp": 41000,
   "traits": [
    "Amphibious. The dragon can breathe air and water.",
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -21189,7 +21516,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "ancient-green-dragon"
+  "srd_ref": "ancient-green-dragon",
+  "description": "A vast, manipulative tyrant of the primeval wood, every honeyed word dripping with poison and centuries of guile."
  },
  {
   "id": "ancient_blue_dragon",
@@ -21243,7 +21571,7 @@
   "languages": "Common, Draconic",
   "xp": 50000,
   "traits": [
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -21298,7 +21626,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "ancient-blue-dragon"
+  "srd_ref": "ancient-blue-dragon",
+  "description": "A colossal storm-tyrant of the deserts, sand hissing around it as thunder rolls deep within its lightning-charged throat."
  },
  {
   "id": "ancient_silver_dragon",
@@ -21355,7 +21684,7 @@
   "languages": "Common, Draconic",
   "xp": 50000,
   "traits": [
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -21412,7 +21741,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "ancient-silver-dragon"
+  "srd_ref": "ancient-silver-dragon",
+  "description": "A vast, gleaming dragon of silver and frost, serene and benevolent, mantled in clouds high above the peaks."
  },
  {
   "id": "kraken",
@@ -21514,7 +21844,8 @@
     "damage_type": "poison"
    }
   ],
-  "srd_ref": "kraken"
+  "srd_ref": "kraken",
+  "description": "A nightmare of the abyssal deep, tentacles vast as ship-masts coiling up from black water to drag whole vessels under."
  },
  {
   "id": "ancient_gold_dragon",
@@ -21573,7 +21904,7 @@
   "xp": 62000,
   "traits": [
    "Amphibious. The dragon can breathe air and water.",
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -21630,7 +21961,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "ancient-gold-dragon"
+  "srd_ref": "ancient-gold-dragon",
+  "description": "The mightiest of noble dragons, a sun made flesh, its golden majesty radiating wisdom, justice, and crushing power."
  },
  {
   "id": "ancient_red_dragon",
@@ -21684,7 +22016,7 @@
   "languages": "Common, Draconic",
   "xp": 62000,
   "traits": [
-   "Legendary Resistance. If the dragon fails a saving throw, it can choose to succeed instead."
+   "Legendary Resistance (3/Day). If the dragon fails a saving throw, it can choose to succeed instead."
   ],
   "actions": [
    {
@@ -21739,7 +22071,8 @@
     "damage_type": "bludgeoning"
    }
   ],
-  "srd_ref": "ancient-red-dragon"
+  "srd_ref": "ancient-red-dragon",
+  "description": "A volcano given will and wing, scales like cooling lava, its furnace breath enough to reduce a city to ash."
  },
  {
   "id": "tarrasque",
@@ -21789,7 +22122,7 @@
   "languages": "—",
   "xp": 155000,
   "traits": [
-   "Legendary Resistance. If the tarrasque fails a saving throw, it can choose to succeed instead.",
+   "Legendary Resistance (3/Day). If the tarrasque fails a saving throw, it can choose to succeed instead.",
    "Magic Resistance. The tarrasque has advantage on saving throws against spells and other magical effects.",
    "Reflective Carapace. Any time the tarrasque is targeted by a magic missile spell, a line spell, or a spell that requires a ranged attack roll, roll a d6. On a 1 to 5, the tarrasque is unaffected. On a 6, the tarrasque is unaffected, and the effect is reflected back at the caster as though it originated from the tarrasque, turning the caster into the target.",
    "Siege Monster. The tarrasque deals double damage to objects and structures."
@@ -21850,6 +22183,7 @@
     "desc": "The tarrasque makes one bite attack or uses its Swallow."
    }
   ],
-  "srd_ref": "tarrasque"
+  "srd_ref": "tarrasque",
+  "description": "A world-ending colossus of armored horror, its approach felt as trembling earth long before its shadow swallows the sky."
  }
 ]

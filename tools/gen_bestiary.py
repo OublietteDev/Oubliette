@@ -154,7 +154,8 @@ def map_monster(m: dict) -> dict:
         "senses": {k: str(v) for k, v in m.get("senses", {}).items()},
         "languages": m.get("languages") or "—",
         "xp": m.get("xp", 0),
-        "traits": [f"{sa['name']}. {sa['desc']}" for sa in m.get("special_abilities", [])],
+        "traits": [f"{sa['name']}{_usage_suffix(sa.get('usage'))}. {sa['desc']}"
+                   for sa in m.get("special_abilities", [])],
         "actions": actions,
         "legendary_actions": [_action(a) for a in m.get("legendary_actions", [])],
         "reactions": [_action(a) for a in m.get("reactions", [])],
