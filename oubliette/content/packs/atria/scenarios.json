@@ -3,7 +3,7 @@
     "id": "opening",
     "name": "A New Beginning",
     "start_location": "brightvale",
-    "scene_override": "The party finds themselves in the midst of a bustling, beautiful coastal city; they have finally made it to Brightvale. Their pasts are washed away, whether they were a band of thieves, a troupe of musicians, or a simple band of farmers. This is all secondary to one sobering realization: their true story starts now.",
+    "scene_override": "The party finds themselves in the midst of a bustling, beautiful coastal city; they have finally made it to Brightvale. Their pasts are washed away, whether they were a band of thieves, a troupe of musicians, or a simple group of farmers. This is all secondary to one sobering realization: their true story starts now.",
     "party_source": "default",
     "default_party": [
       {
