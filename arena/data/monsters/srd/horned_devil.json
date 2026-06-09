@@ -107,7 +107,7 @@
     {
       "name": "Multiattack",
       "description": "The devil makes three melee attacks: two with its fork and one with its tail. It can use Hurl Flame in place of any melee attack.",
-      "extra_attack_count": 2
+      "extra_attack_count": 3
     },
     {
       "name": "Devil's Sight",

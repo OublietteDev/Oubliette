@@ -91,7 +91,7 @@
     {
       "name": "Multiattack",
       "description": "The centaur makes two attacks: one with its pike and one with its hooves or two with its longbow.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Charge",

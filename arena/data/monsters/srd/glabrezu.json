@@ -87,7 +87,7 @@
     {
       "name": "Multiattack",
       "description": "The glabrezu makes four attacks: two with its pincers and two with its fists. Alternatively, it makes two attacks with its pincers and casts one spell.",
-      "extra_attack_count": 3
+      "extra_attack_count": 4
     },
     {
       "name": "Innate Spellcasting",

@@ -71,7 +71,7 @@
     {
       "name": "Multiattack",
       "description": "The gibbering mouther makes one bite attack and, if it can, uses its Blinding Spittle.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Aberrant Ground",

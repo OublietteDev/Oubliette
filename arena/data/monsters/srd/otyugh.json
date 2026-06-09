@@ -92,7 +92,7 @@
     {
       "name": "Multiattack",
       "description": "The otyugh makes three attacks: one with its bite and two with its tentacles.",
-      "extra_attack_count": 2
+      "extra_attack_count": 3
     },
     {
       "name": "Limited Telepathy",

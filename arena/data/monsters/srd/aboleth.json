@@ -95,7 +95,7 @@
     {
       "name": "Multiattack",
       "description": "The aboleth makes three tentacle attacks.",
-      "extra_attack_count": 2
+      "extra_attack_count": 3
     },
     {
       "name": "Amphibious",

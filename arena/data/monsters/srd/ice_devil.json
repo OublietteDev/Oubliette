@@ -121,7 +121,7 @@
     {
       "name": "Multiattack",
       "description": "The devil makes three attacks: one with its bite, one with its claws, and one with its tail.",
-      "extra_attack_count": 2
+      "extra_attack_count": 3
     },
     {
       "name": "Devil's Sight",

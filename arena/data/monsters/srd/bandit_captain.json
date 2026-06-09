@@ -75,7 +75,7 @@
     {
       "name": "Multiattack",
       "description": "The captain makes three melee attacks: two with its scimitar and one with its dagger. Or the captain makes two ranged attacks with its daggers.",
-      "extra_attack_count": 2
+      "extra_attack_count": 3
     }
   ],
   "challenge_rating": 2.0,

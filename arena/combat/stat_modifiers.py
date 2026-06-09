@@ -437,6 +437,12 @@ def get_extra_attack_count(creature: Creature) -> int:
     for f in _get_feats(creature):
         if f.extra_attack_count > max_count:
             max_count = f.extra_attack_count
+    # Monsters carry their abilities in `special_abilities` (not `features`), so a
+    # monster's Multiattack — a dragon's bite + two claws — lives there. Read it too,
+    # so monster multiattack is live, not just a PlayerCharacter mechanic.
+    for f in getattr(creature, "special_abilities", []):
+        if getattr(f, "extra_attack_count", 0) > max_count:
+            max_count = f.extra_attack_count
     return max_count
 
 

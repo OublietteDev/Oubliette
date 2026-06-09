@@ -75,7 +75,7 @@
     {
       "name": "Multiattack",
       "description": "The giant makes two morningstar attacks.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Keen Smell",

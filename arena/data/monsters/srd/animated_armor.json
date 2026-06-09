@@ -65,7 +65,7 @@
     {
       "name": "Multiattack",
       "description": "The armor makes two melee attacks.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Antimagic Susceptibility",

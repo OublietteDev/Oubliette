@@ -67,7 +67,7 @@
     {
       "name": "Multiattack",
       "description": "The elemental makes two slam attacks.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Earth Glide",

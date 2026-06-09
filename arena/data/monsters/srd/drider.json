@@ -84,7 +84,7 @@
     {
       "name": "Multiattack",
       "description": "The drider makes three attacks, either with its longsword or its longbow. It can replace one of those attacks with a bite attack.",
-      "extra_attack_count": 2
+      "extra_attack_count": 3
     },
     {
       "name": "Fey Ancestry",

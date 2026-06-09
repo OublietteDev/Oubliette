@@ -73,7 +73,7 @@
     {
       "name": "Multiattack",
       "description": "The lamia makes two attacks: one with its claws and one with its dagger or Intoxicating Touch.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Innate Spellcasting",

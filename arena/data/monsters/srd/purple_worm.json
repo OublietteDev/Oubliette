@@ -78,7 +78,7 @@
     {
       "name": "Multiattack",
       "description": "The worm makes two attacks: one with its bite and one with its stinger.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Tunneler",

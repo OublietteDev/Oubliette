@@ -84,7 +84,7 @@
     {
       "name": "Multiattack",
       "description": "The salamander makes two attacks: one with its spear and one with its tail.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Heated Body",

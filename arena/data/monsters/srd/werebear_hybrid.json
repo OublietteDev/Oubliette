@@ -94,7 +94,7 @@
     {
       "name": "Multiattack",
       "description": "In bear form, the werebear makes two claw attacks. In humanoid form, it makes two greataxe attacks. In hybrid form, it can attack like a bear or a humanoid.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Shapechanger",

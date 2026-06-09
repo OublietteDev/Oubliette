@@ -83,7 +83,7 @@
     {
       "name": "Multiattack",
       "description": "The dragon makes three attacks: one with its bite and two with its claws.",
-      "extra_attack_count": 2
+      "extra_attack_count": 3
     }
   ],
   "challenge_rating": 6.0,

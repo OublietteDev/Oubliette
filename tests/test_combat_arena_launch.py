@@ -218,6 +218,17 @@ def test_authored_fidelity_survives_the_encounter_round_trip():
     arena_launch.cleanup(pending)
 
 
+def test_monster_multiattack_is_live():
+    """The engine enable: a generated multiattacker's extra-attack count is now
+    read off its special_abilities, so monster multiattack actually fires."""
+    from arena.combat.stat_modifiers import get_extra_attack_count
+
+    from oubliette.combat.arena_bridge import arena_monster_file
+
+    assert get_extra_attack_count(arena_monster_file("young_red_dragon")) == 3  # bite + 2 claws
+    assert get_extra_attack_count(arena_monster_file("goblin")) == 1            # no multiattack
+
+
 def test_unknown_enemy_ref_is_a_combat_error():
     s = _session()
     req = EncounterRequest(enemies=[EnemyRef(ref="nonesuch_beast")])

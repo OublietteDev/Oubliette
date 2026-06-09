@@ -138,7 +138,7 @@
     {
       "name": "Multiattack",
       "description": "The tarrasque can use its Frightful Presence. It then makes five attacks: one with its bite, two with its claws, one with its horns, and one with its tail. It can use its Swallow instead of its bite.",
-      "extra_attack_count": 4
+      "extra_attack_count": 5
     },
     {
       "name": "Legendary Resistance",

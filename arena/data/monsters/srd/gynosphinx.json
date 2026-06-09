@@ -61,7 +61,7 @@
     {
       "name": "Multiattack",
       "description": "The sphinx makes two claw attacks.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Inscrutable",

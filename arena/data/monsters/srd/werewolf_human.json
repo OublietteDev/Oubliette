@@ -32,7 +32,7 @@
     {
       "name": "Multiattack",
       "description": "The werewolf makes two attacks: two with its spear (humanoid form) or one with its bite and one with its claws (hybrid form).",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Shapechanger",

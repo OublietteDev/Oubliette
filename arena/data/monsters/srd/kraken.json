@@ -104,7 +104,7 @@
     {
       "name": "Multiattack",
       "description": "The kraken makes three tentacle attacks, each of which it can replace with one use of Fling.",
-      "extra_attack_count": 2
+      "extra_attack_count": 3
     },
     {
       "name": "Amphibious",

@@ -126,7 +126,7 @@
     {
       "name": "Multiattack",
       "description": "The pit fiend makes four attacks: one with its bite, one with its claw, one with its mace, and one with its tail.",
-      "extra_attack_count": 3
+      "extra_attack_count": 4
     },
     {
       "name": "Fear Aura",

@@ -112,7 +112,7 @@
     {
       "name": "Multiattack",
       "description": "The lizardfolk makes two melee attacks, each one with a different weapon.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Hold Breath",

@@ -77,7 +77,7 @@
     {
       "name": "Multiattack",
       "description": "The xorn makes three claw attacks and one bite attack.",
-      "extra_attack_count": 3
+      "extra_attack_count": 4
     },
     {
       "name": "Earth Glide",

@@ -79,7 +79,7 @@
     {
       "name": "Multiattack",
       "description": "The oni makes two attacks, either with its claws or its glaive.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Innate Spellcasting",

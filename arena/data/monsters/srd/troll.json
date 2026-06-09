@@ -73,7 +73,7 @@
     {
       "name": "Multiattack",
       "description": "The troll makes three attacks: one with its bite and two with its claws.",
-      "extra_attack_count": 2
+      "extra_attack_count": 3
     },
     {
       "name": "Keen Smell",

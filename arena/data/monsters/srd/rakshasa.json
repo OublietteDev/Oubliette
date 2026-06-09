@@ -57,7 +57,7 @@
     {
       "name": "Multiattack",
       "description": "The rakshasa makes two claw attacks",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Limited Magic Immunity",

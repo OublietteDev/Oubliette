@@ -72,7 +72,7 @@
     {
       "name": "Multiattack",
       "description": "The crocodile makes two attacks: one with its bite and one with its tail.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Hold Breath",

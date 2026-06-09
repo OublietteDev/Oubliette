@@ -72,7 +72,7 @@
     {
       "name": "Multiattack",
       "description": "The vulture makes two attacks: one with its beak and one with its talons.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Keen Sight and Smell",

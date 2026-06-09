@@ -106,7 +106,7 @@
     {
       "name": "Multiattack",
       "description": "The devil makes three melee attacks: one with its tail and two with its claws. Alternatively, it can use Hurl Flame twice.",
-      "extra_attack_count": 2
+      "extra_attack_count": 3
     },
     {
       "name": "Barbed Hide",

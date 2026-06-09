@@ -54,7 +54,7 @@
     {
       "name": "Multiattack",
       "description": "The roper makes four attacks with its tendrils, uses Reel, and makes one attack with its bite.",
-      "extra_attack_count": 5
+      "extra_attack_count": 6
     },
     {
       "name": "False Appearance",

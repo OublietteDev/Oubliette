@@ -76,7 +76,7 @@
     {
       "name": "Multiattack",
       "description": "The treant makes two slam attacks.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "False Appearance",

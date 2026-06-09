@@ -73,7 +73,7 @@
     {
       "name": "Multiattack",
       "description": "The scorpion makes three attacks: two with its claws and one with its sting.",
-      "extra_attack_count": 2
+      "extra_attack_count": 3
     }
   ],
   "challenge_rating": 3.0,

@@ -87,7 +87,7 @@
     {
       "name": "Multiattack",
       "description": "The mummy can use its Dreadful Glare and makes one attack with its rotting fist.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Magic Resistance",

@@ -122,7 +122,7 @@
     {
       "name": "Multiattack",
       "description": "The dragon turtle makes three attacks: one with its bite and two with its claws. It can make one tail attack in place of its two claw attacks.",
-      "extra_attack_count": 2
+      "extra_attack_count": 3
     },
     {
       "name": "Amphibious",

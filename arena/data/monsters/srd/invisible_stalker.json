@@ -67,7 +67,7 @@
     {
       "name": "Multiattack",
       "description": "The stalker makes two slam attacks.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Invisibility",

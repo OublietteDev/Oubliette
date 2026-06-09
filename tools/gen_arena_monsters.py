@@ -18,7 +18,7 @@ What it maps onto the Arena `Monster` model, with full combat fidelity:
   - core stats: abilities, AC, HP, hit dice, speed, proficiency, CR, XP,
     resistances/immunities/vulnerabilities, condition immunities, senses;
   - MULTIATTACK as a `special_abilities` Feature carrying `extra_attack_count`
-    (= total attacks − 1). NOTE: monster multiattack is currently DORMANT — the
+    (= total attacks per Attack action). NOTE: monster multiattack is currently DORMANT — the
     engine's get_extra_attack_count only reads PlayerCharacter.features, not a
     monster's special_abilities. The data is forward-compatible: a ~4-line engine
     change ("turn on" monster multiattack) activates it across the whole set.
@@ -207,8 +207,11 @@ def _multiattack(actions: list) -> dict | None:
             m = re.search(r"makes (\w+) ", a.get("desc", "").lower())
             total = _NUM_WORD.get(m.group(1), 0) if m else 0
         if total and total > 1:
+            # extra_attack_count is the TOTAL attacks per Attack action (the engine's
+            # convention: a Fighter's Extra Attack = 2 → two attacks), NOT "extra
+            # beyond one". A dragon's bite + two claws = 3.
             return {"name": "Multiattack", "description": a.get("desc", ""),
-                    "extra_attack_count": total - 1}
+                    "extra_attack_count": total}
     return None
 
 

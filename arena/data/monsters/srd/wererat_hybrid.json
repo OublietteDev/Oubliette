@@ -93,7 +93,7 @@
     {
       "name": "Multiattack",
       "description": "The wererat makes two attacks, only one of which can be a bite.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Shapechanger",

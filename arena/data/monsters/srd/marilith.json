@@ -87,7 +87,7 @@
     {
       "name": "Multiattack",
       "description": "The marilith can make seven attacks: six with its longswords and one with its tail.",
-      "extra_attack_count": 6
+      "extra_attack_count": 7
     },
     {
       "name": "Magic Resistance",

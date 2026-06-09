@@ -79,7 +79,7 @@
     {
       "name": "Multiattack",
       "description": "The unicorn makes two attacks: one with its hooves and one with its horn.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Charge",

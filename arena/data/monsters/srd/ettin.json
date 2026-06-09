@@ -73,7 +73,7 @@
     {
       "name": "Multiattack",
       "description": "The ettin makes two attacks: one with its battleaxe and one with its morningstar.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Two Heads",

@@ -97,7 +97,7 @@
     {
       "name": "Multiattack",
       "description": "The vampire makes two attacks, only one of which can be a bite attack.",
-      "extra_attack_count": 1
+      "extra_attack_count": 2
     },
     {
       "name": "Shapechanger",
