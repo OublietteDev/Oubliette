@@ -16,7 +16,7 @@ os.environ.pop("ANTHROPIC_API_KEY", None)  # force the scripted client
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from oubliette.app.server import app  # noqa: E402
+from oubliette.app.server import GAME, app  # noqa: E402
 
 client = TestClient(app)
 
@@ -353,8 +353,12 @@ def test_rest_endpoint_restores_after_short_rest_hit_dice():
 
 def test_levelup_flow_over_http():
     client.post("/api/new", json={"pack_id": "brightvale", "build": _FIGHTER_BUILD})
+    # leveling is XP-gated now: a fresh PC has 0 XP and can't advance yet.
+    assert client.get("/api/levelup/plan").json()["can_level"] is False
+    GAME.session.repo.adjust_xp("pc", 2700)        # enough for levels 2, 3, and 4
     plan = client.get("/api/levelup/plan").json()
     assert plan["next_level"] == 2 and plan["is_asi"] is False
+    assert plan["xp"]["xp"] == 2700                 # the bar sees it
     # L1 -> L2 (plain)
     d = client.post("/api/levelup", json={"hp_method": "average"}).json()
     assert d["ok"] and d["party"][0]["level"] == 2 and d["party"][0]["max_hp"] == 20

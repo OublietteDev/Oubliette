@@ -15,8 +15,8 @@ from ..canon.models import CanonDraft
 from ..canon.store import CanonStore
 from ..record.events import StateOp
 from ..state.repository import Repository, StateError
-from .schemas import (CreateEntity, EndSession, Give, PromoteCanon, StartQuest, Take,
-                      ToolCall, Transact, Travel, UpdateQuest, ValueEntry)
+from .schemas import (AwardXp, CreateEntity, EndSession, Give, PromoteCanon, StartQuest,
+                      Take, ToolCall, Transact, Travel, UpdateQuest, ValueEntry)
 
 
 class ToolApplyError(Exception):
@@ -58,6 +58,12 @@ class Dispatcher:
             self._assert_can_cover(call.from_, call.items)
             return ResolvedTool(call.tool, call.reason,
                                 ops=[self._debit_op(call.from_, e) for e in call.items])
+        if isinstance(call, AwardXp):
+            try:
+                self.repo.get_character(call.to)        # recipient must exist
+            except StateError as e:
+                raise ToolApplyError(str(e)) from e
+            return ResolvedTool(call.tool, call.reason, ops=[StateOp.xp(call.to, call.amount)])
         if isinstance(call, CreateEntity):
             draft = CanonDraft(entity_type=call.entity_type, name=call.name,
                                text=call.text, origin=call.origin)

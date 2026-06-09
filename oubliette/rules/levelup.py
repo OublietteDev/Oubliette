@@ -25,6 +25,42 @@ from . import derive
 MAX_LEVEL = 20
 ASI_POINTS = 2
 
+# Cumulative XP required to BE at each level (SRD 5.1 / standard advancement table).
+XP_THRESHOLDS = {1: 0, 2: 300, 3: 900, 4: 2700, 5: 6500, 6: 14000, 7: 23000,
+                 8: 34000, 9: 48000, 10: 64000, 11: 85000, 12: 100000, 13: 120000,
+                 14: 140000, 15: 165000, 16: 195000, 17: 225000, 18: 265000,
+                 19: 305000, 20: 355000}
+
+
+def xp_for_level(level: int) -> int:
+    """Cumulative XP needed to reach `level` (clamped to the 1–20 table)."""
+    return XP_THRESHOLDS[max(1, min(MAX_LEVEL, level))]
+
+
+def level_for_xp(xp: int) -> int:
+    """The highest level whose XP threshold the given total meets."""
+    return max(L for L, need in XP_THRESHOLDS.items() if xp >= need)
+
+
+def xp_progress(char: Character) -> dict:
+    """XP-bar data for the sheet: total XP, the current level's floor and the next
+    level's ceiling, how far into the tier (and the percentage), how much more is
+    needed, and whether enough XP is banked to level up. `ceil`/`needed` are 0 and
+    `ready` is False at the maximum level."""
+    lvl = char.level
+    floor_ = xp_for_level(lvl)
+    if lvl >= MAX_LEVEL:
+        return {"xp": char.xp, "level": lvl, "floor": floor_, "ceil": None,
+                "into": max(0, char.xp - floor_), "needed": 0, "pct": 100,
+                "ready": False, "is_max": True}
+    ceil_ = xp_for_level(lvl + 1)
+    span = ceil_ - floor_
+    into = max(0, char.xp - floor_)
+    pct = 100 if span <= 0 else max(0, min(100, round(100 * into / span)))
+    return {"xp": char.xp, "level": lvl, "floor": floor_, "ceil": ceil_,
+            "into": into, "needed": max(0, ceil_ - char.xp), "pct": pct,
+            "ready": char.xp >= ceil_, "is_max": False}
+
 
 class LevelUpError(Exception):
     """A level-up choice that breaks the rules. Carries the aggregated `.errors`."""
@@ -54,12 +90,18 @@ def level_up_plan(char: Character, ruleset: Ruleset) -> dict:
     if cc is None:
         return {"can_level": False, "reason": "this character has no class sheet to advance"}
     nxt = char.level + 1
+    prog = xp_progress(char)
     if nxt > MAX_LEVEL:
-        return {"can_level": False, "reason": f"already at the maximum level ({MAX_LEVEL})"}
+        return {"can_level": False, "reason": f"already at the maximum level ({MAX_LEVEL})",
+                "xp": prog}
+    if char.xp < xp_for_level(nxt):
+        return {"can_level": False, "next_level": nxt, "xp": prog,
+                "reason": (f"not enough experience — level {nxt} needs {xp_for_level(nxt):,} XP "
+                           f"(you have {char.xp:,})")}
     sub_opts = ruleset.subclasses_for(cc.id)
     needs_subclass = cc.subclass_level == nxt and bool(sub_opts) and not char.sheet.subclass
     return {
-        "can_level": True, "next_level": nxt, "hit_die": cc.hit_die,
+        "can_level": True, "next_level": nxt, "hit_die": cc.hit_die, "xp": prog,
         "average_hp_gain": derive.average_hp_per_level(cc.hit_die) + char.ability_mod(Ability.CON),
         "is_asi": nxt in cc.asi_levels,
         "needs_subclass": needs_subclass, "subclass_label": cc.subclass_label,
@@ -80,6 +122,9 @@ def level_up(char: Character, ruleset: Ruleset, choice: LevelUpChoice,
     new_level = char.level + 1
     if new_level > MAX_LEVEL:
         raise LevelUpError([f"already at the maximum level ({MAX_LEVEL})"])
+    if char.xp < xp_for_level(new_level):
+        raise LevelUpError([f"not enough experience for level {new_level} "
+                            f"(needs {xp_for_level(new_level)} XP, has {char.xp})"])
 
     # --- ability score improvement / feat -----------------------------------
     increases: dict[Ability, int] = {}

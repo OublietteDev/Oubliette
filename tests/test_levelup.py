@@ -8,7 +8,8 @@ import pytest
 
 from oubliette.content.ruleset import load_ruleset
 from oubliette.enums import Ability
-from oubliette.rules.levelup import LevelUpChoice, LevelUpError, level_up, level_up_plan
+from oubliette.rules.levelup import (LevelUpChoice, LevelUpError, level_up, level_up_plan,
+                                     level_for_xp, xp_for_level, xp_progress)
 from oubliette.state.models import Character, CharacterSheet, ItemStack
 
 RS = load_ruleset()
@@ -17,6 +18,8 @@ RS = load_ruleset()
 def _fighter(level=1, **over) -> Character:
     base = dict(
         id="pc", name="Bron", kind="pc", level=level, hp=12, max_hp=12, gold=10,
+        xp=400_000,                       # above the level-20 threshold: XP never gates these
+
         abilities={Ability.STR: 16, Ability.DEX: 14, Ability.CON: 14,
                    Ability.INT: 10, Ability.WIS: 12, Ability.CHA: 8},
         inventory=[ItemStack(item_id="longsword", qty=1)],
@@ -109,6 +112,33 @@ def test_subclass_cannot_be_chosen_early():
 
 def test_cannot_exceed_max_level():
     assert "maximum level" in _why(_fighter(20), LevelUpChoice())
+
+
+# --- XP-driven advancement --------------------------------------------------
+def test_xp_threshold_helpers():
+    assert xp_for_level(1) == 0 and xp_for_level(2) == 300 and xp_for_level(20) == 355_000
+    assert level_for_xp(0) == 1 and level_for_xp(299) == 1 and level_for_xp(300) == 2
+    assert level_for_xp(900) == 3 and level_for_xp(10_000_000) == 20
+
+
+def test_xp_progress_bar_math():
+    p = xp_progress(_fighter(1, xp=150))          # halfway from 0 to 300
+    assert p["floor"] == 0 and p["ceil"] == 300 and p["into"] == 150
+    assert p["pct"] == 50 and p["needed"] == 150 and p["ready"] is False
+    assert xp_progress(_fighter(1, xp=300))["ready"] is True      # banked enough for L2
+    assert xp_progress(_fighter(20, xp=400_000))["is_max"] is True
+
+
+def test_level_up_is_gated_on_xp():
+    rookie = _fighter(1, xp=299)                   # 1 short of level 2
+    plan = level_up_plan(rookie, RS)
+    assert plan["can_level"] is False and "not enough experience" in plan["reason"]
+    assert plan["xp"]["needed"] == 1
+    with pytest.raises(LevelUpError) as ei:
+        level_up(rookie, RS, LevelUpChoice())
+    assert "not enough experience" in "\n".join(ei.value.errors)
+    # one more XP and the gate opens
+    assert level_up_plan(_fighter(1, xp=300), RS)["can_level"] is True
 
 
 # --- the plan ---------------------------------------------------------------

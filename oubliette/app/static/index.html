@@ -124,6 +124,13 @@
   .sheet-name { font-family: var(--serif); font-size: 18px; }
   .hpbar { height: 9px; border-radius: 6px; background: #2c2420; overflow: hidden; margin: 8px 0 6px; border: 1px solid var(--line); }
   .hpfill { height: 100%; background: linear-gradient(90deg, #7d9a6b, #b9533f); transition: width .4s; }
+  .xprow { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .xplabel { font-size: .85em; opacity: .85; }
+  .xpbar { height: 7px; border-radius: 6px; background: #2c2420; overflow: hidden; margin: 4px 0 2px; border: 1px solid var(--line); }
+  .xpfill { height: 100%; width: 0; background: linear-gradient(90deg, #b8862b, var(--gold)); transition: width .5s; }
+  .xp-ready { font-size: .8em; color: var(--gold); font-weight: 600; animation: xppulse 1.6s ease-in-out infinite; }
+  @keyframes xppulse { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+  .act.ready { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
   .stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
   .stats b { color: var(--ink); font-weight: 600; }
   .gold b { color: var(--gold); }
@@ -465,9 +472,13 @@
         <div class="stats">
           <span id="hp"></span>
           <span class="gold">Gold <b id="gold">0</b></span>
-          <span>XP <b id="xp">0</b></span>
           <span>AC <b id="ac">0</b></span>
         </div>
+        <div class="xprow">
+          <span class="xplabel">XP <b id="xp">0</b></span>
+          <span id="xp-ready" class="xp-ready hidden">✦ ready to level up</span>
+        </div>
+        <div class="xpbar" id="xpbar" title=""><div class="xpfill" id="xpfill"></div></div>
         <div id="conditions" class="stats" style="margin-top:8px"></div>
       </div>
       <div class="card">
@@ -854,8 +865,14 @@ function renderState(s) {
   $("hp").textContent = `HP ${pc.hp}/${pc.max_hp}`;
   $("hpfill").style.width = Math.max(0, Math.min(100, 100 * pc.hp / pc.max_hp)) + "%";
   $("gold").textContent = pc.gold;
-  $("xp").textContent = pc.xp;
   $("ac").textContent = pc.armor_class;
+  const xpp = pc.xp_progress || { xp: pc.xp, pct: 0, is_max: false, ready: false, ceil: null };
+  $("xp").textContent = xpp.is_max ? `${xpp.xp.toLocaleString()} (max level)`
+    : `${xpp.xp.toLocaleString()} / ${(xpp.ceil || 0).toLocaleString()}`;
+  $("xpfill").style.width = (xpp.pct || 0) + "%";
+  $("xpbar").title = xpp.is_max ? "Maximum level reached"
+    : `${(xpp.needed || 0).toLocaleString()} XP to level ${xpp.level + 1}`;
+  $("xp-ready").classList.toggle("hidden", !xpp.ready);
   const cond = $("conditions");
   cond.textContent = pc.conditions.length ? "Conditions: " + pc.conditions.join(", ") : "";
 
@@ -2082,7 +2099,8 @@ function renderRestBar(m) {
   longBtn.addEventListener("click", () => doRest(m.id, "long", 0));
   bar.appendChild(shortBtn); bar.appendChild(longBtn);
   if (m.has_sheet) {
-    const luBtn = el("button", "act", "Level Up ✦");
+    const ready = m.xp_progress && m.xp_progress.ready;
+    const luBtn = el("button", "act" + (ready ? " ready" : ""), "Level Up ✦");
     luBtn.addEventListener("click", () => openLevelUp(m.id));
     bar.appendChild(luBtn);
   }

@@ -20,7 +20,8 @@ from oubliette.record.store import InMemoryEventStore
 from oubliette.runtime.loop import TurnLoop
 from oubliette.runtime.session import Session
 from oubliette.tools.dispatch import Dispatcher, ToolApplyError
-from oubliette.tools.schemas import Transact, ValueEntry
+from oubliette.tools.schemas import AwardXp, Transact, ValueEntry
+from pydantic import ValidationError
 
 
 def _make_loop():
@@ -80,6 +81,30 @@ def test_full_acceptance_transcript():
     assert r4.assessment.tier == Tier.DENIED
     assert r4.applied == []
     assert pc.gold == 265
+
+
+def test_award_xp_tool_grants_experience():
+    """The award_xp DM tool resolves to an XP StateOp the session applies — the
+    sanctioned path for the DM to administer experience (it proposes, code applies)."""
+    session, _ = _make_loop()
+    repo = session.repo
+    pc = repo.pc()
+    start = pc.xp
+    dispatcher = Dispatcher(repo)
+    resolved = dispatcher.resolve(AwardXp(to="pc", amount=500, reason="resolved the standoff"))
+    assert [(o.op, o.char, o.delta) for o in resolved.ops] == [("xp", "pc", 500)]
+    for op in resolved.ops:
+        op.apply(repo)
+    assert pc.xp == start + 500
+
+
+def test_award_xp_rejects_nonpositive_and_unknown_target():
+    session, _ = _make_loop()
+    dispatcher = Dispatcher(session.repo)
+    with pytest.raises(ValidationError):           # schema guards the amount
+        AwardXp(to="pc", amount=0, reason="nothing earned")
+    with pytest.raises(ToolApplyError):            # recipient must exist
+        dispatcher.resolve(AwardXp(to="ghost", amount=10, reason="who?"))
 
 
 def test_unbacked_tool_call_resolves_to_nothing():

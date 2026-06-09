@@ -64,6 +64,25 @@ class Take(BaseModel):
     reason: str
 
 
+class AwardXp(BaseModel):
+    """Grant experience points for a meaningful accomplishment — finishing a quest,
+    overcoming a challenge or a tense social encounter, a milestone in the story.
+    Code applies it to the character's XP total and the sheet handles leveling; the
+    DM only decides the (positive) amount the fiction earns. Combat awards its own XP
+    automatically, so don't double-grant for a fight code already resolved."""
+
+    tool: Literal["award_xp"] = "award_xp"
+    to: str = Field(default="pc", description="who earns the XP (usually 'pc')")
+    amount: int = Field(description="experience points to grant (a positive number)")
+    reason: str = Field(description="what was accomplished, e.g. 'resolved the bridge standoff'")
+
+    @model_validator(mode="after")
+    def _positive(self) -> "AwardXp":
+        if self.amount <= 0:
+            raise ValueError("XP award must be positive")
+        return self
+
+
 class CreateEntity(BaseModel):
     """Introduce new world content (an NPC, place, lore...). Always born
     `provisional` (spec §7/§11) — the runtime forces that; the DM cannot create
@@ -129,7 +148,7 @@ class UpdateQuest(BaseModel):
 # the model fills in). To add a tool: add a model + a `tool` literal, and a resolver
 # branch in tools/dispatch.py.
 ToolCall = Annotated[
-    Union[Transact, Give, Take, CreateEntity, PromoteCanon, Travel, EndSession,
-          StartQuest, UpdateQuest],
+    Union[Transact, Give, Take, AwardXp, CreateEntity, PromoteCanon, Travel,
+          EndSession, StartQuest, UpdateQuest],
     Field(discriminator="tool"),
 ]

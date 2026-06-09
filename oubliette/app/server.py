@@ -31,7 +31,8 @@ from ..rules import derive
 from ..rules.chargen import (POINT_BUY_BUDGET, POINT_BUY_COST, STANDARD_ARRAY,
                              CharacterBuild, ChargenError, build_character)
 from ..rules.rest import long_rest_ops, short_rest_ops
-from ..rules.levelup import LevelUpChoice, LevelUpError, level_up, level_up_plan
+from ..rules.levelup import (LevelUpChoice, LevelUpError, level_up, level_up_plan,
+                            xp_progress)
 from ..runtime.loop import TurnLoop
 from ..runtime.session import Session
 from ..dm.brain import Brain
@@ -118,7 +119,8 @@ def _snapshot() -> dict:
         "weather": GAME.session.weather,
         "pc": {
             "name": pc.name, "hp": pc.hp, "max_hp": pc.max_hp,
-            "gold": pc.gold, "xp": pc.xp, "armor_class": pc.armor_class,
+            "gold": pc.gold, "xp": pc.xp, "xp_progress": xp_progress(pc),
+            "armor_class": pc.armor_class,
             "conditions": list(pc.conditions),
             "inventory": [
                 {"id": s.item_id, "name": repo.get_item(s.item_id).name, "qty": s.qty}
@@ -807,7 +809,8 @@ def _sheet_member(char: Character, rs: Ruleset) -> dict:
         "saves": saves, "skills": skills, "derived": d,
         "inventory": [{"name": _item_name(rs, s.item_id), "qty": s.qty,
                        "equipped": s.item_id in char.equipped} for s in char.inventory],
-        "gold": char.gold, "conditions": list(char.conditions),
+        "gold": char.gold, "xp": char.xp, "xp_progress": xp_progress(char),
+        "conditions": list(char.conditions),
         "hit_dice_used": char.hit_dice_used, "slots_used": dict(char.spell_slots_used),
         "resources_used": dict(char.resources_used),
     }
