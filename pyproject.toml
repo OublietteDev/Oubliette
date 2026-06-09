@@ -11,7 +11,9 @@ dependencies = [
 # Real model play needs NO extra deps — the Anthropic adapter uses the stdlib
 # (urllib). The scripted client runs fully offline. Just set ANTHROPIC_API_KEY.
 web = ["fastapi>=0.110", "uvicorn>=0.29"]
-dev = ["pytest>=8.0", "fastapi>=0.110", "uvicorn>=0.29", "httpx>=0.27"]
+# The Arena — the tactical combat app (launched as its own window). pygame only.
+arena = ["pygame>=2.5"]
+dev = ["pytest>=8.0", "fastapi>=0.110", "uvicorn>=0.29", "httpx>=0.27", "pygame>=2.5"]
 
 [project.scripts]
 oubliette = "oubliette.app.repl:main"
@@ -23,7 +25,8 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["oubliette*"]
+include = ["oubliette*", "arena*"]
+exclude = ["arena.tests*"]
 
 [tool.setuptools.package-data]
 # Authored content packs are data files shipped inside the package (incl. images).
@@ -33,6 +36,10 @@ include = ["oubliette*"]
 "oubliette.app" = ["static/**/*"]
 # The Forge's single-page UI.
 "oubliette.creator" = ["static/*"]
+# The Arena's content (monsters/characters/encounters/schemas) — JSON data files.
+# Visual assets (assets/**) are intentionally NOT packaged: they're large (~100MB)
+# and gitignored; they live on disk for local play.
+"arena" = ["data/**/*.json"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "arena/tests"]

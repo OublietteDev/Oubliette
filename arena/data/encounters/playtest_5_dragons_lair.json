@@ -1,0 +1,61 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 5: Dragon's Lair",
+  "description": "TESTS: Large creature (3-hex footprint) movement and rendering, multi-hex reach/range calculations, breath weapon (cone AoE save), multi-hex token at all camera angles, mixed melee/ranged party tactics.\n\nA four-person party confronts a Young Red Dragon in its lair. Scattered pillars provide cover. The dragon has bite (10 ft reach), claws, and fire breath.",
+
+  "grid_width": 25,
+  "grid_height": 20,
+
+  "terrain": [
+    {"position": [8, 7], "terrain_type": "cover_half"},
+    {"position": [8, 8], "terrain_type": "cover_half"},
+    {"position": [16, 7], "terrain_type": "cover_half"},
+    {"position": [16, 8], "terrain_type": "cover_half"},
+
+    {"position": [12, 4], "terrain_type": "cover_half"},
+    {"position": [12, 12], "terrain_type": "cover_half"},
+
+    {"position": [10, 10], "terrain_type": "difficult"},
+    {"position": [11, 10], "terrain_type": "difficult"},
+    {"position": [10, 11], "terrain_type": "difficult"},
+    {"position": [11, 11], "terrain_type": "difficult"},
+
+    {"position": [14, 5], "terrain_type": "difficult"},
+    {"position": [15, 5], "terrain_type": "difficult"},
+    {"position": [14, 6], "terrain_type": "difficult"},
+    {"position": [15, 6], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/ser_marcus.json",
+      "team": "player",
+      "starting_position": [4, 15]
+    },
+    {
+      "creature_id": "characters/elara.json",
+      "team": "player",
+      "starting_position": [6, 17]
+    },
+    {
+      "creature_id": "characters/brother_aldric.json",
+      "team": "player",
+      "starting_position": [3, 17]
+    },
+    {
+      "creature_id": "characters/shade.json",
+      "team": "player",
+      "starting_position": [8, 16]
+    },
+    {
+      "creature_id": "monsters/young_red_dragon.json",
+      "team": "enemy",
+      "starting_position": [12, 5]
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "dim"
+}

@@ -1,0 +1,117 @@
+{
+  "$schema": "../schemas/monster.schema.json",
+  "name": "Forest Shaman",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "neutral evil",
+
+  "ability_scores": {
+    "strength": 10,
+    "dexterity": 12,
+    "constitution": 14,
+    "intelligence": 12,
+    "wisdom": 16,
+    "charisma": 11
+  },
+
+  "armor_class": 13,
+  "armor_description": "hide armor",
+  "max_hit_points": 45,
+  "hit_dice": "7d8+14",
+  "speed": {"walk": 30},
+  "proficiency_bonus": 3,
+
+  "saving_throw_proficiencies": ["intelligence", "wisdom"],
+  "passive_perception": 16,
+
+  "challenge_rating": 4,
+  "experience_points": 1100,
+
+  "special_abilities": [
+    {
+      "name": "Spellcasting",
+      "description": "The shaman is a 7th-level spellcaster. Its spellcasting ability is Wisdom (spell save DC 14, +6 to hit with spell attacks)."
+    }
+  ],
+
+  "actions": [
+    {
+      "name": "Entangle",
+      "description": "Grasping weeds and vines sprout in a 20-ft radius. Area becomes difficult terrain. STR save DC 14 or restrained. Concentration.",
+      "action_type": "action",
+      "target_type": "area_sphere",
+      "range": 90,
+      "area_size": 20,
+      "requires_concentration": true,
+      "terrain_modification": "difficult",
+      "saving_throw": {
+        "ability": "strength",
+        "dc": 14,
+        "damage_on_fail": [],
+        "damage_on_success": "none",
+        "conditions_on_fail": ["restrained"]
+      },
+      "uses_per_rest": 2,
+      "ai_priority": 8,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Plant Growth",
+      "description": "All normal vegetation in a 100-ft radius becomes thick and overgrown, turning the area into difficult terrain. Not concentration -- permanent until dispelled.",
+      "action_type": "action",
+      "target_type": "area_sphere",
+      "range": 150,
+      "area_size": 50,
+      "requires_concentration": false,
+      "terrain_modification": "difficult",
+      "uses_per_rest": 1,
+      "ai_priority": 7,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Produce Flame",
+      "description": "Ranged spell attack. 2d8 fire damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 30,
+      "attack": {
+        "name": "Produce Flame",
+        "attack_type": "ranged_spell",
+        "ability": "wisdom",
+        "reach": 5,
+        "range_normal": 30,
+        "damage": [
+          {"dice": "2d8", "damage_type": "fire"}
+        ]
+      },
+      "ai_priority": 5
+    },
+    {
+      "name": "Quarterstaff",
+      "description": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 3 (1d6) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Quarterstaff",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {"dice": "1d6", "damage_type": "bludgeoning", "ability_modifier": "strength"}
+        ]
+      },
+      "ai_priority": 3
+    }
+  ],
+
+  "bonus_actions": [],
+  "reactions": [],
+
+  "is_player_controlled": false,
+  "ai_profile": "spellcaster",
+  "ai_notes": "Prioritizes terrain control spells to slow down melee attackers. Uses Plant Growth early for permanent difficult terrain, then Entangle for restrained. Falls back to Produce Flame for damage.",
+  "token_color": "#556B2F",
+  "source_book": "Custom",
+  "source_page": 0
+}

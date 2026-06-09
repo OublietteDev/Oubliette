@@ -1,0 +1,52 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 1: Tavern Brawl",
+  "description": "TESTS: Basic melee combat, attack rolls, damage, HP tracking, death saves, initiative order, turn economy.\n\nTwo fighters face off against four goblins in a simple open tavern. No terrain complications — pure melee combat basics.",
+
+  "grid_width": 15,
+  "grid_height": 10,
+
+  "terrain": [],
+
+  "combatants": [
+    {
+      "creature_id": "characters/thorin.json",
+      "team": "player",
+      "starting_position": [3, 5]
+    },
+    {
+      "creature_id": "characters/ser_marcus.json",
+      "team": "player",
+      "starting_position": [3, 7]
+    },
+    {
+      "creature_id": "monsters/goblin.json",
+      "team": "enemy",
+      "starting_position": [11, 4],
+      "name_override": "Goblin 1"
+    },
+    {
+      "creature_id": "monsters/goblin.json",
+      "team": "enemy",
+      "starting_position": [12, 5],
+      "name_override": "Goblin 2"
+    },
+    {
+      "creature_id": "monsters/goblin.json",
+      "team": "enemy",
+      "starting_position": [11, 7],
+      "name_override": "Goblin 3"
+    },
+    {
+      "creature_id": "monsters/goblin.json",
+      "team": "enemy",
+      "starting_position": [12, 8],
+      "name_override": "Goblin 4"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

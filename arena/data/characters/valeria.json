@@ -1,0 +1,133 @@
+{
+  "name": "Valeria",
+  "size": "medium",
+  "creature_type": "humanoid",
+
+  "ability_scores": {
+    "strength": 18,
+    "dexterity": 8,
+    "constitution": 14,
+    "intelligence": 10,
+    "wisdom": 12,
+    "charisma": 16
+  },
+
+  "armor_class": 18,
+  "max_hit_points": 47,
+  "speed": {"walk": 30},
+  "proficiency_bonus": 3,
+
+  "saving_throw_proficiencies": ["wisdom", "charisma"],
+  "damage_immunities": ["disease"],
+  "passive_perception": 11,
+
+  "actions": [
+    {
+      "name": "Longsword +1",
+      "description": "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 1d8 + 5 slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Longsword +1",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {"dice": "1d8", "damage_type": "slashing", "bonus": 1, "ability_modifier": "strength"}
+        ]
+      },
+      "ai_priority": 7
+    },
+    {
+      "name": "Javelin",
+      "description": "Melee or Ranged Weapon Attack: +7 to hit, reach 5 ft. or range 30/120 ft., one target.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Javelin",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "range_normal": 30,
+        "range_long": 120,
+        "damage": [
+          {"dice": "1d6", "damage_type": "piercing", "ability_modifier": "strength"}
+        ]
+      },
+      "ai_priority": 4
+    },
+    {
+      "name": "Lay on Hands",
+      "description": "Touch a creature and restore up to 10 hit points from your healing pool.",
+      "action_type": "action",
+      "target_type": "one_ally",
+      "range": 5,
+      "healing": "10",
+      "uses_per_rest": 3,
+      "rest_type": "long",
+      "ai_priority": 8,
+      "ai_use_condition": "allies_wounded >= 1"
+    }
+  ],
+
+  "bonus_actions": [],
+  "reactions": [],
+  "active_conditions": [],
+  "token_color": "#DAA520",
+
+  "equipment": [
+    {
+      "name": "Plate Armor",
+      "item_type": "armor",
+      "equipment_slot": "armor",
+      "armor_class": 18,
+      "armor_type": "heavy",
+      "stealth_disadvantage": true,
+      "strength_requirement": 15
+    },
+    {
+      "name": "Shield",
+      "item_type": "shield",
+      "equipment_slot": "off_hand",
+      "bonus_ac": 2
+    },
+    {
+      "name": "Longsword +1",
+      "item_type": "weapon",
+      "equipment_slot": "main_hand",
+      "magic_bonus": 1,
+      "is_magical": true,
+      "damage_dice": "1d8",
+      "damage_type": "slashing",
+      "weapon_properties": ["versatile"],
+      "versatile_dice": "1d10"
+    }
+  ],
+
+  "is_player_controlled": true,
+  "character_class": "Paladin",
+  "subclass": "Oath of Devotion",
+  "level": 5,
+  "background": "Noble",
+  "race": "Human",
+  "spell_slots": {"1": 4, "2": 2},
+  "class_resources": {"lay_on_hands": 3},
+
+  "skill_proficiencies": ["athletics", "persuasion", "religion", "history"],
+  "spellcasting_ability": "charisma",
+
+  "features": [
+    {"name": "Divine Sense", "description": "Detect celestial, fiend, or undead within 60 ft", "source": "Paladin 1"},
+    {"name": "Lay on Hands", "description": "Pool of 25 HP to restore by touch", "source": "Paladin 1"},
+    {"name": "Fighting Style: Defense", "description": "+1 AC while wearing armor", "source": "Paladin 2", "bonus_ac": 1},
+    {"name": "Divine Smite", "description": "Expend spell slot on hit for 2d8+ radiant damage", "source": "Paladin 2"},
+    {"name": "Divine Health", "description": "Immune to disease", "source": "Paladin 3", "grants_condition_immunities": ["diseased"]},
+    {"name": "Extra Attack", "description": "Attack twice when taking the Attack action", "source": "Paladin 5"},
+    {"name": "Sacred Weapon", "description": "Channel Divinity: Add CHA to attack rolls for 1 minute", "source": "Devotion 3"}
+  ],
+
+  "death_save_successes": 0,
+  "death_save_failures": 0
+}

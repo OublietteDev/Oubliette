@@ -1,0 +1,36 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 3: Wizard's Duel",
+  "description": "TESTS: Saving throws (DEX, WIS), condition application (paralyzed from Hold Person), concentration checks on damage, advantage/disadvantage from conditions, spell resource costs (spell slots), cantrip vs leveled spell usage, AI spellcaster behavior.\n\nElara faces an enemy mage in an arcane duel. The mage has Hold Person (paralyzed + concentration) and Fireball to stress-test save mechanics.",
+
+  "grid_width": 15,
+  "grid_height": 15,
+
+  "terrain": [
+    {"position": [7, 3], "terrain_type": "cover_half"},
+    {"position": [7, 11], "terrain_type": "cover_half"},
+    {"position": [4, 7], "terrain_type": "difficult"},
+    {"position": [5, 7], "terrain_type": "difficult"},
+    {"position": [9, 7], "terrain_type": "difficult"},
+    {"position": [10, 7], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/elara.json",
+      "team": "player",
+      "starting_position": [7, 12]
+    },
+    {
+      "creature_id": "monsters/mage.json",
+      "team": "enemy",
+      "name_override": "Archmage Kessler",
+      "starting_position": [7, 2]
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

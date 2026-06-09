@@ -1,0 +1,98 @@
+{
+  "name": "Demo Encounter",
+  "description": null,
+  "grid_width": 20,
+  "grid_height": 15,
+  "terrain": [],
+  "combatants": [
+    {
+      "creature_id": "characters/elara.json",
+      "creature_data": null,
+      "team": "player",
+      "starting_position": [
+        1,
+        12
+      ],
+      "count": 1,
+      "name_override": null
+    },
+    {
+      "creature_id": "characters/thorin.json",
+      "creature_data": null,
+      "team": "player",
+      "starting_position": [
+        3,
+        13
+      ],
+      "count": 1,
+      "name_override": null
+    },
+    {
+      "creature_id": "monsters/goblin.json",
+      "creature_data": null,
+      "team": "enemy",
+      "starting_position": [
+        13,
+        1
+      ],
+      "count": 1,
+      "name_override": null
+    },
+    {
+      "creature_id": "monsters/goblin.json",
+      "creature_data": null,
+      "team": "enemy",
+      "starting_position": [
+        14,
+        3
+      ],
+      "count": 1,
+      "name_override": "Goblin 2"
+    },
+    {
+      "creature_id": "monsters/goblin.json",
+      "creature_data": null,
+      "team": "enemy",
+      "starting_position": [
+        16,
+        4
+      ],
+      "count": 1,
+      "name_override": "Goblin 3"
+    },
+    {
+      "creature_id": "monsters/goblin.json",
+      "creature_data": null,
+      "team": "enemy",
+      "starting_position": [
+        18,
+        5
+      ],
+      "count": 1,
+      "name_override": "Goblin 4"
+    },
+    {
+      "creature_id": "monsters/goblin_boss.json",
+      "creature_data": null,
+      "team": "enemy",
+      "starting_position": [
+        17,
+        1
+      ],
+      "count": 1,
+      "name_override": null
+    }
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": "lighthearted_highdifficulty_encounter_1.mp3",
+  "background_image": "forest_background.png",
+  "background_offset": [
+    0.0,
+    0.0
+  ],
+  "background_scale": 1.0
+}

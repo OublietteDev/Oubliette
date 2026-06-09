@@ -1,0 +1,67 @@
+{
+  "name": "New Encounter",
+  "description": null,
+  "grid_width": 20,
+  "grid_height": 15,
+  "terrain": [],
+  "combatants": [
+    {
+      "creature_id": "characters/brother_aldric.json",
+      "creature_data": null,
+      "team": "player",
+      "starting_position": [
+        18,
+        0
+      ],
+      "count": 1,
+      "name_override": null
+    },
+    {
+      "creature_id": "characters/ser_marcus.json",
+      "creature_data": null,
+      "team": "player",
+      "starting_position": [
+        18,
+        1
+      ],
+      "count": 1,
+      "name_override": null
+    },
+    {
+      "creature_id": "characters/shade.json",
+      "creature_data": null,
+      "team": "player",
+      "starting_position": [
+        19,
+        1
+      ],
+      "count": 1,
+      "name_override": null
+    },
+    {
+      "creature_id": "monsters/mage.json",
+      "creature_data": null,
+      "team": "enemy",
+      "starting_position": [
+        19,
+        0
+      ],
+      "count": 1,
+      "name_override": null
+    }
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [
+    0.0,
+    0.0
+  ],
+  "background_scale": 1.0
+}

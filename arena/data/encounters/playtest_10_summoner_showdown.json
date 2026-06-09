@@ -1,0 +1,61 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 10: Summoner Showdown",
+  "description": "TESTS: Summon creature from JSON (Find Familiar owl), Wild Shape (druid transforms into brown bear), summoned creature initiative ordering (acts after summoner), summoned creature same team as summoner, summon placement on empty hex, summon blocked on occupied hex, unique IDs for multiple summons, summon death removal, Wild Shape revert on 0 HP (original creature restored with original HP), summon link tracking.\n\nA wizard and druid face wolves and bandits in a roadside ambush. TEST STEPS: (1) Finn casts Find Familiar (Owl) — click empty hex to place owl. Verify owl appears on player team, acts after Finn in initiative. (2) Willow uses Wild Shape (Bear) — click adjacent hex. Verify brown bear replaces Willow's position, has bear stats and actions. (3) Deal enough damage to bear form to drop it to 0 HP — verify Willow reverts with original HP. (4) Kill the owl familiar — verify it's removed from combat entirely (not death saves). (5) Finn summons another owl — verify it gets a unique ID (owl_2 not owl_1).",
+
+  "grid_width": 18,
+  "grid_height": 12,
+
+  "terrain": [
+    {"position": [4, 5], "terrain_type": "cover_half"},
+    {"position": [4, 6], "terrain_type": "cover_half"},
+    {"position": [13, 5], "terrain_type": "cover_half"},
+    {"position": [13, 6], "terrain_type": "cover_half"},
+    {"position": [8, 2], "terrain_type": "difficult"},
+    {"position": [9, 2], "terrain_type": "difficult"},
+    {"position": [8, 9], "terrain_type": "difficult"},
+    {"position": [9, 9], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/finn.json",
+      "team": "player",
+      "starting_position": [3, 6]
+    },
+    {
+      "creature_id": "characters/willow.json",
+      "team": "player",
+      "starting_position": [3, 8]
+    },
+    {
+      "creature_id": "monsters/bandit.json",
+      "team": "enemy",
+      "starting_position": [14, 4],
+      "name_override": "Bandit Leader"
+    },
+    {
+      "creature_id": "monsters/bandit.json",
+      "team": "enemy",
+      "starting_position": [15, 6],
+      "name_override": "Bandit Thug"
+    },
+    {
+      "creature_id": "monsters/wolf.json",
+      "team": "enemy",
+      "starting_position": [12, 8],
+      "name_override": "Dire Wolf 1"
+    },
+    {
+      "creature_id": "monsters/wolf.json",
+      "team": "enemy",
+      "starting_position": [13, 9],
+      "name_override": "Dire Wolf 2"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

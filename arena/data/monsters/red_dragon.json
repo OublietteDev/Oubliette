@@ -1,0 +1,90 @@
+{
+  "name": "Red Dragon",
+  "size": "huge",
+  "creature_type": "humanoid",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 10,
+    "dexterity": 10,
+    "constitution": 10,
+    "intelligence": 10,
+    "wisdom": 10,
+    "charisma": 10
+  },
+  "armor_class": 10,
+  "max_hit_points": 10,
+  "current_hit_points": 10,
+  "temporary_hit_points": 0,
+  "hit_dice": null,
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Tail Whip",
+      "description": "",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "area_size": null,
+      "attack": {
+        "name": "Tail Whip",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "range_normal": null,
+        "range_long": null,
+        "damage": [
+          {
+            "dice": "5d8",
+            "damage_type": "slashing",
+            "bonus": 0,
+            "ability_modifier": null
+          }
+        ],
+        "damage_on_miss": null,
+        "extra_effects": [],
+        "properties": []
+      },
+      "saving_throw": null,
+      "healing": null,
+      "conditions_applied": [],
+      "conditions_removed": [],
+      "uses_per_rest": null,
+      "rest_type": null,
+      "current_uses": null,
+      "resource_cost": {},
+      "legendary_action_cost": 1,
+      "requires_concentration": false,
+      "requires_weapon": null,
+      "ai_priority": 5,
+      "ai_use_condition": null,
+      "source_item": null,
+      "animation": null
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "active_conditions": [],
+  "token_image": "C:/Users/The Load Harvester/Documents/DND Combat Sim main folder/dnd_combat_sim/assets/tokens/generic/red_dragon.png",
+  "token_color": "#808080",
+  "equipment": [],
+  "is_player_controlled": false,
+  "ai_profile": "berserker",
+  "challenge_rating": 30.0,
+  "experience_points": 155000,
+  "legendary_actions": [],
+  "legendary_action_count": 0,
+  "lair_actions": [],
+  "special_abilities": [],
+  "source_book": null,
+  "source_page": null
+}

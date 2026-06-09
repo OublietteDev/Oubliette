@@ -1,0 +1,88 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 2: Ambush at the Bridge",
+  "description": "TESTS: Difficult terrain, water terrain, cover (half & three-quarters), walls/pits blocking movement, ranged attacks with cover AC bonuses, movement cost doubling, AI archer behavior.\n\nTwo ranged PCs face hobgoblin archers across a river crossing with cover positions on both sides.",
+
+  "grid_width": 20,
+  "grid_height": 12,
+
+  "terrain": [
+    {"position": [9, 3], "terrain_type": "water"},
+    {"position": [9, 4], "terrain_type": "water"},
+    {"position": [10, 3], "terrain_type": "water"},
+    {"position": [10, 4], "terrain_type": "water"},
+    {"position": [9, 5], "terrain_type": "water"},
+    {"position": [10, 5], "terrain_type": "water"},
+    {"position": [9, 6], "terrain_type": "water"},
+    {"position": [10, 6], "terrain_type": "water"},
+    {"position": [9, 7], "terrain_type": "water"},
+    {"position": [10, 7], "terrain_type": "water"},
+    {"position": [9, 8], "terrain_type": "water"},
+    {"position": [10, 8], "terrain_type": "water"},
+
+    {"position": [9, 0], "terrain_type": "wall"},
+    {"position": [10, 0], "terrain_type": "wall"},
+    {"position": [9, 1], "terrain_type": "wall"},
+    {"position": [10, 1], "terrain_type": "wall"},
+    {"position": [9, 2], "terrain_type": "wall"},
+    {"position": [10, 2], "terrain_type": "wall"},
+
+    {"position": [9, 9], "terrain_type": "wall"},
+    {"position": [10, 9], "terrain_type": "wall"},
+    {"position": [9, 10], "terrain_type": "wall"},
+    {"position": [10, 10], "terrain_type": "wall"},
+    {"position": [9, 11], "terrain_type": "wall"},
+    {"position": [10, 11], "terrain_type": "wall"},
+
+    {"position": [5, 4], "terrain_type": "cover_half"},
+    {"position": [5, 5], "terrain_type": "cover_half"},
+    {"position": [6, 7], "terrain_type": "cover_half"},
+    {"position": [6, 8], "terrain_type": "cover_half"},
+
+    {"position": [14, 4], "terrain_type": "cover_three_quarters"},
+    {"position": [14, 5], "terrain_type": "cover_three_quarters"},
+    {"position": [13, 7], "terrain_type": "cover_half"},
+    {"position": [13, 8], "terrain_type": "cover_half"},
+
+    {"position": [3, 6], "terrain_type": "difficult"},
+    {"position": [4, 6], "terrain_type": "difficult"},
+    {"position": [3, 7], "terrain_type": "difficult"},
+    {"position": [4, 7], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/kael.json",
+      "team": "player",
+      "starting_position": [3, 4]
+    },
+    {
+      "creature_id": "characters/shade.json",
+      "team": "player",
+      "starting_position": [3, 8]
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [15, 4],
+      "name_override": "Hobgoblin Archer 1"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [16, 6],
+      "name_override": "Hobgoblin Archer 2"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [15, 8],
+      "name_override": "Hobgoblin Archer 3"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

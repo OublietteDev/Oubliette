@@ -1,0 +1,51 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 6: The Gauntlet",
+  "description": "TESTS: Passive equipment bonuses (AC from plate+shield+Ring of Protection), feat effects (Alert +5 initiative, Mobile +10 speed), stat modifier aggregation, resource costs (ki points, divine smite deducting on use), actions graying out when resources depleted, AC calculation stacking.\n\nA Paladin (heavy armor + equipment bonuses) and a Monk (ki resource pool + Mobile feat) take on three properly-statted ogres. Watch for: Paladin AC should be very high, Monk speed should be 50 ft, Stunning Strike should cost ki, Smite Strike should cost divine_smite.",
+
+  "grid_width": 20,
+  "grid_height": 15,
+
+  "terrain": [
+    {"position": [10, 5], "terrain_type": "difficult"},
+    {"position": [11, 5], "terrain_type": "difficult"},
+    {"position": [10, 9], "terrain_type": "difficult"},
+    {"position": [11, 9], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/valeria.json",
+      "team": "player",
+      "starting_position": [4, 7]
+    },
+    {
+      "creature_id": "characters/zara.json",
+      "team": "player",
+      "starting_position": [4, 9]
+    },
+    {
+      "creature_id": "monsters/ogre_proper.json",
+      "team": "enemy",
+      "starting_position": [14, 5],
+      "name_override": "Ogre Brute 1"
+    },
+    {
+      "creature_id": "monsters/ogre_proper.json",
+      "team": "enemy",
+      "starting_position": [15, 8],
+      "name_override": "Ogre Brute 2"
+    },
+    {
+      "creature_id": "monsters/ogre_proper.json",
+      "team": "enemy",
+      "starting_position": [14, 11],
+      "name_override": "Ogre Brute 3"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

@@ -1,0 +1,101 @@
+{
+  "name": "Kael",
+  "size": "medium",
+  "creature_type": "humanoid",
+
+  "ability_scores": {
+    "strength": 12,
+    "dexterity": 18,
+    "constitution": 12,
+    "intelligence": 10,
+    "wisdom": 16,
+    "charisma": 8
+  },
+
+  "armor_class": 15,
+  "max_hit_points": 42,
+  "speed": {"walk": 30},
+  "proficiency_bonus": 3,
+
+  "saving_throw_proficiencies": ["strength", "dexterity"],
+  "passive_perception": 16,
+
+  "actions": [
+    {
+      "name": "Longbow",
+      "description": "Ranged Weapon Attack: +7 to hit, range 150/600 ft., one target. Hit: 1d8 + 4 piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 150,
+      "attack": {
+        "name": "Longbow",
+        "attack_type": "ranged_weapon",
+        "ability": "dexterity",
+        "range_normal": 150,
+        "range_long": 600,
+        "damage": [
+          {"dice": "1d8", "damage_type": "piercing", "ability_modifier": "dexterity"}
+        ]
+      },
+      "ai_priority": 7,
+      "animation": "arrow_shot"
+    },
+    {
+      "name": "Shortsword",
+      "description": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 1d6 + 4 piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Shortsword",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {"dice": "1d6", "damage_type": "piercing", "ability_modifier": "dexterity"}
+        ],
+        "properties": ["finesse", "light"]
+      },
+      "ai_priority": 5
+    },
+    {
+      "name": "Cure Wounds",
+      "description": "A creature you touch regains 1d8 + 3 hit points.",
+      "action_type": "action",
+      "target_type": "one_ally",
+      "range": 5,
+      "healing": "1d8+3",
+      "resource_cost": {"spell_slot_1": 1},
+      "ai_priority": 4,
+      "ai_use_condition": "allies_wounded >= 1"
+    }
+  ],
+
+  "bonus_actions": [],
+  "reactions": [],
+  "active_conditions": [],
+  "token_color": "#228B22",
+
+  "is_player_controlled": true,
+  "character_class": "Ranger",
+  "subclass": "Hunter",
+  "level": 5,
+  "background": "Outlander",
+  "race": "Human",
+  "spell_slots": {"1": 4, "2": 2},
+  "class_resources": {},
+
+  "skill_proficiencies": ["athletics", "nature", "perception", "stealth", "survival"],
+  "spellcasting_ability": "wisdom",
+
+  "features": [
+    {"name": "Favored Enemy: Undead", "description": "Advantage on Survival checks to track undead, Intelligence checks to recall information about them", "source": "Ranger 1"},
+    {"name": "Natural Explorer", "description": "Difficult terrain doesn't slow group travel, can't become lost except by magical means", "source": "Ranger 1"},
+    {"name": "Fighting Style: Archery", "description": "+2 to attack rolls with ranged weapons", "source": "Ranger 2"},
+    {"name": "Extra Attack", "description": "Attack twice when taking the Attack action", "source": "Ranger 5"},
+    {"name": "Colossus Slayer", "description": "Once per turn, deal extra 1d8 damage to a creature below max HP", "source": "Hunter 3"}
+  ],
+
+  "death_save_successes": 0,
+  "death_save_failures": 0
+}

@@ -1,0 +1,82 @@
+{
+  "name": "Cultist Warlock",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "chaotic evil",
+
+  "ability_scores": {
+    "strength": 10,
+    "dexterity": 14,
+    "constitution": 12,
+    "intelligence": 10,
+    "wisdom": 11,
+    "charisma": 16
+  },
+
+  "armor_class": 13,
+  "max_hit_points": 33,
+  "hit_dice": "6d8+6",
+  "speed": {"walk": 30},
+  "proficiency_bonus": 2,
+
+  "saving_throw_proficiencies": ["wisdom", "charisma"],
+  "passive_perception": 10,
+
+  "challenge_rating": 2,
+  "experience_points": 450,
+
+  "special_abilities": [
+    {
+      "name": "Repelling Blast",
+      "description": "When the warlock hits a creature with Eldritch Blast, it can push the creature up to 10 feet away in a straight line."
+    }
+  ],
+
+  "actions": [
+    {
+      "name": "Eldritch Blast",
+      "description": "Ranged spell attack. 1d10+3 force damage. Repelling Blast: push target 10 ft on hit.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 120,
+      "attack": {
+        "name": "Eldritch Blast",
+        "attack_type": "ranged_spell",
+        "ability": "charisma",
+        "reach": 5,
+        "range_normal": 120,
+        "damage": [
+          {"dice": "1d10", "damage_type": "force", "bonus": 3}
+        ]
+      },
+      "forced_movement_type": "push",
+      "forced_movement_distance": 10,
+      "ai_priority": 7
+    },
+    {
+      "name": "Dagger",
+      "description": "Melee weapon attack with dagger.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Dagger",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {"dice": "1d4", "damage_type": "piercing", "ability_modifier": "dexterity"}
+        ]
+      },
+      "ai_priority": 2
+    }
+  ],
+
+  "bonus_actions": [],
+  "reactions": [],
+
+  "is_player_controlled": false,
+  "ai_profile": "spellcaster",
+  "token_color": "#5D3FD3",
+  "source_book": "Custom"
+}

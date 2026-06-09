@@ -1,0 +1,127 @@
+{
+  "name": "Finn Whisperwind",
+  "size": "medium",
+  "creature_type": "humanoid",
+
+  "ability_scores": {
+    "strength": 10,
+    "dexterity": 14,
+    "constitution": 12,
+    "intelligence": 16,
+    "wisdom": 14,
+    "charisma": 10
+  },
+
+  "armor_class": 12,
+  "max_hit_points": 27,
+  "speed": {"walk": 30},
+  "proficiency_bonus": 3,
+
+  "saving_throw_proficiencies": ["intelligence", "wisdom"],
+  "passive_perception": 15,
+
+  "actions": [
+    {
+      "name": "Fire Bolt",
+      "description": "Ranged spell attack. 2d10 fire damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 120,
+      "attack": {
+        "name": "Fire Bolt",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 120,
+        "damage": [
+          {"dice": "2d10", "damage_type": "fire"}
+        ]
+      },
+      "ai_priority": 5
+    },
+    {
+      "name": "Find Familiar (Owl)",
+      "description": "Summon an owl familiar. The owl acts after you in initiative and is on your team.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 30,
+      "summon_creature": "monsters/owl.json",
+      "is_wild_shape": false,
+      "resource_cost": {"spell_slot_1": 1},
+      "ai_priority": 6,
+      "ai_use_condition": null
+    },
+    {
+      "name": "Magic Missile",
+      "description": "Three darts of force. 1d4+1 damage each. Auto-hit.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 120,
+      "attack": {
+        "name": "Magic Missile",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 120,
+        "damage": [
+          {"dice": "1d4", "damage_type": "force", "bonus": 1},
+          {"dice": "1d4", "damage_type": "force", "bonus": 1},
+          {"dice": "1d4", "damage_type": "force", "bonus": 1}
+        ]
+      },
+      "resource_cost": {"spell_slot_1": 1},
+      "ai_priority": 7
+    },
+    {
+      "name": "Dagger",
+      "description": "Melee weapon attack with dagger.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Dagger",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {"dice": "1d4", "damage_type": "piercing", "ability_modifier": "dexterity"}
+        ]
+      },
+      "ai_priority": 2
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+
+  "is_player_controlled": true,
+  "character_class": "Wizard",
+  "subclass": "School of Conjuration",
+  "level": 5,
+  "race": "Halfling",
+  "background": "Sage",
+
+  "class_resources": {
+    "spell_slot_1": 4,
+    "spell_slot_2": 3,
+    "spell_slot_3": 2
+  },
+
+  "features": [
+    {
+      "name": "Conjuration Savant",
+      "description": "Halved time and gold to copy conjuration spells.",
+      "source": "School of Conjuration 2"
+    },
+    {
+      "name": "Lucky",
+      "description": "Reroll 1s on attack rolls, ability checks, and saving throws.",
+      "source": "Halfling"
+    }
+  ],
+
+  "feats": [],
+  "token_color": "#4682B4",
+  "death_save_successes": 0,
+  "death_save_failures": 0,
+  "is_stabilized": false
+}

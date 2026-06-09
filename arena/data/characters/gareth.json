@@ -1,0 +1,213 @@
+{
+  "name": "Gareth Stoneheart",
+  "size": "medium",
+  "creature_type": "humanoid",
+
+  "ability_scores": {
+    "strength": 14,
+    "dexterity": 10,
+    "constitution": 16,
+    "intelligence": 20,
+    "wisdom": 12,
+    "charisma": 8
+  },
+
+  "armor_class": 15,
+  "max_hit_points": 58,
+  "speed": {"walk": 25},
+  "proficiency_bonus": 4,
+
+  "saving_throw_proficiencies": ["intelligence", "wisdom"],
+  "passive_perception": 15,
+  "senses": {"darkvision": 60},
+  "damage_resistances": ["poison"],
+
+  "actions": [
+    {
+      "name": "Wall of Stone",
+      "description": "Create a wall of stone on the battlefield. 10-ft radius area becomes impassable wall terrain. Concentration. Lasts until concentration ends.",
+      "action_type": "action",
+      "target_type": "area_sphere",
+      "range": 120,
+      "area_size": 10,
+      "requires_concentration": true,
+      "terrain_modification": "wall",
+      "resource_cost": {"spell_slot_5": 1},
+      "ai_priority": 8,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Spike Growth",
+      "description": "Ground in a 20-ft radius sprouts thorny spikes. Area becomes difficult terrain. Creatures moving through take 2d4 piercing per 5 ft. Concentration.",
+      "action_type": "action",
+      "target_type": "area_sphere",
+      "range": 150,
+      "area_size": 20,
+      "requires_concentration": true,
+      "terrain_modification": "difficult",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 17,
+        "damage_on_fail": [
+          {"dice": "2d4", "damage_type": "piercing"}
+        ],
+        "damage_on_success": "none"
+      },
+      "resource_cost": {"spell_slot_2": 1},
+      "ai_priority": 7,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Mold Earth",
+      "description": "Reshape terrain in a 5-ft area. Clears difficult terrain, walls, or other modifications back to normal ground.",
+      "action_type": "action",
+      "target_type": "area_sphere",
+      "range": 30,
+      "area_size": 0,
+      "terrain_modification": "normal",
+      "ai_priority": 3
+    },
+    {
+      "name": "Transmute Rock",
+      "description": "Turn a 10-ft radius area into a hazardous pit. Creatures in the area must make DEX save or take 4d6 bludgeoning. Area becomes pit terrain. Concentration.",
+      "action_type": "action",
+      "target_type": "area_sphere",
+      "range": 120,
+      "area_size": 10,
+      "requires_concentration": true,
+      "terrain_modification": "pit",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 17,
+        "damage_on_fail": [
+          {"dice": "4d6", "damage_type": "bludgeoning"}
+        ],
+        "damage_on_success": "half"
+      },
+      "resource_cost": {"spell_slot_5": 1},
+      "ai_priority": 7,
+      "ai_use_condition": "enemies_in_range >= 1"
+    },
+    {
+      "name": "Fireball",
+      "description": "20-foot radius explosion. Dex save DC 17 or 8d6 fire damage (half on save).",
+      "action_type": "action",
+      "target_type": "area_sphere",
+      "range": 150,
+      "area_size": 20,
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 17,
+        "damage_on_fail": [
+          {"dice": "8d6", "damage_type": "fire"}
+        ],
+        "damage_on_success": "half"
+      },
+      "resource_cost": {"spell_slot_3": 1},
+      "ai_priority": 9,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Fire Bolt",
+      "description": "Ranged spell attack. 2d10 fire damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 120,
+      "attack": {
+        "name": "Fire Bolt",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 120,
+        "damage": [
+          {"dice": "2d10", "damage_type": "fire"}
+        ]
+      },
+      "ai_priority": 5
+    },
+    {
+      "name": "Warhammer",
+      "description": "Melee weapon attack with warhammer.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Warhammer",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {"dice": "1d8", "damage_type": "bludgeoning", "ability_modifier": "strength"}
+        ]
+      },
+      "ai_priority": 3
+    }
+  ],
+
+  "bonus_actions": [
+    {
+      "name": "Misty Step",
+      "description": "Teleport up to 30 feet to an unoccupied space you can see.",
+      "action_type": "bonus_action",
+      "target_type": "self",
+      "range": 30,
+      "teleport_range": 30,
+      "teleport_self": true,
+      "resource_cost": {"spell_slot_2": 1},
+      "ai_priority": 7,
+      "ai_use_condition": "is_in_melee"
+    }
+  ],
+
+  "reactions": [
+    {
+      "name": "Shield",
+      "description": "+5 AC until start of next turn.",
+      "action_type": "reaction",
+      "target_type": "self",
+      "range": 5,
+      "resource_cost": {"spell_slot_1": 1},
+      "ai_priority": 9
+    }
+  ],
+
+  "is_player_controlled": true,
+  "character_class": "Wizard",
+  "subclass": "School of Transmutation",
+  "level": 9,
+  "race": "Mountain Dwarf",
+  "background": "Guild Artisan",
+
+  "class_resources": {
+    "spell_slot_1": 4,
+    "spell_slot_2": 3,
+    "spell_slot_3": 3,
+    "spell_slot_4": 3,
+    "spell_slot_5": 1
+  },
+
+  "features": [
+    {
+      "name": "Transmuter's Stone",
+      "description": "You carry a transmuter's stone that grants darkvision 60 ft, +10 speed, proficiency in CON saves, or resistance to a chosen damage type.",
+      "source": "School of Transmutation 6"
+    },
+    {
+      "name": "Stonecunning",
+      "description": "Expertise on History checks related to origin of stonework.",
+      "source": "Mountain Dwarf"
+    },
+    {
+      "name": "Dwarven Resilience",
+      "description": "Advantage on saving throws against poison, and resistance against poison damage.",
+      "source": "Dwarf"
+    }
+  ],
+
+  "feats": [],
+  "spellcasting_ability": "intelligence",
+  "token_color": "#8B7355",
+  "death_save_successes": 0,
+  "death_save_failures": 0,
+  "is_stabilized": false
+}

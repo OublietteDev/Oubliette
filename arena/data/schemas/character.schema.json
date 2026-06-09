@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "character.schema.json",
+  "title": "PlayerCharacter",
+  "description": "A player-controlled character in D&D 5e",
+  "$defs": {
+    "AbilityScores": {
+      "type": "object",
+      "description": "The six core ability scores for a creature.",
+      "properties": {
+        "strength": {"type": "integer", "minimum": 1, "maximum": 30, "default": 10},
+        "dexterity": {"type": "integer", "minimum": 1, "maximum": 30, "default": 10},
+        "constitution": {"type": "integer", "minimum": 1, "maximum": 30, "default": 10},
+        "intelligence": {"type": "integer", "minimum": 1, "maximum": 30, "default": 10},
+        "wisdom": {"type": "integer", "minimum": 1, "maximum": 30, "default": 10},
+        "charisma": {"type": "integer", "minimum": 1, "maximum": 30, "default": 10}
+      }
+    },
+    "CreatureSize": {
+      "type": "string",
+      "enum": ["tiny", "small", "medium", "large", "huge", "gargantuan"]
+    },
+    "CreatureType": {
+      "type": "string",
+      "enum": ["aberration", "beast", "celestial", "construct", "dragon", "elemental", "fey", "fiend", "giant", "humanoid", "monstrosity", "ooze", "plant", "undead"]
+    },
+    "Condition": {
+      "type": "string",
+      "enum": ["blinded", "charmed", "deafened", "exhaustion", "frightened", "grappled", "incapacitated", "invisible", "paralyzed", "petrified", "poisoned", "prone", "restrained", "stunned", "unconscious", "concentrating", "dodging", "helped"]
+    },
+    "AppliedCondition": {
+      "type": "object",
+      "required": ["condition", "source"],
+      "properties": {
+        "condition": {"$ref": "#/$defs/Condition"},
+        "source": {"type": "string"},
+        "duration_type": {"type": "string", "enum": ["indefinite", "rounds", "end_of_turn", "start_of_turn"], "default": "indefinite"},
+        "duration_rounds": {"type": ["integer", "null"]},
+        "save_to_end": {"type": ["string", "null"]},
+        "save_dc": {"type": ["integer", "null"]},
+        "level": {"type": "integer", "default": 1},
+        "extra_data": {"type": "object", "default": {}}
+      }
+    },
+    "ActionType": {
+      "type": "string",
+      "enum": ["action", "bonus_action", "reaction", "legendary", "lair", "free"]
+    },
+    "TargetType": {
+      "type": "string",
+      "enum": ["self", "one_creature", "one_ally", "one_enemy", "area_sphere", "area_cone", "area_line", "area_cube", "area_cylinder"]
+    },
+    "DamageType": {
+      "type": "string",
+      "enum": ["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"]
+    },
+    "DamageRoll": {
+      "type": "object",
+      "required": ["dice", "damage_type"],
+      "properties": {
+        "dice": {"type": "string", "description": "Dice expression, e.g., '2d6'"},
+        "damage_type": {"$ref": "#/$defs/DamageType"},
+        "bonus": {"type": "integer", "default": 0},
+        "ability_modifier": {"type": ["string", "null"]}
+      }
+    },
+    "Attack": {
+      "type": "object",
+      "required": ["name", "attack_type", "ability"],
+      "properties": {
+        "name": {"type": "string"},
+        "attack_type": {"type": "string", "enum": ["melee_weapon", "ranged_weapon", "melee_spell", "ranged_spell"]},
+        "ability": {"type": "string"},
+        "reach": {"type": "integer", "default": 5},
+        "range_normal": {"type": ["integer", "null"]},
+        "range_long": {"type": ["integer", "null"]},
+        "damage": {"type": "array", "items": {"$ref": "#/$defs/DamageRoll"}, "default": []},
+        "damage_on_miss": {"type": ["array", "null"], "items": {"$ref": "#/$defs/DamageRoll"}},
+        "extra_effects": {"type": "array", "items": {"type": "string"}, "default": []}
+      }
+    },
+    "SavingThrowEffect": {
+      "type": "object",
+      "required": ["ability"],
+      "properties": {
+        "ability": {"type": "string"},
+        "dc": {"type": ["integer", "null"]},
+        "dc_ability": {"type": ["string", "null"]},
+        "damage_on_fail": {"type": "array", "items": {"$ref": "#/$defs/DamageRoll"}, "default": []},
+        "damage_on_success": {"type": "string", "enum": ["none", "half", "full"], "default": "none"},
+        "conditions_on_fail": {"type": "array", "items": {"type": "string"}, "default": []},
+        "conditions_on_success": {"type": "array", "items": {"type": "string"}, "default": []}
+      }
+    },
+    "Action": {
+      "type": "object",
+      "required": ["name", "description"],
+      "properties": {
+        "name": {"type": "string"},
+        "description": {"type": "string"},
+        "action_type": {"$ref": "#/$defs/ActionType", "default": "action"},
+        "target_type": {"$ref": "#/$defs/TargetType", "default": "one_creature"},
+        "range": {"type": "integer", "default": 5},
+        "area_size": {"type": ["integer", "null"]},
+        "attack": {"$ref": "#/$defs/Attack"},
+        "saving_throw": {"$ref": "#/$defs/SavingThrowEffect"},
+        "healing": {"type": ["string", "null"]},
+        "conditions_applied": {"type": "array", "items": {"type": "string"}, "default": []},
+        "conditions_removed": {"type": "array", "items": {"type": "string"}, "default": []},
+        "uses_per_rest": {"type": ["integer", "null"]},
+        "rest_type": {"type": ["string", "null"], "enum": ["short", "long", null]},
+        "current_uses": {"type": ["integer", "null"]},
+        "resource_cost": {"type": "object", "default": {}},
+        "legendary_action_cost": {"type": "integer", "default": 1},
+        "requires_concentration": {"type": "boolean", "default": false},
+        "requires_weapon": {"type": ["string", "null"]},
+        "ai_priority": {"type": "integer", "minimum": 1, "maximum": 10, "default": 5},
+        "ai_use_condition": {"type": ["string", "null"]}
+      }
+    },
+    "Feature": {
+      "type": "object",
+      "required": ["name", "description"],
+      "properties": {
+        "name": {"type": "string"},
+        "description": {"type": "string"},
+        "source": {"type": ["string", "null"]}
+      }
+    },
+    "Item": {
+      "type": "object",
+      "required": ["name", "item_type"],
+      "properties": {
+        "name": {"type": "string"},
+        "item_type": {"type": "string", "enum": ["weapon", "armor", "shield", "potion", "wondrous", "tool", "gear"]},
+        "description": {"type": ["string", "null"]},
+        "requires_attunement": {"type": "boolean", "default": false},
+        "is_magical": {"type": "boolean", "default": false}
+      }
+    }
+  },
+  "type": "object",
+  "required": ["name", "max_hit_points", "character_class"],
+  "properties": {
+    "name": {"type": "string"},
+    "size": {"$ref": "#/$defs/CreatureSize", "default": "medium"},
+    "creature_type": {"$ref": "#/$defs/CreatureType", "default": "humanoid"},
+    "alignment": {"type": ["string", "null"]},
+    "ability_scores": {"$ref": "#/$defs/AbilityScores"},
+    "armor_class": {"type": "integer", "minimum": 1, "default": 10},
+    "max_hit_points": {"type": "integer", "minimum": 1},
+    "current_hit_points": {"type": ["integer", "null"]},
+    "temporary_hit_points": {"type": "integer", "default": 0},
+    "hit_dice": {"type": ["string", "null"]},
+    "speed": {"type": "object", "additionalProperties": {"type": "integer"}, "default": {"walk": 30}},
+    "proficiency_bonus": {"type": "integer", "minimum": 2, "maximum": 9, "default": 2},
+    "saving_throw_proficiencies": {"type": "array", "items": {"type": "string"}, "default": []},
+    "damage_resistances": {"type": "array", "items": {"type": "string"}, "default": []},
+    "damage_immunities": {"type": "array", "items": {"type": "string"}, "default": []},
+    "damage_vulnerabilities": {"type": "array", "items": {"type": "string"}, "default": []},
+    "condition_immunities": {"type": "array", "items": {"type": "string"}, "default": []},
+    "senses": {"type": "object", "additionalProperties": {"type": "integer"}, "default": {}},
+    "passive_perception": {"type": ["integer", "null"]},
+    "actions": {"type": "array", "items": {"$ref": "#/$defs/Action"}, "default": []},
+    "bonus_actions": {"type": "array", "items": {"$ref": "#/$defs/Action"}, "default": []},
+    "reactions": {"type": "array", "items": {"$ref": "#/$defs/Action"}, "default": []},
+    "active_conditions": {"type": "array", "items": {"$ref": "#/$defs/AppliedCondition"}, "default": []},
+    "token_image": {"type": ["string", "null"]},
+    "token_color": {"type": "string", "default": "#808080"},
+    "is_player_controlled": {"type": "boolean", "default": true},
+    "ai_profile": {"type": ["string", "null"]},
+    "character_class": {"type": "string"},
+    "subclass": {"type": ["string", "null"]},
+    "level": {"type": "integer", "minimum": 1, "maximum": 20, "default": 1},
+    "multiclass": {"type": "array", "items": {"type": "object"}, "default": []},
+    "background": {"type": ["string", "null"]},
+    "race": {"type": "string", "default": "Human"},
+    "spell_slots": {"type": "object", "additionalProperties": {"type": "integer"}, "default": {}},
+    "current_spell_slots": {"type": ["object", "null"]},
+    "class_resources": {"type": "object", "additionalProperties": {"type": "integer"}, "default": {}},
+    "skill_proficiencies": {"type": "array", "items": {"type": "string"}, "default": []},
+    "skill_expertise": {"type": "array", "items": {"type": "string"}, "default": []},
+    "equipment": {"type": "array", "items": {"$ref": "#/$defs/Item"}, "default": []},
+    "equipped_armor": {"type": ["string", "null"]},
+    "equipped_shield": {"type": "boolean", "default": false},
+    "equipped_weapons": {"type": "array", "items": {"type": "string"}, "default": []},
+    "features": {"type": "array", "items": {"$ref": "#/$defs/Feature"}, "default": []},
+    "spellcasting_ability": {"type": ["string", "null"]},
+    "spells_known": {"type": "array", "items": {"type": "string"}, "default": []},
+    "spells_prepared": {"type": "array", "items": {"type": "string"}, "default": []},
+    "death_save_successes": {"type": "integer", "minimum": 0, "maximum": 3, "default": 0},
+    "death_save_failures": {"type": "integer", "minimum": 0, "maximum": 3, "default": 0}
+  }
+}

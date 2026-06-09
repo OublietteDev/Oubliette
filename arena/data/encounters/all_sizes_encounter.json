@@ -1,0 +1,65 @@
+{
+  "name": "All sizes encounter",
+  "description": null,
+  "grid_width": 20,
+  "grid_height": 15,
+  "terrain": [],
+  "combatants": [
+    {
+      "creature_id": "characters/elara.json",
+      "creature_data": null,
+      "team": "player",
+      "starting_position": [
+        10,
+        14
+      ],
+      "count": 1,
+      "name_override": null
+    },
+    {
+      "creature_id": "monsters/kraken.json",
+      "creature_data": null,
+      "team": "enemy",
+      "starting_position": [
+        16,
+        2
+      ],
+      "count": 1,
+      "name_override": null
+    },
+    {
+      "creature_id": "monsters/red_dragon.json",
+      "creature_data": null,
+      "team": "enemy",
+      "starting_position": [
+        9,
+        2
+      ],
+      "count": 1,
+      "name_override": null
+    },
+    {
+      "creature_id": "monsters/ogre.json",
+      "creature_data": null,
+      "team": "enemy",
+      "starting_position": [
+        4,
+        2
+      ],
+      "count": 1,
+      "name_override": null
+    }
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [
+    0.0,
+    0.0
+  ],
+  "background_scale": 1.0
+}

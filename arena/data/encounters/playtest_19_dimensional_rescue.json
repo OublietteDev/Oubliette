@@ -1,0 +1,85 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 19: Dimensional Rescue",
+  "description": "TESTS: Dimension Door long-range teleport (500 ft), passenger mechanic (bring adjacent willing ally), passenger placement near destination, solo Dimension Door (no passenger), teleport to occupied hex rejection, teleport to wall hex rejection, teleport visual effect over long distance, multiple teleport types on one character (Misty Step + Dimension Door).\n\nShade has been captured and imprisoned behind enemy walls in a ruined fortress. Lyra and Thorin must fight through ogre guards, then Lyra uses Dimension Door to teleport directly to Shade and bring her back as a passenger. The large grid (25x20) ensures Dimension Door's 500-ft range is properly exercised. Walls create the 'prison' Shade is trapped behind.",
+
+  "grid_width": 25,
+  "grid_height": 20,
+
+  "terrain": [
+    {"position": [17, 5], "terrain_type": "wall"},
+    {"position": [17, 6], "terrain_type": "wall"},
+    {"position": [17, 7], "terrain_type": "wall"},
+    {"position": [17, 8], "terrain_type": "wall"},
+    {"position": [17, 9], "terrain_type": "wall"},
+    {"position": [17, 10], "terrain_type": "wall"},
+
+    {"position": [18, 5], "terrain_type": "wall"},
+    {"position": [19, 5], "terrain_type": "wall"},
+    {"position": [20, 5], "terrain_type": "wall"},
+    {"position": [21, 5], "terrain_type": "wall"},
+    {"position": [22, 5], "terrain_type": "wall"},
+
+    {"position": [18, 10], "terrain_type": "wall"},
+    {"position": [19, 10], "terrain_type": "wall"},
+    {"position": [20, 10], "terrain_type": "wall"},
+    {"position": [21, 10], "terrain_type": "wall"},
+    {"position": [22, 10], "terrain_type": "wall"},
+
+    {"position": [8, 8], "terrain_type": "cover_half"},
+    {"position": [8, 9], "terrain_type": "cover_half"},
+    {"position": [12, 7], "terrain_type": "cover_half"},
+
+    {"position": [4, 13], "terrain_type": "difficult"},
+    {"position": [5, 13], "terrain_type": "difficult"},
+    {"position": [4, 14], "terrain_type": "difficult"},
+    {"position": [5, 14], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/lyra.json",
+      "team": "player",
+      "starting_position": [4, 10]
+    },
+    {
+      "creature_id": "characters/thorin.json",
+      "team": "player",
+      "starting_position": [5, 10]
+    },
+    {
+      "creature_id": "characters/shade.json",
+      "team": "player",
+      "starting_position": [20, 7]
+    },
+    {
+      "creature_id": "monsters/ogre_proper.json",
+      "team": "enemy",
+      "starting_position": [11, 8],
+      "name_override": "Fortress Guard 1"
+    },
+    {
+      "creature_id": "monsters/ogre_proper.json",
+      "team": "enemy",
+      "starting_position": [14, 6],
+      "name_override": "Fortress Guard 2"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [13, 10],
+      "name_override": "Hobgoblin Sentry 1"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [15, 8],
+      "name_override": "Hobgoblin Sentry 2"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "dim"
+}

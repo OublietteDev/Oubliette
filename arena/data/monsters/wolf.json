@@ -1,0 +1,71 @@
+{
+  "$schema": "../schemas/monster.schema.json",
+  "name": "Wolf",
+  "size": "medium",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+
+  "ability_scores": {
+    "strength": 12,
+    "dexterity": 15,
+    "constitution": 12,
+    "intelligence": 3,
+    "wisdom": 12,
+    "charisma": 6
+  },
+
+  "armor_class": 13,
+  "max_hit_points": 11,
+  "hit_dice": "2d8+2",
+  "speed": {"walk": 40},
+  "proficiency_bonus": 2,
+
+  "skill_proficiencies": ["perception", "stealth"],
+  "senses": {},
+  "passive_perception": 13,
+
+  "challenge_rating": 0.25,
+  "experience_points": 50,
+
+  "special_abilities": [
+    {
+      "name": "Keen Hearing and Smell",
+      "description": "The wolf has advantage on Wisdom (Perception) checks that rely on hearing or smell."
+    },
+    {
+      "name": "Pack Tactics",
+      "description": "The wolf has advantage on attack rolls against a creature if at least one of the wolf's allies is within 5 feet of the creature and the ally isn't incapacitated."
+    }
+  ],
+
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee weapon attack: +4 to hit, reach 5 ft., one target. Hit: 7 (2d4 + 2) piercing damage. If the target is a creature, it must succeed on a DC 11 Strength saving throw or be knocked prone.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {"dice": "2d4", "damage_type": "piercing", "ability_modifier": "dexterity"}
+        ],
+        "extra_effects": ["Target must succeed on DC 11 Strength save or be knocked prone"]
+      },
+      "saving_throw": {
+        "ability": "strength",
+        "dc": 11,
+        "conditions_on_fail": ["prone"]
+      },
+      "ai_priority": 7
+    }
+  ],
+
+  "ai_profile": "berserker",
+  "token_color": "#696969",
+  "source_book": "Monster Manual",
+  "source_page": 341
+}

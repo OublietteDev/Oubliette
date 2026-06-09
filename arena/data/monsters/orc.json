@@ -1,0 +1,94 @@
+{
+  "$schema": "../schemas/monster.schema.json",
+  "name": "Orc",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "chaotic evil",
+
+  "ability_scores": {
+    "strength": 16,
+    "dexterity": 12,
+    "constitution": 16,
+    "intelligence": 7,
+    "wisdom": 11,
+    "charisma": 10
+  },
+
+  "armor_class": 13,
+  "armor_description": "hide armor",
+  "max_hit_points": 15,
+  "hit_dice": "2d8+6",
+  "speed": {"walk": 30},
+  "proficiency_bonus": 2,
+
+  "skill_proficiencies": ["intimidation"],
+  "senses": {"darkvision": 60},
+  "passive_perception": 10,
+  "languages": ["Common", "Orc"],
+
+  "challenge_rating": 0.5,
+  "experience_points": 100,
+
+  "special_abilities": [
+    {
+      "name": "Aggressive",
+      "description": "As a bonus action, the orc can move up to its speed toward a hostile creature that it can see."
+    }
+  ],
+
+  "actions": [
+    {
+      "name": "Greataxe",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 9 (1d12 + 3) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Greataxe",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {"dice": "1d12", "damage_type": "slashing", "ability_modifier": "strength"}
+        ]
+      },
+      "ai_priority": 8
+    },
+    {
+      "name": "Javelin",
+      "description": "Melee or Ranged Weapon Attack: +5 to hit, reach 5 ft. or range 30/120 ft., one target. Hit: 6 (1d6 + 3) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 30,
+      "attack": {
+        "name": "Javelin",
+        "attack_type": "ranged_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "range_normal": 30,
+        "range_long": 120,
+        "damage": [
+          {"dice": "1d6", "damage_type": "piercing", "ability_modifier": "strength"}
+        ]
+      },
+      "ai_priority": 6
+    }
+  ],
+
+  "bonus_actions": [
+    {
+      "name": "Aggressive",
+      "description": "Move up to speed toward a hostile creature that it can see.",
+      "action_type": "bonus_action",
+      "target_type": "self",
+      "ai_priority": 9,
+      "ai_use_condition": "not is_in_melee and distance_to_nearest_enemy > 0"
+    }
+  ],
+
+  "ai_profile": "aggressive",
+  "ai_notes": "Uses Aggressive bonus action to close distance quickly, prefers melee combat with greataxe",
+  "token_color": "#556B2F",
+  "source_book": "Monster Manual",
+  "source_page": 246
+}

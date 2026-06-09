@@ -1,0 +1,65 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 11: Temp HP Gauntlet",
+  "description": "TESTS: Granting temporary HP via action effects (Armor of Agathys flat 10, False Life 1d4+4 dice roll), temp HP no-stacking rule (higher value kept, lower ignored), temp HP absorption on damage (temp HP absorbed before real HP), temp HP display in creature info panel, combined healing + temp HP in same action.\n\nA warlock and cleric face a wave of orcs and skeletons. The warlock buffs with temp HP before enemies close in. TEST STEPS: (1) Morgana casts Armor of Agathys — verify 10 temp HP granted, shown in creature info. (2) Morgana takes damage — verify temp HP absorbed first, real HP untouched until temp HP depleted. (3) Morgana casts False Life (1d4+4) — if roll < 10, temp HP stays at current value (no-stack). If roll > remaining temp HP, replaces with new higher value. (4) Brother Aldric casts Heroism-style buff with both healing and temp HP — verify both apply. (5) Multiple enemies attack Morgana — verify temp HP depletes correctly across multiple hits.",
+
+  "grid_width": 16,
+  "grid_height": 12,
+
+  "terrain": [
+    {"position": [3, 5], "terrain_type": "cover_half"},
+    {"position": [3, 6], "terrain_type": "cover_half"},
+    {"position": [7, 3], "terrain_type": "difficult"},
+    {"position": [8, 3], "terrain_type": "difficult"},
+    {"position": [7, 8], "terrain_type": "difficult"},
+    {"position": [8, 8], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/morgana.json",
+      "team": "player",
+      "starting_position": [2, 6]
+    },
+    {
+      "creature_id": "characters/brother_aldric.json",
+      "team": "player",
+      "starting_position": [2, 8]
+    },
+    {
+      "creature_id": "monsters/orc.json",
+      "team": "enemy",
+      "starting_position": [12, 4],
+      "name_override": "Orc Brute 1"
+    },
+    {
+      "creature_id": "monsters/orc.json",
+      "team": "enemy",
+      "starting_position": [13, 6],
+      "name_override": "Orc Brute 2"
+    },
+    {
+      "creature_id": "monsters/orc.json",
+      "team": "enemy",
+      "starting_position": [12, 8],
+      "name_override": "Orc Brute 3"
+    },
+    {
+      "creature_id": "monsters/skeleton.json",
+      "team": "enemy",
+      "starting_position": [14, 5],
+      "name_override": "Skeleton Archer 1"
+    },
+    {
+      "creature_id": "monsters/skeleton.json",
+      "team": "enemy",
+      "starting_position": [14, 7],
+      "name_override": "Skeleton Archer 2"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

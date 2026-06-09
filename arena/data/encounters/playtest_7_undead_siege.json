@@ -1,0 +1,68 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 7: Undead Siege",
+  "description": "TESTS: Damage resistance (skeletons halve non-bludgeoning), damage immunity (undead immune to poison), damage vulnerability (skeletons vulnerable to bludgeoning = double damage), condition immunities (undead immune to poisoned/exhaustion), radiant damage working normally, healing spells on party members.\n\nA Cleric and Fighter hold off waves of skeletons and zombies. The Cleric's Sacred Flame deals radiant, the Fighter has slashing. Watch for: skeleton bludgeoning vulnerability doubling damage, poison immunity blocking poison damage, condition immunity icons.",
+
+  "grid_width": 18,
+  "grid_height": 12,
+
+  "terrain": [
+    {"position": [5, 5], "terrain_type": "cover_half"},
+    {"position": [5, 6], "terrain_type": "cover_half"},
+    {"position": [5, 7], "terrain_type": "cover_half"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/brother_aldric.json",
+      "team": "player",
+      "starting_position": [3, 6]
+    },
+    {
+      "creature_id": "characters/thorin.json",
+      "team": "player",
+      "starting_position": [4, 5]
+    },
+    {
+      "creature_id": "monsters/skeleton.json",
+      "team": "enemy",
+      "starting_position": [13, 3],
+      "name_override": "Skeleton 1"
+    },
+    {
+      "creature_id": "monsters/skeleton.json",
+      "team": "enemy",
+      "starting_position": [14, 5],
+      "name_override": "Skeleton 2"
+    },
+    {
+      "creature_id": "monsters/skeleton.json",
+      "team": "enemy",
+      "starting_position": [13, 7],
+      "name_override": "Skeleton 3"
+    },
+    {
+      "creature_id": "monsters/zombie.json",
+      "team": "enemy",
+      "starting_position": [14, 4],
+      "name_override": "Zombie 1"
+    },
+    {
+      "creature_id": "monsters/zombie.json",
+      "team": "enemy",
+      "starting_position": [15, 6],
+      "name_override": "Zombie 2"
+    },
+    {
+      "creature_id": "monsters/zombie.json",
+      "team": "enemy",
+      "starting_position": [14, 8],
+      "name_override": "Zombie 3"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "dim"
+}

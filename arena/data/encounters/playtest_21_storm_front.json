@@ -1,0 +1,60 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 21: Storm Front",
+  "description": "TESTS: AoE push on failed save (Thunderwave), no push on successful save, AI using Repelling Blast push, Shove tactic (prone + push choice), shove contested Athletics check, forced movement + zone interaction, multiple creatures pushed by same AoE.\n\nElara and Thorin face a Cultist Warlock and hobgoblin soldiers in a ruined temple. The warlock uses Repelling Blast to push players away while hobgoblins close to melee. Elara's Thunderwave can push multiple enemies on a failed save. Thorin's high STR makes him ideal for testing the Shove tactic -- pushing enemies into walls or knocking them prone for advantage on follow-up attacks. The central zone of difficult terrain represents rubble that creatures can be pushed through.",
+
+  "grid_width": 18,
+  "grid_height": 14,
+
+  "terrain": [
+    {"position": [8, 5], "terrain_type": "wall"},
+    {"position": [9, 5], "terrain_type": "wall"},
+    {"position": [8, 8], "terrain_type": "wall"},
+    {"position": [9, 8], "terrain_type": "wall"},
+
+    {"position": [8, 6], "terrain_type": "difficult"},
+    {"position": [9, 6], "terrain_type": "difficult"},
+    {"position": [8, 7], "terrain_type": "difficult"},
+    {"position": [9, 7], "terrain_type": "difficult"},
+
+    {"position": [4, 3], "terrain_type": "cover_half"},
+    {"position": [13, 3], "terrain_type": "cover_half"},
+    {"position": [4, 10], "terrain_type": "cover_half"},
+    {"position": [13, 10], "terrain_type": "cover_half"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/elara.json",
+      "team": "player",
+      "starting_position": [4, 7]
+    },
+    {
+      "creature_id": "characters/thorin.json",
+      "team": "player",
+      "starting_position": [5, 6]
+    },
+    {
+      "creature_id": "monsters/cultist_warlock.json",
+      "team": "enemy",
+      "starting_position": [14, 6]
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [12, 4],
+      "name_override": "Hobgoblin Soldier 1"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [12, 9],
+      "name_override": "Hobgoblin Soldier 2"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

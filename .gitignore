@@ -16,6 +16,11 @@ pack-backups/
 # Personal/local Claude Code settings — not shared history
 .claude/settings.local.json
 
+# The Arena's visual/audio assets (~100MB: tokens, music, sounds, fonts,
+# backgrounds, animation frames) — live on disk for local play, never committed
+# so git stays lean. Versioning strategy (lfs / one-time commit) deferred.
+arena/assets/
+
 # Secrets — never commit
 APIKey.txt
 *.key

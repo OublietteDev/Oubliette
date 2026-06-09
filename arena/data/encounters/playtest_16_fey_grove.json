@@ -1,0 +1,121 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 16: Fey Grove",
+  "description": "TESTS: All new lair action effect types: condition-only (Grasping Roots applies restrained via STR save), damage+condition combo (Freezing Wind deals cold + prone via CON save), healing (Nature's Mending heals 2d6 HP to enemy creatures), temp HP (Fey Ward grants 8 temp HP to enemies), summoning (Call of the Wild summons a wolf via monsters/wolf.json), AI scoring prioritizes different effect types correctly, summoned creature appears in initiative and on grid.\n\nThe party ventures into an ancient fey grove corrupted by a mage and her wolf guardians. The grove itself is alive with magic: roots grasp at intruders, freezing winds howl, nature mends the guardians' wounds, fey magic shields allies, and the grove calls wolves to defend it. AI-controlled (use_ai_for_enemies=true) to test AI scoring of all new lair effect types.",
+
+  "grid_width": 16,
+  "grid_height": 12,
+
+  "terrain": [
+    {"position": [3, 3], "terrain_type": "difficult"},
+    {"position": [4, 3], "terrain_type": "difficult"},
+    {"position": [3, 4], "terrain_type": "difficult"},
+
+    {"position": [11, 3], "terrain_type": "difficult"},
+    {"position": [12, 3], "terrain_type": "difficult"},
+    {"position": [12, 4], "terrain_type": "difficult"},
+
+    {"position": [7, 5], "terrain_type": "cover_half"},
+    {"position": [8, 5], "terrain_type": "cover_half"},
+
+    {"position": [5, 8], "terrain_type": "difficult"},
+    {"position": [10, 8], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/ser_marcus.json",
+      "team": "player",
+      "starting_position": [3, 10]
+    },
+    {
+      "creature_id": "characters/elara.json",
+      "team": "player",
+      "starting_position": [6, 11]
+    },
+    {
+      "creature_id": "characters/thorin.json",
+      "team": "player",
+      "starting_position": [10, 10]
+    },
+    {
+      "creature_id": "monsters/mage.json",
+      "team": "enemy",
+      "starting_position": [8, 2],
+      "name_override": "Grove Keeper"
+    },
+    {
+      "creature_id": "monsters/wolf.json",
+      "team": "enemy",
+      "starting_position": [5, 3],
+      "name_override": "Fey Wolf 1"
+    },
+    {
+      "creature_id": "monsters/wolf.json",
+      "team": "enemy",
+      "starting_position": [11, 3],
+      "name_override": "Fey Wolf 2"
+    }
+  ],
+
+  "has_lair": true,
+  "lair_actions": [
+    {
+      "name": "Grasping Roots",
+      "description": "Twisted roots burst from the earth, entangling creatures in their grip.",
+      "action_type": "lair",
+      "target_type": "area_sphere",
+      "range": 120,
+      "saving_throw": {
+        "ability": "strength",
+        "dc": 14,
+        "damage_on_fail": [],
+        "damage_on_success": "none",
+        "conditions_on_fail": ["restrained"]
+      }
+    },
+    {
+      "name": "Freezing Wind",
+      "description": "An unnatural gale of freezing wind sweeps through the grove.",
+      "action_type": "lair",
+      "target_type": "area_sphere",
+      "range": 120,
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 13,
+        "damage_on_fail": [{"dice": "2d6", "damage_type": "cold"}],
+        "damage_on_success": "half",
+        "conditions_on_fail": ["prone"]
+      }
+    },
+    {
+      "name": "Nature's Mending",
+      "description": "The grove channels restorative energy into its guardians.",
+      "action_type": "lair",
+      "target_type": "area_sphere",
+      "range": 120,
+      "healing": "2d6"
+    },
+    {
+      "name": "Fey Ward",
+      "description": "Shimmering fey magic wraps around the grove's defenders.",
+      "action_type": "lair",
+      "target_type": "area_sphere",
+      "range": 120,
+      "grants_temporary_hp": "8"
+    },
+    {
+      "name": "Call of the Wild",
+      "description": "The grove summons a wolf from the forest to defend it.",
+      "action_type": "lair",
+      "target_type": "area_sphere",
+      "range": 120,
+      "summon_creature": "monsters/wolf.json"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

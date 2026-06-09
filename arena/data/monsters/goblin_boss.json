@@ -1,0 +1,117 @@
+{
+  "$schema": "../schemas/monster.schema.json",
+  "name": "Goblin Boss",
+  "size": "small",
+  "creature_type": "humanoid",
+  "alignment": "neutral evil",
+
+  "ability_scores": {
+    "strength": 10,
+    "dexterity": 14,
+    "constitution": 10,
+    "intelligence": 10,
+    "wisdom": 8,
+    "charisma": 10
+  },
+
+  "armor_class": 17,
+  "max_hit_points": 21,
+  "hit_dice": "6d6",
+  "speed": {"walk": 30},
+  "proficiency_bonus": 2,
+
+  "skill_proficiencies": ["stealth"],
+  "senses": {"darkvision": 60},
+  "passive_perception": 9,
+
+  "challenge_rating": 1,
+  "experience_points": 200,
+
+  "special_abilities": [
+    {
+      "name": "Nimble Escape",
+      "description": "The goblin can take the Disengage or Hide action as a bonus action on each of its turns."
+    }
+  ],
+
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The goblin makes two attacks with its scimitar. The second attack has disadvantage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "ai_priority": 8
+    },
+    {
+      "name": "Scimitar",
+      "description": "Melee weapon attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Scimitar",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {"dice": "1d6", "damage_type": "slashing", "ability_modifier": "dexterity"}
+        ]
+      },
+      "ai_priority": 7
+    },
+    {
+      "name": "Javelin",
+      "description": "Melee or Ranged weapon attack: +2 to hit, reach 5 ft. or range 30/120 ft., one target. Hit: 3 (1d6) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Javelin",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "range_normal": 30,
+        "range_long": 120,
+        "damage": [
+          {"dice": "1d6", "damage_type": "piercing", "ability_modifier": "strength"}
+        ]
+      },
+      "ai_priority": 5
+    }
+  ],
+
+  "bonus_actions": [
+    {
+      "name": "Nimble Escape: Disengage",
+      "description": "Disengage as a bonus action",
+      "action_type": "bonus_action",
+      "target_type": "self",
+      "ai_priority": 5,
+      "ai_use_condition": "is_in_melee and self.hp_percent < 50"
+    },
+    {
+      "name": "Nimble Escape: Hide",
+      "description": "Hide as a bonus action",
+      "action_type": "bonus_action",
+      "target_type": "self",
+      "ai_priority": 4
+    }
+  ],
+
+  "reactions": [
+    {
+      "name": "Redirect Attack",
+      "description": "When a creature the goblin can see targets it with an attack, the goblin chooses another goblin within 5 feet of it. The two goblins swap places, and the chosen goblin becomes the target instead.",
+      "action_type": "reaction",
+      "target_type": "self",
+      "ai_priority": 6,
+      "ai_use_condition": "ally_goblin_adjacent"
+    }
+  ],
+  "token_image": "assets/tokens/generic/goblin_boss.png",
+  "ai_profile": "default_monster",
+  "token_color": "#8B0000",
+  "source_book": "Monster Manual",
+  "source_page": 166
+}

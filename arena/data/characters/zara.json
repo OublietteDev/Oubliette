@@ -1,0 +1,406 @@
+{
+  "name": "Zara",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": null,
+  "ability_scores": {
+    "strength": 10,
+    "dexterity": 18,
+    "constitution": 12,
+    "intelligence": 10,
+    "wisdom": 16,
+    "charisma": 8
+  },
+  "armor_class": 17,
+  "max_hit_points": 33,
+  "current_hit_points": 33,
+  "temporary_hit_points": 0,
+  "hit_dice": null,
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [
+    "strength",
+    "dexterity"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 13,
+  "actions": [
+    {
+      "name": "Unarmed Strike",
+      "description": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 1d6 + 4 bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "area_size": null,
+      "attack": {
+        "name": "Unarmed Strike",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "range_normal": null,
+        "range_long": null,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "bludgeoning",
+            "bonus": 0,
+            "ability_modifier": "dexterity"
+          }
+        ],
+        "damage_on_miss": null,
+        "extra_effects": [],
+        "properties": [
+          "finesse"
+        ]
+      },
+      "saving_throw": null,
+      "healing": null,
+      "conditions_applied": [],
+      "conditions_removed": [],
+      "uses_per_rest": null,
+      "rest_type": null,
+      "current_uses": null,
+      "resource_cost": {},
+      "legendary_action_cost": 1,
+      "requires_concentration": false,
+      "requires_weapon": null,
+      "ai_priority": 7,
+      "ai_use_condition": null,
+      "source_item": null,
+      "animation": null
+    },
+    {
+      "name": "Dart",
+      "description": "Ranged Weapon Attack: +7 to hit, range 20/60 ft., one target. Hit: 1d4 + 4 piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 20,
+      "area_size": null,
+      "attack": {
+        "name": "Dart",
+        "attack_type": "ranged_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "range_normal": 20,
+        "range_long": 60,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "piercing",
+            "bonus": 0,
+            "ability_modifier": "dexterity"
+          }
+        ],
+        "damage_on_miss": null,
+        "extra_effects": [],
+        "properties": []
+      },
+      "saving_throw": null,
+      "healing": null,
+      "conditions_applied": [],
+      "conditions_removed": [],
+      "uses_per_rest": null,
+      "rest_type": null,
+      "current_uses": null,
+      "resource_cost": {},
+      "legendary_action_cost": 1,
+      "requires_concentration": false,
+      "requires_weapon": null,
+      "ai_priority": 4,
+      "ai_use_condition": null,
+      "source_item": null,
+      "animation": null
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Flurry of Blows",
+      "description": "After taking the Attack action, spend 1 ki to make two unarmed strikes as a bonus action.",
+      "action_type": "bonus_action",
+      "target_type": "one_creature",
+      "range": 5,
+      "area_size": null,
+      "attack": {
+        "name": "Flurry of Blows",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "range_normal": null,
+        "range_long": null,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "bludgeoning",
+            "bonus": 0,
+            "ability_modifier": "dexterity"
+          }
+        ],
+        "damage_on_miss": null,
+        "extra_effects": [],
+        "properties": [
+          "finesse"
+        ]
+      },
+      "saving_throw": null,
+      "healing": null,
+      "conditions_applied": [],
+      "conditions_removed": [],
+      "uses_per_rest": null,
+      "rest_type": null,
+      "current_uses": null,
+      "resource_cost": {
+        "ki_points": 1
+      },
+      "legendary_action_cost": 1,
+      "requires_concentration": false,
+      "requires_weapon": null,
+      "ai_priority": 8,
+      "ai_use_condition": null,
+      "source_item": null,
+      "animation": null
+    },
+    {
+      "name": "Patient Defense",
+      "description": "Spend 1 ki to take the Dodge action as a bonus action.",
+      "action_type": "bonus_action",
+      "target_type": "self",
+      "range": 5,
+      "area_size": null,
+      "attack": null,
+      "saving_throw": null,
+      "healing": null,
+      "conditions_applied": [],
+      "conditions_removed": [],
+      "uses_per_rest": null,
+      "rest_type": null,
+      "current_uses": null,
+      "resource_cost": {
+        "ki_points": 1
+      },
+      "legendary_action_cost": 1,
+      "requires_concentration": false,
+      "requires_weapon": null,
+      "ai_priority": 6,
+      "ai_use_condition": "self.hp_percent < 50",
+      "source_item": null,
+      "animation": null
+    },
+    {
+      "name": "Step of the Wind",
+      "description": "Spend 1 ki to take the Dash or Disengage action as a bonus action. Jump distance doubled.",
+      "action_type": "bonus_action",
+      "target_type": "self",
+      "range": 5,
+      "area_size": null,
+      "attack": null,
+      "saving_throw": null,
+      "healing": null,
+      "conditions_applied": [],
+      "conditions_removed": [],
+      "uses_per_rest": null,
+      "rest_type": null,
+      "current_uses": null,
+      "resource_cost": {
+        "ki_points": 1
+      },
+      "legendary_action_cost": 1,
+      "requires_concentration": false,
+      "requires_weapon": null,
+      "ai_priority": 5,
+      "ai_use_condition": null,
+      "source_item": null,
+      "animation": null
+    },
+    {
+      "name": "Stunning Strike",
+      "description": "When you hit with a melee attack, spend 1 ki. Target must succeed DC 14 Constitution save or be stunned.",
+      "action_type": "bonus_action",
+      "target_type": "one_creature",
+      "range": 5,
+      "area_size": null,
+      "attack": null,
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 14,
+        "dc_ability": null,
+        "damage_on_fail": [],
+        "damage_on_success": "none",
+        "conditions_on_fail": [
+          "stunned"
+        ],
+        "conditions_on_success": []
+      },
+      "healing": null,
+      "conditions_applied": [],
+      "conditions_removed": [],
+      "uses_per_rest": null,
+      "rest_type": null,
+      "current_uses": null,
+      "resource_cost": {
+        "ki_points": 1
+      },
+      "legendary_action_cost": 1,
+      "requires_concentration": false,
+      "requires_weapon": null,
+      "ai_priority": 9,
+      "ai_use_condition": null,
+      "source_item": null,
+      "animation": null
+    }
+  ],
+  "reactions": [],
+  "active_conditions": [],
+  "token_image": null,
+  "token_color": "#D2691E",
+  "equipment": [
+    {
+      "name": "Ring of Protection",
+      "item_type": "gear",
+      "description": "Ring that protects. +2 AC",
+      "equipment_slot": "ring_1",
+      "rarity": "common",
+      "magic_bonus": 0,
+      "requires_attunement": false,
+      "is_magical": false,
+      "weight": 0.0,
+      "weapon_properties": [],
+      "damage_dice": null,
+      "damage_type": "slashing",
+      "versatile_dice": null,
+      "armor_class": null,
+      "armor_type": null,
+      "max_dex_bonus": null,
+      "stealth_disadvantage": false,
+      "strength_requirement": null,
+      "range_normal": null,
+      "range_long": null,
+      "charges": null,
+      "current_charges": null,
+      "potion_action_type": null,
+      "effect_healing": null,
+      "effect_damage_dice": null,
+      "effect_damage_type": null,
+      "effect_target_type": null,
+      "effect_range": null,
+      "effect_save_ability": null,
+      "effect_save_dc": null,
+      "effect_save_damage_on_success": null,
+      "effect_conditions_applied": [],
+      "effect_conditions_removed": [],
+      "bonus_ability_scores": {},
+      "bonus_speed": 0,
+      "bonus_ac": 2,
+      "grants_damage_resistances": [],
+      "grants_damage_immunities": [],
+      "grants_condition_immunities": [],
+      "grants_senses": {}
+    }
+  ],
+  "is_player_controlled": true,
+  "ai_profile": null,
+  "character_class": "Monk",
+  "subclass": "Way of the Open Hand",
+  "level": 5,
+  "multiclass": [],
+  "background": "Hermit",
+  "race": "Human",
+  "spell_slots": {},
+  "current_spell_slots": null,
+  "class_resources": {
+    "ki_points": 5
+  },
+  "skill_proficiencies": [
+    "acrobatics",
+    "athletics",
+    "stealth",
+    "insight"
+  ],
+  "skill_expertise": [],
+  "equipped_armor": null,
+  "equipped_shield": false,
+  "equipped_weapons": [],
+  "features": [
+    {
+      "name": "Unarmored Defense",
+      "description": "AC = 10 + DEX mod + WIS mod when not wearing armor",
+      "source": "Monk 1",
+      "unarmored_defense": "monk"
+    },
+    {
+      "name": "Martial Arts",
+      "description": "Use DEX for unarmed/monk weapons, 1d6 martial arts die",
+      "source": "Monk 1"
+    },
+    {
+      "name": "Ki",
+      "description": "5 ki points, regained on short rest",
+      "source": "Monk 2"
+    },
+    {
+      "name": "Unarmored Movement",
+      "description": "Speed +10 ft when not wearing armor or shield",
+      "source": "Monk 2",
+      "bonus_speed": 10
+    },
+    {
+      "name": "Deflect Missiles",
+      "description": "Use reaction to reduce ranged attack damage by 1d10+9",
+      "source": "Monk 3"
+    },
+    {
+      "name": "Stunning Strike",
+      "description": "Spend 1 ki when you hit \u2014 target must save CON DC 14 or be stunned",
+      "source": "Monk 5"
+    },
+    {
+      "name": "Extra Attack",
+      "description": "Attack twice when taking the Attack action",
+      "source": "Monk 5"
+    },
+    {
+      "name": "Slow Fall",
+      "description": "Use reaction to reduce falling damage by 25",
+      "source": "Monk 4"
+    }
+  ],
+  "feats": [
+    {
+      "name": "Mobile",
+      "description": "Speed +10 ft. When you use Dash, difficult terrain doesn't cost extra. When you make a melee attack against a creature, you don't provoke opportunity attacks from that creature for the rest of the turn.",
+      "bonus_ability_scores": {},
+      "bonus_speed": 10,
+      "bonus_ac": 0,
+      "bonus_initiative": 0,
+      "grants_damage_resistances": [],
+      "grants_damage_immunities": [],
+      "grants_condition_immunities": [],
+      "grants_saving_throw_proficiencies": []
+    },
+    {
+      "name": "Tavern Brawler",
+      "description": "+1 STR or CON, proficient with improvised weapons, grapple as bonus.",
+      "bonus_ability_scores": {
+        "strength": 1
+      },
+      "bonus_speed": 0,
+      "bonus_ac": 0,
+      "bonus_initiative": 0,
+      "grants_damage_resistances": [],
+      "grants_damage_immunities": [],
+      "grants_condition_immunities": [],
+      "grants_saving_throw_proficiencies": []
+    }
+  ],
+  "spellcasting_ability": null,
+  "spells_known": [],
+  "spells_prepared": [],
+  "death_save_successes": 0,
+  "death_save_failures": 0,
+  "is_stabilized": false
+}

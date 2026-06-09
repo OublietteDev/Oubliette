@@ -1,0 +1,77 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Goblin Ambush",
+  "description": "A group of goblins ambushes the party in a forest clearing. The goblin boss Grak the Sneaky leads the attack from behind cover.",
+
+  "grid_width": 25,
+  "grid_height": 20,
+
+  "terrain": [
+    {"position": [5, 5], "terrain_type": "difficult"},
+    {"position": [5, 6], "terrain_type": "difficult"},
+    {"position": [6, 5], "terrain_type": "difficult"},
+    {"position": [6, 6], "terrain_type": "difficult"},
+    {"position": [4, 5], "terrain_type": "difficult"},
+    {"position": [5, 4], "terrain_type": "difficult"},
+    {"position": [10, 10], "terrain_type": "cover_half"},
+    {"position": [11, 10], "terrain_type": "cover_half"},
+    {"position": [15, 8], "terrain_type": "cover_three_quarters"},
+    {"position": [20, 5], "terrain_type": "difficult"},
+    {"position": [20, 6], "terrain_type": "difficult"},
+    {"position": [21, 5], "terrain_type": "difficult"},
+    {"position": [21, 6], "terrain_type": "difficult"},
+    {"position": [12, 15], "terrain_type": "water"},
+    {"position": [13, 15], "terrain_type": "water"},
+    {"position": [12, 16], "terrain_type": "water"},
+    {"position": [13, 16], "terrain_type": "water"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/thorin.json",
+      "team": "player",
+      "starting_position": [3, 10]
+    },
+    {
+      "creature_id": "characters/elara.json",
+      "team": "player",
+      "starting_position": [2, 11]
+    },
+    {
+      "creature_id": "monsters/goblin.json",
+      "team": "enemy",
+      "starting_position": [18, 7],
+      "name_override": "Goblin 1"
+    },
+    {
+      "creature_id": "monsters/goblin.json",
+      "team": "enemy",
+      "starting_position": [19, 9],
+      "name_override": "Goblin 2"
+    },
+    {
+      "creature_id": "monsters/goblin.json",
+      "team": "enemy",
+      "starting_position": [20, 11],
+      "name_override": "Goblin 3"
+    },
+    {
+      "creature_id": "monsters/goblin.json",
+      "team": "enemy",
+      "starting_position": [18, 13],
+      "name_override": "Goblin 4"
+    },
+    {
+      "creature_id": "monsters/goblin_boss.json",
+      "team": "enemy",
+      "name_override": "Grak the Sneaky",
+      "starting_position": [22, 10]
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "dim",
+  "environmental_effects": ["light_fog"]
+}

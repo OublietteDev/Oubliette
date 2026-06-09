@@ -1,0 +1,173 @@
+{
+  "name": "Mage",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "any alignment",
+
+  "ability_scores": {
+    "strength": 9,
+    "dexterity": 14,
+    "constitution": 11,
+    "intelligence": 17,
+    "wisdom": 12,
+    "charisma": 11
+  },
+
+  "armor_class": 12,
+  "max_hit_points": 40,
+  "hit_dice": "9d8",
+  "speed": {"walk": 30},
+  "proficiency_bonus": 3,
+
+  "saving_throw_proficiencies": ["intelligence", "wisdom"],
+  "passive_perception": 11,
+
+  "challenge_rating": 6,
+  "experience_points": 2300,
+
+  "special_abilities": [
+    {
+      "name": "Spellcasting",
+      "description": "The mage is a 9th-level spellcaster. Its spellcasting ability is Intelligence (spell save DC 14, +6 to hit with spell attacks)."
+    }
+  ],
+
+  "actions": [
+    {
+      "name": "Fire Bolt",
+      "description": "Ranged spell attack. 2d10 fire damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 120,
+      "attack": {
+        "name": "Fire Bolt",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "range_normal": 120,
+        "damage": [
+          {"dice": "2d10", "damage_type": "fire"}
+        ]
+      },
+      "ai_priority": 5
+    },
+    {
+      "name": "Ray of Frost",
+      "description": "Ranged spell attack. 2d8 cold damage, target speed reduced by 10 ft.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 60,
+      "attack": {
+        "name": "Ray of Frost",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "range_normal": 60,
+        "damage": [
+          {"dice": "2d8", "damage_type": "cold"}
+        ],
+        "extra_effects": ["Target's speed reduced by 10 feet until start of your next turn"]
+      },
+      "ai_priority": 4
+    },
+    {
+      "name": "Magic Missile",
+      "description": "Three darts of force. Each hits automatically for 1d4+1 force damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 120,
+      "attack": {
+        "name": "Magic Missile",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "range_normal": 120,
+        "damage": [
+          {"dice": "1d4", "damage_type": "force", "bonus": 1},
+          {"dice": "1d4", "damage_type": "force", "bonus": 1},
+          {"dice": "1d4", "damage_type": "force", "bonus": 1}
+        ]
+      },
+      "uses_per_rest": 4,
+      "ai_priority": 6
+    },
+    {
+      "name": "Hold Person",
+      "description": "One humanoid within range must succeed on a DC 14 Wisdom save or be paralyzed.",
+      "action_type": "action",
+      "target_type": "one_enemy",
+      "range": 60,
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 14,
+        "conditions_on_fail": ["paralyzed"]
+      },
+      "requires_concentration": true,
+      "uses_per_rest": 3,
+      "ai_priority": 8,
+      "ai_use_condition": "enemies_in_range >= 1"
+    },
+    {
+      "name": "Wall of Stone",
+      "description": "Create a wall of stone. 10-ft radius area becomes impassable wall terrain. Concentration. Skips occupied hexes.",
+      "action_type": "action",
+      "target_type": "area_sphere",
+      "range": 120,
+      "area_size": 10,
+      "requires_concentration": true,
+      "terrain_modification": "wall",
+      "uses_per_rest": 1,
+      "ai_priority": 7,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Fireball",
+      "description": "20-foot radius explosion. Dex save DC 14 or 8d6 fire damage (half on save).",
+      "action_type": "action",
+      "target_type": "area_sphere",
+      "range": 150,
+      "area_size": 20,
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 14,
+        "damage_on_fail": [
+          {"dice": "8d6", "damage_type": "fire"}
+        ],
+        "damage_on_success": "half"
+      },
+      "uses_per_rest": 2,
+      "ai_priority": 9,
+      "ai_use_condition": "enemies_in_range >= 2"
+    }
+  ],
+
+  "bonus_actions": [
+    {
+      "name": "Misty Step",
+      "description": "Teleport up to 30 feet to an unoccupied space you can see.",
+      "action_type": "bonus_action",
+      "target_type": "self",
+      "range": 30,
+      "teleport_range": 30,
+      "teleport_self": true,
+      "uses_per_rest": 3,
+      "ai_priority": 7,
+      "ai_use_condition": "is_in_melee"
+    }
+  ],
+
+  "reactions": [
+    {
+      "name": "Shield",
+      "description": "+5 AC until start of next turn.",
+      "action_type": "reaction",
+      "target_type": "self",
+      "range": 5,
+      "uses_per_rest": 4,
+      "ai_priority": 9
+    }
+  ],
+
+  "is_player_controlled": false,
+  "ai_profile": "spellcaster",
+  "token_color": "#4B0082",
+  "source_book": "Monster Manual",
+  "source_page": 347
+}

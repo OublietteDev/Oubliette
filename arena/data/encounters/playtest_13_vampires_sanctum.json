@@ -1,0 +1,56 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 13: Vampire's Sanctum",
+  "description": "TESTS: Player-controlled legendary creature, legendary action popup (player must choose), legendary actions with different costs (1 pt unarmed vs 2 pt bite), passing on legendary actions, legendary points badge in initiative panel, interaction with conditions (charmed targets), medium-size legendary creature.\n\nTwo player-controlled fighters face a player-controlled Vampire Lord and two AI skeleton minions. The vampire is player-controlled so the tester can exercise the legendary action popup manually, choosing when to use/pass legendary actions.",
+
+  "grid_width": 18,
+  "grid_height": 14,
+
+  "terrain": [
+    {"position": [4, 4], "terrain_type": "cover_half"},
+    {"position": [13, 4], "terrain_type": "cover_half"},
+    {"position": [4, 9], "terrain_type": "cover_half"},
+    {"position": [13, 9], "terrain_type": "cover_half"},
+
+    {"position": [8, 6], "terrain_type": "difficult"},
+    {"position": [9, 6], "terrain_type": "difficult"},
+    {"position": [8, 7], "terrain_type": "difficult"},
+    {"position": [9, 7], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/ser_marcus.json",
+      "team": "player",
+      "starting_position": [3, 11]
+    },
+    {
+      "creature_id": "characters/thorin.json",
+      "team": "player",
+      "starting_position": [5, 12]
+    },
+    {
+      "creature_id": "monsters/vampire_lord.json",
+      "team": "enemy",
+      "starting_position": [9, 2],
+      "name_override": "Lord Strahd"
+    },
+    {
+      "creature_id": "monsters/skeleton.json",
+      "team": "enemy",
+      "starting_position": [7, 4],
+      "name_override": "Skeleton Guard 1"
+    },
+    {
+      "creature_id": "monsters/skeleton.json",
+      "team": "enemy",
+      "starting_position": [11, 4],
+      "name_override": "Skeleton Guard 2"
+    }
+  ],
+
+  "use_ai_for_enemies": false,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "dim"
+}

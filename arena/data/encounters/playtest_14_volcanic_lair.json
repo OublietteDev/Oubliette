@@ -1,0 +1,95 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 14: Volcanic Lair",
+  "description": "TESTS: AI-controlled lair actions, lair initiative at 20 (loses ties), gold lair entry in initiative panel, lair action saving throws (DEX/STR), half-damage on success, no-repeat consecutive round rule, lair turn auto-resolves via AI, lair actions target all player-side creatures, damage+condition combo (Tremor applies prone on fail).\n\nThe party descends into a volcanic cavern to confront a Young Red Dragon. The lair itself is alive with danger: magma erupts from fissures, the ground trembles, and toxic fumes billow forth. The dragon is AI-controlled, and the lair actions are also AI-controlled (use_ai_for_enemies=true).",
+
+  "grid_width": 20,
+  "grid_height": 15,
+
+  "terrain": [
+    {"position": [3, 3], "terrain_type": "hazard", "extra_data": {"damage": "1d6 fire"}},
+    {"position": [4, 3], "terrain_type": "hazard", "extra_data": {"damage": "1d6 fire"}},
+    {"position": [16, 3], "terrain_type": "hazard", "extra_data": {"damage": "1d6 fire"}},
+    {"position": [17, 3], "terrain_type": "hazard", "extra_data": {"damage": "1d6 fire"}},
+
+    {"position": [9, 7], "terrain_type": "difficult"},
+    {"position": [10, 7], "terrain_type": "difficult"},
+    {"position": [9, 8], "terrain_type": "difficult"},
+    {"position": [10, 8], "terrain_type": "difficult"},
+
+    {"position": [5, 10], "terrain_type": "cover_half"},
+    {"position": [14, 10], "terrain_type": "cover_half"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/ser_marcus.json",
+      "team": "player",
+      "starting_position": [4, 13]
+    },
+    {
+      "creature_id": "characters/elara.json",
+      "team": "player",
+      "starting_position": [7, 14]
+    },
+    {
+      "creature_id": "characters/brother_aldric.json",
+      "team": "player",
+      "starting_position": [10, 13]
+    },
+    {
+      "creature_id": "monsters/young_red_dragon.json",
+      "team": "enemy",
+      "starting_position": [10, 3]
+    }
+  ],
+
+  "has_lair": true,
+  "lair_actions": [
+    {
+      "name": "Magma Eruption",
+      "description": "Magma erupts from cracks in the floor, scorching all intruders.",
+      "action_type": "lair",
+      "target_type": "area_sphere",
+      "range": 120,
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 15,
+        "damage_on_fail": [{"dice": "2d6", "damage_type": "fire"}],
+        "damage_on_success": "half"
+      }
+    },
+    {
+      "name": "Tremor",
+      "description": "The ground shakes violently, threatening to knock creatures prone.",
+      "action_type": "lair",
+      "target_type": "area_sphere",
+      "range": 120,
+      "saving_throw": {
+        "ability": "strength",
+        "dc": 14,
+        "damage_on_fail": [{"dice": "1d10", "damage_type": "bludgeoning"}],
+        "damage_on_success": "none",
+        "conditions_on_fail": ["prone"]
+      }
+    },
+    {
+      "name": "Toxic Fumes",
+      "description": "Volcanic gases billow through the cavern, poisoning the air.",
+      "action_type": "lair",
+      "target_type": "area_sphere",
+      "range": 120,
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 13,
+        "damage_on_fail": [{"dice": "2d4", "damage_type": "poison"}],
+        "damage_on_success": "half"
+      }
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "dim"
+}

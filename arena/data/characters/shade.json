@@ -1,0 +1,119 @@
+{
+  "name": "Shade",
+  "size": "medium",
+  "creature_type": "humanoid",
+
+  "ability_scores": {
+    "strength": 8,
+    "dexterity": 18,
+    "constitution": 12,
+    "intelligence": 14,
+    "wisdom": 10,
+    "charisma": 14
+  },
+
+  "armor_class": 15,
+  "max_hit_points": 33,
+  "speed": {"walk": 30},
+  "proficiency_bonus": 3,
+
+  "saving_throw_proficiencies": ["dexterity", "intelligence"],
+  "condition_immunities": ["charmed"],
+  "senses": {"darkvision": 60},
+  "passive_perception": 16,
+
+  "actions": [
+    {
+      "name": "Shortbow",
+      "description": "Ranged Weapon Attack: +7 to hit, range 80/320 ft., one target. Hit: 1d6 + 4 piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 80,
+      "attack": {
+        "name": "Shortbow",
+        "attack_type": "ranged_weapon",
+        "ability": "dexterity",
+        "range_normal": 80,
+        "range_long": 320,
+        "damage": [
+          {"dice": "1d6", "damage_type": "piercing", "ability_modifier": "dexterity"}
+        ]
+      },
+      "ai_priority": 7,
+      "animation": "arrow_shot"
+    },
+    {
+      "name": "Rapier",
+      "description": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 1d8 + 4 piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Rapier",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {"dice": "1d8", "damage_type": "piercing", "ability_modifier": "dexterity"}
+        ],
+        "properties": ["finesse"]
+      },
+      "ai_priority": 6
+    }
+  ],
+
+  "bonus_actions": [
+    {
+      "name": "Cunning Action: Dash",
+      "description": "Dash as a bonus action.",
+      "action_type": "bonus_action",
+      "target_type": "self",
+      "range": 5,
+      "ai_priority": 4
+    },
+    {
+      "name": "Cunning Action: Disengage",
+      "description": "Disengage as a bonus action.",
+      "action_type": "bonus_action",
+      "target_type": "self",
+      "range": 5,
+      "ai_priority": 5,
+      "ai_use_condition": "is_in_melee"
+    },
+    {
+      "name": "Cunning Action: Hide",
+      "description": "Hide as a bonus action.",
+      "action_type": "bonus_action",
+      "target_type": "self",
+      "range": 5,
+      "ai_priority": 3
+    }
+  ],
+
+  "reactions": [],
+  "active_conditions": [],
+  "token_color": "#2F2F2F",
+
+  "is_player_controlled": true,
+  "character_class": "Rogue",
+  "subclass": "Assassin",
+  "level": 5,
+  "background": "Criminal",
+  "race": "Half-Elf",
+  "spell_slots": {},
+  "class_resources": {},
+
+  "skill_proficiencies": ["acrobatics", "deception", "perception", "stealth", "investigation", "sleight_of_hand"],
+  "skill_expertise": ["stealth", "perception"],
+
+  "features": [
+    {"name": "Sneak Attack", "description": "3d6 extra damage once per turn when you have advantage or an ally is within 5 ft of the target", "source": "Rogue 1"},
+    {"name": "Cunning Action", "description": "Dash, Disengage, or Hide as a bonus action", "source": "Rogue 2"},
+    {"name": "Uncanny Dodge", "description": "Use reaction to halve damage from an attack you can see", "source": "Rogue 5"},
+    {"name": "Assassinate", "description": "Advantage on attacks against creatures that haven't taken a turn yet. Hits against surprised creatures are critical hits.", "source": "Assassin 3"},
+    {"name": "Fey Ancestry", "description": "Advantage on saves against being charmed, immune to magical sleep", "source": "Half-Elf"}
+  ],
+
+  "death_save_successes": 0,
+  "death_save_failures": 0
+}

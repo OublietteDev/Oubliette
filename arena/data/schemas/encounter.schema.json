@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "encounter.schema.json",
+  "title": "Encounter",
+  "description": "A complete encounter setup for D&D 5e combat",
+  "$defs": {
+    "TerrainType": {
+      "type": "string",
+      "enum": ["normal", "difficult", "hazard", "water", "pit", "wall", "cover_half", "cover_three_quarters", "cover_full"]
+    },
+    "TerrainHex": {
+      "type": "object",
+      "required": ["position", "terrain_type"],
+      "properties": {
+        "position": {
+          "type": "array",
+          "items": {"type": "integer"},
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Hex coordinates [q, r]"
+        },
+        "terrain_type": {"$ref": "#/$defs/TerrainType"},
+        "extra_data": {"type": "object", "default": {}}
+      }
+    },
+    "CombatantEntry": {
+      "type": "object",
+      "required": ["creature_id"],
+      "properties": {
+        "creature_id": {"type": "string", "description": "Path to character/monster JSON file"},
+        "creature_data": {"type": ["object", "null"], "description": "Inline creature data (alternative to creature_id)"},
+        "team": {"type": "string", "enum": ["player", "ally", "enemy", "neutral"], "default": "enemy"},
+        "starting_position": {
+          "type": ["array", "null"],
+          "items": {"type": "integer"},
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Hex coordinates [q, r]"
+        },
+        "count": {"type": "integer", "minimum": 1, "default": 1},
+        "name_override": {"type": ["string", "null"]}
+      }
+    }
+  },
+  "type": "object",
+  "required": ["name"],
+  "properties": {
+    "name": {"type": "string"},
+    "description": {"type": ["string", "null"]},
+    "grid_width": {"type": "integer", "minimum": 5, "maximum": 100, "default": 20},
+    "grid_height": {"type": "integer", "minimum": 5, "maximum": 100, "default": 15},
+    "terrain": {"type": "array", "items": {"$ref": "#/$defs/TerrainHex"}, "default": []},
+    "combatants": {"type": "array", "items": {"$ref": "#/$defs/CombatantEntry"}, "default": []},
+    "use_ai_for_enemies": {"type": "boolean", "default": true},
+    "use_ai_for_allies": {"type": "boolean", "default": false},
+    "auto_roll_initiative": {"type": "boolean", "default": true},
+    "lighting": {"type": "string", "enum": ["bright", "dim", "dark"], "default": "bright"},
+    "environmental_effects": {"type": "array", "items": {"type": "string"}, "default": []}
+  }
+}

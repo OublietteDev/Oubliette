@@ -1,0 +1,62 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 9: Moonbeam Arena",
+  "description": "TESTS: Click-to-place AoE targeting (Moonbeam placed at a hex, not on caster), AoE preview overlay (gold hexes showing blast radius while hovering), movable zones (Moonbeam moved as action, Flaming Sphere moved as bonus action), fixed-center zone persistence (zone stays when caster moves), zone entry damage (enemies walking into zone), zone start-of-turn damage, concentration break removes zone, Fireball instant AoE at hex.\n\nA druid faces hobgoblins in a forest clearing. The open terrain encourages zone placement and repositioning. TEST STEPS: (1) Cast Moonbeam on a hex near enemies — verify gold preview appears, zone placed at clicked hex, not on caster. (2) Move Willow away — verify zone stays at original hex. (3) Next turn, use Move Zone action to reposition Moonbeam over an enemy. (4) Break concentration — verify zone vanishes. (5) Cast Flaming Sphere, move it as bonus action on same turn. (6) Have Elara cast Fireball at a hex — verify instant AoE damage, no zone created.",
+
+  "grid_width": 20,
+  "grid_height": 15,
+
+  "terrain": [
+    {"position": [5, 3], "terrain_type": "difficult"},
+    {"position": [6, 3], "terrain_type": "difficult"},
+    {"position": [5, 4], "terrain_type": "difficult"},
+    {"position": [14, 3], "terrain_type": "difficult"},
+    {"position": [15, 3], "terrain_type": "difficult"},
+    {"position": [14, 4], "terrain_type": "difficult"},
+    {"position": [9, 7], "terrain_type": "cover_half"},
+    {"position": [10, 7], "terrain_type": "cover_half"},
+    {"position": [9, 8], "terrain_type": "cover_half"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/willow.json",
+      "team": "player",
+      "starting_position": [3, 10]
+    },
+    {
+      "creature_id": "characters/elara.json",
+      "team": "player",
+      "starting_position": [5, 12]
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [12, 4],
+      "name_override": "Hobgoblin Captain"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [14, 6],
+      "name_override": "Hobgoblin Soldier 1"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [10, 5],
+      "name_override": "Hobgoblin Soldier 2"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [16, 5],
+      "name_override": "Hobgoblin Archer"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

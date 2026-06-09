@@ -1,0 +1,77 @@
+{
+  "name": "Brown Bear",
+  "size": "large",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+
+  "ability_scores": {
+    "strength": 19,
+    "dexterity": 10,
+    "constitution": 16,
+    "intelligence": 2,
+    "wisdom": 13,
+    "charisma": 7
+  },
+
+  "armor_class": 11,
+  "max_hit_points": 34,
+  "hit_dice": "4d10+12",
+  "speed": {"walk": 40},
+  "proficiency_bonus": 2,
+
+  "skill_proficiencies": ["perception"],
+  "senses": {},
+  "passive_perception": 13,
+
+  "challenge_rating": 1,
+  "experience_points": 200,
+
+  "special_abilities": [
+    {
+      "name": "Keen Smell",
+      "description": "The bear has advantage on Wisdom (Perception) checks that rely on smell."
+    }
+  ],
+
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee weapon attack: +5 to hit, reach 5 ft. Hit: 8 (1d8+4) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {"dice": "1d8", "damage_type": "piercing", "ability_modifier": "strength"}
+        ]
+      },
+      "ai_priority": 7
+    },
+    {
+      "name": "Claws",
+      "description": "Melee weapon attack: +5 to hit, reach 5 ft. Hit: 11 (2d6+4) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claws",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {"dice": "2d6", "damage_type": "slashing", "ability_modifier": "strength"}
+        ]
+      },
+      "ai_priority": 8
+    }
+  ],
+
+  "ai_profile": "berserker",
+  "token_color": "#8B4513",
+  "source_book": "Monster Manual",
+  "source_page": 319
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 22: Fortress of Earth",
+  "description": "TESTS: Wall of Stone wall creation (concentration-linked), Mold Earth terrain removal (non-concentration), Transmute Rock pit creation (concentration-linked), occupied hex skipping for wall/pit terrain, concentration break reverts terrain, terrain modification visual effects, AI terrain spells (enemy Mage with Wall of Stone), non-concentration terrain persists through cleanup, stacking terrain from different sources, Spike Growth combo (zone + terrain modification).\n\nGareth Stoneheart and Ser Marcus defend a mountain pass against a Mage and hobgoblin soldiers. Gareth uses Wall of Stone to block chokepoints and Transmute Rock to create hazardous pits, while the enemy Mage also has Wall of Stone for AI-controlled terrain creation. Mold Earth allows clearing terrain modifications. The grid features existing terrain (cover, difficult) to test interaction with dynamic modifications.",
+
+  "grid_width": 18,
+  "grid_height": 14,
+
+  "terrain": [
+    {"position": [8, 3], "terrain_type": "cover_half"},
+    {"position": [8, 10], "terrain_type": "cover_half"},
+    {"position": [5, 6], "terrain_type": "difficult"},
+    {"position": [5, 7], "terrain_type": "difficult"},
+    {"position": [12, 6], "terrain_type": "difficult"},
+    {"position": [12, 7], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/gareth.json",
+      "team": "player",
+      "starting_position": [3, 7]
+    },
+    {
+      "creature_id": "characters/ser_marcus.json",
+      "team": "player",
+      "starting_position": [4, 6]
+    },
+    {
+      "creature_id": "monsters/mage.json",
+      "team": "enemy",
+      "starting_position": [15, 6],
+      "name_override": "Arcane Sentinel"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [13, 4],
+      "name_override": "Hobgoblin Vanguard 1"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [13, 9],
+      "name_override": "Hobgoblin Vanguard 2"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [14, 7],
+      "name_override": "Hobgoblin Vanguard 3"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "../schemas/monster.schema.json",
+  "name": "Skeleton",
+  "size": "medium",
+  "creature_type": "undead",
+  "alignment": "lawful evil",
+
+  "ability_scores": {
+    "strength": 10,
+    "dexterity": 14,
+    "constitution": 15,
+    "intelligence": 6,
+    "wisdom": 8,
+    "charisma": 5
+  },
+
+  "armor_class": 13,
+  "armor_description": "armor scraps",
+  "max_hit_points": 13,
+  "hit_dice": "2d8+4",
+  "speed": {"walk": 30},
+  "proficiency_bonus": 2,
+
+  "damage_vulnerabilities": ["bludgeoning"],
+  "damage_immunities": ["poison"],
+  "condition_immunities": ["exhaustion", "poisoned"],
+
+  "senses": {"darkvision": 60},
+  "passive_perception": 9,
+  "languages": ["understands the languages it knew in life but can't speak"],
+
+  "challenge_rating": 0.25,
+  "experience_points": 50,
+
+  "actions": [
+    {
+      "name": "Shortsword",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Shortsword",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {"dice": "1d6", "damage_type": "piercing", "ability_modifier": "dexterity"}
+        ]
+      },
+      "ai_priority": 7
+    },
+    {
+      "name": "Shortbow",
+      "description": "Ranged Weapon Attack: +4 to hit, range 80/320 ft., one target. Hit: 5 (1d6 + 2) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 80,
+      "attack": {
+        "name": "Shortbow",
+        "attack_type": "ranged_weapon",
+        "ability": "dexterity",
+        "range_normal": 80,
+        "range_long": 320,
+        "damage": [
+          {"dice": "1d6", "damage_type": "piercing", "ability_modifier": "dexterity"}
+        ]
+      },
+      "ai_priority": 6
+    }
+  ],
+
+  "ai_profile": "basic_melee",
+  "ai_notes": "Mindless undead, follows simple commands, no self-preservation instinct",
+  "token_color": "#D3D3D3",
+  "source_book": "Monster Manual",
+  "source_page": 272
+}

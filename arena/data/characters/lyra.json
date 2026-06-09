@@ -1,0 +1,238 @@
+{
+  "name": "Lyra Stormcaller",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": null,
+  "ability_scores": {
+    "strength": 8,
+    "dexterity": 14,
+    "constitution": 14,
+    "intelligence": 12,
+    "wisdom": 10,
+    "charisma": 18
+  },
+  "armor_class": 15,
+  "max_hit_points": 45,
+  "current_hit_points": 45,
+  "temporary_hit_points": 0,
+  "hit_dice": null,
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [
+    "constitution",
+    "charisma"
+  ],
+  "damage_resistances": ["fire"],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Fire Bolt",
+      "description": "Ranged spell attack. 2d10 fire damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 120,
+      "attack": {
+        "name": "Fire Bolt",
+        "attack_type": "ranged_spell",
+        "ability": "charisma",
+        "reach": 5,
+        "range_normal": 120,
+        "damage": [
+          {
+            "dice": "2d10",
+            "damage_type": "fire",
+            "bonus": 0,
+            "ability_modifier": null
+          }
+        ]
+      },
+      "resource_cost": {},
+      "ai_priority": 5,
+      "animation": "fireball"
+    },
+    {
+      "name": "Thunder Step",
+      "description": "You teleport up to 90 feet. Each creature within 10 feet of the space you left must make a CON save or take 3d10 thunder damage (half on success).",
+      "action_type": "action",
+      "target_type": "self",
+      "range": 90,
+      "area_size": 10,
+      "teleport_range": 90,
+      "teleport_self": true,
+      "teleport_origin_effect": "3d10",
+      "teleport_origin_damage_type": "thunder",
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 15,
+        "damage_on_success": "half"
+      },
+      "resource_cost": {
+        "spell_slot_3": 1
+      },
+      "ai_priority": 8,
+      "ai_use_condition": "is_in_melee and self.hp_percent < 60"
+    },
+    {
+      "name": "Dimension Door",
+      "description": "You teleport up to 500 feet. You can bring one willing creature within 5 feet of you.",
+      "action_type": "action",
+      "target_type": "self",
+      "range": 500,
+      "teleport_range": 500,
+      "teleport_self": true,
+      "teleport_passenger": true,
+      "resource_cost": {
+        "spell_slot_4": 1
+      },
+      "ai_priority": 7,
+      "ai_use_condition": "self.hp_percent < 30"
+    },
+    {
+      "name": "Dagger",
+      "description": "Melee or ranged weapon attack with dagger.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Dagger",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "range_normal": 20,
+        "range_long": 60,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "piercing",
+            "bonus": 0,
+            "ability_modifier": "dexterity"
+          }
+        ],
+        "properties": ["finesse", "light", "thrown"]
+      },
+      "resource_cost": {},
+      "ai_priority": 2
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Misty Step",
+      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space you can see.",
+      "action_type": "bonus_action",
+      "target_type": "self",
+      "range": 30,
+      "teleport_range": 30,
+      "teleport_self": true,
+      "resource_cost": {
+        "spell_slot_2": 1
+      },
+      "ai_priority": 7,
+      "ai_use_condition": "is_in_melee"
+    }
+  ],
+  "reactions": [],
+  "active_conditions": [],
+  "token_image": null,
+  "token_color": "#9B59B6",
+  "equipment": [],
+  "is_player_controlled": true,
+  "ai_profile": null,
+  "character_class": "Sorcerer",
+  "subclass": "Draconic Bloodline (Red)",
+  "level": 7,
+  "multiclass": [],
+  "background": "Sage",
+  "race": "Half-Elf",
+  "spell_slots": {
+    "1": 4,
+    "2": 3,
+    "3": 3,
+    "4": 1
+  },
+  "current_spell_slots": null,
+  "class_resources": {},
+  "skill_proficiencies": [
+    "arcana",
+    "persuasion",
+    "deception",
+    "insight"
+  ],
+  "skill_expertise": [],
+  "equipped_armor": null,
+  "equipped_shield": false,
+  "equipped_weapons": [
+    "dagger"
+  ],
+  "features": [
+    {
+      "name": "Draconic Resilience",
+      "description": "HP +1 per sorcerer level. When unarmored, AC = 13 + DEX modifier.",
+      "source": "Draconic Bloodline 1",
+      "bonus_ac": 0,
+      "bonus_speed": 0,
+      "bonus_ability_scores": {},
+      "bonus_initiative": 0,
+      "grants_damage_resistances": [],
+      "grants_damage_immunities": [],
+      "grants_condition_immunities": [],
+      "grants_saving_throw_proficiencies": [],
+      "unarmored_defense": null
+    },
+    {
+      "name": "Elemental Affinity (Fire)",
+      "description": "Add CHA modifier to fire damage rolls. Spend 1 sorcery point for fire resistance for 1 hour.",
+      "source": "Draconic Bloodline 6",
+      "bonus_ac": 0,
+      "bonus_speed": 0,
+      "bonus_ability_scores": {},
+      "bonus_initiative": 0,
+      "grants_damage_resistances": [],
+      "grants_damage_immunities": [],
+      "grants_condition_immunities": [],
+      "grants_saving_throw_proficiencies": [],
+      "unarmored_defense": null
+    },
+    {
+      "name": "Fey Ancestry",
+      "description": "Advantage on saves against being charmed, immune to magical sleep.",
+      "source": "Half-Elf",
+      "bonus_ac": 0,
+      "bonus_speed": 0,
+      "bonus_ability_scores": {},
+      "bonus_initiative": 0,
+      "grants_damage_resistances": [],
+      "grants_damage_immunities": [],
+      "grants_condition_immunities": [],
+      "grants_saving_throw_proficiencies": [],
+      "unarmored_defense": null
+    }
+  ],
+  "feats": [],
+  "spellcasting_ability": "charisma",
+  "spells_known": [
+    "fire_bolt",
+    "misty_step",
+    "thunder_step",
+    "dimension_door",
+    "shield",
+    "mage_armor"
+  ],
+  "spells_prepared": [
+    "misty_step",
+    "thunder_step",
+    "dimension_door",
+    "shield",
+    "mage_armor"
+  ],
+  "death_save_successes": 0,
+  "death_save_failures": 0,
+  "is_stabilized": false
+}

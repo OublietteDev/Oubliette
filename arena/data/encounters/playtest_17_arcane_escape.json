@@ -1,0 +1,67 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 17: Arcane Escape",
+  "description": "TESTS: Self-teleportation (Misty Step), teleport range validation, opportunity attack bypass, spell slot consumption, AI teleport decisions (enemy Mage), teleport visual effect (cyan rings), teleport into Spirit Guardians zone, concentration + teleport combo.\n\nElara and Brother Aldric are ambushed by a Mage and hobgoblin soldiers in a ruined courtyard. Both sides have access to Misty Step. The hobgoblins start flanking the party, forcing the squishy wizard to teleport to safety. Aldric can cast Spirit Guardians to create a danger zone, then teleport into better positioning. The enemy Mage will also use Misty Step to escape melee if cornered.",
+
+  "grid_width": 18,
+  "grid_height": 14,
+
+  "terrain": [
+    {"position": [4, 4], "terrain_type": "cover_half"},
+    {"position": [13, 4], "terrain_type": "cover_half"},
+    {"position": [4, 9], "terrain_type": "cover_half"},
+    {"position": [13, 9], "terrain_type": "cover_half"},
+
+    {"position": [8, 6], "terrain_type": "wall"},
+    {"position": [9, 6], "terrain_type": "wall"},
+    {"position": [8, 7], "terrain_type": "wall"},
+    {"position": [9, 7], "terrain_type": "wall"},
+
+    {"position": [2, 1], "terrain_type": "difficult"},
+    {"position": [3, 1], "terrain_type": "difficult"},
+    {"position": [14, 12], "terrain_type": "difficult"},
+    {"position": [15, 12], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/elara.json",
+      "team": "player",
+      "starting_position": [5, 7]
+    },
+    {
+      "creature_id": "characters/brother_aldric.json",
+      "team": "player",
+      "starting_position": [5, 8]
+    },
+    {
+      "creature_id": "monsters/mage.json",
+      "team": "enemy",
+      "starting_position": [14, 3],
+      "name_override": "Archmage Kessler"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [7, 4],
+      "name_override": "Hobgoblin Flanker 1"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [3, 5],
+      "name_override": "Hobgoblin Flanker 2"
+    },
+    {
+      "creature_id": "monsters/hobgoblin.json",
+      "team": "enemy",
+      "starting_position": [7, 10],
+      "name_override": "Hobgoblin Flanker 3"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

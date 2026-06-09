@@ -1,0 +1,103 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 8: Boss Rush",
+  "description": "TESTS: Gargantuan creature (19-hex footprint) rendering and movement, all size categories on one map, hazard terrain, death saves on downed PCs, concentration checks (Cleric Spirit Guardians), resource depletion across a long fight, AI behavior for multiple profiles, multi-round combat stability.\n\nA full 4-person party faces a Kraken (Gargantuan) flanked by two Sahuagin guards in a coastal battlefield. Water terrain in the center is the Kraken's domain. Hazard terrain at edges. This is the ultimate stress test.",
+
+  "grid_width": 30,
+  "grid_height": 25,
+
+  "terrain": [
+    {"position": [12, 8], "terrain_type": "water"},
+    {"position": [13, 8], "terrain_type": "water"},
+    {"position": [14, 8], "terrain_type": "water"},
+    {"position": [15, 8], "terrain_type": "water"},
+    {"position": [16, 8], "terrain_type": "water"},
+    {"position": [17, 8], "terrain_type": "water"},
+    {"position": [12, 9], "terrain_type": "water"},
+    {"position": [13, 9], "terrain_type": "water"},
+    {"position": [14, 9], "terrain_type": "water"},
+    {"position": [15, 9], "terrain_type": "water"},
+    {"position": [16, 9], "terrain_type": "water"},
+    {"position": [17, 9], "terrain_type": "water"},
+    {"position": [12, 10], "terrain_type": "water"},
+    {"position": [13, 10], "terrain_type": "water"},
+    {"position": [14, 10], "terrain_type": "water"},
+    {"position": [15, 10], "terrain_type": "water"},
+    {"position": [16, 10], "terrain_type": "water"},
+    {"position": [17, 10], "terrain_type": "water"},
+    {"position": [12, 11], "terrain_type": "water"},
+    {"position": [13, 11], "terrain_type": "water"},
+    {"position": [14, 11], "terrain_type": "water"},
+    {"position": [15, 11], "terrain_type": "water"},
+    {"position": [16, 11], "terrain_type": "water"},
+    {"position": [17, 11], "terrain_type": "water"},
+
+    {"position": [0, 0], "terrain_type": "hazard"},
+    {"position": [1, 0], "terrain_type": "hazard"},
+    {"position": [0, 1], "terrain_type": "hazard"},
+    {"position": [29, 0], "terrain_type": "hazard"},
+    {"position": [28, 0], "terrain_type": "hazard"},
+    {"position": [29, 1], "terrain_type": "hazard"},
+    {"position": [0, 24], "terrain_type": "hazard"},
+    {"position": [1, 24], "terrain_type": "hazard"},
+    {"position": [0, 23], "terrain_type": "hazard"},
+    {"position": [29, 24], "terrain_type": "hazard"},
+    {"position": [28, 24], "terrain_type": "hazard"},
+    {"position": [29, 23], "terrain_type": "hazard"},
+
+    {"position": [8, 15], "terrain_type": "cover_half"},
+    {"position": [9, 15], "terrain_type": "cover_half"},
+    {"position": [20, 15], "terrain_type": "cover_half"},
+    {"position": [21, 15], "terrain_type": "cover_half"},
+
+    {"position": [14, 18], "terrain_type": "difficult"},
+    {"position": [15, 18], "terrain_type": "difficult"},
+    {"position": [14, 19], "terrain_type": "difficult"},
+    {"position": [15, 19], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/ser_marcus.json",
+      "team": "player",
+      "starting_position": [10, 20]
+    },
+    {
+      "creature_id": "characters/elara.json",
+      "team": "player",
+      "starting_position": [14, 22]
+    },
+    {
+      "creature_id": "characters/brother_aldric.json",
+      "team": "player",
+      "starting_position": [12, 21]
+    },
+    {
+      "creature_id": "characters/shade.json",
+      "team": "player",
+      "starting_position": [17, 20]
+    },
+    {
+      "creature_id": "monsters/kraken.json",
+      "team": "enemy",
+      "starting_position": [14, 9]
+    },
+    {
+      "creature_id": "monsters/sahuagin.json",
+      "team": "enemy",
+      "starting_position": [10, 14],
+      "name_override": "Sahuagin Guard 1"
+    },
+    {
+      "creature_id": "monsters/sahuagin.json",
+      "team": "enemy",
+      "starting_position": [19, 14],
+      "name_override": "Sahuagin Guard 2"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

@@ -1,0 +1,66 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 23: Thornwall Siege",
+  "description": "TESTS: Spike Growth zone+terrain combo (difficult terrain + 2d4 zone damage), Entangle terrain+condition (difficult terrain + restrained on fail), AI-controlled terrain spells (Forest Shaman with Plant Growth + Entangle), non-concentration terrain persistence (Plant Growth), concentration reversion clears BOTH zone and terrain (Spike Growth), stacking terrain from player and enemy, terrain mod visual effects, combo revert on concentration loss, terrain modification in builder tab.\n\nWillow and Thorin face a Forest Shaman and its wild allies in a forest clearing. The Shaman uses Plant Growth for permanent difficult terrain and Entangle for area control, while Willow counters with Spike Growth (zone + terrain combo). The clearing has sparse existing terrain to test layering of dynamic modifications. Multiple terrain-modifying casters on both sides test stacking and independent reversion.",
+
+  "grid_width": 20,
+  "grid_height": 15,
+
+  "terrain": [
+    {"position": [6, 4], "terrain_type": "cover_half"},
+    {"position": [13, 4], "terrain_type": "cover_half"},
+    {"position": [6, 10], "terrain_type": "cover_half"},
+    {"position": [13, 10], "terrain_type": "cover_half"},
+    {"position": [9, 7], "terrain_type": "water"},
+    {"position": [10, 7], "terrain_type": "water"},
+    {"position": [9, 8], "terrain_type": "water"},
+    {"position": [10, 8], "terrain_type": "water"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/willow.json",
+      "team": "player",
+      "starting_position": [3, 7]
+    },
+    {
+      "creature_id": "characters/thorin.json",
+      "team": "player",
+      "starting_position": [4, 8]
+    },
+    {
+      "creature_id": "monsters/forest_shaman.json",
+      "team": "enemy",
+      "starting_position": [16, 7]
+    },
+    {
+      "creature_id": "monsters/wolf.json",
+      "team": "enemy",
+      "starting_position": [14, 5],
+      "name_override": "Dire Wolf Alpha"
+    },
+    {
+      "creature_id": "monsters/wolf.json",
+      "team": "enemy",
+      "starting_position": [14, 9],
+      "name_override": "Dire Wolf Beta"
+    },
+    {
+      "creature_id": "monsters/bandit.json",
+      "team": "enemy",
+      "starting_position": [15, 6],
+      "name_override": "Forest Raider 1"
+    },
+    {
+      "creature_id": "monsters/bandit.json",
+      "team": "enemy",
+      "starting_position": [15, 8],
+      "name_override": "Forest Raider 2"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

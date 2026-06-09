@@ -1,0 +1,79 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 4: Hold the Line",
+  "description": "TESTS: Opportunity attacks (leaving reach triggers OA), Disengage (prevents OA), Dodge (attackers have disadvantage), Help (grants advantage to ally), Dash (doubles movement), reaction consumption, narrow chokepoint tactics.\n\nTwo fighters and a cleric defend a narrow 3-hex passage against wolves. Use the fighters to block, try Dodge/Help. Watch for wolves triggering OAs if they try to slip past. Cleric can heal from behind.",
+
+  "grid_width": 15,
+  "grid_height": 12,
+
+  "terrain": [
+    {"position": [6, 0], "terrain_type": "wall"},
+    {"position": [6, 1], "terrain_type": "wall"},
+    {"position": [6, 2], "terrain_type": "wall"},
+    {"position": [6, 3], "terrain_type": "wall"},
+
+    {"position": [6, 7], "terrain_type": "wall"},
+    {"position": [6, 8], "terrain_type": "wall"},
+    {"position": [6, 9], "terrain_type": "wall"},
+    {"position": [6, 10], "terrain_type": "wall"},
+    {"position": [6, 11], "terrain_type": "wall"},
+
+    {"position": [7, 0], "terrain_type": "wall"},
+    {"position": [7, 1], "terrain_type": "wall"},
+    {"position": [7, 2], "terrain_type": "wall"},
+    {"position": [7, 3], "terrain_type": "wall"},
+
+    {"position": [7, 7], "terrain_type": "wall"},
+    {"position": [7, 8], "terrain_type": "wall"},
+    {"position": [7, 9], "terrain_type": "wall"},
+    {"position": [7, 10], "terrain_type": "wall"},
+    {"position": [7, 11], "terrain_type": "wall"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/thorin.json",
+      "team": "player",
+      "starting_position": [5, 5]
+    },
+    {
+      "creature_id": "characters/ser_marcus.json",
+      "team": "player",
+      "starting_position": [5, 6]
+    },
+    {
+      "creature_id": "characters/brother_aldric.json",
+      "team": "player",
+      "starting_position": [3, 5]
+    },
+    {
+      "creature_id": "monsters/wolf.json",
+      "team": "enemy",
+      "starting_position": [10, 4],
+      "name_override": "Wolf 1"
+    },
+    {
+      "creature_id": "monsters/wolf.json",
+      "team": "enemy",
+      "starting_position": [11, 5],
+      "name_override": "Wolf 2"
+    },
+    {
+      "creature_id": "monsters/wolf.json",
+      "team": "enemy",
+      "starting_position": [10, 6],
+      "name_override": "Wolf 3"
+    },
+    {
+      "creature_id": "monsters/wolf.json",
+      "team": "enemy",
+      "starting_position": [11, 7],
+      "name_override": "Wolf 4"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "dim"
+}

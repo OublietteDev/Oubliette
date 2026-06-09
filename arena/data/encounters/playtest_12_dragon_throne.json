@@ -1,0 +1,61 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 12: Dragon Throne Room",
+  "description": "TESTS: Legendary action point pool, legendary action popup after each non-dragon turn, tail attack (melee legendary), wing attack (AoE save legendary, 2-cost), point depletion across a round, point reset at dragon's turn start, initiative panel legendary badge (L:N), AI legendary decision-making.\n\nA four-person party confronts an Adult Blue Dragon in its ancient throne room. Scattered pillars provide cover. The dragon has 3 legendary action points per round: Detect (1 pt, self), Tail Attack (1 pt, melee 15 ft reach), Wing Attack (2 pts, AoE save + prone).",
+
+  "grid_width": 25,
+  "grid_height": 20,
+
+  "terrain": [
+    {"position": [6, 5], "terrain_type": "cover_half"},
+    {"position": [6, 6], "terrain_type": "cover_half"},
+    {"position": [18, 5], "terrain_type": "cover_half"},
+    {"position": [18, 6], "terrain_type": "cover_half"},
+
+    {"position": [12, 3], "terrain_type": "cover_three_quarters"},
+    {"position": [12, 12], "terrain_type": "cover_three_quarters"},
+
+    {"position": [9, 8], "terrain_type": "difficult"},
+    {"position": [10, 8], "terrain_type": "difficult"},
+    {"position": [9, 9], "terrain_type": "difficult"},
+    {"position": [10, 9], "terrain_type": "difficult"},
+
+    {"position": [14, 8], "terrain_type": "difficult"},
+    {"position": [15, 8], "terrain_type": "difficult"},
+    {"position": [14, 9], "terrain_type": "difficult"},
+    {"position": [15, 9], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/ser_marcus.json",
+      "team": "player",
+      "starting_position": [4, 16]
+    },
+    {
+      "creature_id": "characters/valeria.json",
+      "team": "player",
+      "starting_position": [6, 17]
+    },
+    {
+      "creature_id": "characters/elara.json",
+      "team": "player",
+      "starting_position": [8, 18]
+    },
+    {
+      "creature_id": "characters/brother_aldric.json",
+      "team": "player",
+      "starting_position": [3, 18]
+    },
+    {
+      "creature_id": "monsters/adult_blue_dragon.json",
+      "team": "enemy",
+      "starting_position": [12, 5]
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "dim"
+}

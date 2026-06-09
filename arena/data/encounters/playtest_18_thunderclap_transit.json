@@ -1,0 +1,68 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 18: Thunderclap Transit",
+  "description": "TESTS: Thunder Step origin damage, CON saving throws, half damage on success, origin AoE radius (10 ft), teleport range (90 ft vs Misty Step 30 ft), AI teleport escape scoring, both Thunder Step (action) and Misty Step (bonus action) on same character, spell slot consumption (level 2 vs level 3).\n\nLyra Stormcaller and Ser Marcus face a warband of aggressive orcs in a forest clearing. The orcs will rush to surround Lyra, making Thunder Step's origin damage especially punishing -- she can blink away and leave a thunderclap behind. Ser Marcus holds the front line while Lyra repositions with teleportation.",
+
+  "grid_width": 20,
+  "grid_height": 15,
+
+  "terrain": [
+    {"position": [3, 3], "terrain_type": "difficult"},
+    {"position": [4, 3], "terrain_type": "difficult"},
+    {"position": [3, 4], "terrain_type": "difficult"},
+
+    {"position": [16, 3], "terrain_type": "difficult"},
+    {"position": [17, 3], "terrain_type": "difficult"},
+    {"position": [16, 4], "terrain_type": "difficult"},
+
+    {"position": [9, 7], "terrain_type": "cover_half"},
+    {"position": [10, 7], "terrain_type": "cover_half"},
+
+    {"position": [6, 11], "terrain_type": "difficult"},
+    {"position": [7, 11], "terrain_type": "difficult"},
+    {"position": [13, 11], "terrain_type": "difficult"},
+    {"position": [14, 11], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/lyra.json",
+      "team": "player",
+      "starting_position": [6, 8]
+    },
+    {
+      "creature_id": "characters/ser_marcus.json",
+      "team": "player",
+      "starting_position": [7, 8]
+    },
+    {
+      "creature_id": "monsters/orc.json",
+      "team": "enemy",
+      "starting_position": [13, 4],
+      "name_override": "Orc Raider 1"
+    },
+    {
+      "creature_id": "monsters/orc.json",
+      "team": "enemy",
+      "starting_position": [15, 6],
+      "name_override": "Orc Raider 2"
+    },
+    {
+      "creature_id": "monsters/orc.json",
+      "team": "enemy",
+      "starting_position": [14, 9],
+      "name_override": "Orc Raider 3"
+    },
+    {
+      "creature_id": "monsters/orc.json",
+      "team": "enemy",
+      "starting_position": [12, 11],
+      "name_override": "Orc Raider 4"
+    }
+  ],
+
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "bright"
+}

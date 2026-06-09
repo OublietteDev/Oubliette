@@ -1,0 +1,87 @@
+{
+  "$schema": "../schemas/encounter.schema.json",
+  "name": "Playtest 15: Cursed Crypt",
+  "description": "TESTS: Player-controlled lair action popup (DM chooses), lair action pass button, consecutive-round filtering (same action can't fire twice in a row), lair turn with player-controlled enemies, lair actions coexisting with legendary actions on the same encounter, lair + legendary interleaving across turns, damage+condition combo (Grasping Graves applies restrained on fail).\n\nTwo fighters breach a cursed crypt where a Vampire Lord and skeleton guards await. The crypt itself fights back with supernatural effects. All enemies AND lair actions are player-controlled (use_ai_for_enemies=false) so the tester manually exercises the lair action popup.",
+
+  "grid_width": 18,
+  "grid_height": 14,
+
+  "terrain": [
+    {"position": [4, 4], "terrain_type": "cover_half"},
+    {"position": [13, 4], "terrain_type": "cover_half"},
+    {"position": [4, 9], "terrain_type": "cover_half"},
+    {"position": [13, 9], "terrain_type": "cover_half"},
+
+    {"position": [8, 6], "terrain_type": "difficult"},
+    {"position": [9, 6], "terrain_type": "difficult"},
+    {"position": [8, 7], "terrain_type": "difficult"},
+    {"position": [9, 7], "terrain_type": "difficult"}
+  ],
+
+  "combatants": [
+    {
+      "creature_id": "characters/ser_marcus.json",
+      "team": "player",
+      "starting_position": [3, 11]
+    },
+    {
+      "creature_id": "characters/thorin.json",
+      "team": "player",
+      "starting_position": [5, 12]
+    },
+    {
+      "creature_id": "monsters/vampire_lord.json",
+      "team": "enemy",
+      "starting_position": [9, 2],
+      "name_override": "Lord Strahd"
+    },
+    {
+      "creature_id": "monsters/skeleton.json",
+      "team": "enemy",
+      "starting_position": [7, 4],
+      "name_override": "Skeleton Guard 1"
+    },
+    {
+      "creature_id": "monsters/skeleton.json",
+      "team": "enemy",
+      "starting_position": [11, 4],
+      "name_override": "Skeleton Guard 2"
+    }
+  ],
+
+  "has_lair": true,
+  "lair_actions": [
+    {
+      "name": "Grasping Graves",
+      "description": "Skeletal hands reach from the ground, clawing at the living.",
+      "action_type": "lair",
+      "target_type": "area_sphere",
+      "range": 120,
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 15,
+        "damage_on_fail": [{"dice": "2d6", "damage_type": "necrotic"}],
+        "damage_on_success": "half",
+        "conditions_on_fail": ["restrained"]
+      }
+    },
+    {
+      "name": "Unholy Darkness",
+      "description": "Supernatural darkness pulses through the crypt, draining life force.",
+      "action_type": "lair",
+      "target_type": "area_sphere",
+      "range": 120,
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 14,
+        "damage_on_fail": [{"dice": "3d4", "damage_type": "necrotic"}],
+        "damage_on_success": "none"
+      }
+    }
+  ],
+
+  "use_ai_for_enemies": false,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "lighting": "dim"
+}

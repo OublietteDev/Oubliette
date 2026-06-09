@@ -1,0 +1,25 @@
+{
+  "gameplay": {
+    "ai_step_delay": 500,
+    "ai_thinking_delay": 300,
+    "ai_randomness": 0.1,
+    "show_ai_thinking": true
+  },
+  "display": {
+    "show_hex_coordinates": false,
+    "default_hex_size": 40,
+    "zoom_speed": 1.1,
+    "token_radius": 26,
+    "cursor": "Random",
+    "cursor_animations": true
+  },
+  "audio": {
+    "master_volume": 80,
+    "sfx_volume": 80,
+    "music_volume": 20
+  },
+  "system": {
+    "resolution": "1280x720",
+    "auto_scroll_combat_log": true
+  }
+}
