@@ -21,6 +21,9 @@ pack-backups/
 # so git stays lean. Versioning strategy (lfs / one-time commit) deferred.
 arena/assets/
 
+# Combat handoff: the transient Arena→Oubliette result JSON (runtime output).
+result.json
+
 # Secrets — never commit
 APIKey.txt
 *.key
