@@ -5,8 +5,16 @@
     "parent": "fighter",
     "label": "Martial Archetype",
     "features": [
-      {"name": "Improved Critical", "level": 3, "text": "Your weapon attacks score a critical hit on a roll of 19 or 20."},
-      {"name": "Remarkable Athlete", "level": 7, "text": "Add half your proficiency bonus to Str, Dex, or Con checks that don't already use it."}
+      {
+        "name": "Improved Critical",
+        "level": 3,
+        "text": "Your weapon attacks score a critical hit on a roll of 19 or 20."
+      },
+      {
+        "name": "Remarkable Athlete",
+        "level": 7,
+        "text": "Add half your proficiency bonus to Str, Dex, or Con checks that don't already use it."
+      }
     ]
   },
   {
@@ -15,8 +23,59 @@
     "parent": "wizard",
     "label": "Arcane Tradition",
     "features": [
-      {"name": "Evocation Savant", "level": 2, "text": "Halve the time and gold to copy evocation spells into your spellbook."},
-      {"name": "Sculpt Spells", "level": 2, "text": "When you cast an evocation spell affecting others, you can protect allies from its effects."}
+      {
+        "name": "Evocation Savant",
+        "level": 2,
+        "text": "Halve the time and gold to copy evocation spells into your spellbook."
+      },
+      {
+        "name": "Sculpt Spells",
+        "level": 2,
+        "text": "When you cast an evocation spell affecting others, you can protect allies from its effects."
+      }
+    ]
+  },
+  {
+    "id": "life",
+    "name": "Life Domain",
+    "parent": "cleric",
+    "label": "Divine Domain",
+    "features": [
+      {
+        "name": "Domain Spells",
+        "level": 1,
+        "text": "You always have these domain spells prepared, and they don't count against your number of prepared spells: 1st—bless, cure wounds; 3rd—lesser restoration, spiritual weapon; 5th—beacon of hope, revivify; 7th—death ward, guardian of faith; 9th—mass cure wounds, raise dead."
+      },
+      {
+        "name": "Bonus Proficiency",
+        "level": 1,
+        "text": "You gain proficiency with heavy armor."
+      },
+      {
+        "name": "Disciple of Life",
+        "level": 1,
+        "text": "Whenever a spell of 1st level or higher restores hit points to a creature, it regains extra hit points equal to 2 + the spell's level."
+      },
+      {
+        "name": "Channel Divinity: Preserve Life",
+        "level": 2,
+        "text": "As an action, use Channel Divinity to restore hit points equal to five times your cleric level, divided among creatures within 30 feet (up to half each one's maximum)."
+      },
+      {
+        "name": "Blessed Healer",
+        "level": 6,
+        "text": "When you cast a spell of 1st level or higher that restores hit points to another creature, you regain hit points equal to 2 + the spell's level."
+      },
+      {
+        "name": "Divine Strike",
+        "level": 8,
+        "text": "Once per turn, when you hit with a weapon attack, deal an extra 1d8 radiant damage (2d8 at 14th level)."
+      },
+      {
+        "name": "Supreme Healing",
+        "level": 17,
+        "text": "When you would roll dice to restore hit points with a spell, use the highest possible value for each die instead."
+      }
     ]
   }
 ]

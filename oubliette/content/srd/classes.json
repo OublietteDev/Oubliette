@@ -3,220 +3,1666 @@
     "id": "fighter",
     "name": "Fighter",
     "hit_die": 10,
-    "primary_ability": ["str", "dex"],
-    "saving_throws": ["str", "con"],
-    "armor_proficiencies": ["light", "medium", "heavy", "shields"],
-    "weapon_proficiencies": ["simple", "martial"],
+    "primary_ability": [
+      "str",
+      "dex"
+    ],
+    "saving_throws": [
+      "str",
+      "con"
+    ],
+    "armor_proficiencies": [
+      "light",
+      "medium",
+      "heavy",
+      "shields"
+    ],
+    "weapon_proficiencies": [
+      "simple",
+      "martial"
+    ],
     "tool_proficiencies": [],
-    "skill_choices": {"choose": 2, "from": ["acrobatics", "animal_handling", "athletics", "history", "insight", "intimidation", "perception", "survival"]},
-    "starting_equipment": {
-      "fixed": [{"item": "explorers_pack"}],
-      "choices": [
-        {"choose": 1, "options": [[{"item": "chain_mail"}], [{"item": "leather_armor"}]]},
-        {"choose": 1, "options": [[{"item": "longsword"}, {"item": "shield"}], [{"item": "handaxe", "qty": 2}]]},
-        {"choose": 1, "options": [[{"item": "light_crossbow"}], [{"item": "handaxe", "qty": 2}]]}
+    "skill_choices": {
+      "choose": 2,
+      "from": [
+        "acrobatics",
+        "animal_handling",
+        "athletics",
+        "history",
+        "insight",
+        "intimidation",
+        "perception",
+        "survival"
       ]
     },
-    "asi_levels": [4, 6, 8, 12, 14, 16, 19],
+    "starting_equipment": {
+      "fixed": [
+        {
+          "item": "explorers_pack"
+        }
+      ],
+      "choices": [
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "chain_mail"
+              }
+            ],
+            [
+              {
+                "item": "leather_armor"
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "longsword"
+              },
+              {
+                "item": "shield"
+              }
+            ],
+            [
+              {
+                "item": "handaxe",
+                "qty": 2
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "light_crossbow"
+              }
+            ],
+            [
+              {
+                "item": "handaxe",
+                "qty": 2
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "asi_levels": [
+      4,
+      6,
+      8,
+      12,
+      14,
+      16,
+      19
+    ],
     "subclass_level": 3,
     "subclass_label": "Martial Archetype",
     "features": [
-      {"name": "Fighting Style", "level": 1, "text": "Adopt a fighting style (e.g. Defense: +1 AC while wearing armor)."},
-      {"name": "Second Wind", "level": 1, "text": "Once per short/long rest, a bonus action to regain 1d10 + fighter level HP."},
-      {"name": "Action Surge", "level": 2, "text": "Once per short/long rest, take one additional action on your turn."},
-      {"name": "Martial Archetype", "level": 3, "text": "Choose a martial archetype that shapes your approach to battle."},
-      {"name": "Extra Attack", "level": 5, "text": "Attack twice, instead of once, when you take the Attack action."},
-      {"name": "Indomitable", "level": 9, "text": "Reroll a failed saving throw; once per long rest."}
+      {
+        "name": "Fighting Style",
+        "level": 1,
+        "text": "Adopt a fighting style (e.g. Defense: +1 AC while wearing armor)."
+      },
+      {
+        "name": "Second Wind",
+        "level": 1,
+        "text": "Once per short/long rest, a bonus action to regain 1d10 + fighter level HP."
+      },
+      {
+        "name": "Action Surge",
+        "level": 2,
+        "text": "Once per short/long rest, take one additional action on your turn."
+      },
+      {
+        "name": "Martial Archetype",
+        "level": 3,
+        "text": "Choose a martial archetype that shapes your approach to battle."
+      },
+      {
+        "name": "Extra Attack",
+        "level": 5,
+        "text": "Attack twice, instead of once, when you take the Attack action."
+      },
+      {
+        "name": "Indomitable",
+        "level": 9,
+        "text": "Reroll a failed saving throw; once per long rest."
+      }
     ]
   },
   {
     "id": "wizard",
     "name": "Wizard",
     "hit_die": 6,
-    "primary_ability": ["int"],
-    "saving_throws": ["int", "wis"],
+    "primary_ability": [
+      "int"
+    ],
+    "saving_throws": [
+      "int",
+      "wis"
+    ],
     "armor_proficiencies": [],
-    "weapon_proficiencies": ["daggers", "darts", "slings", "quarterstaffs", "light crossbows"],
+    "weapon_proficiencies": [
+      "daggers",
+      "darts",
+      "slings",
+      "quarterstaffs",
+      "light crossbows"
+    ],
     "tool_proficiencies": [],
-    "skill_choices": {"choose": 2, "from": ["arcana", "history", "insight", "investigation", "medicine", "religion"]},
-    "starting_equipment": {
-      "fixed": [{"item": "spellbook"}, {"item": "explorers_pack"}],
-      "choices": [
-        {"choose": 1, "options": [[{"item": "quarterstaff"}], [{"item": "dagger"}]]}
+    "skill_choices": {
+      "choose": 2,
+      "from": [
+        "arcana",
+        "history",
+        "insight",
+        "investigation",
+        "medicine",
+        "religion"
       ]
     },
-    "asi_levels": [4, 8, 12, 16, 19],
+    "starting_equipment": {
+      "fixed": [
+        {
+          "item": "spellbook"
+        },
+        {
+          "item": "explorers_pack"
+        }
+      ],
+      "choices": [
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "quarterstaff"
+              }
+            ],
+            [
+              {
+                "item": "dagger"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "asi_levels": [
+      4,
+      8,
+      12,
+      16,
+      19
+    ],
     "subclass_level": 2,
     "subclass_label": "Arcane Tradition",
-    "spellcasting": {"ability": "int", "caster_type": "full", "preparation": "prepared", "ritual": true},
+    "spellcasting": {
+      "ability": "int",
+      "caster_type": "full",
+      "preparation": "prepared",
+      "ritual": true
+    },
     "features": [
-      {"name": "Spellcasting", "level": 1, "text": "Cast wizard spells using Intelligence. Prepare INT mod + wizard level spells from your spellbook each day."},
-      {"name": "Arcane Recovery", "level": 1, "text": "Once per day on a short rest, recover spell slots totalling up to half your wizard level (rounded up)."},
-      {"name": "Arcane Tradition", "level": 2, "text": "Choose an arcane tradition that shapes your magic."},
-      {"name": "Ability Score Improvement", "level": 4, "text": "Increase ability scores or take a feat."}
+      {
+        "name": "Spellcasting",
+        "level": 1,
+        "text": "Cast wizard spells using Intelligence. Prepare INT mod + wizard level spells from your spellbook each day."
+      },
+      {
+        "name": "Arcane Recovery",
+        "level": 1,
+        "text": "Once per day on a short rest, recover spell slots totalling up to half your wizard level (rounded up)."
+      },
+      {
+        "name": "Arcane Tradition",
+        "level": 2,
+        "text": "Choose an arcane tradition that shapes your magic."
+      },
+      {
+        "name": "Ability Score Improvement",
+        "level": 4,
+        "text": "Increase ability scores or take a feat."
+      }
     ],
     "spell_progression": [
-      {"level": 1, "cantrips_known": 3, "spell_slots": [2]},
-      {"level": 2, "cantrips_known": 3, "spell_slots": [3]},
-      {"level": 3, "cantrips_known": 3, "spell_slots": [4, 2]},
-      {"level": 4, "cantrips_known": 4, "spell_slots": [4, 3]},
-      {"level": 5, "cantrips_known": 4, "spell_slots": [4, 3, 2]},
-      {"level": 6, "cantrips_known": 4, "spell_slots": [4, 3, 3]},
-      {"level": 7, "cantrips_known": 4, "spell_slots": [4, 3, 3, 1]},
-      {"level": 8, "cantrips_known": 4, "spell_slots": [4, 3, 3, 2]},
-      {"level": 9, "cantrips_known": 4, "spell_slots": [4, 3, 3, 3, 1]},
-      {"level": 10, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2]},
-      {"level": 11, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1]},
-      {"level": 12, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1]},
-      {"level": 13, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1, 1]},
-      {"level": 14, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1, 1]},
-      {"level": 15, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1, 1, 1]},
-      {"level": 16, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1, 1, 1]},
-      {"level": 17, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 2, 1, 1, 1, 1]},
-      {"level": 18, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 3, 1, 1, 1, 1]},
-      {"level": 19, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 3, 2, 1, 1, 1]},
-      {"level": 20, "cantrips_known": 5, "spell_slots": [4, 3, 3, 3, 3, 2, 2, 1, 1]}
+      {
+        "level": 1,
+        "cantrips_known": 3,
+        "spell_slots": [
+          2
+        ]
+      },
+      {
+        "level": 2,
+        "cantrips_known": 3,
+        "spell_slots": [
+          3
+        ]
+      },
+      {
+        "level": 3,
+        "cantrips_known": 3,
+        "spell_slots": [
+          4,
+          2
+        ]
+      },
+      {
+        "level": 4,
+        "cantrips_known": 4,
+        "spell_slots": [
+          4,
+          3
+        ]
+      },
+      {
+        "level": 5,
+        "cantrips_known": 4,
+        "spell_slots": [
+          4,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 6,
+        "cantrips_known": 4,
+        "spell_slots": [
+          4,
+          3,
+          3
+        ]
+      },
+      {
+        "level": 7,
+        "cantrips_known": 4,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          1
+        ]
+      },
+      {
+        "level": 8,
+        "cantrips_known": 4,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 9,
+        "cantrips_known": 4,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          1
+        ]
+      },
+      {
+        "level": 10,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 11,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "level": 12,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "level": 13,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 14,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 15,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 16,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 17,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 18,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 19,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 20,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          2,
+          2,
+          1,
+          1
+        ]
+      }
     ]
   },
   {
     "id": "sorcerer",
     "name": "Sorcerer",
     "hit_die": 6,
-    "primary_ability": ["cha"],
-    "saving_throws": ["con", "cha"],
+    "primary_ability": [
+      "cha"
+    ],
+    "saving_throws": [
+      "con",
+      "cha"
+    ],
     "armor_proficiencies": [],
-    "weapon_proficiencies": ["daggers", "darts", "slings", "quarterstaffs", "light crossbows"],
+    "weapon_proficiencies": [
+      "daggers",
+      "darts",
+      "slings",
+      "quarterstaffs",
+      "light crossbows"
+    ],
     "tool_proficiencies": [],
-    "skill_choices": {"choose": 2, "from": ["arcana", "deception", "insight", "intimidation", "persuasion", "religion"]},
-    "starting_equipment": {
-      "fixed": [{"item": "dagger", "qty": 2}, {"item": "explorers_pack"}],
-      "choices": [
-        {"choose": 1, "options": [[{"item": "light_crossbow"}], [{"item": "quarterstaff"}]]}
+    "skill_choices": {
+      "choose": 2,
+      "from": [
+        "arcana",
+        "deception",
+        "insight",
+        "intimidation",
+        "persuasion",
+        "religion"
       ]
     },
-    "asi_levels": [4, 8, 12, 16, 19],
+    "starting_equipment": {
+      "fixed": [
+        {
+          "item": "dagger",
+          "qty": 2
+        },
+        {
+          "item": "explorers_pack"
+        }
+      ],
+      "choices": [
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "light_crossbow"
+              }
+            ],
+            [
+              {
+                "item": "quarterstaff"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "asi_levels": [
+      4,
+      8,
+      12,
+      16,
+      19
+    ],
     "subclass_level": 1,
     "subclass_label": "Sorcerous Origin",
-    "spellcasting": {"ability": "cha", "caster_type": "full", "preparation": "known", "ritual": false},
+    "spellcasting": {
+      "ability": "cha",
+      "caster_type": "full",
+      "preparation": "known",
+      "ritual": false
+    },
     "features": [
-      {"name": "Spellcasting", "level": 1, "text": "Cast sorcerer spells using Charisma. You know a fixed set of spells, swapping one each level."},
-      {"name": "Sorcerous Origin", "level": 1, "text": "Choose the source of your innate magic."},
-      {"name": "Font of Magic", "level": 2, "text": "You gain Sorcery Points and can convert them to/from spell slots (Flexible Casting)."},
-      {"name": "Metamagic", "level": 3, "text": "Twist your spells using Sorcery Points (e.g. Twinned, Quickened Spell)."},
-      {"name": "Ability Score Improvement", "level": 4, "text": "Increase ability scores or take a feat."}
+      {
+        "name": "Spellcasting",
+        "level": 1,
+        "text": "Cast sorcerer spells using Charisma. You know a fixed set of spells, swapping one each level."
+      },
+      {
+        "name": "Sorcerous Origin",
+        "level": 1,
+        "text": "Choose the source of your innate magic."
+      },
+      {
+        "name": "Font of Magic",
+        "level": 2,
+        "text": "You gain Sorcery Points and can convert them to/from spell slots (Flexible Casting)."
+      },
+      {
+        "name": "Metamagic",
+        "level": 3,
+        "text": "Twist your spells using Sorcery Points (e.g. Twinned, Quickened Spell)."
+      },
+      {
+        "name": "Ability Score Improvement",
+        "level": 4,
+        "text": "Increase ability scores or take a feat."
+      }
     ],
     "resources": [
-      {"name": "Sorcery Points", "recharge": "long", "by_level": {"2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, "11": 11, "12": 12, "13": 13, "14": 14, "15": 15, "16": 16, "17": 17, "18": 18, "19": 19, "20": 20}, "text": "Spent on Metamagic and Flexible Casting; regained on a long rest."}
+      {
+        "name": "Sorcery Points",
+        "recharge": "long",
+        "by_level": {
+          "2": 2,
+          "3": 3,
+          "4": 4,
+          "5": 5,
+          "6": 6,
+          "7": 7,
+          "8": 8,
+          "9": 9,
+          "10": 10,
+          "11": 11,
+          "12": 12,
+          "13": 13,
+          "14": 14,
+          "15": 15,
+          "16": 16,
+          "17": 17,
+          "18": 18,
+          "19": 19,
+          "20": 20
+        },
+        "text": "Spent on Metamagic and Flexible Casting; regained on a long rest."
+      }
     ],
     "spell_progression": [
-      {"level": 1, "cantrips_known": 4, "spells_known": 2, "spell_slots": [2]},
-      {"level": 2, "cantrips_known": 4, "spells_known": 3, "spell_slots": [3]},
-      {"level": 3, "cantrips_known": 4, "spells_known": 4, "spell_slots": [4, 2]},
-      {"level": 4, "cantrips_known": 5, "spells_known": 5, "spell_slots": [4, 3]},
-      {"level": 5, "cantrips_known": 5, "spells_known": 6, "spell_slots": [4, 3, 2]},
-      {"level": 6, "cantrips_known": 5, "spells_known": 7, "spell_slots": [4, 3, 3]},
-      {"level": 7, "cantrips_known": 5, "spells_known": 8, "spell_slots": [4, 3, 3, 1]},
-      {"level": 8, "cantrips_known": 5, "spells_known": 9, "spell_slots": [4, 3, 3, 2]},
-      {"level": 9, "cantrips_known": 5, "spells_known": 10, "spell_slots": [4, 3, 3, 3, 1]},
-      {"level": 10, "cantrips_known": 6, "spells_known": 11, "spell_slots": [4, 3, 3, 3, 2]},
-      {"level": 11, "cantrips_known": 6, "spells_known": 12, "spell_slots": [4, 3, 3, 3, 2, 1]},
-      {"level": 12, "cantrips_known": 6, "spells_known": 12, "spell_slots": [4, 3, 3, 3, 2, 1]},
-      {"level": 13, "cantrips_known": 6, "spells_known": 13, "spell_slots": [4, 3, 3, 3, 2, 1, 1]},
-      {"level": 14, "cantrips_known": 6, "spells_known": 13, "spell_slots": [4, 3, 3, 3, 2, 1, 1]},
-      {"level": 15, "cantrips_known": 6, "spells_known": 14, "spell_slots": [4, 3, 3, 3, 2, 1, 1, 1]},
-      {"level": 16, "cantrips_known": 6, "spells_known": 14, "spell_slots": [4, 3, 3, 3, 2, 1, 1, 1]},
-      {"level": 17, "cantrips_known": 6, "spells_known": 15, "spell_slots": [4, 3, 3, 3, 2, 1, 1, 1, 1]},
-      {"level": 18, "cantrips_known": 6, "spells_known": 15, "spell_slots": [4, 3, 3, 3, 3, 1, 1, 1, 1]},
-      {"level": 19, "cantrips_known": 6, "spells_known": 15, "spell_slots": [4, 3, 3, 3, 3, 2, 1, 1, 1]},
-      {"level": 20, "cantrips_known": 6, "spells_known": 15, "spell_slots": [4, 3, 3, 3, 3, 2, 2, 1, 1]}
+      {
+        "level": 1,
+        "cantrips_known": 4,
+        "spells_known": 2,
+        "spell_slots": [
+          2
+        ]
+      },
+      {
+        "level": 2,
+        "cantrips_known": 4,
+        "spells_known": 3,
+        "spell_slots": [
+          3
+        ]
+      },
+      {
+        "level": 3,
+        "cantrips_known": 4,
+        "spells_known": 4,
+        "spell_slots": [
+          4,
+          2
+        ]
+      },
+      {
+        "level": 4,
+        "cantrips_known": 5,
+        "spells_known": 5,
+        "spell_slots": [
+          4,
+          3
+        ]
+      },
+      {
+        "level": 5,
+        "cantrips_known": 5,
+        "spells_known": 6,
+        "spell_slots": [
+          4,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 6,
+        "cantrips_known": 5,
+        "spells_known": 7,
+        "spell_slots": [
+          4,
+          3,
+          3
+        ]
+      },
+      {
+        "level": 7,
+        "cantrips_known": 5,
+        "spells_known": 8,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          1
+        ]
+      },
+      {
+        "level": 8,
+        "cantrips_known": 5,
+        "spells_known": 9,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 9,
+        "cantrips_known": 5,
+        "spells_known": 10,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          1
+        ]
+      },
+      {
+        "level": 10,
+        "cantrips_known": 6,
+        "spells_known": 11,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 11,
+        "cantrips_known": 6,
+        "spells_known": 12,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "level": 12,
+        "cantrips_known": 6,
+        "spells_known": 12,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "level": 13,
+        "cantrips_known": 6,
+        "spells_known": 13,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 14,
+        "cantrips_known": 6,
+        "spells_known": 13,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 15,
+        "cantrips_known": 6,
+        "spells_known": 14,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 16,
+        "cantrips_known": 6,
+        "spells_known": 14,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 17,
+        "cantrips_known": 6,
+        "spells_known": 15,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 18,
+        "cantrips_known": 6,
+        "spells_known": 15,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 19,
+        "cantrips_known": 6,
+        "spells_known": 15,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 20,
+        "cantrips_known": 6,
+        "spells_known": 15,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          2,
+          2,
+          1,
+          1
+        ]
+      }
     ]
   },
   {
     "id": "warlock",
     "name": "Warlock",
     "hit_die": 8,
-    "primary_ability": ["cha"],
-    "saving_throws": ["wis", "cha"],
-    "armor_proficiencies": ["light"],
-    "weapon_proficiencies": ["simple"],
+    "primary_ability": [
+      "cha"
+    ],
+    "saving_throws": [
+      "wis",
+      "cha"
+    ],
+    "armor_proficiencies": [
+      "light"
+    ],
+    "weapon_proficiencies": [
+      "simple"
+    ],
     "tool_proficiencies": [],
-    "skill_choices": {"choose": 2, "from": ["arcana", "deception", "history", "intimidation", "investigation", "nature", "religion"]},
-    "starting_equipment": {
-      "fixed": [{"item": "dagger", "qty": 2}, {"item": "leather_armor"}, {"item": "explorers_pack"}],
-      "choices": [
-        {"choose": 1, "options": [[{"item": "light_crossbow"}], [{"item": "quarterstaff"}]]}
+    "skill_choices": {
+      "choose": 2,
+      "from": [
+        "arcana",
+        "deception",
+        "history",
+        "intimidation",
+        "investigation",
+        "nature",
+        "religion"
       ]
     },
-    "asi_levels": [4, 8, 12, 16, 19],
+    "starting_equipment": {
+      "fixed": [
+        {
+          "item": "dagger",
+          "qty": 2
+        },
+        {
+          "item": "leather_armor"
+        },
+        {
+          "item": "explorers_pack"
+        }
+      ],
+      "choices": [
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "light_crossbow"
+              }
+            ],
+            [
+              {
+                "item": "quarterstaff"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "asi_levels": [
+      4,
+      8,
+      12,
+      16,
+      19
+    ],
     "subclass_level": 1,
     "subclass_label": "Otherworldly Patron",
-    "spellcasting": {"ability": "cha", "caster_type": "pact", "preparation": "known", "ritual": false},
+    "spellcasting": {
+      "ability": "cha",
+      "caster_type": "pact",
+      "preparation": "known",
+      "ritual": false
+    },
     "features": [
-      {"name": "Otherworldly Patron", "level": 1, "text": "Choose a patron whose bargain grants your power."},
-      {"name": "Pact Magic", "level": 1, "text": "Cast warlock spells using Charisma. Your few slots are all your highest level and recharge on a SHORT or long rest."},
-      {"name": "Eldritch Invocations", "level": 2, "text": "Learn fragments of forbidden knowledge that grant magical abilities."},
-      {"name": "Pact Boon", "level": 3, "text": "Your patron grants a gift: Pact of the Chain, Blade, or Tome."},
-      {"name": "Ability Score Improvement", "level": 4, "text": "Increase ability scores or take a feat."},
-      {"name": "Mystic Arcanum", "level": 11, "text": "Gain one high-level spell you can cast once per long rest without a pact slot (6th at 11th, 7th/8th/9th later)."}
+      {
+        "name": "Otherworldly Patron",
+        "level": 1,
+        "text": "Choose a patron whose bargain grants your power."
+      },
+      {
+        "name": "Pact Magic",
+        "level": 1,
+        "text": "Cast warlock spells using Charisma. Your few slots are all your highest level and recharge on a SHORT or long rest."
+      },
+      {
+        "name": "Eldritch Invocations",
+        "level": 2,
+        "text": "Learn fragments of forbidden knowledge that grant magical abilities."
+      },
+      {
+        "name": "Pact Boon",
+        "level": 3,
+        "text": "Your patron grants a gift: Pact of the Chain, Blade, or Tome."
+      },
+      {
+        "name": "Ability Score Improvement",
+        "level": 4,
+        "text": "Increase ability scores or take a feat."
+      },
+      {
+        "name": "Mystic Arcanum",
+        "level": 11,
+        "text": "Gain one high-level spell you can cast once per long rest without a pact slot (6th at 11th, 7th/8th/9th later)."
+      }
     ],
     "pact_magic_progression": [
-      {"level": 1, "cantrips_known": 2, "spells_known": 2, "slots": 1, "slot_level": 1, "invocations_known": 0},
-      {"level": 2, "cantrips_known": 2, "spells_known": 3, "slots": 2, "slot_level": 1, "invocations_known": 2},
-      {"level": 3, "cantrips_known": 2, "spells_known": 4, "slots": 2, "slot_level": 2, "invocations_known": 2},
-      {"level": 4, "cantrips_known": 3, "spells_known": 5, "slots": 2, "slot_level": 2, "invocations_known": 2},
-      {"level": 5, "cantrips_known": 3, "spells_known": 6, "slots": 2, "slot_level": 3, "invocations_known": 3},
-      {"level": 6, "cantrips_known": 3, "spells_known": 7, "slots": 2, "slot_level": 3, "invocations_known": 3},
-      {"level": 7, "cantrips_known": 3, "spells_known": 8, "slots": 2, "slot_level": 4, "invocations_known": 4},
-      {"level": 8, "cantrips_known": 3, "spells_known": 9, "slots": 2, "slot_level": 4, "invocations_known": 4},
-      {"level": 9, "cantrips_known": 3, "spells_known": 10, "slots": 2, "slot_level": 5, "invocations_known": 5},
-      {"level": 10, "cantrips_known": 4, "spells_known": 10, "slots": 2, "slot_level": 5, "invocations_known": 5},
-      {"level": 11, "cantrips_known": 4, "spells_known": 11, "slots": 3, "slot_level": 5, "invocations_known": 5},
-      {"level": 12, "cantrips_known": 4, "spells_known": 11, "slots": 3, "slot_level": 5, "invocations_known": 6},
-      {"level": 13, "cantrips_known": 4, "spells_known": 12, "slots": 3, "slot_level": 5, "invocations_known": 6},
-      {"level": 14, "cantrips_known": 4, "spells_known": 12, "slots": 3, "slot_level": 5, "invocations_known": 6},
-      {"level": 15, "cantrips_known": 4, "spells_known": 13, "slots": 3, "slot_level": 5, "invocations_known": 7},
-      {"level": 16, "cantrips_known": 4, "spells_known": 13, "slots": 3, "slot_level": 5, "invocations_known": 7},
-      {"level": 17, "cantrips_known": 4, "spells_known": 14, "slots": 4, "slot_level": 5, "invocations_known": 7},
-      {"level": 18, "cantrips_known": 4, "spells_known": 14, "slots": 4, "slot_level": 5, "invocations_known": 8},
-      {"level": 19, "cantrips_known": 4, "spells_known": 15, "slots": 4, "slot_level": 5, "invocations_known": 8},
-      {"level": 20, "cantrips_known": 4, "spells_known": 15, "slots": 4, "slot_level": 5, "invocations_known": 8}
+      {
+        "level": 1,
+        "cantrips_known": 2,
+        "spells_known": 2,
+        "slots": 1,
+        "slot_level": 1,
+        "invocations_known": 0
+      },
+      {
+        "level": 2,
+        "cantrips_known": 2,
+        "spells_known": 3,
+        "slots": 2,
+        "slot_level": 1,
+        "invocations_known": 2
+      },
+      {
+        "level": 3,
+        "cantrips_known": 2,
+        "spells_known": 4,
+        "slots": 2,
+        "slot_level": 2,
+        "invocations_known": 2
+      },
+      {
+        "level": 4,
+        "cantrips_known": 3,
+        "spells_known": 5,
+        "slots": 2,
+        "slot_level": 2,
+        "invocations_known": 2
+      },
+      {
+        "level": 5,
+        "cantrips_known": 3,
+        "spells_known": 6,
+        "slots": 2,
+        "slot_level": 3,
+        "invocations_known": 3
+      },
+      {
+        "level": 6,
+        "cantrips_known": 3,
+        "spells_known": 7,
+        "slots": 2,
+        "slot_level": 3,
+        "invocations_known": 3
+      },
+      {
+        "level": 7,
+        "cantrips_known": 3,
+        "spells_known": 8,
+        "slots": 2,
+        "slot_level": 4,
+        "invocations_known": 4
+      },
+      {
+        "level": 8,
+        "cantrips_known": 3,
+        "spells_known": 9,
+        "slots": 2,
+        "slot_level": 4,
+        "invocations_known": 4
+      },
+      {
+        "level": 9,
+        "cantrips_known": 3,
+        "spells_known": 10,
+        "slots": 2,
+        "slot_level": 5,
+        "invocations_known": 5
+      },
+      {
+        "level": 10,
+        "cantrips_known": 4,
+        "spells_known": 10,
+        "slots": 2,
+        "slot_level": 5,
+        "invocations_known": 5
+      },
+      {
+        "level": 11,
+        "cantrips_known": 4,
+        "spells_known": 11,
+        "slots": 3,
+        "slot_level": 5,
+        "invocations_known": 5
+      },
+      {
+        "level": 12,
+        "cantrips_known": 4,
+        "spells_known": 11,
+        "slots": 3,
+        "slot_level": 5,
+        "invocations_known": 6
+      },
+      {
+        "level": 13,
+        "cantrips_known": 4,
+        "spells_known": 12,
+        "slots": 3,
+        "slot_level": 5,
+        "invocations_known": 6
+      },
+      {
+        "level": 14,
+        "cantrips_known": 4,
+        "spells_known": 12,
+        "slots": 3,
+        "slot_level": 5,
+        "invocations_known": 6
+      },
+      {
+        "level": 15,
+        "cantrips_known": 4,
+        "spells_known": 13,
+        "slots": 3,
+        "slot_level": 5,
+        "invocations_known": 7
+      },
+      {
+        "level": 16,
+        "cantrips_known": 4,
+        "spells_known": 13,
+        "slots": 3,
+        "slot_level": 5,
+        "invocations_known": 7
+      },
+      {
+        "level": 17,
+        "cantrips_known": 4,
+        "spells_known": 14,
+        "slots": 4,
+        "slot_level": 5,
+        "invocations_known": 7
+      },
+      {
+        "level": 18,
+        "cantrips_known": 4,
+        "spells_known": 14,
+        "slots": 4,
+        "slot_level": 5,
+        "invocations_known": 8
+      },
+      {
+        "level": 19,
+        "cantrips_known": 4,
+        "spells_known": 15,
+        "slots": 4,
+        "slot_level": 5,
+        "invocations_known": 8
+      },
+      {
+        "level": 20,
+        "cantrips_known": 4,
+        "spells_known": 15,
+        "slots": 4,
+        "slot_level": 5,
+        "invocations_known": 8
+      }
     ]
   },
   {
     "id": "barbarian",
     "name": "Barbarian",
     "hit_die": 12,
-    "primary_ability": ["str"],
-    "saving_throws": ["str", "con"],
-    "armor_proficiencies": ["light", "medium", "shields"],
-    "weapon_proficiencies": ["simple", "martial"],
+    "primary_ability": [
+      "str"
+    ],
+    "saving_throws": [
+      "str",
+      "con"
+    ],
+    "armor_proficiencies": [
+      "light",
+      "medium",
+      "shields"
+    ],
+    "weapon_proficiencies": [
+      "simple",
+      "martial"
+    ],
     "tool_proficiencies": [],
-    "skill_choices": {"choose": 2, "from": ["animal_handling", "athletics", "intimidation", "nature", "perception", "survival"]},
-    "starting_equipment": {
-      "fixed": [{"item": "explorers_pack"}, {"item": "handaxe", "qty": 2}],
-      "choices": [
-        {"choose": 1, "options": [[{"item": "longsword"}], [{"item": "handaxe", "qty": 2}]]}
+    "skill_choices": {
+      "choose": 2,
+      "from": [
+        "animal_handling",
+        "athletics",
+        "intimidation",
+        "nature",
+        "perception",
+        "survival"
       ]
     },
-    "asi_levels": [4, 8, 12, 16, 19],
+    "starting_equipment": {
+      "fixed": [
+        {
+          "item": "explorers_pack"
+        },
+        {
+          "item": "handaxe",
+          "qty": 2
+        }
+      ],
+      "choices": [
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "longsword"
+              }
+            ],
+            [
+              {
+                "item": "handaxe",
+                "qty": 2
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "asi_levels": [
+      4,
+      8,
+      12,
+      16,
+      19
+    ],
     "subclass_level": 3,
     "subclass_label": "Primal Path",
     "features": [
-      {"name": "Rage", "level": 1, "text": "As a bonus action, enter a rage for up to 1 minute: advantage on STR checks/saves, bonus melee damage (+2, rising to +3 at 9th and +4 at 16th), and resistance to bludgeoning/piercing/slashing damage."},
-      {"name": "Unarmored Defense", "level": 1, "text": "While wearing no armor, your AC equals 10 + DEX modifier + CON modifier (a shield still adds its bonus)."},
-      {"name": "Reckless Attack", "level": 2, "text": "Gain advantage on STR melee attacks this turn, but attacks against you have advantage until your next turn."},
-      {"name": "Danger Sense", "level": 2, "text": "Advantage on DEX saves against effects you can see."},
-      {"name": "Primal Path", "level": 3, "text": "Choose a path that shapes the nature of your rage."},
-      {"name": "Extra Attack", "level": 5, "text": "Attack twice when you take the Attack action."},
-      {"name": "Fast Movement", "level": 5, "text": "Your speed increases by 10 feet while you aren't wearing heavy armor."},
-      {"name": "Brutal Critical", "level": 9, "text": "Roll one extra weapon damage die on a critical hit (more at 13th and 17th)."},
-      {"name": "Relentless Rage", "level": 11, "text": "Dropping to 0 HP while raging lets you make a CON save to stay at 1 HP instead."},
-      {"name": "Persistent Rage", "level": 15, "text": "Your rage ends early only if you fall unconscious or choose to end it."},
-      {"name": "Indomitable Might", "level": 18, "text": "If a STR check is lower than your STR score, use your score instead."},
-      {"name": "Primal Champion", "level": 20, "text": "Your STR and CON scores increase by 4, to a maximum of 24."}
+      {
+        "name": "Rage",
+        "level": 1,
+        "text": "As a bonus action, enter a rage for up to 1 minute: advantage on STR checks/saves, bonus melee damage (+2, rising to +3 at 9th and +4 at 16th), and resistance to bludgeoning/piercing/slashing damage."
+      },
+      {
+        "name": "Unarmored Defense",
+        "level": 1,
+        "text": "While wearing no armor, your AC equals 10 + DEX modifier + CON modifier (a shield still adds its bonus)."
+      },
+      {
+        "name": "Reckless Attack",
+        "level": 2,
+        "text": "Gain advantage on STR melee attacks this turn, but attacks against you have advantage until your next turn."
+      },
+      {
+        "name": "Danger Sense",
+        "level": 2,
+        "text": "Advantage on DEX saves against effects you can see."
+      },
+      {
+        "name": "Primal Path",
+        "level": 3,
+        "text": "Choose a path that shapes the nature of your rage."
+      },
+      {
+        "name": "Extra Attack",
+        "level": 5,
+        "text": "Attack twice when you take the Attack action."
+      },
+      {
+        "name": "Fast Movement",
+        "level": 5,
+        "text": "Your speed increases by 10 feet while you aren't wearing heavy armor."
+      },
+      {
+        "name": "Brutal Critical",
+        "level": 9,
+        "text": "Roll one extra weapon damage die on a critical hit (more at 13th and 17th)."
+      },
+      {
+        "name": "Relentless Rage",
+        "level": 11,
+        "text": "Dropping to 0 HP while raging lets you make a CON save to stay at 1 HP instead."
+      },
+      {
+        "name": "Persistent Rage",
+        "level": 15,
+        "text": "Your rage ends early only if you fall unconscious or choose to end it."
+      },
+      {
+        "name": "Indomitable Might",
+        "level": 18,
+        "text": "If a STR check is lower than your STR score, use your score instead."
+      },
+      {
+        "name": "Primal Champion",
+        "level": 20,
+        "text": "Your STR and CON scores increase by 4, to a maximum of 24."
+      }
     ],
     "resources": [
-      {"name": "Rage", "recharge": "long", "by_level": {"1": 2, "3": 3, "6": 4, "12": 5, "17": 6, "20": -1}, "text": "Number of times you can rage between long rests (-1 = unlimited at 20th)."}
+      {
+        "name": "Rage",
+        "recharge": "long",
+        "by_level": {
+          "1": 2,
+          "3": 3,
+          "6": 4,
+          "12": 5,
+          "17": 6,
+          "20": -1
+        },
+        "text": "Number of times you can rage between long rests (-1 = unlimited at 20th)."
+      }
+    ]
+  },
+  {
+    "id": "cleric",
+    "name": "Cleric",
+    "hit_die": 8,
+    "primary_ability": [
+      "wis"
+    ],
+    "saving_throws": [
+      "wis",
+      "cha"
+    ],
+    "armor_proficiencies": [
+      "light",
+      "medium",
+      "shields"
+    ],
+    "weapon_proficiencies": [
+      "simple"
+    ],
+    "tool_proficiencies": [],
+    "skill_choices": {
+      "choose": 2,
+      "from": [
+        "history",
+        "insight",
+        "medicine",
+        "persuasion",
+        "religion"
+      ]
+    },
+    "starting_equipment": {
+      "fixed": [
+        {
+          "item": "shield"
+        },
+        {
+          "item": "amulet"
+        }
+      ],
+      "choices": [
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "mace"
+              }
+            ],
+            [
+              {
+                "item": "warhammer"
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "scale_mail"
+              }
+            ],
+            [
+              {
+                "item": "leather_armor"
+              }
+            ],
+            [
+              {
+                "item": "chain_mail"
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "light_crossbow"
+              }
+            ],
+            [
+              {
+                "item": "club"
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "priests_pack"
+              }
+            ],
+            [
+              {
+                "item": "explorers_pack"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "asi_levels": [
+      4,
+      8,
+      12,
+      16,
+      19
+    ],
+    "subclass_level": 1,
+    "subclass_label": "Divine Domain",
+    "spellcasting": {
+      "ability": "wis",
+      "caster_type": "full",
+      "preparation": "prepared",
+      "ritual": true
+    },
+    "features": [
+      {
+        "name": "Spellcasting",
+        "level": 1,
+        "text": "Cast cleric spells using Wisdom. Prepare WIS mod + cleric level spells from the cleric list each day; you know 3 cantrips at 1st level."
+      },
+      {
+        "name": "Divine Domain",
+        "level": 1,
+        "text": "Choose a divine domain that grants bonus spells and features."
+      },
+      {
+        "name": "Channel Divinity",
+        "level": 2,
+        "text": "Channel divine energy for magical effects, regaining uses on a short or long rest. You gain more uses per rest as you level (1 at 2nd, 2 at 6th, 3 at 18th)."
+      },
+      {
+        "name": "Channel Divinity: Turn Undead",
+        "level": 2,
+        "text": "As an action, present your holy symbol; each undead within 30 feet that fails a Wisdom save is turned for 1 minute."
+      },
+      {
+        "name": "Ability Score Improvement",
+        "level": 4,
+        "text": "Increase ability scores or take a feat."
+      },
+      {
+        "name": "Destroy Undead",
+        "level": 5,
+        "text": "When an undead fails its save against your Turn Undead, it is instantly destroyed if its CR is at or below a threshold that rises with your level (CR 1/2 at 5th, up to CR 4 at 17th)."
+      },
+      {
+        "name": "Divine Intervention",
+        "level": 10,
+        "text": "Call on your deity to intervene; succeed if you roll your cleric level or lower on percentile dice (automatic at 20th level). One use per long rest on success, or once per 7 days."
+      }
+    ],
+    "spell_progression": [
+      {
+        "level": 1,
+        "cantrips_known": 3,
+        "spell_slots": [
+          2
+        ]
+      },
+      {
+        "level": 2,
+        "cantrips_known": 3,
+        "spell_slots": [
+          3
+        ]
+      },
+      {
+        "level": 3,
+        "cantrips_known": 3,
+        "spell_slots": [
+          4,
+          2
+        ]
+      },
+      {
+        "level": 4,
+        "cantrips_known": 4,
+        "spell_slots": [
+          4,
+          3
+        ]
+      },
+      {
+        "level": 5,
+        "cantrips_known": 4,
+        "spell_slots": [
+          4,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 6,
+        "cantrips_known": 4,
+        "spell_slots": [
+          4,
+          3,
+          3
+        ]
+      },
+      {
+        "level": 7,
+        "cantrips_known": 4,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          1
+        ]
+      },
+      {
+        "level": 8,
+        "cantrips_known": 4,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 9,
+        "cantrips_known": 4,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          1
+        ]
+      },
+      {
+        "level": 10,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 11,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "level": 12,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "level": 13,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 14,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 15,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 16,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 17,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 18,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 19,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "level": 20,
+        "cantrips_known": 5,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          2,
+          2,
+          1,
+          1
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "name": "Channel Divinity",
+        "recharge": "short",
+        "by_level": {
+          "2": 1,
+          "6": 2,
+          "18": 3
+        },
+        "text": "Spent on Channel Divinity options (Turn Undead, domain options); regained on a short or long rest."
+      }
     ]
   }
 ]
