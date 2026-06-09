@@ -37,3 +37,25 @@ def test_in_character_turn_is_not_meta():
     s, loop = _loop()
     report = asyncio.run(loop.take_turn("I look around the market", ooc=False))
     assert report.assessment.intent.verb != Verb.META
+
+
+def test_in_character_meta_from_the_model_is_coerced(monkeypatch):
+    """Even if the assess model disobeys and tags an in-character turn `meta` — a
+    real playtest bug, a reflective remark right after a fight ("What a crazy
+    happenstance!") — the runtime demotes it so the DM narrates in-world instead of
+    dropping into table-talk. The OOC toggle is the sole signal for meta."""
+    from oubliette.enums import Tier
+    from oubliette.schemas import Intent, TurnAssessment
+
+    s, loop = _loop()
+
+    async def fake_assess(text, context=""):
+        return TurnAssessment(
+            intent=Intent(raw_text=text, verb=Verb.META, ooc=False),
+            tier=Tier.FREESTYLE, resolution_hint="")
+
+    monkeypatch.setattr(loop.brain, "assess", fake_assess)
+    report = asyncio.run(loop.take_turn("What a crazy happenstance! The docks are safe again."))
+
+    assert report.assessment.intent.verb == Verb.SKILL_CHECK   # demoted, in-character
+    assert report.assessment.intent.verb != Verb.META

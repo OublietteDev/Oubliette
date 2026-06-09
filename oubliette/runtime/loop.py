@@ -86,6 +86,15 @@ class TurnLoop:
                 tier=Tier.FREESTYLE, resolution_hint="Player is speaking out-of-character.")
         else:
             assessment = await self.brain.assess(player_text, context)
+            # The OOC toggle is the SOLE signal for table-talk (the assess prompt
+            # says so, but the model can disobey — e.g. a reflective in-character
+            # remark after a fight, "What a happenstance!", gets mislabeled meta and
+            # the DM answers out-of-character). Enforce it in code: an in-character
+            # turn is never meta. Demote to a no-roll observation so it narrates
+            # in-world (skill_check is the prompt's bucket for non-mechanical beats).
+            if assessment.intent.verb == Verb.META:
+                assessment.intent = assessment.intent.model_copy(update={"verb": Verb.SKILL_CHECK})
+                self.debug.append("note", stage="assess", coerced="meta->skill_check (in-character)")
         # The PLAYER_MESSAGE event carries the raw text + the parsed intent (§4.1).
         self.session.emit_log(
             EventKind.PLAYER_MESSAGE, text=player_text,
