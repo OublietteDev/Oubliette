@@ -236,6 +236,13 @@ class CombatManager:
         # Result
         self.winner: str | None = None
 
+        # Solo handoff play (Oubliette): with no allies to revive a downed PC, a
+        # player team that is entirely UNCONSCIOUS is defeated immediately rather
+        # than lingering through death saves in a vacuum (which never ends, so the
+        # subprocess never exits and the calling story turn hangs). Off by default
+        # — standalone play keeps the full death-save grace.
+        self.solo_defeat_when_downed: bool = False
+
     # ------------------------------------------------------------------
     # Action Economy
     # ------------------------------------------------------------------
@@ -4532,17 +4539,22 @@ class CombatManager:
 
         return False
 
-    @staticmethod
-    def _is_still_fighting(combatant: Combatant) -> bool:
+    def _is_still_fighting(self, combatant: Combatant) -> bool:
         """Check if a combatant is still in the fight.
 
         A conscious creature is always fighting. An unconscious PC (0 HP)
         is still fighting as long as they haven't accumulated 3 death save
         failures — they could stabilize or be healed. Monsters at 0 HP
         are always defeated.
+
+        Exception: in solo handoff play (``solo_defeat_when_downed``) a downed PC
+        has no allies to revive them, so unconscious counts as out of the fight —
+        ending combat promptly instead of stalling in a death-save vacuum.
         """
         if combatant.creature.is_conscious:
             return True
+        if self.solo_defeat_when_downed:
+            return False
         # Check if this is a PC who is dying but not yet dead
         failures = getattr(combatant.creature, "death_save_failures", 3)
         return failures < 3

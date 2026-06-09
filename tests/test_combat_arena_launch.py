@@ -230,6 +230,108 @@ def test_entering_the_arena_resolves_the_fight_as_one_event(monkeypatch):
     assert len(s.store.of_kind(EventKind.COMBAT_RESULT)) == 1
 
 
+def _canned_defeat(pending) -> dict:
+    """Handoff result for a lost fight: the player team downed, an enemy standing."""
+    combatants = []
+    for c in pending.plan.encounter.combatants:
+        cd = c.creature_data
+        enemy = c.team == "enemy"
+        combatants.append({
+            "id": c.name_override, "name": c.name_override, "team": c.team,
+            "is_pc": c.team == "player",
+            "hp": cd.max_hit_points if enemy else 0,
+            "max_hp": cd.max_hit_points, "temp_hp": 0,
+            "conditions": [] if enemy else ["unconscious"],
+            "is_conscious": enemy,
+            "xp": int(getattr(cd, "experience_points", 0) or 0),
+        })
+    return {"schema": 1, "winner": "enemy", "outcome": "defeat",
+            "rounds": 3, "combatants": combatants}
+
+
+def test_defeat_resolves_and_writes_the_pc_down(monkeypatch):
+    s = _session()
+    loop = _loop(s)
+    pc = s.repo.pc()
+    monkeypatch.setattr(arena_launch, "run_arena", _canned_defeat)
+
+    asyncio.run(loop.take_turn("I draw my knife and attack the bandit."))
+    report = asyncio.run(loop.enter_combat())
+
+    assert report.combat_result.outcome == "defeat"
+    assert s.pending_combat is None        # lock clears even on a loss
+    assert pc.hp == 0                       # PC written back as downed
+    assert len(s.store.of_kind(EventKind.COMBAT_RESULT)) == 1
+
+
+def test_enter_combat_survives_an_arena_failure(monkeypatch):
+    """If the Arena crashes or writes no result, the turn still resolves so the
+    browser lock always clears — never a stuck, unenterable combat."""
+    s = _session()
+    loop = _loop(s)
+
+    def boom(pending):
+        raise CombatError("the Arena exploded")
+
+    asyncio.run(loop.take_turn("I draw my knife and attack the bandit."))
+    monkeypatch.setattr(arena_launch, "run_arena", boom)
+    report = asyncio.run(loop.enter_combat())
+
+    assert report.combat_result.outcome == "flee"   # safe break-off, no state change
+    assert s.pending_combat is None
+
+
+def test_solo_handoff_downed_pc_ends_combat_as_defeat():
+    """Regression for the live-play hang: a downed solo PC used to keep the fight
+    'alive' through death-save grace (no ally can revive them), so combat never
+    ended and the Arena subprocess — and the story turn — hung. In handoff mode a
+    fully-downed player team is an immediate defeat."""
+    from pathlib import Path
+
+    from arena.combat.manager import CombatManager
+
+    s = _session()
+    pending = stage_combat(
+        EncounterRequest(kind="brawl", enemies=[EnemyRef(ref="wolf")], terrain=TerrainSpec()),
+        s.repo, s).pending
+    enc = Encounter.model_validate(json.loads(pending.encounter_path.read_text("utf-8")))
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("."))
+    cm.solo_defeat_when_downed = True       # handoff.play_encounter sets this
+
+    for c in cm.combatants.values():
+        if c.team == "player":
+            c.creature.current_hit_points = 0   # downed, no death-save failures yet
+
+    assert cm._check_victory() is True
+    assert cm.winner == "enemy"
+    arena_launch.cleanup(pending)
+
+
+def test_standalone_play_keeps_full_death_save_grace():
+    """The handoff rule is opt-in: by default a downed PC at 0 HP with no failures
+    is still in the fight, so combat does NOT end (death-save rules preserved)."""
+    from pathlib import Path
+
+    from arena.combat.manager import CombatManager
+
+    s = _session()
+    pending = stage_combat(
+        EncounterRequest(kind="brawl", enemies=[EnemyRef(ref="wolf")], terrain=TerrainSpec()),
+        s.repo, s).pending
+    enc = Encounter.model_validate(json.loads(pending.encounter_path.read_text("utf-8")))
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("."))       # solo_defeat_when_downed defaults False
+
+    for c in cm.combatants.values():
+        if c.team == "player":
+            c.creature.current_hit_points = 0
+            c.creature.death_save_failures = 0
+
+    assert cm._check_victory() is False     # still dying, not yet defeated
+    arena_launch.cleanup(pending)
+
+
 def test_enter_combat_without_a_staged_fight_raises():
     s = _session()
     loop = _loop(s)

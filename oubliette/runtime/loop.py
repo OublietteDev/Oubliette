@@ -316,6 +316,15 @@ class TurnLoop:
         try:
             handoff = await loop.run_in_executor(None, arena_launch.run_arena, pending)
             result = arena_launch.resolve_to_combat_result(pending, handoff)
+        except CombatError as e:
+            # The Arena crashed or wrote no readable result. Never leave the turn
+            # hanging or the browser locked: resolve as an unresolved break-off
+            # (no state change) so play always continues.
+            self.debug.append("anomaly", stage="combat", error=str(e))
+            result = CombatResult(
+                outcome="flee",
+                narrative_digest="The clash breaks off unresolved; you step back into the story.",
+            )
         finally:
             arena_launch.cleanup(pending)
             self.session.pending_combat = None

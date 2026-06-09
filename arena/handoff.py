@@ -117,6 +117,11 @@ def play_encounter(encounter_path: str | Path, result_path: str | Path) -> dict:
         return result
 
     screen.handoff_mode = True
+    # Solo story combat: a fully-downed player team loses now, rather than lingering
+    # in a death-save vacuum that never ends (which would hang this subprocess and the
+    # calling story turn). The combatant `.creature` objects are shared with the
+    # manager, so set the flag on it directly.
+    screen.combat.solo_defeat_when_downed = True
     app.run()  # blocks until the player exits (ESC after combat, or window close)
 
     # Write from the FINAL manager state — covers every exit path uniformly (a clean
