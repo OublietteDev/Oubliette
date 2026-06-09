@@ -77,6 +77,8 @@ class LoadedWorld:
     pack_version: str
     world_map: str | None = None   # the top-level map background image filename (manifest)
     ruleset: Ruleset | None = None  # the global SRD ruleset (chargen/sheet/derivation)
+    pack_name: str = ""            # the pack's display name (manifest.name; bestiary source label)
+    statblocks: tuple = ()         # the pack's authored StatBlocks (this-world bestiary section)
 
 
 # --- file reading ------------------------------------------------------------
@@ -354,4 +356,5 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
         location=scenario.start_location, places=place_nodes,
         pack_id=manifest.id, pack_version=manifest.version, world_map=manifest.world_map,
         ruleset=load_ruleset(),   # the global SRD layer (shared by every world)
+        pack_name=manifest.name, statblocks=tuple(statblocks),
     )

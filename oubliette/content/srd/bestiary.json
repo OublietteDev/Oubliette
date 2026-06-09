@@ -1,0 +1,160 @@
+[
+  {
+    "id": "goblin", "name": "Goblin", "kind": "monster",
+    "size": "Small", "type": "humanoid (goblinoid)", "alignment": "neutral evil", "cr": 0.25,
+    "abilities": {"str": 8, "dex": 14, "con": 10, "int": 10, "wis": 8, "cha": 8},
+    "hp": 7, "hit_dice": "2d6", "armor_class": 15, "ac_desc": "leather armor, shield",
+    "speed": {"walk": "30 ft."},
+    "attack_bonus": 4, "damage": "1d6+2",
+    "skills": ["stealth"], "skill_bonuses": {"stealth": 6},
+    "senses": {"darkvision": "60 ft.", "passive_perception": "9"},
+    "languages": "Common, Goblin",
+    "xp": 50,
+    "traits": ["Nimble Escape. The goblin can take the Disengage or Hide action as a bonus action on each of its turns."],
+    "actions": [
+      {"name": "Scimitar", "attack_bonus": 4, "reach": "5 ft.", "target": "one target", "damage": "1d6+2", "damage_type": "slashing"},
+      {"name": "Shortbow", "attack_bonus": 4, "reach": "80/320 ft.", "target": "one target", "damage": "1d6+2", "damage_type": "piercing"}
+    ],
+    "description": "A small, black-hearted humanoid that lairs in caves and ruins, raiding for food and treasure.",
+    "srd_ref": "goblin"
+  },
+  {
+    "id": "wolf", "name": "Wolf", "kind": "monster",
+    "size": "Medium", "type": "beast", "alignment": "unaligned", "cr": 0.25,
+    "abilities": {"str": 12, "dex": 15, "con": 12, "int": 3, "wis": 12, "cha": 6},
+    "hp": 11, "hit_dice": "2d8+2", "armor_class": 13, "ac_desc": "natural armor",
+    "speed": {"walk": "40 ft."},
+    "attack_bonus": 4, "damage": "2d4+2",
+    "skills": ["perception", "stealth"], "skill_bonuses": {"perception": 3, "stealth": 4},
+    "senses": {"passive_perception": "13"},
+    "languages": "—",
+    "xp": 50,
+    "traits": [
+      "Keen Hearing and Smell. The wolf has advantage on Wisdom (Perception) checks that rely on hearing or smell.",
+      "Pack Tactics. The wolf has advantage on an attack roll against a creature if at least one of the wolf's allies is within 5 feet of the creature and isn't incapacitated."
+    ],
+    "actions": [
+      {"name": "Bite", "attack_bonus": 4, "reach": "5 ft.", "target": "one target", "damage": "2d4+2", "damage_type": "piercing", "desc": "If the target is a creature, it must succeed on a DC 11 Strength saving throw or be knocked prone."}
+    ],
+    "description": "A lean pack hunter, bright-eyed and tireless on the trail.",
+    "srd_ref": "wolf"
+  },
+  {
+    "id": "skeleton", "name": "Skeleton", "kind": "monster",
+    "size": "Medium", "type": "undead", "alignment": "lawful evil", "cr": 0.25,
+    "abilities": {"str": 10, "dex": 14, "con": 15, "int": 6, "wis": 8, "cha": 5},
+    "hp": 13, "hit_dice": "2d8+4", "armor_class": 13, "ac_desc": "armor scraps",
+    "speed": {"walk": "30 ft."},
+    "attack_bonus": 4, "damage": "1d6+2",
+    "damage_vulnerabilities": ["bludgeoning"],
+    "damage_immunities": ["poison"],
+    "condition_immunities": ["exhaustion", "poisoned"],
+    "senses": {"darkvision": "60 ft.", "passive_perception": "9"},
+    "languages": "understands all languages it knew in life but can't speak",
+    "xp": 50,
+    "actions": [
+      {"name": "Shortsword", "attack_bonus": 4, "reach": "5 ft.", "target": "one target", "damage": "1d6+2", "damage_type": "piercing"},
+      {"name": "Shortbow", "attack_bonus": 4, "reach": "80/320 ft.", "target": "one target", "damage": "1d6+2", "damage_type": "piercing"}
+    ],
+    "description": "Animated bones clutching rusted arms, obeying the will that raised them.",
+    "srd_ref": "skeleton"
+  },
+  {
+    "id": "zombie", "name": "Zombie", "kind": "monster",
+    "size": "Medium", "type": "undead", "alignment": "neutral evil", "cr": 0.25,
+    "abilities": {"str": 13, "dex": 6, "con": 16, "int": 3, "wis": 6, "cha": 5},
+    "hp": 22, "hit_dice": "3d8+9", "armor_class": 8,
+    "speed": {"walk": "20 ft."},
+    "attack_bonus": 3, "damage": "1d6+1",
+    "saves": {"wis": 0},
+    "damage_immunities": ["poison"],
+    "condition_immunities": ["poisoned"],
+    "senses": {"darkvision": "60 ft.", "passive_perception": "8"},
+    "languages": "understands all languages it knew in life but can't speak",
+    "xp": 50,
+    "traits": ["Undead Fortitude. If damage reduces the zombie to 0 hit points, it must make a Constitution saving throw with a DC of 5 + the damage taken, unless the damage is radiant or from a critical hit. On a success, the zombie drops to 1 hit point instead."],
+    "actions": [
+      {"name": "Slam", "attack_bonus": 3, "reach": "5 ft.", "target": "one target", "damage": "1d6+1", "damage_type": "bludgeoning"}
+    ],
+    "description": "A shambling corpse, slow and relentless, hard to put back down.",
+    "srd_ref": "zombie"
+  },
+  {
+    "id": "orc", "name": "Orc", "kind": "monster",
+    "size": "Medium", "type": "humanoid (orc)", "alignment": "chaotic evil", "cr": 0.5,
+    "abilities": {"str": 16, "dex": 12, "con": 16, "int": 7, "wis": 11, "cha": 10},
+    "hp": 15, "hit_dice": "2d8+6", "armor_class": 13, "ac_desc": "hide armor",
+    "speed": {"walk": "30 ft."},
+    "attack_bonus": 5, "damage": "1d12+3",
+    "skills": ["intimidation"], "skill_bonuses": {"intimidation": 2},
+    "senses": {"darkvision": "60 ft.", "passive_perception": "10"},
+    "languages": "Common, Orc",
+    "xp": 100,
+    "traits": ["Aggressive. As a bonus action, the orc can move up to its speed toward a hostile creature that it can see."],
+    "actions": [
+      {"name": "Greataxe", "attack_bonus": 5, "reach": "5 ft.", "target": "one target", "damage": "1d12+3", "damage_type": "slashing"},
+      {"name": "Javelin", "attack_bonus": 5, "reach": "30/120 ft.", "target": "one target", "damage": "1d6+3", "damage_type": "piercing"}
+    ],
+    "description": "A savage raider with a jutting jaw and a war-cry, worshipping Gruumsh.",
+    "srd_ref": "orc"
+  },
+  {
+    "id": "brown_bear", "name": "Brown Bear", "kind": "monster",
+    "size": "Large", "type": "beast", "alignment": "unaligned", "cr": 1.0,
+    "abilities": {"str": 19, "dex": 10, "con": 16, "int": 2, "wis": 13, "cha": 7},
+    "hp": 34, "hit_dice": "4d10+12", "armor_class": 11, "ac_desc": "natural armor",
+    "speed": {"walk": "40 ft.", "climb": "30 ft."},
+    "attack_bonus": 6, "damage": "1d8+4",
+    "skills": ["perception"], "skill_bonuses": {"perception": 3},
+    "senses": {"passive_perception": "13"},
+    "languages": "—",
+    "xp": 200,
+    "traits": ["Keen Smell. The bear has advantage on Wisdom (Perception) checks that rely on smell."],
+    "actions": [
+      {"name": "Multiattack", "desc": "The bear makes two attacks: one with its bite and one with its claws."},
+      {"name": "Bite", "attack_bonus": 6, "reach": "5 ft.", "target": "one target", "damage": "1d8+4", "damage_type": "piercing"},
+      {"name": "Claws", "attack_bonus": 6, "reach": "5 ft.", "target": "one target", "damage": "2d6+4", "damage_type": "slashing"}
+    ],
+    "description": "A massive, shaggy bruiser, territorial and quick to anger.",
+    "srd_ref": "brown-bear"
+  },
+  {
+    "id": "ogre", "name": "Ogre", "kind": "monster",
+    "size": "Large", "type": "giant", "alignment": "chaotic evil", "cr": 2.0,
+    "abilities": {"str": 19, "dex": 8, "con": 16, "int": 5, "wis": 7, "cha": 7},
+    "hp": 59, "hit_dice": "7d10+21", "armor_class": 11, "ac_desc": "hide armor",
+    "speed": {"walk": "40 ft."},
+    "attack_bonus": 6, "damage": "2d8+4",
+    "senses": {"darkvision": "60 ft.", "passive_perception": "8"},
+    "languages": "Common, Giant",
+    "xp": 450,
+    "actions": [
+      {"name": "Greatclub", "attack_bonus": 6, "reach": "5 ft.", "target": "one target", "damage": "2d8+4", "damage_type": "bludgeoning"},
+      {"name": "Javelin", "attack_bonus": 6, "reach": "30/120 ft.", "target": "one target", "damage": "2d6+4", "damage_type": "piercing"}
+    ],
+    "description": "A dim-witted brute the size of two men, lured by food and shiny things.",
+    "srd_ref": "ogre"
+  },
+  {
+    "id": "young_red_dragon", "name": "Young Red Dragon", "kind": "monster",
+    "size": "Large", "type": "dragon", "alignment": "chaotic evil", "cr": 10.0,
+    "abilities": {"str": 23, "dex": 10, "con": 21, "int": 14, "wis": 11, "cha": 19},
+    "hp": 178, "hit_dice": "17d10+85", "armor_class": 18, "ac_desc": "natural armor",
+    "speed": {"walk": "40 ft.", "climb": "40 ft.", "fly": "80 ft."},
+    "attack_bonus": 10, "damage": "2d10+6",
+    "saves": {"dex": 4, "con": 9, "wis": 4, "cha": 8},
+    "skills": ["perception", "stealth"], "skill_bonuses": {"perception": 8, "stealth": 4},
+    "damage_immunities": ["fire"],
+    "senses": {"blindsight": "30 ft.", "darkvision": "120 ft.", "passive_perception": "18"},
+    "languages": "Common, Draconic",
+    "xp": 5900,
+    "actions": [
+      {"name": "Multiattack", "desc": "The dragon makes three attacks: one with its bite and two with its claws."},
+      {"name": "Bite", "attack_bonus": 10, "reach": "10 ft.", "target": "one target", "damage": "2d10+6", "damage_type": "piercing", "desc": "Plus 3 (1d6) fire damage."},
+      {"name": "Claw", "attack_bonus": 10, "reach": "5 ft.", "target": "one target", "damage": "2d6+6", "damage_type": "slashing"},
+      {"name": "Fire Breath (Recharge 5-6)", "damage": "16d6", "damage_type": "fire", "desc": "The dragon exhales fire in a 30-foot cone. Each creature in that area must make a DC 17 Dexterity saving throw, taking 56 (16d6) fire damage on a failed save, or half as much damage on a successful one."}
+    ],
+    "description": "A cocky, swaggering predator already grown to terrible size, its scales a deepening crimson.",
+    "srd_ref": "young-red-dragon"
+  }
+]

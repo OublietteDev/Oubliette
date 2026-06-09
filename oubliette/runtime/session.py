@@ -46,6 +46,8 @@ class Session:
         self.time_of_day: str = "day"       # engine-owned environment (DM-reported); drives
         self.weather: str = "clear"         # narration tone + the soundscape (audio mixer §5)
         self.pack_id: str | None = None     # which content pack this campaign is playing
+        self.pack_name: str = ""            # the pack's display name (bestiary source label)
+        self.statblocks: tuple = ()         # the pack's authored StatBlocks (this-world bestiary)
         self.world_map: str | None = None   # top-level map background image filename (pack)
         self.ended: bool = False            # the DM closed this session (end_session tool)
         self.table: TableContract = DEFAULT_TABLE   # campaign's tone + content boundaries
@@ -78,6 +80,8 @@ class Session:
             chosen_pack = world.pack_id
             world_map = world.world_map
             ruleset = world.ruleset
+            pack_name = world.pack_name
+            statblocks = world.statblocks
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
         else:
             repo = seed()
@@ -87,6 +91,8 @@ class Session:
             start_scene = DEFAULT_SCENE
             world_map = None
             ruleset = None
+            pack_name = ""
+            statblocks = ()
             marker = {}
         canon = CanonStore()
         quests = QuestStore()
@@ -121,6 +127,8 @@ class Session:
         session.time_of_day = time_of_day
         session.weather = weather
         session.pack_id = chosen_pack
+        session.pack_name = pack_name
+        session.statblocks = statblocks
         session.world_map = world_map
         session.ended = ended
         session.table = table

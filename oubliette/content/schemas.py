@@ -78,21 +78,68 @@ class LootEntry(_Strict):
         return self
 
 
+class Action(_Strict):
+    """One monster action — an attack, a Multiattack instruction, or a special
+    move. The combat seam reads the StatBlock's top-level `attack_bonus`/`damage`
+    (the primary attack); these entries carry full-SRD fidelity for the panel and
+    the eventual tactical resolver. `desc` always holds the verbatim SRD prose, so
+    nothing is lost even when an action has no clean structured form."""
+
+    name: str
+    desc: str = ""                   # verbatim SRD text (multiattack rules, riders)
+    attack_bonus: int | None = None  # set for attack actions ("+5 to hit")
+    reach: str | None = None         # "5 ft.", "10 ft.", "30/120 ft." (ranged)
+    target: str | None = None        # "one target", "one creature"
+    damage: str | None = None        # primary damage dice, e.g. "2d6+3"
+    damage_type: str | None = None   # "slashing", "fire", ...
+
+
 class StatBlock(_Strict):
     id: str
     name: str
     kind: Literal["monster", "npc"] = "monster"
+
+    # --- identity / descriptors (full-SRD fidelity; all optional so the minimal
+    #     hand-authored pack blocks still validate) ---------------------------
+    size: str | None = None          # Tiny | Small | Medium | Large | Huge | Gargantuan
+    type: str | None = None          # "beast", "dragon", "humanoid (goblinoid)", ...
+    alignment: str | None = None     # "chaotic evil", "unaligned", ...
+    cr: float | None = None          # challenge rating (0.125 = 1/8, 0.25, 0.5, 1, ...)
+
+    # --- core combat numbers -----------------------------------------------
     abilities: dict[str, int] = Field(default_factory=dict)   # str..cha
     hp: int
+    hit_dice: str | None = None      # "4d8+8" (HP formula, for display)
     armor_class: int
+    ac_desc: str | None = None       # "natural armor", "chain shirt, shield"
+    speed: dict[str, str] = Field(default_factory=dict)       # {"walk": "30 ft.", "fly": "60 ft."}
+
+    # --- combat-seam primary attack (the auto-resolver reads THESE) ---------
     attack_bonus: int = 0
     damage: str = "1d4"
-    xp: int = 0
+
+    # --- proficiencies & defenses ------------------------------------------
+    saves: dict[str, int] = Field(default_factory=dict)       # {"dex": 5, "con": 7}
     skills: list[str] = Field(default_factory=list)           # proficient SRD skills
+    skill_bonuses: dict[str, int] = Field(default_factory=dict)  # {"perception": 4} (display)
+    damage_vulnerabilities: list[str] = Field(default_factory=list)
+    damage_resistances: list[str] = Field(default_factory=list)
+    damage_immunities: list[str] = Field(default_factory=list)
+    condition_immunities: list[str] = Field(default_factory=list)
+    senses: dict[str, str] = Field(default_factory=dict)      # {"darkvision": "60 ft.", "passive_perception": "12"}
+    languages: str = ""              # "Common, Draconic" or "—"
+
+    # --- prose & actions ----------------------------------------------------
+    xp: int = 0
     traits: list[str] = Field(default_factory=list)           # special abilities (prose)
+    actions: list[Action] = Field(default_factory=list)
+    legendary_actions: list[Action] = Field(default_factory=list)
+    reactions: list[Action] = Field(default_factory=list)
     loot: list[LootEntry] = Field(default_factory=list)
     description: str = ""
     srd_ref: str | None = None
+    portrait: str | None = None      # image filename in the source's portraits/ dir;
+                                     # falls back to "<id>.png", then a silhouette
 
 
 # --- NPCs --------------------------------------------------------------------

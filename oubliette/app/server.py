@@ -45,6 +45,7 @@ from ..trade.service import build_state, buy_transact, checkout_transact, sell_t
 from .repl import _load_dotenv, _pick_client
 
 STATIC = Path(__file__).parent / "static"
+_SRD_PORTRAITS = Path(__file__).parents[1] / "content" / "srd" / "portraits"
 DB_PATH = os.environ.get("OUBLIETTE_DB", "oubliette-save.sqlite")
 
 app = FastAPI(title="Oubliette Table")
@@ -759,6 +760,101 @@ def _spell_name(rs: Ruleset, spell_id: str) -> str:
 @app.get("/api/chargen/options")
 async def get_chargen_options() -> JSONResponse:
     return JSONResponse(_chargen_options())
+
+
+# --- the bestiary (global SRD monster reference) -----------------------------
+_CR_FRACTIONS = {0.125: "1/8", 0.25: "1/4", 0.5: "1/2"}
+
+
+def _cr_label(cr: float | None) -> str:
+    """Human CR string: fractions for the sub-1 tiers, plain ints otherwise."""
+    if cr is None:
+        return "—"
+    if cr in _CR_FRACTIONS:
+        return _CR_FRACTIONS[cr]
+    return str(int(cr)) if cr == int(cr) else str(cr)
+
+
+def _action_view(a) -> dict:
+    return {"name": a.name, "desc": a.desc, "attack_bonus": a.attack_bonus,
+            "reach": a.reach, "target": a.target,
+            "damage": a.damage, "damage_type": a.damage_type}
+
+
+def _statblock_view(sb, source: str, scope: str) -> dict:
+    """One stat block, flattened for the panel. Empty/None fields are passed through
+    so the client can decide what to show (graceful degradation for minimal blocks).
+    `source` is the display label (pack name or "SRD"); `scope` ("srd"/"pack") routes
+    the portrait endpoint to the right images directory."""
+    return {
+        "id": sb.id, "name": sb.name, "kind": sb.kind,
+        "source": source, "scope": scope,
+        "portrait_url": f"/api/monster-portrait/{scope}/{sb.id}",
+        "size": sb.size, "type": sb.type, "alignment": sb.alignment,
+        "cr": sb.cr, "cr_label": _cr_label(sb.cr), "xp": sb.xp,
+        "abilities": dict(sb.abilities),
+        "hp": sb.hp, "hit_dice": sb.hit_dice,
+        "armor_class": sb.armor_class, "ac_desc": sb.ac_desc,
+        "speed": dict(sb.speed),
+        "saves": dict(sb.saves), "skills": list(sb.skills),
+        "skill_bonuses": dict(sb.skill_bonuses),
+        "damage_vulnerabilities": list(sb.damage_vulnerabilities),
+        "damage_resistances": list(sb.damage_resistances),
+        "damage_immunities": list(sb.damage_immunities),
+        "condition_immunities": list(sb.condition_immunities),
+        "senses": dict(sb.senses), "languages": sb.languages,
+        "traits": list(sb.traits),
+        "actions": [_action_view(a) for a in sb.actions],
+        "legendary_actions": [_action_view(a) for a in sb.legendary_actions],
+        "reactions": [_action_view(a) for a in sb.reactions],
+        "description": sb.description,
+    }
+
+
+@app.get("/api/bestiary")
+async def get_bestiary() -> JSONResponse:
+    """The bestiary the panel renders: the loaded world's own monsters PLUS the global
+    SRD library, merged into one list ordered by challenge rating then name. Each entry
+    is tagged with its source so the panel can badge pack vs SRD."""
+    rs = _ruleset()
+    session = GAME.session
+    pack_label = session.pack_name or "This World"
+    views = [_statblock_view(sb, pack_label, "pack") for sb in session.statblocks]
+    views += [_statblock_view(sb, "SRD", "srd") for sb in rs.bestiary.values()]
+    # stable: challenge rating, then name (the panel groups by CR tier).
+    views.sort(key=lambda v: (v["cr"] if v["cr"] is not None else -1.0, v["name"]))
+    return JSONResponse({"monsters": views})
+
+
+def _monster_portrait_path(scope: str, mid: str) -> Path | None:
+    """Resolve a monster's portrait file: the stat block's `portrait` field if set,
+    else `<id>.png`, under the scope's portraits/ dir. None if nothing on disk."""
+    if scope == "srd":
+        sb = _ruleset().bestiary.get(mid)
+        base = _SRD_PORTRAITS
+    elif scope == "pack":
+        sb = next((s for s in GAME.session.statblocks if s.id == mid), None)
+        base = _PACKS_ROOT / (GAME.pack_id or "") / "portraits"
+    else:
+        return None
+    if sb is None:
+        return None
+    fname = sb.portrait or f"{mid}.png"
+    if "/" in fname or "\\" in fname:        # no path traversal out of the dir
+        return None
+    path = base / fname
+    return path if path.is_file() else None
+
+
+@app.get("/api/monster-portrait/{scope}/{mid}")
+async def monster_portrait(scope: str, mid: str) -> FileResponse:
+    """A monster's portrait (combat-board token art + the bestiary detail). Serves the
+    authored image if present, else a neutral silhouette so every monster has one."""
+    path = _monster_portrait_path(scope, mid)
+    if path is not None:
+        return FileResponse(path, headers={"Cache-Control": "no-cache"})
+    return FileResponse(STATIC / "img" / "monster-fallback.svg",
+                        headers={"Cache-Control": "no-cache"})
 
 
 # --- the read-only character sheet (CS3) -------------------------------------

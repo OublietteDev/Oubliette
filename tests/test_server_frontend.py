@@ -266,6 +266,51 @@ def test_chargen_options_serialize_the_ruleset():
     assert opt["standard_array"] == [15, 14, 13, 12, 10, 8]
 
 
+def test_bestiary_endpoint_serializes_the_srd_monsters():
+    _new()
+    mons = client.get("/api/bestiary").json()["monsters"]
+    ids = {m["id"] for m in mons}
+    assert {"goblin", "wolf", "young_red_dragon"} <= ids
+    # ordered by challenge rating, ascending (None-CR pack blocks sort first).
+    crs = [(m["cr"] if m["cr"] is not None else -1.0) for m in mons]
+    assert crs == sorted(crs)
+    assert mons[-1]["id"] == "young_red_dragon"
+    drake = next(m for m in mons if m["id"] == "young_red_dragon")
+    assert drake["cr_label"] == "10" and drake["size"] == "Large"
+    assert drake["damage_immunities"] == ["fire"]
+    assert drake["speed"]["fly"] == "80 ft."
+    assert any(a["name"] == "Multiattack" for a in drake["actions"])
+    # every entry is source-tagged and carries a portrait URL routed by scope.
+    assert drake["source"] == "SRD" and drake["scope"] == "srd"
+    assert drake["portrait_url"] == "/api/monster-portrait/srd/young_red_dragon"
+    # sub-1 CR renders as a fraction for the player.
+    goblin = next(m for m in mons if m["id"] == "goblin")
+    assert goblin["cr_label"] == "1/4"
+
+
+def test_bestiary_merges_the_loaded_world_monsters():
+    """The panel shows the loaded pack's own monsters alongside the SRD library, each
+    tagged with its source so the front-end can badge pack vs SRD."""
+    _new()                                   # default world = Brightvale
+    mons = client.get("/api/bestiary").json()["monsters"]
+    pack = [m for m in mons if m["scope"] == "pack"]
+    assert {m["id"] for m in pack} >= {"road_bandit", "lean_wolf"}
+    assert all(m["source"] and m["source"] != "SRD" for m in pack)
+    bandit = next(m for m in pack if m["id"] == "road_bandit")
+    assert bandit["portrait_url"] == "/api/monster-portrait/pack/road_bandit"
+
+
+def test_monster_portrait_serves_art_or_falls_back():
+    """A monster with no authored art resolves to the bundled silhouette (so combat
+    tokens are never blank); one with a real <id>.png on disk serves that file."""
+    drake = client.get("/api/monster-portrait/srd/young_red_dragon")   # no art yet
+    assert drake.status_code == 200
+    assert drake.headers["content-type"].startswith("image/svg")
+    goblin = client.get("/api/monster-portrait/srd/goblin")            # goblin.png exists
+    assert goblin.status_code == 200
+    assert goblin.headers["content-type"].startswith("image/png")
+
+
 def test_chargen_preview_accepts_a_valid_build():
     d = client.post("/api/chargen/preview", json=_FIGHTER_BUILD).json()
     assert d["ok"] is True and d["errors"] == []

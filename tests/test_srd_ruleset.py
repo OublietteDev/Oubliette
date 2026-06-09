@@ -105,6 +105,50 @@ def test_full_spell_list_present():
             assert cid in rs.classes
 
 
+def test_bundled_bestiary_loads_sorted_by_cr():
+    """The global SRD bestiary layer (bestiary arc). A seed of 8 iconic monsters
+    across the CR range; the content fleet grows it to the full SRD list. Spot-check
+    the schema's enriched fields survived the round-trip and the CR sort is stable."""
+    rs = load_ruleset()
+    assert set(rs.bestiary) == {"goblin", "wolf", "skeleton", "zombie", "orc",
+                                "brown_bear", "ogre", "young_red_dragon"}
+    # monsters_by_cr is the panel's order: ascending CR, then name.
+    names = [s.name for s in rs.monsters_by_cr()]
+    assert names[0] in {"Goblin", "Skeleton", "Wolf", "Zombie"}  # the CR-1/4 cohort
+    assert names[-1] == "Young Red Dragon"                       # CR 10, the top
+    crs = [s.cr for s in rs.monsters_by_cr()]
+    assert crs == sorted(crs)
+    # enriched fields round-trip: descriptors, defenses, and an actions list.
+    drake = rs.bestiary["young_red_dragon"]
+    assert drake.size == "Large" and drake.type == "dragon" and drake.cr == 10.0
+    assert drake.damage_immunities == ["fire"]
+    assert drake.speed["fly"] == "80 ft."
+    assert drake.actions[0].name == "Multiattack"
+    assert any(a.name.startswith("Fire Breath") for a in drake.actions)
+    # the combat seam still reads a single primary attack off the top level.
+    assert drake.attack_bonus == 10 and drake.damage == "2d10+6"
+
+
+def test_bad_skill_in_bestiary_flagged(tmp_path):
+    root = _write_srd(tmp_path, bestiary=[{
+        "id": "griffon", "name": "Griffon", "hp": 59, "armor_class": 12,
+        "skills": ["falconry"],
+    }])
+    with pytest.raises(RulesetValidationError) as e:
+        load_ruleset(srd_root=root)
+    assert any("falconry" in m for m in e.value.errors)
+
+
+def test_unknown_bestiary_loot_ref_flagged(tmp_path):
+    root = _write_srd(tmp_path, bestiary=[{
+        "id": "mimic", "name": "Mimic", "hp": 58, "armor_class": 12,
+        "loot": [{"item": "phantom_blade", "qty": 1}],
+    }])
+    with pytest.raises(RulesetValidationError) as e:
+        load_ruleset(srd_root=root)
+    assert any("phantom_blade" in m for m in e.value.errors)
+
+
 def test_only_srd_legal_backgrounds_and_feats():
     """Strict-SRD guard. SRD 5.1 contains exactly ONE background (Acolyte) and ONE
     feat (Grappler). This tripwire fails if non-SRD content sneaks back in — a prior

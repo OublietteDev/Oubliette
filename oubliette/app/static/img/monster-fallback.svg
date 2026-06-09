@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Unknown creature">
+  <defs>
+    <radialGradient id="mbg" cx="50%" cy="42%" r="80%">
+      <stop offset="0%" stop-color="#2a221b"/>
+      <stop offset="64%" stop-color="#1b1713"/>
+      <stop offset="100%" stop-color="#14110f"/>
+    </radialGradient>
+  </defs>
+  <rect width="240" height="240" fill="url(#mbg)"/>
+  <!-- a clawed-beast silhouette: generic stand-in until real art is dropped in -->
+  <g fill="#d9b25a" fill-opacity="0.22" stroke="#d9b25a" stroke-opacity="0.5" stroke-width="1.5">
+    <!-- head + horns -->
+    <path d="M120 56
+             C103 56 89 70 89 88
+             C89 100 95 110 104 116
+             C98 122 96 130 98 139
+             C84 150 78 168 80 186
+             C92 176 104 172 116 172
+             L124 172
+             C136 172 148 176 160 186
+             C162 168 156 150 142 139
+             C144 130 142 122 136 116
+             C145 110 151 100 151 88
+             C151 70 137 56 120 56 Z"/>
+    <path d="M89 84 L72 64 L86 82 Z M151 84 L168 64 L154 82 Z" fill-opacity="0.4"/>
+  </g>
+  <!-- eyes -->
+  <g fill="#d9b25a" fill-opacity="0.85">
+    <circle cx="110" cy="92" r="4.5"/>
+    <circle cx="130" cy="92" r="4.5"/>
+  </g>
+  <text x="120" y="214" text-anchor="middle" fill="#a99d88" fill-opacity="0.7"
+        font-family="Georgia, serif" font-style="italic" font-size="15">no portrait</text>
+</svg>

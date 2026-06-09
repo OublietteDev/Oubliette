@@ -17,6 +17,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError
 
 from ..enums import Skill
+from .schemas import StatBlock
 from .srd_schemas import (Background, CharClass, Condition, Feat, Race, Spell,
                           SrdEquipment, Subclass, Subrace)
 
@@ -49,6 +50,13 @@ class Ruleset:
     feats: dict[str, Feat] = field(default_factory=dict)
     conditions: dict[str, Condition] = field(default_factory=dict)
     equipment: dict[str, SrdEquipment] = field(default_factory=dict)
+    bestiary: dict[str, StatBlock] = field(default_factory=dict)
+
+    def monsters_by_cr(self) -> list[StatBlock]:
+        """The bestiary sorted by challenge rating then name — the panel's order
+        and a sensible default for any 'pick an enemy near CR n' helper."""
+        return sorted(self.bestiary.values(),
+                      key=lambda s: (s.cr if s.cr is not None else -1.0, s.name))
 
     def subclasses_for(self, class_id: str) -> list[Subclass]:
         return [s for s in self.subclasses.values() if s.parent == class_id]
@@ -110,12 +118,12 @@ def _dup_ids(entities: list, type_name: str, errors: list[str]) -> None:
 
 # --- cross-reference linter ---------------------------------------------------
 def _lint(classes, subclasses, races, subraces, backgrounds, spells, feats,
-          conditions, equipment, errors: list[str]) -> None:
+          conditions, equipment, bestiary, errors: list[str]) -> None:
     for ents, name in [(classes, "classes"), (subclasses, "subclasses"),
                        (races, "races"), (subraces, "subraces"),
                        (backgrounds, "backgrounds"), (spells, "spells"),
                        (feats, "feats"), (conditions, "conditions"),
-                       (equipment, "equipment")]:
+                       (equipment, "equipment"), (bestiary, "bestiary")]:
         _dup_ids(ents, name, errors)
 
     class_ids = {c.id for c in classes}
@@ -157,6 +165,19 @@ def _lint(classes, subclasses, races, subraces, backgrounds, spells, feats,
             if cid not in class_ids:
                 errors.append(f"spells: {sp.id}.classes references unknown class {cid!r}")
 
+    # Bestiary: proficient skills must be real SRD skills; any item loot must
+    # name a known piece of SRD equipment (gold loot needs no ref).
+    for sb in bestiary:
+        for sk in sb.skills:
+            if sk not in _VALID_SKILLS:
+                errors.append(f"bestiary: {sb.id} lists unknown skill {sk!r}")
+        for sk in sb.skill_bonuses:
+            if sk not in _VALID_SKILLS:
+                errors.append(f"bestiary: {sb.id}.skill_bonuses lists unknown skill {sk!r}")
+        for drop in sb.loot:
+            if drop.item is not None and drop.item not in equip_ids:
+                errors.append(f"bestiary: {sb.id}.loot references unknown equipment {drop.item!r}")
+
 
 # --- public API ---------------------------------------------------------------
 def load_ruleset(srd_root: Path | None = None) -> Ruleset:
@@ -180,9 +201,10 @@ def load_ruleset(srd_root: Path | None = None) -> Ruleset:
     feats = _parse_list(root, "feats.json", Feat, errors)
     conditions = _parse_list(root, "conditions.json", Condition, errors)
     equipment = _parse_list(root, "equipment.json", SrdEquipment, errors)
+    bestiary = _parse_list(root, "bestiary.json", StatBlock, errors)
 
     _lint(classes, subclasses, races, subraces, backgrounds, spells, feats,
-          conditions, equipment, errors)
+          conditions, equipment, bestiary, errors)
 
     if errors:
         raise RulesetValidationError(errors)
@@ -198,4 +220,5 @@ def load_ruleset(srd_root: Path | None = None) -> Ruleset:
         feats={f.id: f for f in feats},
         conditions={c.id: c for c in conditions},
         equipment={e.id: e for e in equipment},
+        bestiary={s.id: s for s in bestiary},
     )
