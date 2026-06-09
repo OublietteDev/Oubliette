@@ -24,6 +24,7 @@ from arena.models.actions import (
 )
 from arena.combat.stat_modifiers import has_evasion
 from arena.combat.actions import resolve_effect
+from arena.combat.damage import DamagePacket
 from arena.combat.events import CombatEventType
 from arena.grid.hexgrid import HexGrid
 from arena.grid.coordinates import HexCoord
@@ -223,7 +224,7 @@ class TestEvasionIntegration:
         # Save: d20 roll of 18 + DEX mod (+2) = 20 >= DC 15 → success
         # Damage: 24
         with patch("arena.combat.actions.roll_die", return_value=18), \
-             patch("arena.combat.actions.roll_damage", return_value=(24, [{"dice": "8d6", "total": 24}])):
+             patch("arena.combat.actions.roll_damage", side_effect=lambda *a, **k: [DamagePacket(amount=24, dtype="fire")]):
             result = resolve_effect(
                 action=action,
                 user=caster,
@@ -256,7 +257,7 @@ class TestEvasionIntegration:
         # Save: d20 roll of 2 + DEX mod (+2) = 4 < DC 15 → fail
         # Damage: 24
         with patch("arena.combat.actions.roll_die", return_value=2), \
-             patch("arena.combat.actions.roll_damage", return_value=(24, [{"dice": "8d6", "total": 24}])):
+             patch("arena.combat.actions.roll_damage", side_effect=lambda *a, **k: [DamagePacket(amount=24, dtype="fire")]):
             result = resolve_effect(
                 action=action,
                 user=caster,
@@ -289,7 +290,7 @@ class TestEvasionIntegration:
         # Save: d20 roll of 2 + WIS mod (+0) = 2 < DC 15 → fail
         # Damage: 24 → full damage (no evasion for WIS)
         with patch("arena.combat.actions.roll_die", return_value=2), \
-             patch("arena.combat.actions.roll_damage", return_value=(24, [{"dice": "8d6", "total": 24}])):
+             patch("arena.combat.actions.roll_damage", side_effect=lambda *a, **k: [DamagePacket(amount=24, dtype="fire")]):
             result = resolve_effect(
                 action=action,
                 user=caster,
@@ -321,7 +322,7 @@ class TestEvasionIntegration:
 
         # Save: fail, Damage: 24 → full
         with patch("arena.combat.actions.roll_die", return_value=2), \
-             patch("arena.combat.actions.roll_damage", return_value=(24, [{"dice": "8d6", "total": 24}])):
+             patch("arena.combat.actions.roll_damage", side_effect=lambda *a, **k: [DamagePacket(amount=24, dtype="fire")]):
             result = resolve_effect(
                 action=action,
                 user=caster,
@@ -346,7 +347,7 @@ class TestEvasionIntegration:
         # Save: d20 roll of 18 + DEX mod (+2) = 20 >= DC 15 → success
         # Damage: 24, half = 12
         with patch("arena.combat.actions.roll_die", return_value=18), \
-             patch("arena.combat.actions.roll_damage", return_value=(24, [{"dice": "8d6", "total": 24}])):
+             patch("arena.combat.actions.roll_damage", side_effect=lambda *a, **k: [DamagePacket(amount=24, dtype="fire")]):
             result = resolve_effect(
                 action=action,
                 user=caster,

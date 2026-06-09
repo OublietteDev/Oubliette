@@ -13,6 +13,7 @@ from arena.models.actions import (
     SavingThrowEffect, DamageRoll, DamageType,
 )
 from arena.combat.actions import resolve_effect, ActionResult
+from arena.combat.damage import DamagePacket
 from arena.combat.manager import CombatManager, CombatState, TurnPhase, Combatant
 from arena.combat.events import CombatEventType
 from arena.grid.hexgrid import HexGrid
@@ -220,7 +221,7 @@ class TestResolveEffectSavingThrow:
 
         # High roll = save success; control damage dice
         with patch("arena.combat.actions.roll_die", return_value=18):
-            with patch("arena.combat.actions.roll_damage", return_value=(10, "3d6=10")):
+            with patch("arena.combat.actions.roll_damage", side_effect=lambda *a, **k: [DamagePacket(amount=10, dtype="fire")]):
                 result = resolve_effect(
                     user, "caster", target, "target", action, grid,
                 )

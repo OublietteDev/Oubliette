@@ -19,6 +19,7 @@ from arena.models.actions import (
 )
 from arena.combat.creature_type_bonus import check_creature_type_bonus
 from arena.combat.actions import resolve_attack_damage, resolve_effect, AttackHitResult
+from arena.combat.damage import DamagePacket
 from arena.combat.events import CombatEventType
 from arena.grid.hexgrid import HexGrid
 from arena.grid.coordinates import HexCoord
@@ -217,7 +218,7 @@ class TestAttackCreatureTypeBonus:
             combatants={"paladin_1": attacker, "zombie_1": target},
         )
 
-        with patch("arena.combat.actions.roll_damage", return_value=(10, [{"dice": "2d8", "total": 10, "type": "radiant"}])):
+        with patch("arena.combat.actions.roll_damage", side_effect=lambda *a, **k: [DamagePacket(amount=10, dtype="radiant")]):
             result = resolve_attack_damage(hit_result)
 
         # Should have events: damage event + creature type bonus INFO
@@ -255,7 +256,7 @@ class TestAttackCreatureTypeBonus:
             combatants={"paladin_1": attacker, "bandit_1": target},
         )
 
-        with patch("arena.combat.actions.roll_damage", return_value=(10, [{"dice": "2d8", "total": 10, "type": "radiant"}])):
+        with patch("arena.combat.actions.roll_damage", side_effect=lambda *a, **k: [DamagePacket(amount=10, dtype="radiant")]):
             result = resolve_attack_damage(hit_result)
 
         # Should NOT have creature type bonus event
@@ -292,7 +293,7 @@ class TestAttackCreatureTypeBonus:
             combatants={"paladin_1": attacker, "imp_1": target},
         )
 
-        with patch("arena.combat.actions.roll_damage", return_value=(10, [{"dice": "2d8", "total": 10, "type": "radiant"}])):
+        with patch("arena.combat.actions.roll_damage", side_effect=lambda *a, **k: [DamagePacket(amount=10, dtype="radiant")]):
             result = resolve_attack_damage(hit_result)
 
         info_events = [

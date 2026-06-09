@@ -894,7 +894,9 @@ class CombatManager:
 
         from arena.combat.actions import resolve_saving_throw
         from arena.combat.concentration import check_concentration
-        from arena.combat.damage import roll_damage, apply_damage
+        from arena.combat.damage import (
+            roll_damage, apply_damage, halve_packets, zero_packets,
+        )
         from arena.combat.conditions import apply_condition
         from arena.models.conditions import Condition
 
@@ -920,19 +922,19 @@ class CombatManager:
 
                 # Damage on fail (or half on success)
                 if save.damage_on_fail:
-                    total_dmg, dmg_details = roll_damage(
+                    packets = roll_damage(
                         save.damage_on_fail, target.creature,
                         is_critical=False,
                     )
                     if save_success:
                         if save.damage_on_success == "half":
-                            total_dmg = total_dmg // 2
+                            halve_packets(packets)
                         elif save.damage_on_success == "none":
-                            total_dmg = 0
-                    if total_dmg > 0:
-                        primary_type = save.damage_on_fail[0].damage_type.value
+                            zero_packets(packets)
+                    if sum(p.amount for p in packets) > 0:
+                        roll_details = [p.to_detail() for p in packets]
                         dmg_event, dp_events = apply_damage(
-                            target.creature, total_dmg, primary_type,
+                            target.creature, packets,
                             creature_id=tid,
                         )
                         dmg_event.source_id = "__lair__"
@@ -940,7 +942,7 @@ class CombatManager:
                         dmg_event.message = (
                             f"{target.creature.name} {dmg_event.message}"
                         )
-                        dmg_event.details["roll_details"] = dmg_details
+                        dmg_event.details["roll_details"] = roll_details
                         all_events.append(dmg_event)
                         all_events.extend(dp_events)
 

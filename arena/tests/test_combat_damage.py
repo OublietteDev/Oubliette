@@ -20,7 +20,7 @@ def _make_creature(hp=20, strength=16, dexterity=14):
 
 
 class TestRollDamage:
-    """Tests for roll_damage function."""
+    """Tests for roll_damage function (returns a list of DamagePacket)."""
 
     @patch("arena.combat.damage.roll_expression")
     def test_basic_damage_roll(self, mock_roll):
@@ -29,12 +29,12 @@ class TestRollDamage:
         damage_rolls = [
             DamageRoll(dice="1d8", damage_type=DamageType.SLASHING, ability_modifier="strength"),
         ]
-        total, details = roll_damage(damage_rolls, attacker)
+        packets = roll_damage(damage_rolls, attacker)
         # 5 (dice) + 3 (str mod) = 8
-        assert total == 8
-        assert len(details) == 1
-        assert details[0]["ability_bonus"] == 3
-        assert details[0]["damage_type"] == "slashing"
+        assert len(packets) == 1
+        assert packets[0].amount == 8
+        assert packets[0].breakdown["ability_bonus"] == 3
+        assert packets[0].dtype == "slashing"
 
     @patch("arena.combat.damage.roll_expression")
     def test_critical_doubles_dice(self, mock_roll):
@@ -43,9 +43,9 @@ class TestRollDamage:
         damage_rolls = [
             DamageRoll(dice="1d8", damage_type=DamageType.SLASHING, ability_modifier="strength"),
         ]
-        total, details = roll_damage(damage_rolls, attacker, is_critical=True)
+        packets = roll_damage(damage_rolls, attacker, is_critical=True)
         # 4 + 4 (doubled dice) + 3 (str mod, not doubled) = 11
-        assert total == 11
+        assert packets[0].amount == 11
         assert mock_roll.call_count == 2  # Called twice for critical
 
     @patch("arena.combat.damage.roll_expression")
@@ -55,10 +55,10 @@ class TestRollDamage:
         damage_rolls = [
             DamageRoll(dice="1d6", damage_type=DamageType.FIRE, bonus=2),
         ]
-        total, details = roll_damage(damage_rolls, attacker)
+        packets = roll_damage(damage_rolls, attacker)
         # 3 (dice) + 2 (bonus) = 5
-        assert total == 5
-        assert details[0]["bonus"] == 2
+        assert packets[0].amount == 5
+        assert packets[0].breakdown["bonus"] == 2
 
     @patch("arena.combat.damage.roll_expression")
     def test_multiple_damage_rolls(self, mock_roll):
@@ -68,9 +68,12 @@ class TestRollDamage:
             DamageRoll(dice="1d6", damage_type=DamageType.SLASHING),
             DamageRoll(dice="1d4", damage_type=DamageType.FIRE),
         ]
-        total, details = roll_damage(damage_rolls, attacker)
-        assert total == 7
-        assert len(details) == 2
+        packets = roll_damage(damage_rolls, attacker)
+        # One packet per type, no longer summed into a single total
+        assert len(packets) == 2
+        assert sum(p.amount for p in packets) == 7
+        assert packets[0].dtype == "slashing"
+        assert packets[1].dtype == "fire"
 
     @patch("arena.combat.damage.roll_expression")
     def test_damage_minimum_zero(self, mock_roll):
@@ -79,9 +82,9 @@ class TestRollDamage:
         damage_rolls = [
             DamageRoll(dice="1d4", damage_type=DamageType.BLUDGEONING, bonus=-3, ability_modifier="strength"),
         ]
-        total, details = roll_damage(damage_rolls, attacker)
-        # 1 (dice) + (-3) bonus + (-2) str mod = -4, floored to 0
-        assert total == 0
+        packets = roll_damage(damage_rolls, attacker)
+        # 1 (dice) + (-3) bonus + (-2) str mod = -4, floored to 0 per packet
+        assert packets[0].amount == 0
 
 
 class TestApplyDamage:

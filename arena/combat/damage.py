@@ -1,4 +1,20 @@
-"""Damage calculation and application."""
+"""Damage calculation and application.
+
+Damage flows as a LIST of typed ``DamagePacket`` objects (one per damage type)
+from the roll all the way to the target, and is realized into hit points only at
+the very end of :func:`apply_damage`.  Keeping the per-type breakdown alive means
+mixed-type attacks (a dragon's piercing+fire bite, a flame tongue's slashing+fire,
+Divine Smite's weapon+radiant) resolve resistance / immunity / vulnerability
+*per type*, the way 5e intends.
+
+Single-type damage is just a one-element packet list, so its arithmetic is
+identical to the old "one int + one type" path — the overwhelming majority of
+content (and tests) is unaffected by construction.  ``apply_damage`` still accepts
+a bare ``int`` + ``damage_type`` for callers that only ever deal one type
+(recurring effects, zones); that path wraps the value in a single packet.
+"""
+
+from dataclasses import dataclass, field
 
 from arena.models.character import Creature
 from arena.models.actions import DamageRoll
@@ -16,12 +32,40 @@ from arena.combat.death_prevention import (
 )
 
 
+@dataclass
+class DamagePacket:
+    """A single typed chunk of damage flowing through resolution.
+
+    ``tags`` is an OPEN set (``"magical"``, ``"silvered"``, a source id, …): the
+    extension point for later effects, which attach tags that defense handlers
+    check for — the packet *structure* never has to change.  ``can_reduce``
+    lets a packet opt out of flat/reaction reductions.  ``breakdown`` carries the
+    dice/rolls detail purely for the event log.
+    """
+
+    amount: int
+    dtype: str
+    source: str = ""
+    tags: set = field(default_factory=set)
+    can_reduce: bool = True
+    breakdown: dict = field(default_factory=dict)
+
+    def to_detail(self) -> dict:
+        """Render this packet as an event/log detail dict."""
+        detail = dict(self.breakdown)
+        detail["damage_type"] = self.dtype
+        detail["subtotal"] = self.amount
+        if self.source:
+            detail["source"] = self.source
+        return detail
+
+
 def roll_damage(
     damage_rolls: list[DamageRoll],
     attacker: Creature,
     is_critical: bool = False,
-) -> tuple[int, list[dict]]:
-    """Roll damage for an attack.
+) -> list[DamagePacket]:
+    """Roll an attack's damage into a list of typed packets (one per DamageRoll).
 
     Args:
         damage_rolls: List of DamageRoll from the Attack model.
@@ -29,10 +73,9 @@ def roll_damage(
         is_critical: If True, double the dice (not the modifier).
 
     Returns:
-        (total_damage, details_list) where details_list has per-roll breakdown.
+        A list of DamagePacket, one per damage roll, each amount floored at 0.
     """
-    total = 0
-    details = []
+    packets: list[DamagePacket] = []
 
     for dr in damage_rolls:
         # Roll the dice
@@ -44,108 +87,167 @@ def roll_damage(
             dice_total += crit_total
             dice_list = dice_list + crit_list
 
-        # Add flat bonus from the DamageRoll
         bonus = dr.bonus
 
-        # Add ability modifier if specified
         ability_bonus = 0
         if dr.ability_modifier:
             ability_bonus = get_effective_ability_modifier(attacker, dr.ability_modifier)
 
         subtotal = dice_total + bonus + ability_bonus
-        total += subtotal
 
-        details.append(
-            {
-                "dice": dr.dice,
-                "rolls": dice_list,
-                "bonus": bonus,
-                "ability_bonus": ability_bonus,
-                "damage_type": dr.damage_type.value,
-                "subtotal": subtotal,
-            }
+        packets.append(
+            DamagePacket(
+                amount=max(0, subtotal),
+                dtype=dr.damage_type.value,
+                breakdown={
+                    "dice": dr.dice,
+                    "rolls": dice_list,
+                    "bonus": bonus,
+                    "ability_bonus": ability_bonus,
+                },
+            )
         )
 
-    return max(0, total), details
+    return packets
+
+
+def halve_packets(packets: list[DamagePacket]) -> list[DamagePacket]:
+    """Halve every packet's amount (rounded down per packet).
+
+    Used by save-for-half, Evasion, and Uncanny Dodge.  For single-type damage
+    this is identical to halving the scalar total.
+    """
+    for p in packets:
+        p.amount = p.amount // 2
+    return packets
+
+
+def zero_packets(packets: list[DamagePacket]) -> list[DamagePacket]:
+    """Set every packet's amount to 0 (save-for-none, Evasion on success)."""
+    for p in packets:
+        p.amount = 0
+    return packets
+
+
+def reduce_packets_flat(packets: list[DamagePacket], amount: int) -> list[DamagePacket]:
+    """Drain a flat ``amount`` of reduction across reducible packets, in order.
+
+    Mirrors the old scalar ``max(0, damage - reduction)`` for a single packet.
+    """
+    remaining = amount
+    for p in packets:
+        if remaining <= 0:
+            break
+        if not p.can_reduce:
+            continue
+        take = min(p.amount, remaining)
+        p.amount -= take
+        remaining -= take
+    return packets
+
+
+def _defend_packet(
+    packet: DamagePacket,
+    immunities: list[str],
+    resistances: list[str],
+    vulnerabilities: list[str],
+) -> tuple[int, str]:
+    """Apply immunity / resistance / vulnerability to one packet by its type.
+
+    Processing order per 5e: immunity negates, then resistance halves, then
+    vulnerability doubles.  Resistance and vulnerability to the same type cancel.
+
+    Returns:
+        (modified_amount, modifier_text) for logging.
+    """
+    dtype = packet.dtype.lower()
+    is_immune = dtype in immunities
+    is_resistant = dtype in resistances
+    is_vulnerable = dtype in vulnerabilities
+
+    if is_immune:
+        return 0, " [IMMUNE]"
+
+    if is_resistant and is_vulnerable:
+        return packet.amount, ""
+
+    if is_resistant:
+        return packet.amount // 2, " [RESISTANT - halved]"
+
+    if is_vulnerable:
+        return packet.amount * 2, " [VULNERABLE - doubled]"
+
+    return packet.amount, ""
 
 
 def _apply_damage_modifiers(
     target: Creature, damage: int, damage_type: str
 ) -> tuple[int, str]:
-    """Apply resistance, immunity, and vulnerability to damage.
+    """Scalar resistance/immunity/vulnerability helper (single type).
 
-    Processing order per 5e rules:
-    1. Immunity (negates all damage of that type)
-    2. Resistance (halves damage)
-    3. Vulnerability (doubles damage)
-
-    If a creature has both resistance and vulnerability to the same type,
-    they cancel out (apply neither).
-
-    Args:
-        target: The creature taking damage.
-        damage: Raw damage amount.
-        damage_type: The damage type string (e.g., "fire", "slashing").
+    Kept as a thin wrapper over the packet defense logic for callers/tests that
+    work in single-type scalars.
 
     Returns:
         (modified_damage, modifier_text) for logging.
     """
-    dtype = damage_type.lower()
-    is_immune = dtype in [d.lower() for d in get_effective_damage_immunities(target)]
-    is_resistant = dtype in [d.lower() for d in get_effective_damage_resistances(target)]
-    is_vulnerable = dtype in [d.lower() for d in target.damage_vulnerabilities]
-
-    if is_immune:
-        return 0, " [IMMUNE]"
-
-    # Resistance and vulnerability cancel each other
-    if is_resistant and is_vulnerable:
-        return damage, ""
-
-    if is_resistant:
-        return damage // 2, " [RESISTANT - halved]"
-
-    if is_vulnerable:
-        return damage * 2, " [VULNERABLE - doubled]"
-
-    return damage, ""
+    immunities = [d.lower() for d in get_effective_damage_immunities(target)]
+    resistances = [d.lower() for d in get_effective_damage_resistances(target)]
+    vulnerabilities = [d.lower() for d in target.damage_vulnerabilities]
+    return _defend_packet(
+        DamagePacket(amount=damage, dtype=damage_type),
+        immunities,
+        resistances,
+        vulnerabilities,
+    )
 
 
 def apply_damage(
     target: Creature,
-    damage: int,
-    damage_type: str,
+    damage: "int | list[DamagePacket]",
+    damage_type: str | None = None,
     creature_id: str = "",
 ) -> tuple[CombatEvent, list[CombatEvent]]:
-    """Apply damage to a creature, accounting for defenses and temp HP.
+    """Apply damage to a creature, accounting for per-type defenses and temp HP.
+
+    ``damage`` may be either a list of :class:`DamagePacket` (the full pipeline)
+    or a bare ``int`` with ``damage_type`` (single-type convenience, wrapped into
+    one packet).
 
     Processing order:
-    1. Apply resistance/immunity/vulnerability modifiers.
-    2. Subtract from temporary hit points first.
+    1. Per packet: apply resistance / immunity / vulnerability by its damage type.
+    2. Subtract from temporary hit points first (across packets).
     3. Remainder subtracts from current hit points (minimum 0).
-    4. If creature just dropped to 0 HP, check death prevention features.
-
-    Args:
-        target: The creature taking damage.
-        damage: Amount of damage to apply.
-        damage_type: Type of damage (e.g., "slashing", "fire").
-        creature_id: ID of the creature taking damage (for death prevention events).
+    4. If the creature just dropped to 0 HP, check death prevention features.
 
     Returns:
-        A tuple of (damage_event, extra_events) where extra_events contains
-        any death prevention events that fired.
+        A tuple of (damage_event, extra_events) where extra_events contains any
+        death prevention events that fired.
     """
+    if isinstance(damage, list):
+        packets = damage
+    else:
+        packets = [DamagePacket(amount=int(damage), dtype=damage_type or "untyped")]
+
     extra_events: list[CombatEvent] = []
 
-    # Apply resistance/immunity/vulnerability
-    modified_damage, modifier_text = _apply_damage_modifiers(
-        target, damage, damage_type
-    )
+    immunities = [d.lower() for d in get_effective_damage_immunities(target)]
+    resistances = [d.lower() for d in get_effective_damage_resistances(target)]
+    vulnerabilities = [d.lower() for d in target.damage_vulnerabilities]
+
+    raw_damage = sum(max(0, p.amount) for p in packets)
+
+    # 1. Per-type defenses
+    defended: list[tuple[int, str, str]] = []  # (amount, dtype, modifier_text)
+    for p in packets:
+        amt, text = _defend_packet(p, immunities, resistances, vulnerabilities)
+        defended.append((max(0, amt), p.dtype, text))
+
+    modified_damage = sum(amt for amt, _, _ in defended)
 
     old_hp = target.current_hit_points if target.current_hit_points is not None else 0
-    old_temp = target.temporary_hit_points
 
-    # Absorb damage with temp HP first
+    # 2. Absorb with temp HP first (across all packets)
     temp_absorbed = 0
     remaining_damage = modified_damage
     if target.temporary_hit_points > 0 and remaining_damage > 0:
@@ -153,7 +255,7 @@ def apply_damage(
         target.temporary_hit_points -= temp_absorbed
         remaining_damage -= temp_absorbed
 
-    # Apply remaining to real HP
+    # 3. Apply remaining to real HP
     new_hp = max(0, old_hp - remaining_damage)
     target.current_hit_points = new_hp
 
@@ -161,16 +263,12 @@ def apply_damage(
     is_now_unconscious = new_hp <= 0
     death_prevented = False
 
-    # Death prevention check: creature just dropped to 0 HP
+    # 4. Death prevention check: creature just dropped to 0 HP
     if was_conscious and is_now_unconscious:
         dp_features = get_death_prevention_features(target)
         for feature in dp_features:
             if not can_use_death_prevention(target, feature):
                 continue
-            # Calculate use_count for escalating DC features:
-            # For resource-based features, count uses as (initial - current)
-            # For non-resource features (Relentless Rage), use
-            # death_prevention_use_count tracked on the creature.
             use_count = getattr(target, '_death_prevention_use_count', {}).get(
                 feature.name, 0
             )
@@ -178,19 +276,29 @@ def apply_damage(
                 target, creature_id, feature, use_count=use_count
             )
             extra_events.extend(dp_events)
-            # Track use count (increment regardless of success for escalating DC)
             if not hasattr(target, '_death_prevention_use_count'):
                 target._death_prevention_use_count = {}
             target._death_prevention_use_count[feature.name] = use_count + 1
             if success:
-                # Death was prevented -- update state
                 new_hp = target.current_hit_points  # resolve set it to 1
                 is_now_unconscious = False
                 death_prevented = True
-                break  # Only need one successful prevention
+                break
 
-    # Build message
-    msg = f"takes {modified_damage} {damage_type} damage{modifier_text}"
+    # Build the damage-type label + modifier text for the message
+    if len(defended) == 1:
+        type_label = defended[0][1]
+        modifier_text = defended[0][2]
+    else:
+        type_label = "+".join(dt for _, dt, _ in defended)
+        # Combine any distinct per-type modifier notes (e.g. " [IMMUNE]")
+        seen: list[str] = []
+        for _, _, text in defended:
+            if text and text not in seen:
+                seen.append(text)
+        modifier_text = "".join(seen)
+
+    msg = f"takes {modified_damage} {type_label} damage{modifier_text}"
     if temp_absorbed > 0:
         msg += f" ({temp_absorbed} absorbed by temp HP)"
     msg += f" ({new_hp}/{target.max_hit_points} HP)"
@@ -202,14 +310,18 @@ def apply_damage(
         message=msg,
         details={
             "damage": modified_damage,
-            "raw_damage": damage,
-            "damage_type": damage_type,
+            "raw_damage": raw_damage,
+            "damage_type": type_label,
             "old_hp": old_hp,
             "new_hp": new_hp,
             "temp_absorbed": temp_absorbed,
             "knocked_out": is_now_unconscious and was_conscious,
             "death_prevented": death_prevented,
             "modifier_text": modifier_text,
+            "packets": [
+                {"amount": amt, "damage_type": dt, "modifier_text": text}
+                for amt, dt, text in defended
+            ],
         },
     )
     return dmg_event, extra_events

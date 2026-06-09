@@ -10,7 +10,15 @@ from arena.grid.hexgrid import HexGrid
 from arena.util.dice import (
     roll_die, roll_with_advantage, roll_with_disadvantage, roll_expression,
 )
-from arena.combat.damage import roll_damage, apply_damage, apply_healing
+from arena.combat.damage import (
+    roll_damage,
+    apply_damage,
+    apply_healing,
+    DamagePacket,
+    halve_packets,
+    zero_packets,
+    reduce_packets_flat,
+)
 from arena.combat.concentration import (
     check_concentration,
     start_concentrating,
@@ -540,7 +548,7 @@ def resolve_attack_damage(
         if hit_result.action and hit_result.action.cantrip_scaling:
             caster_level = get_caster_level(hit_result.attacker)
             damage_rolls = _scale_cantrip_damage_rolls(damage_rolls, caster_level)
-        total_dmg, dmg_details = roll_damage(
+        packets = roll_damage(
             damage_rolls, hit_result.attacker, is_critical=is_crit
         )
 
@@ -555,16 +563,17 @@ def resolve_attack_damage(
                     die_size = parts[1]
                     bonus_expr = f"{extra_dice_count}d{die_size}"
                     bc_total, bc_rolls = roll_expression(bonus_expr)
-                    total_dmg += bc_total
-                    dmg_details.append({
-                        "dice": bonus_expr,
-                        "rolls": bc_rolls,
-                        "bonus": 0,
-                        "ability_bonus": 0,
-                        "damage_type": damage_rolls[0].damage_type.value,
-                        "subtotal": bc_total,
-                        "source": "Brutal Critical",
-                    })
+                    packets.append(DamagePacket(
+                        amount=max(0, bc_total),
+                        dtype=damage_rolls[0].damage_type.value,
+                        source="Brutal Critical",
+                        breakdown={
+                            "dice": bonus_expr,
+                            "rolls": bc_rolls,
+                            "bonus": 0,
+                            "ability_bonus": 0,
+                        },
+                    ))
 
         # Apply upcast bonus damage
         if hit_result.cast_level is not None and hit_result.action:
@@ -573,19 +582,15 @@ def resolve_attack_damage(
                 hit_result.action, hit_result.cast_level,
             )
             if upcast_bonus:
-                up_total, up_details = roll_damage(
+                packets.extend(roll_damage(
                     upcast_bonus, hit_result.attacker, is_critical=is_crit,
-                )
-                total_dmg += up_total
-                dmg_details.extend(up_details)
+                ))
 
         # Apply bonus damage (e.g., Divine Smite)
         if bonus_damage:
-            bonus_total, bonus_details = roll_damage(
+            packets.extend(roll_damage(
                 bonus_damage, hit_result.attacker, is_critical=is_crit,
-            )
-            total_dmg += bonus_total
-            dmg_details.extend(bonus_details)
+            ))
 
         # Apply creature-type bonus damage (e.g., Divine Smite +1d8 vs undead)
         if hit_result.action and hit_result.target:
@@ -593,21 +598,21 @@ def resolve_attack_damage(
                 hit_result.action, hit_result.target,
             )
             if ct_bonus_dice:
-                ct_total, _ct_rolls = roll_expression(ct_bonus_dice)
+                ct_total, ct_rolls = roll_expression(ct_bonus_dice)
                 if is_crit:
-                    ct_crit, _ct_crit_rolls = roll_expression(ct_bonus_dice)
+                    ct_crit, ct_crit_rolls = roll_expression(ct_bonus_dice)
                     ct_total += ct_crit
-                total_dmg += ct_total
+                    ct_rolls = ct_rolls + ct_crit_rolls
                 ct_type = (
                     hit_result.attack.damage[0].damage_type.value
                     if hit_result.attack.damage else "untyped"
                 )
-                dmg_details.append({
-                    "dice": ct_bonus_dice,
-                    "total": ct_total,
-                    "type": ct_type,
-                    "source": "creature_type_bonus",
-                })
+                packets.append(DamagePacket(
+                    amount=max(0, ct_total),
+                    dtype=ct_type,
+                    source="creature_type_bonus",
+                    breakdown={"dice": ct_bonus_dice, "rolls": ct_rolls},
+                ))
                 events.append(CombatEvent(
                     event_type=CombatEventType.INFO,
                     message=(
@@ -618,24 +623,22 @@ def resolve_attack_damage(
                     target_id=hit_result.target_id,
                 ))
 
-        primary_type = (
-            hit_result.attack.damage[0].damage_type.value
-            if hit_result.attack.damage else "untyped"
-        )
-
         # Apply damage reduction from reactions (Parry, Uncanny Dodge, etc.)
-        if damage_reduction != 0:
-            from arena.combat.damage_reduction import apply_damage_reduction
-            total_dmg = apply_damage_reduction(total_dmg, damage_reduction)
+        # damage_reduction == -1 is the "halve" sentinel (Uncanny Dodge).
+        if damage_reduction == -1:
+            halve_packets(packets)
+        elif damage_reduction > 0:
+            reduce_packets_flat(packets, damage_reduction)
 
+        roll_details = [p.to_detail() for p in packets]
         dmg_event, dp_events = apply_damage(
-            hit_result.target, total_dmg, primary_type,
+            hit_result.target, packets,
             creature_id=hit_result.target_id,
         )
         dmg_event.source_id = hit_result.attacker_id
         dmg_event.target_id = hit_result.target_id
         dmg_event.message = f"{hit_result.target.name} " + dmg_event.message
-        dmg_event.details["roll_details"] = dmg_details
+        dmg_event.details["roll_details"] = roll_details
         events.append(dmg_event)
         events.extend(dp_events)
 
@@ -1042,7 +1045,7 @@ def resolve_effect(
                         )
                     ]
 
-            total_dmg, dmg_details = roll_damage(
+            packets = roll_damage(
                 save_damage_rolls, user, is_critical=False,
             )
 
@@ -1051,24 +1054,21 @@ def resolve_effect(
                 from arena.combat.upcast import calculate_upcast_bonus_damage
                 upcast_bonus = calculate_upcast_bonus_damage(action, cast_level)
                 if upcast_bonus:
-                    up_total, up_details = roll_damage(
+                    packets.extend(roll_damage(
                         upcast_bonus, user, is_critical=False,
-                    )
-                    total_dmg += up_total
-                    dmg_details.extend(up_details)
+                    ))
 
             # Creature-type bonus damage (e.g., Sunbeam +damage vs undead)
             ct_bonus_dice = check_creature_type_bonus(action, target)
             if ct_bonus_dice:
-                ct_total, _ct_rolls = roll_expression(ct_bonus_dice)
-                total_dmg += ct_total
+                ct_total, ct_rolls = roll_expression(ct_bonus_dice)
                 ct_type = save.damage_on_fail[0].damage_type.value
-                dmg_details.append({
-                    "dice": ct_bonus_dice,
-                    "total": ct_total,
-                    "type": ct_type,
-                    "source": "creature_type_bonus",
-                })
+                packets.append(DamagePacket(
+                    amount=max(0, ct_total),
+                    dtype=ct_type,
+                    source="creature_type_bonus",
+                    breakdown={"dice": ct_bonus_dice, "rolls": ct_rolls},
+                ))
                 events.append(CombatEvent(
                     event_type=CombatEventType.INFO,
                     message=(
@@ -1081,15 +1081,15 @@ def resolve_effect(
 
             if save_success:
                 if save.damage_on_success == "half":
-                    total_dmg = total_dmg // 2
+                    halve_packets(packets)
                 elif save.damage_on_success == "none":
-                    total_dmg = 0
+                    zero_packets(packets)
                 # "full" means full damage even on success
 
             # Evasion: DEX saves → success=0 damage, fail=half damage
             if save.ability.lower() == "dexterity" and has_evasion_feature(target):
                 if save_success:
-                    total_dmg = 0
+                    zero_packets(packets)
                     events.append(CombatEvent(
                         event_type=CombatEventType.INFO,
                         message=f"{target.name}'s Evasion negates all damage!",
@@ -1097,7 +1097,7 @@ def resolve_effect(
                         target_id=target_id,
                     ))
                 else:
-                    total_dmg = total_dmg // 2
+                    halve_packets(packets)
                     events.append(CombatEvent(
                         event_type=CombatEventType.INFO,
                         message=f"{target.name}'s Evasion halves the damage!",
@@ -1105,16 +1105,16 @@ def resolve_effect(
                         target_id=target_id,
                     ))
 
-            if total_dmg > 0:
-                primary_type = save.damage_on_fail[0].damage_type.value
+            if sum(p.amount for p in packets) > 0:
+                roll_details = [p.to_detail() for p in packets]
                 dmg_event, dp_events = apply_damage(
-                    target, total_dmg, primary_type,
+                    target, packets,
                     creature_id=target_id,
                 )
                 dmg_event.source_id = user_id
                 dmg_event.target_id = target_id
                 dmg_event.message = f"{target.name} {dmg_event.message}"
-                dmg_event.details["roll_details"] = dmg_details
+                dmg_event.details["roll_details"] = roll_details
                 events.append(dmg_event)
                 events.extend(dp_events)
 
