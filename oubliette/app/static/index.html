@@ -1410,9 +1410,17 @@ function renderSpells() {
   const lists = cgOpt.spells_by_class[cc.id] || { cantrips: [], leveled: [] };
   const sec = secEl("Spells");
   const wantCantrips = cc.cantrips_at_1;
-  const wantSpells = cc.caster_prep === "prepared"
-    ? Math.max(1, abilMod(finalAbility(cc.spell_ability)) + 1)
-    : (cc.spells_known_at_1 || 0);
+  // Half casters (paladin/ranger) have no spell slots at level 1 — max_spell_level
+  // is 0, so there's nothing to prepare/know yet (spellcasting begins at level 2).
+  const wantSpells = cc.max_spell_level === 0 ? 0
+    : (cc.caster_prep === "prepared"
+        ? Math.max(1, abilMod(finalAbility(cc.spell_ability)) + 1)
+        : (cc.spells_known_at_1 || 0));
+  if (wantCantrips === 0 && wantSpells === 0) {
+    sec.appendChild(el("div", "cg-hint",
+      `${cc.name} doesn't gain spellcasting until level 2 — no spells to choose at level 1.`));
+    return sec;
+  }
   sec.appendChild(el("div", "cg-hint", `Cantrips: choose ${wantCantrips}. ` +
     `${cc.caster_prep === "prepared" ? "Prepared" : "Known"} spells: choose ${wantSpells} (level 1).`));
   const cRow = el("div", "cg-checks");

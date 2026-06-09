@@ -368,3 +368,20 @@ def test_levelup_flow_over_http():
     m = d4["party"][0]
     assert m["level"] == 4 and m["abilities"]["str"]["score"] == 18
     _new()
+
+
+def test_chargen_options_half_casters_have_no_level1_spellcasting():
+    """The chargen wizard renders a spell picker only when there's something to pick.
+    Half casters (paladin/ranger) gain spellcasting at level 2, so at level 1 the
+    class view reports 0 cantrips and max_spell_level 0 — the cue the UI uses to show
+    a 'no spells yet' note instead of demanding an unpickable spell (CS4 regression)."""
+    opts = client.get("/api/chargen/options").json()
+    classes = {c["id"]: c for c in opts["classes"]}
+    for half in ("paladin", "ranger"):
+        cv = classes[half]
+        assert cv["is_caster"] is True
+        assert cv["cantrips_at_1"] == 0
+        assert cv["max_spell_level"] == 0          # no slots at level 1
+    # full casters still cast at level 1 (sanity: the guard doesn't over-fire)
+    for full in ("cleric", "wizard", "druid", "bard"):
+        assert classes[full]["max_spell_level"] >= 1
