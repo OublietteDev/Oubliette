@@ -82,6 +82,20 @@
   .chip.combat { border-color: #6e3a30; color: #e0a99a; }
   .chip.meta { border-color: #4a4358; color: #c3b6d6; }
 
+  /* Combat lock bar: shown above the composer while a tactical fight is staged
+     (Stage 3c). Mirrors the session-ended lock — the composer disables and the
+     only way forward is to enter The Arena. */
+  .combat-bar { border-top: 1px solid #6e3a30; padding: 12px 18px; display: flex; gap: 12px;
+    align-items: center; justify-content: space-between; background: rgba(110,58,48,.22); }
+  .combat-bar.hidden { display: none; }
+  .combat-bar .combat-bar-text { color: #e7b4a4; font-weight: 600; font-size: 14px; }
+  .combat-bar button {
+    border: none; border-radius: 10px; cursor: pointer; padding: 10px 20px; font: inherit; font-weight: 700;
+    background: linear-gradient(180deg, #b5543f, #7e2f23); color: #fff; white-space: nowrap;
+    box-shadow: 0 0 0 1px #6e3a30 inset; transition: filter .15s; }
+  .combat-bar button:hover { filter: brightness(1.12); }
+  .combat-bar button:disabled { opacity: .6; cursor: default; }
+
   .composer { border-top: 1px solid var(--line); padding: 14px 18px; display: flex; gap: 10px; background: rgba(0,0,0,.18); }
   .composer textarea {
     flex: 1; resize: none; height: 46px; max-height: 160px; padding: 12px 14px;
@@ -503,6 +517,10 @@
   <main>
     <section class="chat">
       <div class="log" id="log"></div>
+      <div id="combat-bar" class="combat-bar hidden">
+        <span class="combat-bar-text">⚔ A fight is upon you — the table waits.</span>
+        <button id="enter-arena" type="button">⚔ Enter the Arena</button>
+      </div>
       <div class="composer">
         <button id="ooc-toggle" class="ooc-toggle" type="button"
                 title="Switch between speaking as your character and speaking to the DM out-of-character">🎭 In character</button>
@@ -770,6 +788,7 @@
 <script>
 const $ = (id) => document.getElementById(id);
 const log = $("log"), input = $("input"), sendBtn = $("send");
+const combatBar = $("combat-bar"), enterArenaBtn = $("enter-arena");
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -975,6 +994,7 @@ $("trade-overlay").addEventListener("click", (e) => { if (e.target.id === "trade
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeTrade(); closeJournal(); closeInventory(); closeWorldMap(); closeMenu(); closeSettings(); closeNewGame(); } });
 
 let gameEnded = false;          // set when the DM ends the session (locks the composer)
+let combatPending = false;      // a tactical fight is staged, awaiting "Enter the Arena" (Stage 3c)
 function envLabel(t, w) {
   const ti = { day: "☀️ Day", night: "🌙 Night" }[t] || "";
   const wi = { clear: "Clear", rain: "🌧️ Rain", storm: "⛈️ Storm", wind: "🌬️ Wind" }[w] || "";
@@ -1024,13 +1044,17 @@ function renderState(s) {
     gameEnded = true;
     addMessage("System", "— The Phantom has closed the table. This session has ended; start a New Game to play again. —", "system");
   }
-  setBusy(busy);                // re-apply the composer lock (stays disabled when ended)
+  // A staged fight locks the composer and surfaces the Enter-the-Arena bar; it
+  // clears once the fight resolves (the post-combat state has combat_pending false).
+  combatPending = !!s.combat_pending;
+  combatBar.classList.toggle("hidden", !combatPending);
+  setBusy(busy);                // re-apply the composer lock (stays disabled when ended/in combat)
 }
 
 let busy = false;
 function setBusy(b) {
   busy = b;
-  const locked = b || gameEnded;
+  const locked = b || gameEnded || combatPending;
   sendBtn.disabled = locked; input.disabled = locked;
   if (!locked) input.focus();
 }
@@ -1098,6 +1122,35 @@ async function send(textOverride) {
     addMessage("System", "Connection lost: " + e, "system");
   } finally { setBusy(false); }
 }
+
+// Enter the staged tactical fight: launches The Arena (a desktop window) on the
+// server, blocks until you exit it, then renders the DM's post-combat beat.
+async function enterArena() {
+  if (!combatPending) return;
+  enterArenaBtn.disabled = true;
+  enterArenaBtn.textContent = "⚔ Fighting…";
+  addMessage("System", "⚔ The Arena opens in a separate window — play out the fight, then return here.", "system");
+  try {
+    const res = await fetch("/api/combat/enter", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) {
+      addMessage("System", data.error || "the Arena could not be entered", "system");
+      return;
+    }
+    const bubble = addMessage("The Phantom", "", "dm");
+    bubble.querySelector(".body").innerHTML = md(data.narration || "");
+    addChips(bubble, data);
+    if (data.state) renderState(data.state);            // combat_pending now false → unlocks
+    if (data.soundscape) setSoundscape(data.soundscape);
+    (data.quest_beats || []).forEach(addQuestCard);
+  } catch (e) {
+    addMessage("System", "The Arena could not be reached: " + e, "system");
+  } finally {
+    enterArenaBtn.disabled = false;
+    enterArenaBtn.textContent = "⚔ Enter the Arena";
+  }
+}
+enterArenaBtn.addEventListener("click", enterArena);
 
 sendBtn.addEventListener("click", () => send());
 input.addEventListener("keydown", (e) => {
@@ -1214,6 +1267,8 @@ async function beginNewGame(build) {
   hideStart();
   closeTrade();
   gameEnded = false;            // a fresh game clears any prior end-of-session lock
+  combatPending = false;        // ...and any staged fight from the prior save
+  combatBar.classList.add("hidden");
   log.innerHTML = "";
   addMessage("System", `A new tale begins in ${ngPack.name}. Describe what you do.`, "system");
   renderState(data.state);
