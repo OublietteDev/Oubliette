@@ -153,6 +153,56 @@ def test_descriptive_enemy_names_resolve_to_the_core_creature():
     assert _statblock_for(s, "an unspeakable foozle") is None          # genuinely unknown
 
 
+def test_iconic_monster_fights_with_its_authored_arena_kit():
+    """Fidelity slice: an enemy that has a hand-authored Arena file fights with
+    its real kit — a save-for-half breath weapon and a multi-type bite — not a
+    flat single basic attack. Reward stays Oubliette's bestiary XP."""
+    from oubliette.combat.arena_bridge import enemy_from_statblock
+
+    s = _session()
+    sb = (getattr(s.ruleset, "bestiary", None) or {})["young_red_dragon"]
+    mon = enemy_from_statblock(sb).creature
+
+    assert any(a.saving_throw is not None for a in mon.actions)        # Fire Breath
+    bite = next((a for a in mon.actions
+                 if a.attack and len({dr.damage_type for dr in a.attack.damage}) > 1), None)
+    assert bite is not None                                            # multi-type bite
+    assert mon.experience_points == sb.xp                              # reward = bestiary
+
+
+def test_non_authored_monster_falls_back_to_basic_mapping():
+    """A monster without an authored file still works — a single basic attack,
+    no rich actions (the ~317 not yet hand-built)."""
+    from oubliette.combat.arena_bridge import authored_arena_monster, enemy_from_statblock
+
+    s = _session()
+    assert authored_arena_monster("awakened_shrub") is None
+    sb = (getattr(s.ruleset, "bestiary", None) or {})["awakened_shrub"]
+    mon = enemy_from_statblock(sb).creature
+    assert all(a.saving_throw is None for a in mon.actions)
+    assert len(mon.actions) == 1
+
+
+def test_authored_fidelity_survives_the_encounter_round_trip():
+    """The rich actions must survive staging + the Arena's own load (the path that
+    used to drop Monster fields)."""
+    from pathlib import Path
+
+    from arena.combat.manager import CombatManager
+
+    s = _session()
+    pending = stage_combat(
+        EncounterRequest(kind="brawl", enemies=[EnemyRef(ref="young red dragon")],
+                         terrain=TerrainSpec()), s.repo, s).pending
+    enc = Encounter.model_validate(json.loads(pending.encounter_path.read_text("utf-8")))
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("."))
+
+    dragon = next(c.creature for c in cm.combatants.values() if c.team == "enemy")
+    assert any(a.saving_throw is not None for a in dragon.actions)     # breath weapon intact
+    arena_launch.cleanup(pending)
+
+
 def test_unknown_enemy_ref_is_a_combat_error():
     s = _session()
     req = EncounterRequest(enemies=[EnemyRef(ref="nonesuch_beast")])
