@@ -88,6 +88,23 @@ def test_full_class_and_subclass_sets_present():
     assert rs.classes["rogue"].asi_levels == [4, 8, 10, 12, 16, 19]  # rogue's extra ASI
 
 
+def test_full_spell_list_present():
+    """CS4 Gate 5: the complete SRD spell list (319) loads, mapped deterministically
+    from the 5e-database 2014 dataset. Count + per-level tripwire; also asserts the
+    High Elf wizard 3-cantrip gap is closed (the slice shipped only 2 wizard cantrips)."""
+    rs = load_ruleset()
+    assert len(rs.spells) == 319
+    by_level = Counter(s.level for s in rs.spells.values())
+    assert by_level == {0: 24, 1: 49, 2: 54, 3: 42, 4: 31, 5: 37, 6: 31, 7: 20,
+                        8: 16, 9: 15}
+    wizard_cantrips = [s for s in rs.spells.values() if s.level == 0 and "wizard" in s.classes]
+    assert len(wizard_cantrips) >= 3        # High Elf wizard can now pick 3
+    # every spell's class list resolves to real classes
+    for sp in rs.spells.values():
+        for cid in sp.classes:
+            assert cid in rs.classes
+
+
 def test_only_srd_legal_backgrounds_and_feats():
     """Strict-SRD guard. SRD 5.1 contains exactly ONE background (Acolyte) and ONE
     feat (Grappler). This tripwire fails if non-SRD content sneaks back in — a prior
