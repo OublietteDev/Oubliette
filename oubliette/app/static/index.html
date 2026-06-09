@@ -1754,12 +1754,12 @@ $("newgame-overlay").addEventListener("click", (e) => { if (e.target.id === "new
 // --- player menu (extensible registry) ------------------------------------
 // --- bestiary (SRD monster reference; global, read-only) -------------------
 let bestiaryData = [];      // monsters, server-sorted by challenge rating then name
-let bestSelected = null;    // id of the stat block currently shown
+let bestSelected = null;    // key (scope:id) of the stat block currently shown
 async function openBestiary() {
   try { bestiaryData = (await (await fetch("/api/bestiary")).json()).monsters || []; }
   catch (e) { bestiaryData = []; }
   $("best-search").value = "";
-  bestSelected = bestiaryData.length ? bestiaryData[0].id : null;
+  bestSelected = bestiaryData.length ? bestiaryData[0].key : null;
   renderBestiaryList("");
   renderStatBlock(bestSelected);
   $("best-grid").classList.remove("show-detail");
@@ -1781,14 +1781,14 @@ function renderBestiaryList(filter) {
   shown.forEach(m => {
     const t = "Challenge " + m.cr_label;
     if (t !== tier) { tier = t; list.appendChild(el("div", "best-tier", t)); }
-    const row = el("div", "best-item" + (m.id === bestSelected ? " on" : ""));
+    const row = el("div", "best-item" + (m.key === bestSelected ? " on" : ""));
     row.appendChild(el("span", "bm-nm", m.name));
     const srcBadge = el("span", "best-src" + (m.scope === "pack" ? " pack" : ""), m.source);
     srcBadge.title = m.source;
     row.appendChild(srcBadge);
     row.appendChild(el("span", "best-cr", "CR " + m.cr_label));
     row.addEventListener("click", () => {
-      bestSelected = m.id; renderBestiaryList(q); renderStatBlock(m.id);
+      bestSelected = m.key; renderBestiaryList(q); renderStatBlock(m.key);
       $("best-grid").classList.add("show-detail");   // mobile: swap to the sheet
     });
     list.appendChild(row);
@@ -1816,7 +1816,7 @@ function skillsStr(m) {
 
 function renderStatBlock(id) {
   const box = $("best-detail"); box.innerHTML = "";
-  const m = bestiaryData.find(x => x.id === id);
+  const m = bestiaryData.find(x => x.key === id);
   if (!m) { box.appendChild(el("div", "best-empty", "Select a monster.")); return; }
   const sub = [[m.size, m.type].filter(Boolean).join(" "), m.alignment].filter(Boolean).join(", ");
   const head = el("div", "sb-head");
@@ -1888,16 +1888,20 @@ function appendActions(box, title, actions) {
   actions.forEach(a => {
     const tr = el("div", "sb-trait");
     tr.appendChild(el("span", "tn", a.name + ". "));
-    const parts = [];
-    if (a.attack_bonus != null) {
-      parts.push(sgn(a.attack_bonus) + " to hit" +
-        (a.reach ? ", reach " + a.reach : "") + (a.target ? ", " + a.target : "") + ".");
+    let txt;
+    if (a.desc) {
+      txt = a.desc;                  // canonical SRD prose already states to-hit/damage
+    } else {                          // minimal hand-authored action — synthesize the line
+      const parts = [];
+      if (a.attack_bonus != null) {
+        parts.push(sgn(a.attack_bonus) + " to hit" +
+          (a.reach ? ", reach " + a.reach : "") + (a.target ? ", " + a.target : "") + ".");
+      }
+      if (a.damage) {
+        parts.push("Hit: " + a.damage + (a.damage_type ? " " + a.damage_type : "") + " damage.");
+      }
+      txt = parts.join(" ");
     }
-    if (a.damage) {
-      parts.push("Hit: " + a.damage + (a.damage_type ? " " + a.damage_type : "") + " damage.");
-    }
-    let txt = parts.join(" ");
-    if (a.desc) txt = (txt ? txt + " " : "") + a.desc;
     tr.appendChild(document.createTextNode(txt));
     box.appendChild(tr);
   });

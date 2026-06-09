@@ -788,6 +788,7 @@ def _statblock_view(sb, source: str, scope: str) -> dict:
     the portrait endpoint to the right images directory."""
     return {
         "id": sb.id, "name": sb.name, "kind": sb.kind,
+        "key": f"{scope}:{sb.id}",       # unique across the merged list (pack ids can shadow SRD)
         "source": source, "scope": scope,
         "portrait_url": f"/api/monster-portrait/{scope}/{sb.id}",
         "size": sb.size, "type": sb.type, "alignment": sb.alignment,

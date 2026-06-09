@@ -274,7 +274,7 @@ def test_bestiary_endpoint_serializes_the_srd_monsters():
     # ordered by challenge rating, ascending (None-CR pack blocks sort first).
     crs = [(m["cr"] if m["cr"] is not None else -1.0) for m in mons]
     assert crs == sorted(crs)
-    assert mons[-1]["id"] == "young_red_dragon"
+    assert mons[-1]["id"] == "tarrasque"            # CR 30, the apex of the merged list
     drake = next(m for m in mons if m["id"] == "young_red_dragon")
     assert drake["cr_label"] == "10" and drake["size"] == "Large"
     assert drake["damage_immunities"] == ["fire"]

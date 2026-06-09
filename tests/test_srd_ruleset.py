@@ -105,28 +105,32 @@ def test_full_spell_list_present():
             assert cid in rs.classes
 
 
-def test_bundled_bestiary_loads_sorted_by_cr():
-    """The global SRD bestiary layer (bestiary arc). A seed of 8 iconic monsters
-    across the CR range; the content fleet grows it to the full SRD list. Spot-check
-    the schema's enriched fields survived the round-trip and the CR sort is stable."""
+def test_full_srd_bestiary_present():
+    """The global SRD bestiary (content fleet): the complete SRD 5.1 monster list,
+    mapped deterministically from the 5e-database 2014 dataset (NOT LLM recall — see
+    tools/gen_bestiary.py). Count tripwire so a future edit can't silently drop a row;
+    the enriched schema round-trips descriptors, defenses, and an actions list."""
     rs = load_ruleset()
-    assert set(rs.bestiary) == {"goblin", "wolf", "skeleton", "zombie", "orc",
-                                "brown_bear", "ogre", "young_red_dragon"}
-    # monsters_by_cr is the panel's order: ascending CR, then name.
-    names = [s.name for s in rs.monsters_by_cr()]
-    assert names[0] in {"Goblin", "Skeleton", "Wolf", "Zombie"}  # the CR-1/4 cohort
-    assert names[-1] == "Young Red Dragon"                       # CR 10, the top
+    assert len(rs.bestiary) == 334
+    # staples across the CR range all loaded
+    assert {"goblin", "wolf", "orc", "ogre", "young_red_dragon", "tarrasque",
+            "commoner", "lich"} <= set(rs.bestiary)
+    # monsters_by_cr is the panel's order: ascending CR, then name — stable.
     crs = [s.cr for s in rs.monsters_by_cr()]
     assert crs == sorted(crs)
-    # enriched fields round-trip: descriptors, defenses, and an actions list.
+    assert rs.monsters_by_cr()[-1].cr == 30.0          # the Tarrasque, CR 30
+    # enriched fields round-trip on a representative rich monster.
     drake = rs.bestiary["young_red_dragon"]
     assert drake.size == "Large" and drake.type == "dragon" and drake.cr == 10.0
     assert drake.damage_immunities == ["fire"]
     assert drake.speed["fly"] == "80 ft."
     assert drake.actions[0].name == "Multiattack"
-    assert any(a.name.startswith("Fire Breath") for a in drake.actions)
-    # the combat seam still reads a single primary attack off the top level.
+    # the combat seam reads a single primary attack off the top level (the bite).
     assert drake.attack_bonus == 10 and drake.damage == "2d10+6"
+    # actions keep BOTH structured fields and the verbatim SRD prose.
+    bite = next(a for a in drake.actions if a.name == "Bite")
+    assert bite.attack_bonus == 10 and bite.damage == "2d10+6"
+    assert "Melee Weapon Attack" in bite.desc
 
 
 def test_bad_skill_in_bestiary_flagged(tmp_path):
