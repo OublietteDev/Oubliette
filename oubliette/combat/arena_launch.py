@@ -90,10 +90,21 @@ def _statblock_for(session, ref: str):
     want = _norm_ref(ref)
     pack = getattr(session, "statblocks", ()) or ()
     srd = (getattr(getattr(session, "ruleset", None), "bestiary", None) or {}).values()
-    for sb in (*pack, *srd):
+    pool = (*pack, *srd)
+    # Exact match on normalized id or name.
+    for sb in pool:
         if _norm_ref(sb.id) == want or _norm_ref(sb.name) == want:
             return sb
-    return None
+    # Tolerant fallback for the DM's descriptive naming ("a wild wolf" → Wolf):
+    # a creature whose full name is a trailing WHOLE-WORD of the ref. Prefer the
+    # longest (most specific) match, so "giant wolf spider" beats a bare "wolf".
+    # Whole-word only (the leading "_") so 'werewolf' never matches 'wolf'.
+    best = None
+    for sb in pool:
+        name = _norm_ref(sb.name)
+        if want.endswith("_" + name) and (best is None or len(name) > len(_norm_ref(best.name))):
+            best = sb
+    return best
 
 
 def _resolve_enemies(request: EncounterRequest, repo: Repository, session) -> list[EnemyInstance]:
@@ -157,13 +168,41 @@ def stage_combat(
     scratch_dir = Path(tempfile.mkdtemp(prefix="oubliette-combat-", dir=scratch_root))
     encounter_path = scratch_dir / "encounter.json"
     result_path = scratch_dir / "result.json"
-    encounter_path.write_text(
-        json.dumps(plan.encounter.model_dump(mode="json"), indent=2), encoding="utf-8"
-    )
+    _write_encounter_file(plan.encounter, scratch_dir, encounter_path)
     return StageOutcome(pending=PendingCombat(
         plan=plan, encounter_path=encounter_path, result_path=result_path,
         scratch_dir=scratch_dir, assessment=assessment, player_text=player_text,
     ))
+
+
+def _write_encounter_file(encounter, scratch_dir: Path, path: Path) -> None:
+    """Write the encounter JSON with each combatant EXTERNALIZED to its own file
+    under monsters/ or characters/, referenced by absolute `creature_id`.
+
+    Inline `creature_data` cannot survive the round-trip: the Arena types that
+    field as the base `Creature`, so a `Monster`/`PlayerCharacter` written inline
+    comes back as a plain `Creature` — silently losing its subclass fields
+    (experience_points, challenge_rating, …), which zeroed out kill XP. Writing
+    each creature to a path the Arena recognizes ('monsters'/'characters' in the
+    id) routes it through the subclass-aware loader (`Monster.model_validate` /
+    `PlayerCharacter.model_validate`), preserving every field. We externalize a
+    DEEP COPY so the in-memory `plan.encounter` keeps its inline creatures.
+    """
+    enc = encounter.model_copy(deep=True)
+    mon_dir = scratch_dir / "monsters"
+    pc_dir = scratch_dir / "characters"
+    mon_dir.mkdir(exist_ok=True)
+    pc_dir.mkdir(exist_ok=True)
+    for i, entry in enumerate(enc.combatants):
+        creature = entry.creature_data  # the concrete Monster/PlayerCharacter instance
+        target_dir = pc_dir if entry.team == "player" else mon_dir
+        cfile = target_dir / f"{i:02d}.json"
+        cfile.write_text(
+            json.dumps(creature.model_dump(mode="json"), indent=2), encoding="utf-8"
+        )
+        entry.creature_id = str(cfile.resolve())  # absolute → ignores the Arena's data_dir
+        entry.creature_data = None
+    path.write_text(json.dumps(enc.model_dump(mode="json"), indent=2), encoding="utf-8")
 
 
 # --- launch + map-back ---------------------------------------------------

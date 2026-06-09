@@ -99,14 +99,58 @@ def test_generated_encounter_loads_into_a_real_combat_manager():
     enc = Encounter.model_validate(json.loads(pending.encounter_path.read_text("utf-8")))
 
     cm = CombatManager()
-    cm.load_encounter(enc, Path("."))  # data_dir unused: every combatant is inline
+    cm.load_encounter(enc, Path("."))  # creature_id paths are absolute → data_dir unused
 
     teams = sorted(c.team for c in cm.combatants.values())
     assert teams.count("player") == 1 and teams.count("enemy") == 2
     for c in cm.combatants.values():
         assert c.creature.current_hit_points >= 1     # HP initialized
         assert c.position is not None                 # placed on the grid
+    # regression: enemies must reload as Monster with XP intact (the inline-data
+    # round-trip used to downgrade them to base Creature, zeroing kill XP)
+    from arena.models.monster import Monster
+    for c in (c for c in cm.combatants.values() if c.team == "enemy"):
+        assert isinstance(c.creature, Monster)
+        assert c.creature.experience_points > 0
     arena_launch.cleanup(pending)
+
+
+def test_killing_an_enemy_awards_its_xp_end_to_end():
+    """Direct regression for the live-play '0 XP' bug. A bridge monster used to
+    reload as a base Creature — subclass + experience_points lost — so kills paid
+    nothing. Drive a real CombatManager fight to a kill and confirm XP flows back."""
+    from pathlib import Path
+
+    from arena.combat.manager import CombatManager
+    from arena.handoff import build_result
+
+    s = _session()
+    req = EncounterRequest(kind="brawl", enemies=[EnemyRef(ref="wolf")], terrain=TerrainSpec())
+    pending = stage_combat(req, s.repo, s).pending
+    enc = Encounter.model_validate(json.loads(pending.encounter_path.read_text("utf-8")))
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("."))
+
+    for c in cm.combatants.values():
+        if c.team == "enemy":
+            c.creature.current_hit_points = 0     # slay it
+    cm.winner = "player"
+
+    result = arena_launch.resolve_to_combat_result(pending, build_result(cm))
+    assert result.outcome == "victory"
+    assert result.xp_award == 50                  # lean wolf = 50 XP, not 0
+    arena_launch.cleanup(pending)
+
+
+def test_descriptive_enemy_names_resolve_to_the_core_creature():
+    """The DM names creatures descriptively ('a wild wolf'); the resolver falls
+    back to the trailing whole-word creature, preferring the most specific."""
+    from oubliette.combat.arena_launch import _statblock_for
+
+    s = _session()
+    assert _statblock_for(s, "a wild wolf").id == "wolf"               # adjective stripped
+    assert _statblock_for(s, "giant wolf spider").id == "giant_wolf_spider"  # specific beats bare wolf
+    assert _statblock_for(s, "an unspeakable foozle") is None          # genuinely unknown
 
 
 def test_unknown_enemy_ref_is_a_combat_error():
