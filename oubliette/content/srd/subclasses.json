@@ -77,5 +77,198 @@
         "text": "When you would roll dice to restore hit points with a spell, use the highest possible value for each die instead."
       }
     ]
+  },
+  {
+    "id": "lore",
+    "name": "College of Lore",
+    "parent": "bard",
+    "label": "Bard College",
+    "features": [
+      {
+        "name": "Bonus Proficiencies",
+        "level": 3,
+        "text": "You gain proficiency with three skills of your choice."
+      },
+      {
+        "name": "Cutting Words",
+        "level": 3,
+        "text": "When a creature you can see within 60 feet makes an attack, ability check, or damage roll, use your reaction and a Bardic Inspiration die to subtract the roll."
+      },
+      {
+        "name": "Additional Magical Secrets",
+        "level": 6,
+        "text": "Learn two spells from any class's spell list; they don't count against your number of bard spells known."
+      },
+      {
+        "name": "Peerless Skill",
+        "level": 14,
+        "text": "When you make an ability check, you can expend a Bardic Inspiration die and add it to the roll."
+      }
+    ]
+  },
+  {
+    "id": "land",
+    "name": "Circle of the Land",
+    "parent": "druid",
+    "label": "Druid Circle",
+    "features": [
+      {
+        "name": "Bonus Cantrip",
+        "level": 2,
+        "text": "You learn one additional druid cantrip of your choice."
+      },
+      {
+        "name": "Natural Recovery",
+        "level": 2,
+        "text": "Once per day during a short rest, recover expended spell slots totaling up to half your druid level (rounded up), none higher than 5th level."
+      },
+      {
+        "name": "Circle Spells",
+        "level": 3,
+        "text": "Choose a land type (arctic, coast, desert, forest, grassland, mountain, swamp, or Underdark). It grants always-prepared bonus spells at 3rd, 5th, 7th, and 9th level that don't count against your prepared total."
+      },
+      {
+        "name": "Land's Stride",
+        "level": 6,
+        "text": "Moving through nonmagical difficult terrain costs no extra movement, and you pass through plants without being slowed or harmed; advantage on saves against plants magically created to impede movement."
+      },
+      {
+        "name": "Nature's Ward",
+        "level": 10,
+        "text": "You can't be charmed or frightened by elementals or fey, and you're immune to poison and disease."
+      },
+      {
+        "name": "Nature's Sanctuary",
+        "level": 14,
+        "text": "Beasts and plants must succeed on a Wisdom save to attack you, or choose a new target."
+      }
+    ]
+  },
+  {
+    "id": "open_hand",
+    "name": "Way of the Open Hand",
+    "parent": "monk",
+    "label": "Monastic Tradition",
+    "features": [
+      {
+        "name": "Open Hand Technique",
+        "level": 3,
+        "text": "When you hit with a Flurry of Blows attack, you can also knock the target prone, push it 15 feet, or prevent it from taking reactions (Strength or Dexterity save)."
+      },
+      {
+        "name": "Wholeness of Body",
+        "level": 6,
+        "text": "As an action, regain hit points equal to three times your monk level, once per long rest."
+      },
+      {
+        "name": "Tranquility",
+        "level": 11,
+        "text": "At the end of a long rest you gain the effect of a sanctuary spell until your next long rest."
+      },
+      {
+        "name": "Quivering Palm",
+        "level": 17,
+        "text": "When you hit a creature with an unarmed strike, spend 3 ki to set up lethal vibrations you can later end as an action (Constitution save or drop to 0 hit points)."
+      }
+    ]
+  },
+  {
+    "id": "devotion",
+    "name": "Oath of Devotion",
+    "parent": "paladin",
+    "label": "Sacred Oath",
+    "features": [
+      {
+        "name": "Oath Spells",
+        "level": 3,
+        "text": "You always have these oath spells prepared (they don't count against your total): 3rd—protection from evil and good, sanctuary; 5th—lesser restoration, zone of truth; 9th—beacon of hope, dispel magic; 13th—freedom of movement, guardian of faith; 17th—commune, flame strike."
+      },
+      {
+        "name": "Channel Divinity: Sacred Weapon",
+        "level": 3,
+        "text": "As an action, imbue a weapon with positive energy for 1 minute: add your Charisma modifier to attack rolls with it, and it emits bright light."
+      },
+      {
+        "name": "Channel Divinity: Turn the Unholy",
+        "level": 3,
+        "text": "As an action, present your holy symbol; each fiend or undead within 30 feet that fails a Wisdom save is turned for 1 minute."
+      },
+      {
+        "name": "Aura of Devotion",
+        "level": 7,
+        "text": "You and friendly creatures within 10 feet can't be charmed while you're conscious."
+      },
+      {
+        "name": "Purity of Spirit",
+        "level": 15,
+        "text": "You're always under the effect of a protection from evil and good spell."
+      },
+      {
+        "name": "Holy Nimbus",
+        "level": 20,
+        "text": "As an action, emanate sunlight for 1 minute: enemies starting their turn within 30 feet take radiant damage, and you have advantage on saves against spells cast by fiends and undead."
+      }
+    ]
+  },
+  {
+    "id": "hunter",
+    "name": "Hunter",
+    "parent": "ranger",
+    "label": "Ranger Archetype",
+    "features": [
+      {
+        "name": "Hunter's Prey",
+        "level": 3,
+        "text": "Choose Colossus Slayer (extra 1d8 to a damaged target once per turn), Giant Killer (reaction attack vs Large+ foes), or Horde Breaker (a second attack on a different nearby target)."
+      },
+      {
+        "name": "Defensive Tactics",
+        "level": 7,
+        "text": "Choose Escape the Horde, Multiattack Defense, or Steel Will."
+      },
+      {
+        "name": "Multiattack",
+        "level": 11,
+        "text": "Choose Volley (ranged attack against all foes in a 10-foot radius) or Whirlwind Attack (melee attack against all foes within 5 feet)."
+      },
+      {
+        "name": "Superior Hunter's Defense",
+        "level": 15,
+        "text": "Choose Evasion, Stand Against the Tide, or Uncanny Dodge."
+      }
+    ]
+  },
+  {
+    "id": "thief",
+    "name": "Thief",
+    "parent": "rogue",
+    "label": "Roguish Archetype",
+    "features": [
+      {
+        "name": "Fast Hands",
+        "level": 3,
+        "text": "Use your Cunning Action bonus action to make a Sleight of Hand check, use thieves' tools to disarm a trap or open a lock, or use an object."
+      },
+      {
+        "name": "Second-Story Work",
+        "level": 3,
+        "text": "Climbing no longer costs extra movement, and your running jump distance increases by your Dexterity modifier (in feet)."
+      },
+      {
+        "name": "Supreme Sneak",
+        "level": 9,
+        "text": "You have advantage on Dexterity (Stealth) checks if you move no more than half your speed on the same turn."
+      },
+      {
+        "name": "Use Magic Device",
+        "level": 13,
+        "text": "You ignore all class, race, and level requirements on the use of magic items."
+      },
+      {
+        "name": "Thief's Reflexes",
+        "level": 17,
+        "text": "You can take two turns during the first round of any combat (the second at initiative minus 10)."
+      }
+    ]
   }
 ]

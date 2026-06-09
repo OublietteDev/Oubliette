@@ -173,12 +173,18 @@ def cantrips_known(char: Character, ruleset: Ruleset) -> int | None:
 
 
 def prepared_spell_count(char: Character, ruleset: Ruleset) -> int | None:
-    """For 'prepared' casters: ability modifier + class level (min 1). 'Known' casters
-    (and pact casters) return None — they don't prepare."""
+    """For 'prepared' casters: ability modifier + caster level (min 1). Full casters
+    use the class level; half casters (paladin) use half their level, rounded down.
+    Returns 0 when there are no spell slots at this level yet — a half caster at level
+    1 can't prepare anything. 'Known'/pact casters return None (they don't prepare)."""
     cc = _class(char, ruleset)
     if cc is None or not cc.spellcasting or cc.spellcasting.preparation != "prepared":
         return None
-    return max(1, char.ability_mod(_akey(cc.spellcasting.ability)) + char.level)
+    if not spell_slots(char, ruleset):          # half caster before spellcasting kicks in
+        return 0
+    caster_level = (char.level // 2 if cc.spellcasting.caster_type == "half"
+                    else char.level)
+    return max(1, char.ability_mod(_akey(cc.spellcasting.ability)) + caster_level)
 
 
 def spells_known_count(char: Character, ruleset: Ruleset) -> int | None:

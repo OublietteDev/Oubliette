@@ -63,6 +63,31 @@ def test_full_equipment_catalog_present():
     assert eq["cartographers_tools"].cost == 15 and eq["glassblowers_tools"].cost == 30
 
 
+def test_full_class_and_subclass_sets_present():
+    """CS4 Gate 4: all 12 SRD classes load, each with exactly one SRD subclass.
+    Count + caster-shape tripwire so a future edit can't silently drop one."""
+    rs = load_ruleset()
+    assert set(rs.classes) == {"barbarian", "bard", "cleric", "druid", "fighter",
+                               "monk", "paladin", "ranger", "rogue", "sorcerer",
+                               "warlock", "wizard"}
+    assert set(rs.subclasses) == {"champion", "evocation", "life", "lore", "land",
+                                  "open_hand", "devotion", "hunter", "thief"}
+    for s in rs.subclasses.values():           # every subclass parent resolves
+        assert s.parent in rs.classes
+    # Vancian casters carry a full 20-row spell table; warlock uses Pact Magic.
+    vancian = {cid for cid, c in rs.classes.items() if c.spell_progression}
+    assert vancian == {"bard", "cleric", "druid", "paladin", "ranger", "sorcerer", "wizard"}
+    assert all(len(rs.classes[c].spell_progression) == 20 for c in vancian)
+    assert rs.classes["warlock"].pact_magic_progression
+    # martial classes have no spell list at all
+    noncasters = {cid for cid, c in rs.classes.items() if c.spellcasting is None}
+    assert noncasters == {"barbarian", "fighter", "monk", "rogue"}
+    # leveled resource pools landed where they belong
+    assert {r.name for r in rs.classes["monk"].resources} == {"Ki"}
+    assert {r.name for r in rs.classes["paladin"].resources} == {"Lay on Hands", "Channel Divinity"}
+    assert rs.classes["rogue"].asi_levels == [4, 8, 10, 12, 16, 19]  # rogue's extra ASI
+
+
 def test_only_srd_legal_backgrounds_and_feats():
     """Strict-SRD guard. SRD 5.1 contains exactly ONE background (Acolyte) and ONE
     feat (Grappler). This tripwire fails if non-SRD content sneaks back in — a prior

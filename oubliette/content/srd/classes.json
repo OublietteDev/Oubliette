@@ -1664,5 +1664,1930 @@
         "text": "Spent on Channel Divinity options (Turn Undead, domain options); regained on a short or long rest."
       }
     ]
+  },
+  {
+    "id": "bard",
+    "name": "Bard",
+    "hit_die": 8,
+    "primary_ability": [
+      "cha"
+    ],
+    "saving_throws": [
+      "dex",
+      "cha"
+    ],
+    "armor_proficiencies": [
+      "light"
+    ],
+    "weapon_proficiencies": [
+      "simple",
+      "hand crossbows",
+      "longswords",
+      "rapiers",
+      "shortswords"
+    ],
+    "tool_proficiencies": [
+      "three musical instruments of your choice"
+    ],
+    "skill_choices": {
+      "choose": 3,
+      "from": [
+        "acrobatics",
+        "animal_handling",
+        "arcana",
+        "athletics",
+        "deception",
+        "history",
+        "insight",
+        "intimidation",
+        "investigation",
+        "medicine",
+        "nature",
+        "perception",
+        "performance",
+        "persuasion",
+        "religion",
+        "sleight_of_hand",
+        "stealth",
+        "survival"
+      ]
+    },
+    "starting_equipment": {
+      "fixed": [
+        {
+          "item": "leather_armor"
+        },
+        {
+          "item": "dagger"
+        }
+      ],
+      "choices": [
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "rapier"
+              }
+            ],
+            [
+              {
+                "item": "longsword"
+              }
+            ],
+            [
+              {
+                "item": "club"
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "diplomats_pack"
+              }
+            ],
+            [
+              {
+                "item": "entertainers_pack"
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "lute"
+              }
+            ],
+            [
+              {
+                "item": "flute"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "asi_levels": [
+      4,
+      8,
+      12,
+      16,
+      19
+    ],
+    "subclass_level": 3,
+    "subclass_label": "Bard College",
+    "spellcasting": {
+      "ability": "cha",
+      "caster_type": "full",
+      "preparation": "known",
+      "ritual": true
+    },
+    "features": [
+      {
+        "name": "Spellcasting",
+        "level": 1,
+        "text": "Cast bard spells using Charisma. You know a fixed set of bard spells and 2 cantrips at 1st level, learning and swapping more as you level."
+      },
+      {
+        "name": "Bardic Inspiration",
+        "level": 1,
+        "text": "As a bonus action, give a creature a Bardic Inspiration die (d6, rising to d8/d10/d12 at 5th/10th/15th level) it can add to one ability check, attack roll, or saving throw within 10 minutes. Uses equal to your Charisma modifier, regained on a long rest."
+      },
+      {
+        "name": "Jack of All Trades",
+        "level": 2,
+        "text": "Add half your proficiency bonus (rounded down) to any ability check that doesn't already include it."
+      },
+      {
+        "name": "Song of Rest",
+        "level": 2,
+        "text": "During a short rest, allies who spend Hit Dice regain extra hit points (1d6, rising with level)."
+      },
+      {
+        "name": "Expertise",
+        "level": 3,
+        "text": "Choose two of your skill proficiencies to double your proficiency bonus on; choose two more at 10th level."
+      },
+      {
+        "name": "Ability Score Improvement",
+        "level": 4,
+        "text": "Increase ability scores or take a feat."
+      },
+      {
+        "name": "Font of Inspiration",
+        "level": 5,
+        "text": "You regain all expended Bardic Inspiration uses on a short or long rest."
+      },
+      {
+        "name": "Countercharm",
+        "level": 6,
+        "text": "As an action, grant yourself and allies within 30 feet advantage on saves against being frightened or charmed."
+      },
+      {
+        "name": "Magical Secrets",
+        "level": 10,
+        "text": "Learn two spells from any class's spell list; more at 14th and 18th level."
+      },
+      {
+        "name": "Superior Inspiration",
+        "level": 20,
+        "text": "When you roll initiative with no Bardic Inspiration uses left, you regain one."
+      }
+    ],
+    "spell_progression": [
+      {
+        "level": 1,
+        "spell_slots": [
+          2
+        ],
+        "cantrips_known": 2,
+        "spells_known": 4
+      },
+      {
+        "level": 2,
+        "spell_slots": [
+          3
+        ],
+        "cantrips_known": 2,
+        "spells_known": 5
+      },
+      {
+        "level": 3,
+        "spell_slots": [
+          4,
+          2
+        ],
+        "cantrips_known": 2,
+        "spells_known": 6
+      },
+      {
+        "level": 4,
+        "spell_slots": [
+          4,
+          3
+        ],
+        "cantrips_known": 3,
+        "spells_known": 7
+      },
+      {
+        "level": 5,
+        "spell_slots": [
+          4,
+          3,
+          2
+        ],
+        "cantrips_known": 3,
+        "spells_known": 8
+      },
+      {
+        "level": 6,
+        "spell_slots": [
+          4,
+          3,
+          3
+        ],
+        "cantrips_known": 3,
+        "spells_known": 9
+      },
+      {
+        "level": 7,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          1
+        ],
+        "cantrips_known": 3,
+        "spells_known": 10
+      },
+      {
+        "level": 8,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          2
+        ],
+        "cantrips_known": 3,
+        "spells_known": 11
+      },
+      {
+        "level": 9,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          1
+        ],
+        "cantrips_known": 3,
+        "spells_known": 12
+      },
+      {
+        "level": 10,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2
+        ],
+        "cantrips_known": 4,
+        "spells_known": 14
+      },
+      {
+        "level": 11,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1
+        ],
+        "cantrips_known": 4,
+        "spells_known": 15
+      },
+      {
+        "level": 12,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1
+        ],
+        "cantrips_known": 4,
+        "spells_known": 15
+      },
+      {
+        "level": 13,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1
+        ],
+        "cantrips_known": 4,
+        "spells_known": 16
+      },
+      {
+        "level": 14,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1
+        ],
+        "cantrips_known": 4,
+        "spells_known": 18
+      },
+      {
+        "level": 15,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ],
+        "cantrips_known": 4,
+        "spells_known": 19
+      },
+      {
+        "level": 16,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ],
+        "cantrips_known": 4,
+        "spells_known": 19
+      },
+      {
+        "level": 17,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1,
+          1
+        ],
+        "cantrips_known": 4,
+        "spells_known": 20
+      },
+      {
+        "level": 18,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          1,
+          1,
+          1,
+          1
+        ],
+        "cantrips_known": 4,
+        "spells_known": 22
+      },
+      {
+        "level": 19,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ],
+        "cantrips_known": 4,
+        "spells_known": 22
+      },
+      {
+        "level": 20,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          2,
+          2,
+          1,
+          1
+        ],
+        "cantrips_known": 4,
+        "spells_known": 22
+      }
+    ]
+  },
+  {
+    "id": "druid",
+    "name": "Druid",
+    "hit_die": 8,
+    "primary_ability": [
+      "wis"
+    ],
+    "saving_throws": [
+      "int",
+      "wis"
+    ],
+    "armor_proficiencies": [
+      "light",
+      "medium",
+      "shields"
+    ],
+    "weapon_proficiencies": [
+      "clubs",
+      "daggers",
+      "darts",
+      "javelins",
+      "maces",
+      "quarterstaffs",
+      "scimitars",
+      "sickles",
+      "slings",
+      "spears"
+    ],
+    "tool_proficiencies": [
+      "herbalism kit"
+    ],
+    "skill_choices": {
+      "choose": 2,
+      "from": [
+        "arcana",
+        "animal_handling",
+        "insight",
+        "medicine",
+        "nature",
+        "perception",
+        "religion",
+        "survival"
+      ]
+    },
+    "starting_equipment": {
+      "fixed": [
+        {
+          "item": "leather_armor"
+        },
+        {
+          "item": "explorers_pack"
+        },
+        {
+          "item": "sprig_of_mistletoe"
+        }
+      ],
+      "choices": [
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "shield"
+              }
+            ],
+            [
+              {
+                "item": "club"
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "scimitar"
+              }
+            ],
+            [
+              {
+                "item": "club"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "asi_levels": [
+      4,
+      8,
+      12,
+      16,
+      19
+    ],
+    "subclass_level": 2,
+    "subclass_label": "Druid Circle",
+    "spellcasting": {
+      "ability": "wis",
+      "caster_type": "full",
+      "preparation": "prepared",
+      "ritual": true
+    },
+    "features": [
+      {
+        "name": "Druidic",
+        "level": 1,
+        "text": "You know Druidic, the secret language of druids, and can leave hidden messages in it."
+      },
+      {
+        "name": "Spellcasting",
+        "level": 1,
+        "text": "Cast druid spells using Wisdom. Prepare WIS mod + druid level spells from the druid list each day; you know 2 cantrips at 1st level. Druids won't wear armor or use shields made of metal."
+      },
+      {
+        "name": "Wild Shape",
+        "level": 2,
+        "text": "As an action, magically assume the shape of a beast you have seen (max CR and form options rise with level). Two uses, regained on a short or long rest."
+      },
+      {
+        "name": "Ability Score Improvement",
+        "level": 4,
+        "text": "Increase ability scores or take a feat."
+      },
+      {
+        "name": "Timeless Body",
+        "level": 18,
+        "text": "You age far more slowly; for every 10 years that pass, your body ages only 1 year."
+      },
+      {
+        "name": "Beast Spells",
+        "level": 18,
+        "text": "You can cast many druid spells while in a Wild Shape form."
+      },
+      {
+        "name": "Archdruid",
+        "level": 20,
+        "text": "You can use Wild Shape an unlimited number of times."
+      }
+    ],
+    "spell_progression": [
+      {
+        "level": 1,
+        "spell_slots": [
+          2
+        ],
+        "cantrips_known": 2
+      },
+      {
+        "level": 2,
+        "spell_slots": [
+          3
+        ],
+        "cantrips_known": 2
+      },
+      {
+        "level": 3,
+        "spell_slots": [
+          4,
+          2
+        ],
+        "cantrips_known": 2
+      },
+      {
+        "level": 4,
+        "spell_slots": [
+          4,
+          3
+        ],
+        "cantrips_known": 3
+      },
+      {
+        "level": 5,
+        "spell_slots": [
+          4,
+          3,
+          2
+        ],
+        "cantrips_known": 3
+      },
+      {
+        "level": 6,
+        "spell_slots": [
+          4,
+          3,
+          3
+        ],
+        "cantrips_known": 3
+      },
+      {
+        "level": 7,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          1
+        ],
+        "cantrips_known": 3
+      },
+      {
+        "level": 8,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          2
+        ],
+        "cantrips_known": 3
+      },
+      {
+        "level": 9,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          1
+        ],
+        "cantrips_known": 3
+      },
+      {
+        "level": 10,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2
+        ],
+        "cantrips_known": 4
+      },
+      {
+        "level": 11,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1
+        ],
+        "cantrips_known": 4
+      },
+      {
+        "level": 12,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1
+        ],
+        "cantrips_known": 4
+      },
+      {
+        "level": 13,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1
+        ],
+        "cantrips_known": 4
+      },
+      {
+        "level": 14,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1
+        ],
+        "cantrips_known": 4
+      },
+      {
+        "level": 15,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ],
+        "cantrips_known": 4
+      },
+      {
+        "level": 16,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ],
+        "cantrips_known": 4
+      },
+      {
+        "level": 17,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1,
+          1
+        ],
+        "cantrips_known": 4
+      },
+      {
+        "level": 18,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          1,
+          1,
+          1,
+          1
+        ],
+        "cantrips_known": 4
+      },
+      {
+        "level": 19,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ],
+        "cantrips_known": 4
+      },
+      {
+        "level": 20,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          3,
+          2,
+          2,
+          1,
+          1
+        ],
+        "cantrips_known": 4
+      }
+    ],
+    "resources": [
+      {
+        "name": "Wild Shape",
+        "recharge": "short",
+        "by_level": {
+          "2": 2,
+          "20": -1
+        },
+        "text": "Uses of Wild Shape, regained on a short or long rest (unlimited at 20th level)."
+      }
+    ]
+  },
+  {
+    "id": "monk",
+    "name": "Monk",
+    "hit_die": 8,
+    "primary_ability": [
+      "dex",
+      "wis"
+    ],
+    "saving_throws": [
+      "str",
+      "dex"
+    ],
+    "armor_proficiencies": [],
+    "weapon_proficiencies": [
+      "simple",
+      "shortswords"
+    ],
+    "tool_proficiencies": [
+      "one type of artisan's tools or one musical instrument"
+    ],
+    "skill_choices": {
+      "choose": 2,
+      "from": [
+        "acrobatics",
+        "athletics",
+        "history",
+        "insight",
+        "religion",
+        "stealth"
+      ]
+    },
+    "starting_equipment": {
+      "fixed": [
+        {
+          "item": "dart",
+          "qty": 10
+        }
+      ],
+      "choices": [
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "shortsword"
+              }
+            ],
+            [
+              {
+                "item": "club"
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "dungeoneers_pack"
+              }
+            ],
+            [
+              {
+                "item": "explorers_pack"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "asi_levels": [
+      4,
+      8,
+      12,
+      16,
+      19
+    ],
+    "subclass_level": 3,
+    "subclass_label": "Monastic Tradition",
+    "features": [
+      {
+        "name": "Unarmored Defense",
+        "level": 1,
+        "text": "While you wear no armor and use no shield, your AC equals 10 + your Dexterity modifier + your Wisdom modifier."
+      },
+      {
+        "name": "Martial Arts",
+        "level": 1,
+        "text": "Use Dexterity for unarmed strikes and monk weapons, roll a d4 in place of their normal damage (rising to d6/d8/d10 at 5th/11th/17th level), and make one unarmed strike as a bonus action when you take the Attack action."
+      },
+      {
+        "name": "Ki",
+        "level": 2,
+        "text": "You have ki points equal to your monk level, spent on Flurry of Blows, Patient Defense, and Step of the Wind. You regain all ki on a short or long rest. Ki save DC = 8 + proficiency + Wisdom modifier."
+      },
+      {
+        "name": "Unarmored Movement",
+        "level": 2,
+        "text": "Your speed increases by 10 feet while you wear no armor and use no shield (rising with level); from 9th level you can move along vertical surfaces and across liquids."
+      },
+      {
+        "name": "Deflect Missiles",
+        "level": 3,
+        "text": "Use a reaction to reduce damage from a ranged weapon attack; reduce it to 0 and you can catch and throw the missile, spending 1 ki."
+      },
+      {
+        "name": "Ability Score Improvement",
+        "level": 4,
+        "text": "Increase ability scores or take a feat."
+      },
+      {
+        "name": "Slow Fall",
+        "level": 4,
+        "text": "Use a reaction to reduce falling damage by five times your monk level."
+      },
+      {
+        "name": "Extra Attack",
+        "level": 5,
+        "text": "You can attack twice whenever you take the Attack action."
+      },
+      {
+        "name": "Stunning Strike",
+        "level": 5,
+        "text": "When you hit with a melee weapon attack, spend 1 ki to attempt to stun the target (Constitution save)."
+      },
+      {
+        "name": "Ki-Empowered Strikes",
+        "level": 6,
+        "text": "Your unarmed strikes count as magical for overcoming resistance and immunity."
+      },
+      {
+        "name": "Evasion",
+        "level": 7,
+        "text": "When you make a Dexterity save for half damage, you instead take no damage on a success and half on a failure."
+      },
+      {
+        "name": "Stillness of Mind",
+        "level": 7,
+        "text": "Use an action to end one effect on yourself causing you to be charmed or frightened."
+      },
+      {
+        "name": "Purity of Body",
+        "level": 10,
+        "text": "You're immune to disease and poison."
+      },
+      {
+        "name": "Tongue of the Sun and Moon",
+        "level": 13,
+        "text": "You can understand and be understood by any creature that has a language."
+      },
+      {
+        "name": "Diamond Soul",
+        "level": 14,
+        "text": "You gain proficiency in all saving throws; spend 1 ki to reroll a failed save."
+      },
+      {
+        "name": "Timeless Body",
+        "level": 15,
+        "text": "You no longer suffer the frailty of old age and can't be aged magically; you need no food or water."
+      },
+      {
+        "name": "Empty Body",
+        "level": 18,
+        "text": "Spend 4 ki to become invisible for 1 minute; spend 8 ki to cast astral projection."
+      },
+      {
+        "name": "Perfect Self",
+        "level": 20,
+        "text": "When you roll initiative with no ki left, you regain 4 ki."
+      }
+    ],
+    "spell_progression": [],
+    "resources": [
+      {
+        "name": "Ki",
+        "recharge": "short",
+        "by_level": {
+          "2": 2,
+          "3": 3,
+          "4": 4,
+          "5": 5,
+          "6": 6,
+          "7": 7,
+          "8": 8,
+          "9": 9,
+          "10": 10,
+          "11": 11,
+          "12": 12,
+          "13": 13,
+          "14": 14,
+          "15": 15,
+          "16": 16,
+          "17": 17,
+          "18": 18,
+          "19": 19,
+          "20": 20
+        },
+        "text": "Ki points (equal to your monk level), regained on a short or long rest."
+      }
+    ]
+  },
+  {
+    "id": "paladin",
+    "name": "Paladin",
+    "hit_die": 10,
+    "primary_ability": [
+      "str",
+      "cha"
+    ],
+    "saving_throws": [
+      "wis",
+      "cha"
+    ],
+    "armor_proficiencies": [
+      "light",
+      "medium",
+      "heavy",
+      "shields"
+    ],
+    "weapon_proficiencies": [
+      "simple",
+      "martial"
+    ],
+    "tool_proficiencies": [],
+    "skill_choices": {
+      "choose": 2,
+      "from": [
+        "athletics",
+        "insight",
+        "intimidation",
+        "medicine",
+        "persuasion",
+        "religion"
+      ]
+    },
+    "starting_equipment": {
+      "fixed": [
+        {
+          "item": "chain_mail"
+        },
+        {
+          "item": "amulet"
+        }
+      ],
+      "choices": [
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "longsword"
+              },
+              {
+                "item": "shield"
+              }
+            ],
+            [
+              {
+                "item": "greatsword"
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "javelin",
+                "qty": 5
+              }
+            ],
+            [
+              {
+                "item": "handaxe"
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "priests_pack"
+              }
+            ],
+            [
+              {
+                "item": "explorers_pack"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "asi_levels": [
+      4,
+      8,
+      12,
+      16,
+      19
+    ],
+    "subclass_level": 3,
+    "subclass_label": "Sacred Oath",
+    "spellcasting": {
+      "ability": "cha",
+      "caster_type": "half",
+      "preparation": "prepared",
+      "ritual": false
+    },
+    "features": [
+      {
+        "name": "Divine Sense",
+        "level": 1,
+        "text": "As an action, until the end of your next turn you detect celestials, fiends, and undead within 60 feet, plus consecrated or desecrated places. Uses equal to 1 + your Charisma modifier, regained on a long rest."
+      },
+      {
+        "name": "Lay on Hands",
+        "level": 1,
+        "text": "You have a pool of healing equal to five times your paladin level. As an action, restore hit points from it, or spend 5 points to cure a disease or neutralize a poison. The pool refreshes on a long rest."
+      },
+      {
+        "name": "Fighting Style",
+        "level": 2,
+        "text": "Adopt a fighting style that grants a combat benefit (e.g. Defense, Dueling, Great Weapon Fighting, Protection)."
+      },
+      {
+        "name": "Spellcasting",
+        "level": 2,
+        "text": "Cast paladin spells using Charisma. Prepare CHA mod + half your paladin level spells from the paladin list each day."
+      },
+      {
+        "name": "Divine Smite",
+        "level": 2,
+        "text": "When you hit with a melee weapon, expend a spell slot to deal an extra 2d8 radiant damage, +1d8 per slot level above 1st (max 5d8), and an extra 1d8 against undead or fiends."
+      },
+      {
+        "name": "Divine Health",
+        "level": 3,
+        "text": "You're immune to disease."
+      },
+      {
+        "name": "Sacred Oath",
+        "level": 3,
+        "text": "Swear a sacred oath that grants oath spells, Channel Divinity options, and features."
+      },
+      {
+        "name": "Channel Divinity",
+        "level": 3,
+        "text": "Your oath grants Channel Divinity options; you can use one per short or long rest."
+      },
+      {
+        "name": "Ability Score Improvement",
+        "level": 4,
+        "text": "Increase ability scores or take a feat."
+      },
+      {
+        "name": "Extra Attack",
+        "level": 5,
+        "text": "You can attack twice whenever you take the Attack action."
+      },
+      {
+        "name": "Aura of Protection",
+        "level": 6,
+        "text": "You and friendly creatures within 10 feet add your Charisma modifier (min +1) to saving throws."
+      },
+      {
+        "name": "Aura of Courage",
+        "level": 10,
+        "text": "You and friendly creatures within 10 feet can't be frightened while you're conscious."
+      },
+      {
+        "name": "Improved Divine Smite",
+        "level": 11,
+        "text": "Your melee weapon hits deal an extra 1d8 radiant damage."
+      },
+      {
+        "name": "Cleansing Touch",
+        "level": 14,
+        "text": "As an action, end one spell on yourself or a willing creature you touch. Uses equal to your Charisma modifier, regained on a long rest."
+      }
+    ],
+    "spell_progression": [
+      {
+        "level": 1,
+        "spell_slots": []
+      },
+      {
+        "level": 2,
+        "spell_slots": [
+          2
+        ]
+      },
+      {
+        "level": 3,
+        "spell_slots": [
+          3
+        ]
+      },
+      {
+        "level": 4,
+        "spell_slots": [
+          3
+        ]
+      },
+      {
+        "level": 5,
+        "spell_slots": [
+          4,
+          2
+        ]
+      },
+      {
+        "level": 6,
+        "spell_slots": [
+          4,
+          2
+        ]
+      },
+      {
+        "level": 7,
+        "spell_slots": [
+          4,
+          3
+        ]
+      },
+      {
+        "level": 8,
+        "spell_slots": [
+          4,
+          3
+        ]
+      },
+      {
+        "level": 9,
+        "spell_slots": [
+          4,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 10,
+        "spell_slots": [
+          4,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 11,
+        "spell_slots": [
+          4,
+          3,
+          3
+        ]
+      },
+      {
+        "level": 12,
+        "spell_slots": [
+          4,
+          3,
+          3
+        ]
+      },
+      {
+        "level": 13,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          1
+        ]
+      },
+      {
+        "level": 14,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          1
+        ]
+      },
+      {
+        "level": 15,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 16,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 17,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          1
+        ]
+      },
+      {
+        "level": 18,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          1
+        ]
+      },
+      {
+        "level": 19,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "level": 20,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "name": "Lay on Hands",
+        "recharge": "long",
+        "by_level": {
+          "1": 5,
+          "2": 10,
+          "3": 15,
+          "4": 20,
+          "5": 25,
+          "6": 30,
+          "7": 35,
+          "8": 40,
+          "9": 45,
+          "10": 50,
+          "11": 55,
+          "12": 60,
+          "13": 65,
+          "14": 70,
+          "15": 75,
+          "16": 80,
+          "17": 85,
+          "18": 90,
+          "19": 95,
+          "20": 100
+        },
+        "text": "Hit points in your Lay on Hands healing pool (5 x paladin level), refreshed on a long rest."
+      },
+      {
+        "name": "Channel Divinity",
+        "recharge": "short",
+        "by_level": {
+          "3": 1
+        },
+        "text": "Uses of your oath's Channel Divinity options, regained on a short or long rest."
+      }
+    ]
+  },
+  {
+    "id": "ranger",
+    "name": "Ranger",
+    "hit_die": 10,
+    "primary_ability": [
+      "dex",
+      "wis"
+    ],
+    "saving_throws": [
+      "str",
+      "dex"
+    ],
+    "armor_proficiencies": [
+      "light",
+      "medium",
+      "shields"
+    ],
+    "weapon_proficiencies": [
+      "simple",
+      "martial"
+    ],
+    "tool_proficiencies": [],
+    "skill_choices": {
+      "choose": 3,
+      "from": [
+        "animal_handling",
+        "athletics",
+        "insight",
+        "investigation",
+        "nature",
+        "perception",
+        "stealth",
+        "survival"
+      ]
+    },
+    "starting_equipment": {
+      "fixed": [
+        {
+          "item": "longbow"
+        },
+        {
+          "item": "arrow",
+          "qty": 20
+        }
+      ],
+      "choices": [
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "scale_mail"
+              }
+            ],
+            [
+              {
+                "item": "leather_armor"
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "shortsword",
+                "qty": 2
+              }
+            ],
+            [
+              {
+                "item": "handaxe",
+                "qty": 2
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "dungeoneers_pack"
+              }
+            ],
+            [
+              {
+                "item": "explorers_pack"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "asi_levels": [
+      4,
+      8,
+      12,
+      16,
+      19
+    ],
+    "subclass_level": 3,
+    "subclass_label": "Ranger Archetype",
+    "spellcasting": {
+      "ability": "wis",
+      "caster_type": "half",
+      "preparation": "known",
+      "ritual": false
+    },
+    "features": [
+      {
+        "name": "Favored Enemy",
+        "level": 1,
+        "text": "Choose a type of favored enemy. You have advantage on Wisdom (Survival) checks to track them and Intelligence checks to recall information about them, and you learn a language they speak."
+      },
+      {
+        "name": "Natural Explorer",
+        "level": 1,
+        "text": "Choose a favored terrain. While traveling there your group isn't slowed by difficult terrain, can't become lost except by magic, stays alert to danger, and gains other tracking and foraging benefits."
+      },
+      {
+        "name": "Fighting Style",
+        "level": 2,
+        "text": "Adopt a fighting style that grants a combat benefit (Archery, Defense, Dueling, or Two-Weapon Fighting)."
+      },
+      {
+        "name": "Spellcasting",
+        "level": 2,
+        "text": "Cast ranger spells using Wisdom. You know a small, fixed set of ranger spells, learning and swapping more as you level (no cantrips)."
+      },
+      {
+        "name": "Primeval Awareness",
+        "level": 3,
+        "text": "Expend a spell slot to sense whether aberrations, celestials, dragons, elementals, fey, fiends, or undead are within 1 mile (6 miles in your favored terrain)."
+      },
+      {
+        "name": "Ability Score Improvement",
+        "level": 4,
+        "text": "Increase ability scores or take a feat."
+      },
+      {
+        "name": "Extra Attack",
+        "level": 5,
+        "text": "You can attack twice whenever you take the Attack action."
+      },
+      {
+        "name": "Land's Stride",
+        "level": 8,
+        "text": "Moving through nonmagical difficult terrain costs no extra movement; advantage on saves against plants that magically impede movement."
+      },
+      {
+        "name": "Hide in Plain Sight",
+        "level": 10,
+        "text": "Spend 1 minute creating camouflage to gain a +10 bonus to Dexterity (Stealth) checks while you remain still."
+      },
+      {
+        "name": "Vanish",
+        "level": 14,
+        "text": "You can Hide as a bonus action, and you can't be tracked by nonmagical means."
+      },
+      {
+        "name": "Feral Senses",
+        "level": 18,
+        "text": "You don't suffer disadvantage attacking creatures you can't see, and you're aware of invisible creatures within 30 feet."
+      },
+      {
+        "name": "Foe Slayer",
+        "level": 20,
+        "text": "Once each turn, add your Wisdom modifier to an attack or damage roll against a favored enemy."
+      }
+    ],
+    "spell_progression": [
+      {
+        "level": 1,
+        "spell_slots": [],
+        "spells_known": 0
+      },
+      {
+        "level": 2,
+        "spell_slots": [
+          2
+        ],
+        "spells_known": 2
+      },
+      {
+        "level": 3,
+        "spell_slots": [
+          3
+        ],
+        "spells_known": 3
+      },
+      {
+        "level": 4,
+        "spell_slots": [
+          3
+        ],
+        "spells_known": 3
+      },
+      {
+        "level": 5,
+        "spell_slots": [
+          4,
+          2
+        ],
+        "spells_known": 4
+      },
+      {
+        "level": 6,
+        "spell_slots": [
+          4,
+          2
+        ],
+        "spells_known": 4
+      },
+      {
+        "level": 7,
+        "spell_slots": [
+          4,
+          3
+        ],
+        "spells_known": 5
+      },
+      {
+        "level": 8,
+        "spell_slots": [
+          4,
+          3
+        ],
+        "spells_known": 5
+      },
+      {
+        "level": 9,
+        "spell_slots": [
+          4,
+          3,
+          2
+        ],
+        "spells_known": 6
+      },
+      {
+        "level": 10,
+        "spell_slots": [
+          4,
+          3,
+          2
+        ],
+        "spells_known": 6
+      },
+      {
+        "level": 11,
+        "spell_slots": [
+          4,
+          3,
+          3
+        ],
+        "spells_known": 7
+      },
+      {
+        "level": 12,
+        "spell_slots": [
+          4,
+          3,
+          3
+        ],
+        "spells_known": 7
+      },
+      {
+        "level": 13,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          1
+        ],
+        "spells_known": 8
+      },
+      {
+        "level": 14,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          1
+        ],
+        "spells_known": 8
+      },
+      {
+        "level": 15,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          2
+        ],
+        "spells_known": 9
+      },
+      {
+        "level": 16,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          2
+        ],
+        "spells_known": 9
+      },
+      {
+        "level": 17,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          1
+        ],
+        "spells_known": 10
+      },
+      {
+        "level": 18,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          1
+        ],
+        "spells_known": 10
+      },
+      {
+        "level": 19,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2
+        ],
+        "spells_known": 11
+      },
+      {
+        "level": 20,
+        "spell_slots": [
+          4,
+          3,
+          3,
+          3,
+          2
+        ],
+        "spells_known": 11
+      }
+    ]
+  },
+  {
+    "id": "rogue",
+    "name": "Rogue",
+    "hit_die": 8,
+    "primary_ability": [
+      "dex"
+    ],
+    "saving_throws": [
+      "dex",
+      "int"
+    ],
+    "armor_proficiencies": [
+      "light"
+    ],
+    "weapon_proficiencies": [
+      "simple",
+      "hand crossbows",
+      "longswords",
+      "rapiers",
+      "shortswords"
+    ],
+    "tool_proficiencies": [
+      "thieves' tools"
+    ],
+    "skill_choices": {
+      "choose": 4,
+      "from": [
+        "acrobatics",
+        "athletics",
+        "deception",
+        "insight",
+        "intimidation",
+        "investigation",
+        "perception",
+        "performance",
+        "persuasion",
+        "sleight_of_hand",
+        "stealth"
+      ]
+    },
+    "starting_equipment": {
+      "fixed": [
+        {
+          "item": "leather_armor"
+        },
+        {
+          "item": "dagger",
+          "qty": 2
+        },
+        {
+          "item": "thieves_tools"
+        }
+      ],
+      "choices": [
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "rapier"
+              }
+            ],
+            [
+              {
+                "item": "shortsword"
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "shortbow"
+              }
+            ],
+            [
+              {
+                "item": "shortsword"
+              }
+            ]
+          ]
+        },
+        {
+          "choose": 1,
+          "options": [
+            [
+              {
+                "item": "burglars_pack"
+              }
+            ],
+            [
+              {
+                "item": "dungeoneers_pack"
+              }
+            ],
+            [
+              {
+                "item": "explorers_pack"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "asi_levels": [
+      4,
+      8,
+      10,
+      12,
+      16,
+      19
+    ],
+    "subclass_level": 3,
+    "subclass_label": "Roguish Archetype",
+    "features": [
+      {
+        "name": "Expertise",
+        "level": 1,
+        "text": "Choose two of your skill proficiencies (or one skill and your thieves' tools) to double your proficiency bonus on; choose two more at 6th level."
+      },
+      {
+        "name": "Sneak Attack",
+        "level": 1,
+        "text": "Once per turn, deal an extra 1d6 damage to a creature you hit with a finesse or ranged weapon when you have advantage, or when an ally is within 5 feet of the target and you don't have disadvantage. The damage rises by 1d6 at each odd level (up to 10d6 at 19th)."
+      },
+      {
+        "name": "Thieves' Cant",
+        "level": 1,
+        "text": "You know thieves' cant, a secret mix of dialect, jargon, and code, and can hide messages in seemingly normal conversation."
+      },
+      {
+        "name": "Cunning Action",
+        "level": 2,
+        "text": "On each of your turns, use a bonus action to Dash, Disengage, or Hide."
+      },
+      {
+        "name": "Ability Score Improvement",
+        "level": 4,
+        "text": "Increase ability scores or take a feat."
+      },
+      {
+        "name": "Uncanny Dodge",
+        "level": 5,
+        "text": "When an attacker you can see hits you, use a reaction to halve the attack's damage."
+      },
+      {
+        "name": "Evasion",
+        "level": 7,
+        "text": "When you make a Dexterity save for half damage, you instead take no damage on a success and half on a failure."
+      },
+      {
+        "name": "Reliable Talent",
+        "level": 11,
+        "text": "Whenever you make an ability check using a skill you're proficient in, treat a d20 roll of 9 or lower as a 10."
+      },
+      {
+        "name": "Blindsense",
+        "level": 14,
+        "text": "You're aware of the location of any hidden or invisible creature within 10 feet that you can hear."
+      },
+      {
+        "name": "Slippery Mind",
+        "level": 15,
+        "text": "You gain proficiency in Wisdom saving throws."
+      },
+      {
+        "name": "Elusive",
+        "level": 18,
+        "text": "No attack roll has advantage against you while you aren't incapacitated."
+      },
+      {
+        "name": "Stroke of Luck",
+        "level": 20,
+        "text": "Once per short or long rest, turn a missed attack into a hit, or a failed ability check into a 20."
+      }
+    ],
+    "spell_progression": []
   }
 ]

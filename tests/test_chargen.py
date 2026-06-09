@@ -130,10 +130,29 @@ def _why(build, ruleset=RS) -> str:
 
 
 def test_unknown_references_are_rejected():
-    errs = _why(_fighter(char_class="bard", race="orc", background="pirate"))
-    assert "unknown class 'bard'" in errs
+    # warlord is not an SRD class (all 12 real classes now load via CS4)
+    errs = _why(_fighter(char_class="warlord", race="orc", background="pirate"))
+    assert "unknown class 'warlord'" in errs
     assert "unknown race 'orc'" in errs
     assert "unknown background 'pirate'" in errs
+
+
+def test_paladin_half_caster_needs_no_spells_at_level_1():
+    """Regression (CS4): a half caster has no spellcasting at level 1, so chargen must
+    require ZERO prepared spells even with positive Charisma. derive.prepared_spell_count
+    gates on actually having slots; the paladin assembles spell-less and wears its kit."""
+    build = CharacterBuild(
+        name="Greer", race="human", char_class="paladin", background="acolyte",
+        ability_method="standard_array",
+        base_abilities={Ability.STR: 15, Ability.CHA: 14, Ability.CON: 13,
+                        Ability.DEX: 12, Ability.WIS: 10, Ability.INT: 8},
+        skills=[Skill.ATHLETICS, Skill.PERSUASION],
+        languages=["Celestial", "Abyssal"], race_languages=["Orc"],
+        equipment_choices=[[0], [0], [0]],     # longsword+shield; 5 javelins; priest's pack
+    )
+    char, _ = build_character(build, RS)
+    assert derive.prepared_spell_count(char, RS) == 0
+    assert char.armor_class == 18              # chain mail 16 + shield 2
 
 
 def test_standard_array_must_match_exactly():
