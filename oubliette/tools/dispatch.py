@@ -52,6 +52,7 @@ class Dispatcher:
         if isinstance(call, Transact):
             return ResolvedTool(call.tool, call.reason, ops=self._resolve_transact(call))
         if isinstance(call, Give):
+            self._assert_char(call.to)        # can't credit gold/items to a non-character
             return ResolvedTool(call.tool, call.reason,
                                 ops=[self._credit_op(call.to, e) for e in call.items])
         if isinstance(call, Take):
@@ -59,10 +60,7 @@ class Dispatcher:
             return ResolvedTool(call.tool, call.reason,
                                 ops=[self._debit_op(call.from_, e) for e in call.items])
         if isinstance(call, AwardXp):
-            try:
-                self.repo.get_character(call.to)        # recipient must exist
-            except StateError as e:
-                raise ToolApplyError(str(e)) from e
+            self._assert_char(call.to)         # XP goes to a tracked character (the party)
             return ResolvedTool(call.tool, call.reason, ops=[StateOp.xp(call.to, call.amount)])
         if isinstance(call, CreateEntity):
             draft = CanonDraft(entity_type=call.entity_type, name=call.name,
@@ -120,6 +118,18 @@ class Dispatcher:
         return ops
 
     # --- helpers --------------------------------------------------------------
+    def _assert_char(self, char_id: str) -> None:
+        """A gold/item/XP target must be a tracked character (the party or an
+        established NPC). Provisional canon entities aren't characters and can't hold
+        protected state — guard here so a bad op is never recorded (it would otherwise
+        crash on replay)."""
+        try:
+            self.repo.get_character(char_id)
+        except StateError as e:
+            raise ToolApplyError(
+                f"{char_id!r} isn't a tracked character that can hold gold or items — "
+                "only the party and established NPCs can") from e
+
     def _assert_can_cover(self, char_id: str, entries: list[ValueEntry]) -> None:
         try:
             char = self.repo.get_character(char_id)

@@ -128,9 +128,20 @@ class StateOp(BaseModel):
             repo.set_level(self.char, self.value or 1)
 
 
-def apply_ops(ops: list[StateOp], repo: "Repository") -> None:
+def apply_ops(ops: list[StateOp], repo: "Repository", strict: bool = True) -> None:
+    """Apply state ops. Live application is `strict` (an op against missing state is a
+    bug — let it raise). Replay is tolerant (`strict=False`): a legacy op that targets
+    a character that never existed — e.g. gold once granted to a provisional canon
+    entity — is skipped with a warning rather than bricking the whole save."""
+    from ..state.repository import StateError
     for op in ops:
-        op.apply(repo)
+        try:
+            op.apply(repo)
+        except StateError as e:
+            if strict:
+                raise
+            print(f"[oubliette] replay: skipped {op.op!r} op on missing target "
+                  f"{op.char!r} — {e}")
 
 
 def install_character(payload: dict, repo: "Repository") -> None:
@@ -158,7 +169,7 @@ class Event(BaseModel):
 
 
 def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = None,
-                quests: "QuestStore | None" = None) -> None:
+                quests: "QuestStore | None" = None, strict: bool = True) -> None:
     """Replay one event into state. Protected-state events carry ops; canon/quest
     events carry their record/mutation. Non-state events (player_message, roll,
     marker) are no-ops here."""
@@ -184,12 +195,13 @@ def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = N
     if event.kind in (EventKind.CHARACTER_CREATED.value, EventKind.CHARACTER_LEVELED.value):
         install_character(event.payload, repo)
         return
-    apply_ops(event.state_ops(), repo)
+    apply_ops(event.state_ops(), repo, strict=strict)
 
 
 def replay(events: list[Event], repo: "Repository", canon: "CanonStore | None" = None,
            quests: "QuestStore | None" = None) -> None:
     """Rebuild authoritative state (canon + quests) by applying events in seq order.
-    Never rolls, never calls a model — the byte-identical guarantee (D9)."""
+    Never rolls, never calls a model — the byte-identical guarantee (D9). Tolerant of
+    legacy invalid ops (skips them) so a saved game always reopens."""
     for event in sorted(events, key=lambda e: e.seq):
-        apply_event(event, repo, canon, quests)
+        apply_event(event, repo, canon, quests, strict=False)

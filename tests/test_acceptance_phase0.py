@@ -14,13 +14,14 @@ import pytest
 from oubliette.dm.brain import Brain
 from oubliette.enums import Tier
 from oubliette.llm.scripted import ScriptedLLMClient
-from oubliette.record.events import EventKind
+from oubliette.record.events import Event, EventKind, StateOp, apply_ops, replay
 from oubliette.record.rng import Rng
 from oubliette.record.store import InMemoryEventStore
 from oubliette.runtime.loop import TurnLoop
 from oubliette.runtime.session import Session
+from oubliette.state.repository import StateError
 from oubliette.tools.dispatch import Dispatcher, ToolApplyError
-from oubliette.tools.schemas import AwardXp, Transact, ValueEntry
+from oubliette.tools.schemas import AwardXp, Give, Transact, ValueEntry
 from pydantic import ValidationError
 
 
@@ -105,6 +106,30 @@ def test_award_xp_rejects_nonpositive_and_unknown_target():
         AwardXp(to="pc", amount=0, reason="nothing earned")
     with pytest.raises(ToolApplyError):            # recipient must exist
         dispatcher.resolve(AwardXp(to="ghost", amount=10, reason="who?"))
+
+
+def test_give_to_noncharacter_is_rejected():
+    """Regression (bricked-save bug): granting gold/items to a non-character — e.g. a
+    provisional NPC the DM just created — is refused at resolve time, so the bad op is
+    never recorded. (Previously it slipped through and crashed replay on reopen.)"""
+    session, _ = _make_loop()
+    dispatcher = Dispatcher(session.repo)
+    with pytest.raises(ToolApplyError):
+        dispatcher.resolve(Give(to="marro_the_dockhand", items=[ValueEntry(gold=50)],
+                                reason="a purse for the new dockhand"))
+
+
+def test_replay_tolerates_legacy_ops_against_missing_characters():
+    """Defense in depth: a save whose log already holds an op targeting a character
+    that never existed still reopens — replay skips the bad op instead of bricking the
+    save. Live application stays strict (an unexpected bad op there is a real bug)."""
+    session, _ = _make_loop()
+    repo = session.repo
+    bad = Event(seq=9999, kind=EventKind.TOOL_APPLIED.value,
+                payload={"ops": [StateOp.gold("ghost", 50).model_dump()]})
+    with pytest.raises(StateError):                 # strict (live) surfaces it
+        apply_ops(bad.state_ops(), repo, strict=True)
+    replay([bad], repo)                             # tolerant replay does not raise
 
 
 def test_unbacked_tool_call_resolves_to_nothing():
