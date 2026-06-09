@@ -75,14 +75,25 @@ class StageOutcome:
 
 # --- enemy resolution (templates → bestiary → persistent entities) -------
 
+def _norm_ref(ref: str) -> str:
+    """Normalise an enemy ref for tolerant matching: lowercase, trim, and treat
+    spaces/hyphens as underscores so 'Dire Wolf' and 'dire-wolf' both hit
+    `dire_wolf`."""
+    return ref.strip().lower().replace(" ", "_").replace("-", "_")
+
+
 def _statblock_for(session, ref: str):
-    """Look a ref up as a monster stat block: the pack's own authored bestiary
-    first (this-world creatures), then the global SRD bestiary (334 monsters)."""
-    for sb in getattr(session, "statblocks", ()) or ():
-        if sb.id == ref:
+    """Look a ref up as a monster stat block, tolerant of natural naming (the DM
+    names creatures in plain English, not by exact id). Pack creatures (this-world
+    bestiary) take precedence over the global SRD bestiary (334 monsters); each is
+    matched by normalised id OR name."""
+    want = _norm_ref(ref)
+    pack = getattr(session, "statblocks", ()) or ()
+    srd = (getattr(getattr(session, "ruleset", None), "bestiary", None) or {}).values()
+    for sb in (*pack, *srd):
+        if _norm_ref(sb.id) == want or _norm_ref(sb.name) == want:
             return sb
-    bestiary = getattr(getattr(session, "ruleset", None), "bestiary", None) or {}
-    return bestiary.get(ref)
+    return None
 
 
 def _resolve_enemies(request: EncounterRequest, repo: Repository, session) -> list[EnemyInstance]:

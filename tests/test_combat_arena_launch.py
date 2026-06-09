@@ -116,6 +116,33 @@ def test_unknown_enemy_ref_is_a_combat_error():
         stage_combat(req, s.repo, s)
 
 
+def test_resolver_is_tolerant_of_natural_monster_naming():
+    """The DM names creatures in plain English ('Dire Wolf'), not by exact id.
+    The resolver normalizes spaces/case and matches id OR name."""
+    from oubliette.combat.arena_launch import _statblock_for
+
+    s = _session()
+    bestiary = getattr(s.ruleset, "bestiary", None) or {}
+    # a monster whose display name isn't a bare lowercase id (has a space)
+    sb = next(v for v in bestiary.values() if " " in v.name)
+
+    assert _statblock_for(s, sb.id) is sb                  # exact id still works
+    assert _statblock_for(s, sb.name) is sb                # "Dire Wolf"
+    assert _statblock_for(s, sb.name.upper()) is sb        # case-insensitive
+    assert _statblock_for(s, sb.name.replace(" ", "-")) is sb  # hyphens too
+    assert _statblock_for(s, "no_such_monster_xyz") is None
+
+
+def test_stage_accepts_a_naturally_named_enemy():
+    s = _session()
+    req = EncounterRequest(kind="brawl", enemies=[EnemyRef(ref="Goblin")])  # capitalized
+    outcome = stage_combat(req, s.repo, s)
+    assert outcome.pending is not None
+    enemy = [c for c in outcome.pending.plan.encounter.combatants if c.team == "enemy"]
+    assert len(enemy) == 1 and enemy[0].creature_data.name.lower().startswith("goblin")
+    arena_launch.cleanup(outcome.pending)
+
+
 def test_chosen_exit_resolves_immediately_without_an_arena():
     s = _session()
     req = EncounterRequest(enemies=[EnemyRef(ref="goblin")],
