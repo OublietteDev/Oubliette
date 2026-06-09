@@ -1,0 +1,95 @@
+{
+  "name": "Planetar",
+  "size": "large",
+  "creature_type": "celestial",
+  "alignment": "lawful good",
+  "ability_scores": {
+    "strength": 24,
+    "dexterity": 20,
+    "constitution": 24,
+    "intelligence": 19,
+    "wisdom": 22,
+    "charisma": 25
+  },
+  "armor_class": 19,
+  "max_hit_points": 200,
+  "hit_dice": "16d10",
+  "speed": {
+    "walk": 40,
+    "fly": 120
+  },
+  "proficiency_bonus": 5,
+  "saving_throw_proficiencies": [
+    "constitution",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [
+    "radiant",
+    "bludgeoning, piercing, and slashing from nonmagical weapons"
+  ],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "charmed",
+    "exhaustion",
+    "frightened"
+  ],
+  "senses": {
+    "truesight": 120
+  },
+  "passive_perception": 21,
+  "actions": [
+    {
+      "name": "Greatsword",
+      "description": "Melee Weapon Attack: +12 to hit, reach 5 ft., one target. Hit: 21 (4d6 + 7) slashing damage plus 22 (5d8) radiant damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Greatsword",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "4d6",
+            "damage_type": "slashing",
+            "bonus": 7
+          },
+          {
+            "dice": "5d8",
+            "damage_type": "radiant",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The planetar makes two melee attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Angelic Weapons",
+      "description": "The planetar's weapon attacks are magical. When the planetar hits with any weapon, the weapon deals an extra 5d8 radiant damage (included in the attack)."
+    },
+    {
+      "name": "Divine Awareness",
+      "description": "The planetar knows if it hears a lie."
+    },
+    {
+      "name": "Innate Spellcasting",
+      "description": "The planetar's spellcasting ability is Charisma (spell save DC 20). The planetar can innately cast the following spells, requiring no material components:\nAt will: detect evil and good, invisibility (self only)\n3/day each: blade barrier, dispel evil and good, flame strike, raise dead\n1/day each: commune, control weather, insect plague"
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The planetar has advantage on saving throws against spells and other magical effects."
+    }
+  ],
+  "challenge_rating": 16.0,
+  "experience_points": 15000,
+  "is_player_controlled": false
+}

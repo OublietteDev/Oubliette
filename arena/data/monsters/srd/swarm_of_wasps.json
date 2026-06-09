@@ -1,0 +1,75 @@
+{
+  "name": "Swarm of Wasps",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 3,
+    "dexterity": 13,
+    "constitution": 10,
+    "intelligence": 1,
+    "wisdom": 7,
+    "charisma": 1
+  },
+  "armor_class": 12,
+  "max_hit_points": 22,
+  "hit_dice": "5d8",
+  "speed": {
+    "walk": 5,
+    "fly": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [
+    "bludgeoning",
+    "piercing",
+    "slashing"
+  ],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "charmed",
+    "frightened",
+    "grappled",
+    "paralyzed",
+    "petrified",
+    "prone",
+    "restrained",
+    "stunned"
+  ],
+  "senses": {
+    "blindsight": 10
+  },
+  "passive_perception": 8,
+  "actions": [
+    {
+      "name": "Bites",
+      "description": "Melee Weapon Attack: +3 to hit, reach 0 ft., one target in the swarm's space. Hit: 10 (4d4) piercing damage, or 5 (2d4) piercing damage if the swarm has half of its hit points or fewer.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bites",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "4d4",
+            "damage_type": "piercing",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Swarm",
+      "description": "The swarm can occupy another creature's space and vice versa, and the swarm can move through any opening large enough for a Tiny insect. The swarm can't regain hit points or gain temporary hit points."
+    }
+  ],
+  "challenge_rating": 0.5,
+  "experience_points": 100,
+  "is_player_controlled": false
+}

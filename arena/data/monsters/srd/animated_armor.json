@@ -1,0 +1,82 @@
+{
+  "name": "Animated Armor",
+  "size": "medium",
+  "creature_type": "construct",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 14,
+    "dexterity": 11,
+    "constitution": 13,
+    "intelligence": 1,
+    "wisdom": 3,
+    "charisma": 1
+  },
+  "armor_class": 18,
+  "max_hit_points": 33,
+  "hit_dice": "6d8",
+  "speed": {
+    "walk": 25
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "poison",
+    "psychic"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "blinded",
+    "charmed",
+    "deafened",
+    "exhaustion",
+    "frightened",
+    "paralyzed",
+    "petrified",
+    "poisoned"
+  ],
+  "senses": {
+    "blindsight": 60
+  },
+  "passive_perception": 6,
+  "actions": [
+    {
+      "name": "Slam",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Slam",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "bludgeoning",
+            "bonus": 2
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The armor makes two melee attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Antimagic Susceptibility",
+      "description": "The armor is incapacitated while in the area of an antimagic field. If targeted by dispel magic, the armor must succeed on a Constitution saving throw against the caster's spell save DC or fall unconscious for 1 minute."
+    },
+    {
+      "name": "False Appearance",
+      "description": "While the armor remains motionless, it is indistinguishable from a normal suit of armor."
+    }
+  ],
+  "challenge_rating": 1.0,
+  "experience_points": 200,
+  "is_player_controlled": false
+}

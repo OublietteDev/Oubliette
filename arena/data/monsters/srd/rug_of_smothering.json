@@ -1,0 +1,59 @@
+{
+  "name": "Rug of Smothering",
+  "size": "large",
+  "creature_type": "construct",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 17,
+    "dexterity": 14,
+    "constitution": 10,
+    "intelligence": 1,
+    "wisdom": 3,
+    "charisma": 1
+  },
+  "armor_class": 12,
+  "max_hit_points": 33,
+  "hit_dice": "6d10",
+  "speed": {
+    "walk": 10
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "poison",
+    "psychic"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "blinded",
+    "charmed",
+    "blinded",
+    "frightened",
+    "paralyzed",
+    "petrified",
+    "poisoned"
+  ],
+  "senses": {
+    "blindsight": 60
+  },
+  "passive_perception": 6,
+  "actions": [],
+  "special_abilities": [
+    {
+      "name": "Antimagic Susceptibility",
+      "description": "The rug is incapacitated while in the area of an antimagic field. If targeted by dispel magic, the rug must succeed on a Constitution saving throw against the caster's spell save DC or fall unconscious for 1 minute."
+    },
+    {
+      "name": "Damage Transfer",
+      "description": "While it is grappling a creature, the rug takes only half the damage dealt to it, and the creature grappled by the rug takes the other half."
+    },
+    {
+      "name": "False Appearance",
+      "description": "While the rug remains motionless, it is indistinguishable from a normal rug."
+    }
+  ],
+  "challenge_rating": 2.0,
+  "experience_points": 450,
+  "is_player_controlled": false
+}

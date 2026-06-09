@@ -1,0 +1,136 @@
+{
+  "name": "Weretiger, Hybrid Form",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "neutral",
+  "ability_scores": {
+    "strength": 17,
+    "dexterity": 15,
+    "constitution": 16,
+    "intelligence": 10,
+    "wisdom": 13,
+    "charisma": 11
+  },
+  "armor_class": 12,
+  "max_hit_points": 120,
+  "hit_dice": "16d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "bludgeoning, piercing, and slashing from nonmagical weapons that aren't silvered"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 15,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 8 (1d10 + 3) piercing damage. If the target is a humanoid, it must succeed on a DC 13 Constitution saving throw or be cursed with weretiger lycanthropy.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d10",
+            "damage_type": "piercing",
+            "bonus": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 7 (1d8 + 3) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claw",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "slashing",
+            "bonus": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "Scimitar",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 6 (1d6 + 3) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Scimitar",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "slashing",
+            "bonus": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "Longbow",
+      "description": "Ranged Weapon Attack: +4 to hit, range 150/600 ft., one target. Hit: 6 (1d8 + 2) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Longbow",
+        "attack_type": "ranged_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "In humanoid form, the weretiger makes two scimitar attacks or two longbow attacks. In hybrid form, it can attack like a humanoid or make two claw attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Shapechanger",
+      "description": "The weretiger can use its action to polymorph into a tiger-humanoid hybrid or into a tiger, or back into its true form, which is humanoid. Its statistics, other than its size, are the same in each form. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies."
+    },
+    {
+      "name": "Keen Hearing and Smell",
+      "description": "The weretiger has advantage on Wisdom (Perception) checks that rely on hearing or smell."
+    },
+    {
+      "name": "Pounce",
+      "description": "If the weretiger moves at least 15 feet straight toward a creature and then hits it with a claw attack on the same turn, that target must succeed on a DC 14 Strength saving throw or be knocked prone. If the target is prone, the weretiger can make one bite attack against it as a bonus action."
+    }
+  ],
+  "challenge_rating": 4.0,
+  "experience_points": 1100,
+  "is_player_controlled": false
+}

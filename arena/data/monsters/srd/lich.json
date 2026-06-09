@@ -1,0 +1,90 @@
+{
+  "name": "Lich",
+  "size": "medium",
+  "creature_type": "undead",
+  "alignment": "any evil alignment",
+  "ability_scores": {
+    "strength": 11,
+    "dexterity": 16,
+    "constitution": 16,
+    "intelligence": 20,
+    "wisdom": 14,
+    "charisma": 16
+  },
+  "armor_class": 17,
+  "max_hit_points": 135,
+  "hit_dice": "18d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 7,
+  "saving_throw_proficiencies": [
+    "constitution",
+    "intelligence",
+    "wisdom"
+  ],
+  "damage_resistances": [
+    "cold",
+    "lightning",
+    "necrotic"
+  ],
+  "damage_immunities": [
+    "poison",
+    "bludgeoning, piercing, and slashing from nonmagical weapons"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "charmed",
+    "exhaustion",
+    "frightened",
+    "paralyzed",
+    "poisoned"
+  ],
+  "senses": {
+    "truesight": 120
+  },
+  "passive_perception": 19,
+  "actions": [
+    {
+      "name": "Paralyzing Touch",
+      "description": "Melee Spell Attack: +12 to hit, reach 5 ft., one creature. Hit: 10 (3d6) cold damage. The target must succeed on a DC 18 Constitution saving throw or be paralyzed for 1 minute. The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Paralyzing Touch",
+        "attack_type": "melee_weapon",
+        "ability": "intelligence",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "3d6",
+            "damage_type": "cold",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Legendary Resistance",
+      "description": "If the lich fails a saving throw, it can choose to succeed instead."
+    },
+    {
+      "name": "Rejuvenation",
+      "description": "If it has a phylactery, a destroyed lich gains a new body in 1d10 days, regaining all its hit points and becoming active again. The new body appears within 5 feet of the phylactery."
+    },
+    {
+      "name": "Spellcasting",
+      "description": "The lich is an 18th-level spellcaster. Its spellcasting ability is Intelligence (spell save DC 20, +12 to hit with spell attacks). The lich has the following wizard spells prepared:\n\n- Cantrips (at will): mage hand, prestidigitation, ray of frost\n- 1st level (4 slots): detect magic, magic missile, shield, thunderwave\n- 2nd level (3 slots): acid arrow, detect thoughts, invisibility, mirror image\n- 3rd level (3 slots): animate dead, counterspell, dispel magic, fireball\n- 4th level (3 slots): blight, dimension door\n- 5th level (3 slots): cloudkill, scrying\n- 6th level (1 slot): disintegrate, globe of invulnerability\n- 7th level (1 slot): finger of death, plane shift\n- 8th level (1 slot): dominate monster, power word stun\n- 9th level (1 slot): power word kill"
+    },
+    {
+      "name": "Turn Resistance",
+      "description": "The lich has advantage on saving throws against any effect that turns undead."
+    }
+  ],
+  "challenge_rating": 21.0,
+  "experience_points": 33000,
+  "is_player_controlled": false
+}

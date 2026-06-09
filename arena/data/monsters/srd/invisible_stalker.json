@@ -1,0 +1,84 @@
+{
+  "name": "Invisible Stalker",
+  "size": "medium",
+  "creature_type": "elemental",
+  "alignment": "neutral",
+  "ability_scores": {
+    "strength": 16,
+    "dexterity": 19,
+    "constitution": 14,
+    "intelligence": 10,
+    "wisdom": 15,
+    "charisma": 11
+  },
+  "armor_class": 14,
+  "max_hit_points": 104,
+  "hit_dice": "16d8",
+  "speed": {
+    "walk": 50,
+    "fly": 50
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [
+    "bludgeoning, piercing, and slashing from nonmagical weapons"
+  ],
+  "damage_immunities": [
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "exhaustion",
+    "grappled",
+    "paralyzed",
+    "petrified",
+    "poisoned",
+    "prone",
+    "restrained",
+    "unconscious"
+  ],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 18,
+  "actions": [
+    {
+      "name": "Slam",
+      "description": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Slam",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "bludgeoning",
+            "bonus": 3
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The stalker makes two slam attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Invisibility",
+      "description": "The stalker is invisible."
+    },
+    {
+      "name": "Faultless Tracker",
+      "description": "The stalker is given a quarry by its summoner. The stalker knows the direction and distance to its quarry as long as the two of them are on the same plane of existence. The stalker also knows the location of its summoner."
+    }
+  ],
+  "challenge_rating": 6.0,
+  "experience_points": 2300,
+  "is_player_controlled": false
+}

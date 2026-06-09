@@ -1,0 +1,90 @@
+{
+  "name": "Ettin",
+  "size": "large",
+  "creature_type": "giant",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 21,
+    "dexterity": 8,
+    "constitution": 17,
+    "intelligence": 6,
+    "wisdom": 10,
+    "charisma": 8
+  },
+  "armor_class": 12,
+  "max_hit_points": 85,
+  "hit_dice": "10d10",
+  "speed": {
+    "walk": 40
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 14,
+  "actions": [
+    {
+      "name": "Battleaxe",
+      "description": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 14 (2d8 + 5) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Battleaxe",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "slashing",
+            "bonus": 5
+          }
+        ]
+      }
+    },
+    {
+      "name": "Morningstar",
+      "description": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 14 (2d8 + 5) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Morningstar",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "piercing",
+            "bonus": 5
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The ettin makes two attacks: one with its battleaxe and one with its morningstar.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Two Heads",
+      "description": "The ettin has advantage on Wisdom (Perception) checks and on saving throws against being blinded, charmed, deafened, frightened, stunned, and knocked unconscious."
+    },
+    {
+      "name": "Wakeful",
+      "description": "When one of the ettin's heads is asleep, its other head is awake."
+    }
+  ],
+  "challenge_rating": 4.0,
+  "experience_points": 1100,
+  "is_player_controlled": false
+}

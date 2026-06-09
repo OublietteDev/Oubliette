@@ -1,0 +1,61 @@
+{
+  "name": "Worg",
+  "size": "large",
+  "creature_type": "monstrosity",
+  "alignment": "neutral evil",
+  "ability_scores": {
+    "strength": 16,
+    "dexterity": 13,
+    "constitution": 13,
+    "intelligence": 7,
+    "wisdom": 11,
+    "charisma": 8
+  },
+  "armor_class": 13,
+  "max_hit_points": 26,
+  "hit_dice": "4d10",
+  "speed": {
+    "walk": 50
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 14,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) piercing damage. If the target is a creature, it must succeed on a DC 13 Strength saving throw or be knocked prone.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "piercing",
+            "bonus": 3
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Keen Hearing and Smell",
+      "description": "The worg has advantage on Wisdom (Perception) checks that rely on hearing or smell."
+    }
+  ],
+  "challenge_rating": 0.5,
+  "experience_points": 100,
+  "is_player_controlled": false
+}

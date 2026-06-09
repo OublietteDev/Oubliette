@@ -1,0 +1,71 @@
+{
+  "name": "Giant Wolf Spider",
+  "size": "medium",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 12,
+    "dexterity": 16,
+    "constitution": 13,
+    "intelligence": 3,
+    "wisdom": 12,
+    "charisma": 4
+  },
+  "armor_class": 13,
+  "max_hit_points": 11,
+  "hit_dice": "2d8",
+  "speed": {
+    "walk": 40,
+    "climb": 40
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 10,
+    "darkvision": 60
+  },
+  "passive_perception": 13,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +3 to hit, reach 5 ft., one creature. Hit: 4 (1d6 + 1) piercing damage, and the target must make a DC 11 Constitution saving throw, taking 7 (2d6) poison damage on a failed save, or half as much damage on a successful one. If the poison damage reduces the target to 0 hit points, the target is stable but poisoned for 1 hour, even after regaining hit points, and is paralyzed while poisoned in this way.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "piercing",
+            "bonus": 1
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Spider Climb",
+      "description": "The spider can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check."
+    },
+    {
+      "name": "Web Sense",
+      "description": "While in contact with a web, the spider knows the exact location of any other creature in contact with the same web."
+    },
+    {
+      "name": "Web Walker",
+      "description": "The spider ignores movement restrictions caused by webbing."
+    }
+  ],
+  "challenge_rating": 0.25,
+  "experience_points": 50,
+  "is_player_controlled": false
+}

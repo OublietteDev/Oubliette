@@ -1,0 +1,163 @@
+{
+  "name": "Tarrasque",
+  "size": "gargantuan",
+  "creature_type": "monstrosity",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 30,
+    "dexterity": 11,
+    "constitution": 30,
+    "intelligence": 3,
+    "wisdom": 11,
+    "charisma": 11
+  },
+  "armor_class": 25,
+  "max_hit_points": 676,
+  "hit_dice": "33d20",
+  "speed": {
+    "walk": 40
+  },
+  "proficiency_bonus": 9,
+  "saving_throw_proficiencies": [
+    "intelligence",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "fire",
+    "poison",
+    "bludgeoning, piercing, and slashing from nonmagical weapons"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "charmed",
+    "frightened",
+    "paralyzed",
+    "poisoned"
+  ],
+  "senses": {
+    "blindsight": 120
+  },
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +19 to hit, reach 10 ft., one target. Hit: 36 (4d12 + 10) piercing damage. If the target is a creature, it is grappled (escape DC 20). Until this grapple ends, the target is restrained, and the tarrasque can't bite another target.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "4d12",
+            "damage_type": "piercing",
+            "bonus": 10
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Weapon Attack: +19 to hit, reach 15 ft., one target. Hit: 28 (4d8 + 10) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 15,
+      "attack": {
+        "name": "Claw",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 15,
+        "damage": [
+          {
+            "dice": "4d8",
+            "damage_type": "slashing",
+            "bonus": 10
+          }
+        ]
+      }
+    },
+    {
+      "name": "Horns",
+      "description": "Melee Weapon Attack: +19 to hit, reach 10 ft., one target. Hit: 32 (4d10 + 10) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Horns",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "4d10",
+            "damage_type": "piercing",
+            "bonus": 10
+          }
+        ]
+      }
+    },
+    {
+      "name": "Tail",
+      "description": "Melee Weapon Attack: +19 to hit, reach 20 ft., one target. Hit: 24 (4d6 + 10) bludgeoning damage. If the target is a creature, it must succeed on a DC 20 Strength saving throw or be knocked prone.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 20,
+      "attack": {
+        "name": "Tail",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 20,
+        "damage": [
+          {
+            "dice": "4d6",
+            "damage_type": "bludgeoning",
+            "bonus": 10
+          }
+        ]
+      }
+    },
+    {
+      "name": "Frightful Presence",
+      "description": "Each creature of the tarrasque's choice within 120 feet of it and aware of it must succeed on a DC 17 Wisdom saving throw or become frightened for 1 minute. A creature can repeat the saving throw at the end of each of its turns, with disadvantage if the tarrasque is within line of sight, ending the effect on itself on a success. If a creature's saving throw is successful or the effect ends for it, the creature is immune to the tarrasque's Frightful Presence for the next 24 hours.",
+      "action_type": "action",
+      "target_type": "area_line",
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 17,
+        "damage_on_fail": [],
+        "damage_on_success": "none"
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The tarrasque can use its Frightful Presence. It then makes five attacks: one with its bite, two with its claws, one with its horns, and one with its tail. It can use its Swallow instead of its bite.",
+      "extra_attack_count": 4
+    },
+    {
+      "name": "Legendary Resistance",
+      "description": "If the tarrasque fails a saving throw, it can choose to succeed instead."
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The tarrasque has advantage on saving throws against spells and other magical effects."
+    },
+    {
+      "name": "Reflective Carapace",
+      "description": "Any time the tarrasque is targeted by a magic missile spell, a line spell, or a spell that requires a ranged attack roll, roll a d6. On a 1 to 5, the tarrasque is unaffected. On a 6, the tarrasque is unaffected, and the effect is reflected back at the caster as though it originated from the tarrasque, turning the caster into the target."
+    },
+    {
+      "name": "Siege Monster",
+      "description": "The tarrasque deals double damage to objects and structures."
+    }
+  ],
+  "challenge_rating": 30.0,
+  "experience_points": 155000,
+  "is_player_controlled": false
+}

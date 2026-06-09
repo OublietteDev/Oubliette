@@ -1,0 +1,62 @@
+{
+  "name": "Crab",
+  "size": "tiny",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 2,
+    "dexterity": 11,
+    "constitution": 10,
+    "intelligence": 1,
+    "wisdom": 8,
+    "charisma": 2
+  },
+  "armor_class": 11,
+  "max_hit_points": 2,
+  "hit_dice": "1d4",
+  "speed": {
+    "walk": 20,
+    "swim": 20
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 30
+  },
+  "passive_perception": 9,
+  "actions": [
+    {
+      "name": "Claw",
+      "description": "Melee Weapon Attack: +0 to hit, reach 5 ft., one target. Hit: 1 bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claw",
+        "attack_type": "melee_weapon",
+        "ability": "wisdom",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1",
+            "damage_type": "bludgeoning",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Amphibious",
+      "description": "The crab can breathe air and water."
+    }
+  ],
+  "challenge_rating": 0.0,
+  "experience_points": 10,
+  "is_player_controlled": false
+}

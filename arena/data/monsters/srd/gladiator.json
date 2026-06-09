@@ -1,0 +1,72 @@
+{
+  "name": "Gladiator",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "any alignment",
+  "ability_scores": {
+    "strength": 18,
+    "dexterity": 15,
+    "constitution": 16,
+    "intelligence": 10,
+    "wisdom": 12,
+    "charisma": 15
+  },
+  "armor_class": 16,
+  "max_hit_points": 112,
+  "hit_dice": "15d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [
+    "strength",
+    "dexterity",
+    "constitution"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 11,
+  "actions": [
+    {
+      "name": "Shield Bash",
+      "description": "Melee Weapon Attack: +7 to hit, reach 5 ft., one creature. Hit: 9 (2d4 + 4) bludgeoning damage. If the target is a Medium or smaller creature, it must succeed on a DC 15 Strength saving throw or be knocked prone.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Shield Bash",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d4",
+            "damage_type": "bludgeoning",
+            "bonus": 4
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The gladiator makes three melee attacks or two ranged attacks.",
+      "extra_attack_count": 2
+    },
+    {
+      "name": "Brave",
+      "description": "The gladiator has advantage on saving throws against being frightened."
+    },
+    {
+      "name": "Brute",
+      "description": "A melee weapon deals one extra die of its damage when the gladiator hits with it (included in the attack)."
+    }
+  ],
+  "challenge_rating": 5.0,
+  "experience_points": 1800,
+  "is_player_controlled": false
+}

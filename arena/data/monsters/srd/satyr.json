@@ -1,0 +1,99 @@
+{
+  "name": "Satyr",
+  "size": "medium",
+  "creature_type": "fey",
+  "alignment": "chaotic neutral",
+  "ability_scores": {
+    "strength": 12,
+    "dexterity": 16,
+    "constitution": 11,
+    "intelligence": 12,
+    "wisdom": 10,
+    "charisma": 14
+  },
+  "armor_class": 14,
+  "max_hit_points": 31,
+  "hit_dice": "7d8",
+  "speed": {
+    "walk": 40
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 12,
+  "actions": [
+    {
+      "name": "Ram",
+      "description": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 6 (2d4 + 1) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Ram",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d4",
+            "damage_type": "bludgeoning",
+            "bonus": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "Shortsword",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 6 (1d6 + 3) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Shortsword",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "piercing",
+            "bonus": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "Shortbow",
+      "description": "Ranged Weapon Attack: +5 to hit, range 80/320 ft., one target. Hit: 6 (1d6 + 3) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Shortbow",
+        "attack_type": "ranged_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "piercing",
+            "bonus": 3
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Magic Resistance",
+      "description": "The satyr has advantage on saving throws against spells and other magical effects."
+    }
+  ],
+  "challenge_rating": 0.5,
+  "experience_points": 100,
+  "is_player_controlled": false
+}

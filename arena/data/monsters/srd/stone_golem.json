@@ -1,0 +1,100 @@
+{
+  "name": "Stone Golem",
+  "size": "large",
+  "creature_type": "construct",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 22,
+    "dexterity": 9,
+    "constitution": 20,
+    "intelligence": 3,
+    "wisdom": 11,
+    "charisma": 1
+  },
+  "armor_class": 17,
+  "max_hit_points": 178,
+  "hit_dice": "17d10",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 4,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "poison",
+    "psychic",
+    "bludgeoning, piercing, and slashing from nonmagical weapons that aren't adamantine"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "charmed",
+    "exhaustion",
+    "frightened",
+    "paralyzed",
+    "petrified",
+    "poisoned"
+  ],
+  "senses": {
+    "darkvision": 120
+  },
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Slam",
+      "description": "Melee Weapon Attack: +10 to hit, reach 5 ft., one target. Hit: 19 (3d8 + 6) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Slam",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "3d8",
+            "damage_type": "bludgeoning",
+            "bonus": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "Slow",
+      "description": "The golem targets one or more creatures it can see within 10 ft. of it. Each target must make a DC 17 Wisdom saving throw against this magic. On a failed save, a target can't use reactions, its speed is halved, and it can't make more than one attack on its turn. In addition, the target can take either an action or a bonus action on its turn, not both. These effects last for 1 minute. A target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 17,
+        "damage_on_fail": [],
+        "damage_on_success": "none"
+      },
+      "uses_per_rest": 2,
+      "rest_type": "short",
+      "current_uses": 2
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The golem makes two slam attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Immutable Form",
+      "description": "The golem is immune to any spell or effect that would alter its form."
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The golem has advantage on saving throws against spells and other magical effects."
+    },
+    {
+      "name": "Magic Weapons",
+      "description": "The golem's weapon attacks are magical."
+    }
+  ],
+  "challenge_rating": 10.0,
+  "experience_points": 5900,
+  "is_player_controlled": false
+}

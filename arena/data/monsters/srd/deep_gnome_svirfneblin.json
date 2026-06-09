@@ -1,0 +1,89 @@
+{
+  "name": "Deep Gnome (Svirfneblin)",
+  "size": "small",
+  "creature_type": "humanoid",
+  "alignment": "neutral good",
+  "ability_scores": {
+    "strength": 15,
+    "dexterity": 14,
+    "constitution": 14,
+    "intelligence": 12,
+    "wisdom": 10,
+    "charisma": 9
+  },
+  "armor_class": 15,
+  "max_hit_points": 16,
+  "hit_dice": "3d6",
+  "speed": {
+    "walk": 20
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 120
+  },
+  "passive_perception": 12,
+  "actions": [
+    {
+      "name": "War Pick",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 6 (1d8 + 2) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "War Pick",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "Poisoned Dart",
+      "description": "Ranged Weapon Attack: +4 to hit, range 30/120 ft., one creature. Hit: 4 (1d4 + 2) piercing damage, and the target must succeed on a DC 12 Constitution saving throw or be poisoned for 1 minute. The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Poisoned Dart",
+        "attack_type": "ranged_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Stone Camouflage",
+      "description": "The gnome has advantage on Dexterity (Stealth) checks made to hide in rocky terrain."
+    },
+    {
+      "name": "Gnome Cunning",
+      "description": "The gnome has advantage on Intelligence, Wisdom, and Charisma saving throws against magic."
+    },
+    {
+      "name": "Innate Spellcasting",
+      "description": "The gnome's innate spellcasting ability is Intelligence (spell save DC 11). It can innately cast the following spells, requiring no material components:\nAt will: nondetection (self only)\n1/day each: blindness/deafness, blur, disguise self"
+    }
+  ],
+  "challenge_rating": 0.5,
+  "experience_points": 50,
+  "is_player_controlled": false
+}

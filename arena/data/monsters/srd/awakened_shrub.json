@@ -1,0 +1,63 @@
+{
+  "name": "Awakened Shrub",
+  "size": "small",
+  "creature_type": "plant",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 3,
+    "dexterity": 8,
+    "constitution": 11,
+    "intelligence": 10,
+    "wisdom": 10,
+    "charisma": 6
+  },
+  "armor_class": 9,
+  "max_hit_points": 10,
+  "hit_dice": "3d6",
+  "speed": {
+    "walk": 20
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [
+    "piercing"
+  ],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [
+    "fire"
+  ],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Rake",
+      "description": "Melee Weapon Attack: +1 to hit, reach 5 ft., one target. Hit: 1 (1d4 - 1) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Rake",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "slashing",
+            "bonus": -1
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "False Appearance",
+      "description": "While the shrub remains motionless, it is indistinguishable from a normal shrub."
+    }
+  ],
+  "challenge_rating": 0.0,
+  "experience_points": 10,
+  "is_player_controlled": false
+}

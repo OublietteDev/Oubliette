@@ -1,0 +1,63 @@
+{
+  "name": "Warhorse Skeleton",
+  "size": "large",
+  "creature_type": "undead",
+  "alignment": "lawful evil",
+  "ability_scores": {
+    "strength": 18,
+    "dexterity": 12,
+    "constitution": 15,
+    "intelligence": 2,
+    "wisdom": 8,
+    "charisma": 5
+  },
+  "armor_class": 13,
+  "max_hit_points": 22,
+  "hit_dice": "3d10",
+  "speed": {
+    "walk": 60
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "poison"
+  ],
+  "damage_vulnerabilities": [
+    "bludgeoning"
+  ],
+  "condition_immunities": [
+    "exhaustion",
+    "poisoned"
+  ],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 9,
+  "actions": [
+    {
+      "name": "Hooves",
+      "description": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 11 (2d6 + 4) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Hooves",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "bludgeoning",
+            "bonus": 4
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [],
+  "challenge_rating": 0.5,
+  "experience_points": 100,
+  "is_player_controlled": false
+}

@@ -1,0 +1,78 @@
+{
+  "name": "Imp",
+  "size": "tiny",
+  "creature_type": "fiend",
+  "alignment": "lawful evil",
+  "ability_scores": {
+    "strength": 6,
+    "dexterity": 17,
+    "constitution": 13,
+    "intelligence": 11,
+    "wisdom": 12,
+    "charisma": 14
+  },
+  "armor_class": 13,
+  "max_hit_points": 10,
+  "hit_dice": "3d4",
+  "speed": {
+    "walk": 20,
+    "fly": 40
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [
+    "cold",
+    "bludgeoning, piercing, and slashing from nonmagical weapons that aren't silvered"
+  ],
+  "damage_immunities": [
+    "fire",
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "poisoned"
+  ],
+  "senses": {
+    "darkvision": 120
+  },
+  "passive_perception": 11,
+  "actions": [
+    {
+      "name": "Sting (Bite in Beast Form)",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 5 (1d4 + 3) piercing damage, and the target must make on a DC 11 Constitution saving throw, taking 10 (3d6) poison damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Sting (Bite in Beast Form)",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "piercing",
+            "bonus": 3
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Shapechanger",
+      "description": "The imp can use its action to polymorph into a beast form that resembles a rat (speed 20 ft.), a raven (20 ft., fly 60 ft.), or a spider (20 ft., climb 20 ft.), or back into its true form. Its statistics are the same in each form, except for the speed changes noted. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies."
+    },
+    {
+      "name": "Devil's Sight",
+      "description": "Magical darkness doesn't impede the imp's darkvision."
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The imp has advantage on saving throws against spells and other magical effects."
+    }
+  ],
+  "challenge_rating": 1.0,
+  "experience_points": 200,
+  "is_player_controlled": false
+}

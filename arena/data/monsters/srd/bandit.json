@@ -1,0 +1,74 @@
+{
+  "name": "Bandit",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "any non-lawful alignment",
+  "ability_scores": {
+    "strength": 11,
+    "dexterity": 12,
+    "constitution": 12,
+    "intelligence": 10,
+    "wisdom": 10,
+    "charisma": 10
+  },
+  "armor_class": 12,
+  "max_hit_points": 11,
+  "hit_dice": "2d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Scimitar",
+      "description": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 4 (1d6 + 1) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Scimitar",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "slashing",
+            "bonus": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "Light Crossbow",
+      "description": "Ranged Weapon Attack: +3 to hit, range 80/320 ft., one target. Hit: 5 (1d8 + 1) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Light Crossbow",
+        "attack_type": "ranged_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "piercing",
+            "bonus": 1
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [],
+  "challenge_rating": 0.125,
+  "experience_points": 25,
+  "is_player_controlled": false
+}

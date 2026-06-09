@@ -153,10 +153,10 @@ def test_descriptive_enemy_names_resolve_to_the_core_creature():
     assert _statblock_for(s, "an unspeakable foozle") is None          # genuinely unknown
 
 
-def test_iconic_monster_fights_with_its_authored_arena_kit():
-    """Fidelity slice: an enemy that has a hand-authored Arena file fights with
-    its real kit — a save-for-half breath weapon and a multi-type bite — not a
-    flat single basic attack. Reward stays Oubliette's bestiary XP."""
+def test_iconic_monster_fights_with_its_full_generated_kit():
+    """An enemy resolves to the generated full-fidelity Arena monster — a
+    save-for-half breath weapon and a multi-type bite — not a flat basic attack.
+    Reward stays Oubliette's bestiary XP."""
     from oubliette.combat.arena_bridge import enemy_from_statblock
 
     s = _session()
@@ -170,17 +170,32 @@ def test_iconic_monster_fights_with_its_authored_arena_kit():
     assert mon.experience_points == sb.xp                              # reward = bestiary
 
 
-def test_non_authored_monster_falls_back_to_basic_mapping():
-    """A monster without an authored file still works — a single basic attack,
-    no rich actions (the ~317 not yet hand-built)."""
-    from oubliette.combat.arena_bridge import authored_arena_monster, enemy_from_statblock
+def test_missing_generated_file_falls_back_to_basic_mapping():
+    """The basic mapping is still the safety net for ids with no generated file
+    (templates, synthetic foes): a single basic attack, no rich actions."""
+    from oubliette.combat.arena_bridge import arena_monster_file, enemy_from_statblock
+    from oubliette.content.schemas import StatBlock
 
-    s = _session()
-    assert authored_arena_monster("awakened_shrub") is None
-    sb = (getattr(s.ruleset, "bestiary", None) or {})["awakened_shrub"]
+    assert arena_monster_file("no_such_generated_monster") is None
+    sb = StatBlock(id="no_such_generated_monster", name="Gribbly", hp=12,
+                   armor_class=12, attack_bonus=3, damage="1d8+1", xp=25)
     mon = enemy_from_statblock(sb).creature
     assert all(a.saving_throw is None for a in mon.actions)
     assert len(mon.actions) == 1
+
+
+def test_every_generated_monster_file_is_a_valid_arena_monster():
+    """Structural gate (like the bestiary linter): the whole generated set loads
+    cleanly as Arena Monsters."""
+    from arena.models.monster import Monster
+
+    from oubliette.combat.arena_bridge import DATA_DIR
+
+    srd = DATA_DIR / "monsters" / "srd"
+    files = list(srd.glob("*.json"))
+    assert len(files) > 300                       # the full SRD set
+    for f in files:
+        Monster.model_validate(json.loads(f.read_text(encoding="utf-8")))
 
 
 def test_authored_fidelity_survives_the_encounter_round_trip():

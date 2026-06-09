@@ -1,0 +1,81 @@
+{
+  "name": "Goblin",
+  "size": "small",
+  "creature_type": "humanoid",
+  "alignment": "neutral evil",
+  "ability_scores": {
+    "strength": 8,
+    "dexterity": 14,
+    "constitution": 10,
+    "intelligence": 10,
+    "wisdom": 8,
+    "charisma": 8
+  },
+  "armor_class": 15,
+  "max_hit_points": 7,
+  "hit_dice": "2d6",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 9,
+  "actions": [
+    {
+      "name": "Scimitar",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Scimitar",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "slashing",
+            "bonus": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "Shortbow",
+      "description": "Ranged Weapon Attack: +4 to hit, range 80/320 ft., one target. Hit: 5 (1d6 + 2) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Shortbow",
+        "attack_type": "ranged_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Nimble Escape",
+      "description": "The goblin can take the Disengage or Hide action as a bonus action on each of its turns."
+    }
+  ],
+  "challenge_rating": 0.25,
+  "experience_points": 50,
+  "is_player_controlled": false
+}

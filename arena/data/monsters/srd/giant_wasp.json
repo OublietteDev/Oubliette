@@ -1,0 +1,56 @@
+{
+  "name": "Giant Wasp",
+  "size": "medium",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 10,
+    "dexterity": 14,
+    "constitution": 10,
+    "intelligence": 1,
+    "wisdom": 10,
+    "charisma": 3
+  },
+  "armor_class": 12,
+  "max_hit_points": 13,
+  "hit_dice": "3d8",
+  "speed": {
+    "walk": 10,
+    "fly": 50,
+    "swim": 50
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Sting",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one creature. Hit: 5 (1d6 + 2) piercing damage, and the target must make a DC 11 Constitution saving throw, taking 10 (3d6) poison damage on a failed save, or half as much damage on a successful one. If the poison damage reduces the target to 0 hit points, the target is stable but poisoned for 1 hour, even after regaining hit points, and is paralyzed while poisoned in this way.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Sting",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [],
+  "challenge_rating": 0.5,
+  "experience_points": 100,
+  "is_player_controlled": false
+}

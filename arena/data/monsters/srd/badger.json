@@ -1,0 +1,62 @@
+{
+  "name": "Badger",
+  "size": "tiny",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 4,
+    "dexterity": 11,
+    "constitution": 12,
+    "intelligence": 2,
+    "wisdom": 12,
+    "charisma": 5
+  },
+  "armor_class": 10,
+  "max_hit_points": 3,
+  "hit_dice": "1d4",
+  "speed": {
+    "walk": 20,
+    "burrow": 5
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 30
+  },
+  "passive_perception": 11,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +2 to hit, reach 5 ft., one target. Hit: 1 piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1",
+            "damage_type": "piercing",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Keen Smell",
+      "description": "The badger has advantage on Wisdom (Perception) checks that rely on smell."
+    }
+  ],
+  "challenge_rating": 0.0,
+  "experience_points": 10,
+  "is_player_controlled": false
+}

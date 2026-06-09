@@ -1,0 +1,95 @@
+{
+  "name": "Gargoyle",
+  "size": "medium",
+  "creature_type": "elemental",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 15,
+    "dexterity": 11,
+    "constitution": 16,
+    "intelligence": 6,
+    "wisdom": 11,
+    "charisma": 7
+  },
+  "armor_class": 15,
+  "max_hit_points": 52,
+  "hit_dice": "7d8",
+  "speed": {
+    "walk": 30,
+    "fly": 60
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [
+    "bludgeoning, piercing, and slashing from nonmagical weapons that aren't adamantine"
+  ],
+  "damage_immunities": [
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "exhaustion",
+    "petrified",
+    "poisoned"
+  ],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claws",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claws",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "slashing",
+            "bonus": 2
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The gargoyle makes two attacks: one with its bite and one with its claws.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "False Appearance",
+      "description": "While the gargoyle remains motion less, it is indistinguishable from an inanimate statue."
+    }
+  ],
+  "challenge_rating": 2.0,
+  "experience_points": 450,
+  "is_player_controlled": false
+}

@@ -1,0 +1,84 @@
+{
+  "name": "Scout",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "any alignment",
+  "ability_scores": {
+    "strength": 11,
+    "dexterity": 14,
+    "constitution": 12,
+    "intelligence": 11,
+    "wisdom": 13,
+    "charisma": 11
+  },
+  "armor_class": 13,
+  "max_hit_points": 16,
+  "hit_dice": "3d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 15,
+  "actions": [
+    {
+      "name": "Shortsword",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Shortsword",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "Longbow",
+      "description": "Ranged Weapon Attack: +4 to hit, range 150/600 ft., one target. Hit: 6 (1d8 + 2) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Longbow",
+        "attack_type": "ranged_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The scout makes two melee attacks or two ranged attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Keen Hearing and Sight",
+      "description": "The scout has advantage on Wisdom (Perception) checks that rely on hearing or sight."
+    }
+  ],
+  "challenge_rating": 0.5,
+  "experience_points": 100,
+  "is_player_controlled": false
+}

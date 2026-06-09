@@ -1,0 +1,120 @@
+{
+  "name": "Storm Giant",
+  "size": "huge",
+  "creature_type": "giant",
+  "alignment": "chaotic good",
+  "ability_scores": {
+    "strength": 29,
+    "dexterity": 14,
+    "constitution": 20,
+    "intelligence": 16,
+    "wisdom": 18,
+    "charisma": 18
+  },
+  "armor_class": 16,
+  "max_hit_points": 230,
+  "hit_dice": "20d12",
+  "speed": {
+    "walk": 50,
+    "swim": 50
+  },
+  "proficiency_bonus": 5,
+  "saving_throw_proficiencies": [
+    "strength",
+    "constitution",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [
+    "cold"
+  ],
+  "damage_immunities": [
+    "lightning",
+    "thunder"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 19,
+  "actions": [
+    {
+      "name": "Greatsword",
+      "description": "Melee Weapon Attack: +14 to hit, reach 10 ft., one target. Hit: 30 (6d6 + 9) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Greatsword",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "6d6",
+            "damage_type": "slashing",
+            "bonus": 9
+          }
+        ]
+      }
+    },
+    {
+      "name": "Rock",
+      "description": "Ranged Weapon Attack: +14 to hit, range 60/240 ft., one target. Hit: 35 (4d12 + 9) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Rock",
+        "attack_type": "ranged_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "4d12",
+            "damage_type": "bludgeoning",
+            "bonus": 9
+          }
+        ]
+      }
+    },
+    {
+      "name": "Lightning Strike",
+      "description": "The giant hurls a magical lightning bolt at a point it can see within 500 feet of it. Each creature within 10 feet of that point must make a DC 17 Dexterity saving throw, taking 54 (12d8) lightning damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 17,
+        "damage_on_fail": [
+          {
+            "dice": "12d8",
+            "damage_type": "lightning",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "uses_per_rest": 2,
+      "rest_type": "short",
+      "current_uses": 2
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The giant makes two greatsword attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Amphibious",
+      "description": "The giant can breathe air and water."
+    },
+    {
+      "name": "Innate Spellcasting",
+      "description": "The giant's innate spellcasting ability is Charisma (spell save DC 17). It can innately cast the following spells, requiring no material components:\n\nAt will: detect magic, feather fall, levitate, light\n3/day each: control weather, water breathing"
+    }
+  ],
+  "challenge_rating": 13.0,
+  "experience_points": 10000,
+  "is_player_controlled": false
+}

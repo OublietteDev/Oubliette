@@ -1,0 +1,135 @@
+{
+  "name": "Dragon Turtle",
+  "size": "gargantuan",
+  "creature_type": "dragon",
+  "alignment": "neutral",
+  "ability_scores": {
+    "strength": 25,
+    "dexterity": 10,
+    "constitution": 20,
+    "intelligence": 10,
+    "wisdom": 12,
+    "charisma": 12
+  },
+  "armor_class": 20,
+  "max_hit_points": 341,
+  "hit_dice": "22d20",
+  "speed": {
+    "walk": 20,
+    "swim": 40
+  },
+  "proficiency_bonus": 6,
+  "saving_throw_proficiencies": [
+    "dexterity",
+    "constitution",
+    "wisdom"
+  ],
+  "damage_resistances": [
+    "fire"
+  ],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 120
+  },
+  "passive_perception": 11,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +13 to hit, reach 15 ft., one target. Hit: 26 (3d12 + 7) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 15,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 15,
+        "damage": [
+          {
+            "dice": "3d12",
+            "damage_type": "piercing",
+            "bonus": 7
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Weapon Attack: +13 to hit, reach 10 ft., one target. Hit: 16 (2d8 + 7) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Claw",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "slashing",
+            "bonus": 7
+          }
+        ]
+      }
+    },
+    {
+      "name": "Tail",
+      "description": "Melee Weapon Attack: +13 to hit, reach 15 ft., one target. Hit: 26 (3d12 + 7) bludgeoning damage. If the target is a creature, it must succeed on a DC 20 Strength saving throw or be pushed up to 10 feet away from the dragon turtle and knocked prone.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 15,
+      "attack": {
+        "name": "Tail",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 15,
+        "damage": [
+          {
+            "dice": "3d12",
+            "damage_type": "bludgeoning",
+            "bonus": 7
+          }
+        ]
+      }
+    },
+    {
+      "name": "Steam Breath",
+      "description": "The dragon turtle exhales scalding steam in a 60-foot cone. Each creature in that area must make a DC 18 Constitution saving throw, taking 52 (15d6) fire damage on a failed save, or half as much damage on a successful one. Being underwater doesn't grant resistance against this damage.",
+      "action_type": "action",
+      "target_type": "area_cone",
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 18,
+        "damage_on_fail": [
+          {
+            "dice": "15d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "area_size": 60,
+      "uses_per_rest": 2,
+      "rest_type": "short",
+      "current_uses": 2
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon turtle makes three attacks: one with its bite and two with its claws. It can make one tail attack in place of its two claw attacks.",
+      "extra_attack_count": 2
+    },
+    {
+      "name": "Amphibious",
+      "description": "The dragon turtle can breathe air and water."
+    }
+  ],
+  "challenge_rating": 17.0,
+  "experience_points": 18000,
+  "is_player_controlled": false
+}

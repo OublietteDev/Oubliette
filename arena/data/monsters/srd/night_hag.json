@@ -1,0 +1,75 @@
+{
+  "name": "Night Hag",
+  "size": "medium",
+  "creature_type": "fiend",
+  "alignment": "neutral evil",
+  "ability_scores": {
+    "strength": 18,
+    "dexterity": 15,
+    "constitution": 16,
+    "intelligence": 16,
+    "wisdom": 14,
+    "charisma": 16
+  },
+  "armor_class": 17,
+  "max_hit_points": 112,
+  "hit_dice": "15d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [
+    "cold",
+    "fire",
+    "bludgeoning, piercing, and slashing from nonmagical weapons that aren't silvered"
+  ],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "charmed"
+  ],
+  "senses": {
+    "darkvision": 120
+  },
+  "passive_perception": 16,
+  "actions": [
+    {
+      "name": "Claws (Hag Form Only)",
+      "description": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 13 (2d8 + 4) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claws (Hag Form Only)",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "slashing",
+            "bonus": 4
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Innate Spellcasting",
+      "description": "The hag's innate spellcasting ability is Charisma (spell save DC 14, +6 to hit with spell attacks). She can innately cast the following spells, requiring no material components:\n\nAt will: detect magic, magic missile\n2/day each: plane shift (self only), ray of enfeeblement, sleep"
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The hag has advantage on saving throws against spells and other magical effects."
+    },
+    {
+      "name": "Night Hag Items",
+      "description": "A night hag carries two very rare magic items that she must craft for herself If either object is lost, the night hag will go to great lengths to retrieve it, as creating a new tool takes time and effort.\nHeartstone: This lustrous black gem allows a night hag to become ethereal while it is in her possession. The touch of a heartstone also cures any disease. Crafting a heartstone takes 30 days.\nSoul Bag: When an evil humanoid dies as a result of a night hag's Nightmare Haunting, the hag catches the soul in this black sack made of stitched flesh. A soul bag can hold only one evil soul at a time, and only the night hag who crafted the bag can catch a soul with it. Crafting a soul bag takes 7 days and a humanoid sacrifice (whose flesh is used to make the bag)."
+    }
+  ],
+  "challenge_rating": 5.0,
+  "experience_points": 1800,
+  "is_player_controlled": false
+}

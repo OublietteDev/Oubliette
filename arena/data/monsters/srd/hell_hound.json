@@ -1,0 +1,94 @@
+{
+  "name": "Hell Hound",
+  "size": "medium",
+  "creature_type": "fiend",
+  "alignment": "lawful evil",
+  "ability_scores": {
+    "strength": 17,
+    "dexterity": 12,
+    "constitution": 14,
+    "intelligence": 6,
+    "wisdom": 13,
+    "charisma": 6
+  },
+  "armor_class": 15,
+  "max_hit_points": 45,
+  "hit_dice": "7d8",
+  "speed": {
+    "walk": 50
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "fire"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 15,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 7 (1d8 + 3) piercing damage plus 7 (2d6) fire damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "piercing",
+            "bonus": 3
+          },
+          {
+            "dice": "2d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Fire Breath",
+      "description": "The hound exhales fire in a 15-foot cone. Each creature in that area must make a DC 12 Dexterity saving throw, taking 21 (6d6) fire damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "target_type": "area_cone",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 12,
+        "damage_on_fail": [
+          {
+            "dice": "6d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "area_size": 15,
+      "uses_per_rest": 2,
+      "rest_type": "short",
+      "current_uses": 2
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Keen Hearing and Smell",
+      "description": "The hound has advantage on Wisdom (Perception) checks that rely on hearing or smell."
+    },
+    {
+      "name": "Pack Tactics",
+      "description": "The hound has advantage on an attack roll against a creature if at least one of the hound's allies is within 5 ft. of the creature and the ally isn't incapacitated."
+    }
+  ],
+  "challenge_rating": 3.0,
+  "experience_points": 700,
+  "is_player_controlled": false
+}

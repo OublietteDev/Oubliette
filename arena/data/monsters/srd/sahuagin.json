@@ -1,0 +1,95 @@
+{
+  "name": "Sahuagin",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "lawful evil",
+  "ability_scores": {
+    "strength": 13,
+    "dexterity": 11,
+    "constitution": 12,
+    "intelligence": 12,
+    "wisdom": 13,
+    "charisma": 9
+  },
+  "armor_class": 12,
+  "max_hit_points": 22,
+  "hit_dice": "4d8",
+  "speed": {
+    "walk": 30,
+    "swim": 40
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 120
+  },
+  "passive_perception": 15,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 3 (1d4 + 1) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "piercing",
+            "bonus": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claws",
+      "description": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 3 (1d4 + 1) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claws",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "slashing",
+            "bonus": 1
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The sahuagin makes two melee attacks: one with its bite and one with its claws or spear.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Blood Frenzy",
+      "description": "The sahuagin has advantage on melee attack rolls against any creature that doesn't have all its hit points."
+    },
+    {
+      "name": "Limited Amphibiousness",
+      "description": "The sahuagin can breathe air and water, but it needs to be submerged at least once every 4 hours to avoid suffocating."
+    },
+    {
+      "name": "Shark Telepathy",
+      "description": "The sahuagin can magically command any shark within 120 feet of it, using a limited telepathy."
+    }
+  ],
+  "challenge_rating": 0.5,
+  "experience_points": 100,
+  "is_player_controlled": false
+}

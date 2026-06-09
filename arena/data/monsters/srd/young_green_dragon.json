@@ -1,0 +1,125 @@
+{
+  "name": "Young Green Dragon",
+  "size": "large",
+  "creature_type": "dragon",
+  "alignment": "lawful evil",
+  "ability_scores": {
+    "strength": 19,
+    "dexterity": 12,
+    "constitution": 17,
+    "intelligence": 16,
+    "wisdom": 13,
+    "charisma": 15
+  },
+  "armor_class": 18,
+  "max_hit_points": 136,
+  "hit_dice": "16d10",
+  "speed": {
+    "walk": 40,
+    "fly": 80,
+    "swim": 40
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [
+    "dexterity",
+    "constitution",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "poisoned"
+  ],
+  "senses": {
+    "blindsight": 30,
+    "darkvision": 120
+  },
+  "passive_perception": 17,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +7 to hit, reach 10 ft., one target. Hit: 15 (2d10 + 4) piercing damage plus 7 (2d6) poison damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "2d10",
+            "damage_type": "piercing",
+            "bonus": 4
+          },
+          {
+            "dice": "2d6",
+            "damage_type": "poison",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 11 (2d6 + 4) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claw",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "slashing",
+            "bonus": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "Poison Breath",
+      "description": "The dragon exhales poisonous gas in a 30-foot cone. Each creature in that area must make a DC 14 Constitution saving throw, taking 42 (12d6) poison damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "target_type": "area_cone",
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 14,
+        "damage_on_fail": [
+          {
+            "dice": "12d6",
+            "damage_type": "poison",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "area_size": 30,
+      "uses_per_rest": 2,
+      "rest_type": "short",
+      "current_uses": 2
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon makes three attacks: one with its bite and two with its claws.",
+      "extra_attack_count": 2
+    },
+    {
+      "name": "Amphibious",
+      "description": "The dragon can breathe air and water."
+    }
+  ],
+  "challenge_rating": 8.0,
+  "experience_points": 3900,
+  "is_player_controlled": false
+}

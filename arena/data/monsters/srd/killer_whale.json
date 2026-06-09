@@ -1,0 +1,69 @@
+{
+  "name": "Killer Whale",
+  "size": "huge",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 19,
+    "dexterity": 10,
+    "constitution": 13,
+    "intelligence": 3,
+    "wisdom": 12,
+    "charisma": 7
+  },
+  "armor_class": 12,
+  "max_hit_points": 90,
+  "hit_dice": "12d12",
+  "speed": {
+    "swim": 60
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 120
+  },
+  "passive_perception": 13,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 21 (5d6 + 4) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "5d6",
+            "damage_type": "piercing",
+            "bonus": 4
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Echolocation",
+      "description": "The whale can't use its blindsight while deafened."
+    },
+    {
+      "name": "Hold Breath",
+      "description": "The whale can hold its breath for 30 minutes"
+    },
+    {
+      "name": "Keen Hearing",
+      "description": "The whale has advantage on Wisdom (Perception) checks that rely on hearing."
+    }
+  ],
+  "challenge_rating": 3.0,
+  "experience_points": 700,
+  "is_player_controlled": false
+}

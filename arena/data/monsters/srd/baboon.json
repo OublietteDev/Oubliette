@@ -1,0 +1,60 @@
+{
+  "name": "Baboon",
+  "size": "small",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 8,
+    "dexterity": 14,
+    "constitution": 11,
+    "intelligence": 4,
+    "wisdom": 12,
+    "charisma": 6
+  },
+  "armor_class": 12,
+  "max_hit_points": 3,
+  "hit_dice": "1d6",
+  "speed": {
+    "walk": 30,
+    "climb": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 11,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +1 to hit, reach 5 ft., one target. Hit: 1 (1d4 - 1) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "piercing",
+            "bonus": -1
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Pack Tactics",
+      "description": "The baboon has advantage on an attack roll against a creature if at least one of the baboon's allies is within 5 ft. of the creature and the ally isn't incapacitated."
+    }
+  ],
+  "challenge_rating": 0.0,
+  "experience_points": 10,
+  "is_player_controlled": false
+}

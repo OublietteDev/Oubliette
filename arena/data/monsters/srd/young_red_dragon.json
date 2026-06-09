@@ -1,0 +1,119 @@
+{
+  "name": "Young Red Dragon",
+  "size": "large",
+  "creature_type": "dragon",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 23,
+    "dexterity": 10,
+    "constitution": 21,
+    "intelligence": 14,
+    "wisdom": 11,
+    "charisma": 19
+  },
+  "armor_class": 18,
+  "max_hit_points": 178,
+  "hit_dice": "17d10",
+  "speed": {
+    "walk": 40,
+    "climb": 40,
+    "fly": 80
+  },
+  "proficiency_bonus": 4,
+  "saving_throw_proficiencies": [
+    "dexterity",
+    "constitution",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "fire"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 30,
+    "darkvision": 120
+  },
+  "passive_perception": 18,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +10 to hit, reach 10 ft., one target. Hit: 17 (2d10 + 6) piercing damage plus 3 (1d6) fire damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "2d10",
+            "damage_type": "piercing",
+            "bonus": 6
+          },
+          {
+            "dice": "1d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Weapon Attack: +10 to hit, reach 5 ft., one target. Hit: 13 (2d6 + 6) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claw",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "slashing",
+            "bonus": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "Fire Breath",
+      "description": "The dragon exhales fire in a 30-foot cone. Each creature in that area must make a DC 17 Dexterity saving throw, taking 56 (16d6) fire damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "target_type": "area_cone",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 17,
+        "damage_on_fail": [
+          {
+            "dice": "16d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "area_size": 30,
+      "uses_per_rest": 2,
+      "rest_type": "short",
+      "current_uses": 2
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon makes three attacks: one with its bite and two with its claws.",
+      "extra_attack_count": 2
+    }
+  ],
+  "challenge_rating": 10.0,
+  "experience_points": 5900,
+  "is_player_controlled": false
+}

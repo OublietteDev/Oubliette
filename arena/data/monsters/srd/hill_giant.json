@@ -1,0 +1,80 @@
+{
+  "name": "Hill Giant",
+  "size": "huge",
+  "creature_type": "giant",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 21,
+    "dexterity": 8,
+    "constitution": 19,
+    "intelligence": 5,
+    "wisdom": 9,
+    "charisma": 6
+  },
+  "armor_class": 13,
+  "max_hit_points": 105,
+  "hit_dice": "10d12",
+  "speed": {
+    "walk": 40
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 12,
+  "actions": [
+    {
+      "name": "Greatclub",
+      "description": "Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 18 (3d8 + 5) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Greatclub",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "3d8",
+            "damage_type": "bludgeoning",
+            "bonus": 5
+          }
+        ]
+      }
+    },
+    {
+      "name": "Rock",
+      "description": "Ranged Weapon Attack: +8 to hit, range 60/240 ft., one target. Hit: 21 (3d10 + 5) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Rock",
+        "attack_type": "ranged_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "3d10",
+            "damage_type": "bludgeoning",
+            "bonus": 5
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The giant makes two greatclub attacks.",
+      "extra_attack_count": 1
+    }
+  ],
+  "challenge_rating": 5.0,
+  "experience_points": 1800,
+  "is_player_controlled": false
+}

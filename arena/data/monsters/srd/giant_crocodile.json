@@ -1,0 +1,85 @@
+{
+  "name": "Giant Crocodile",
+  "size": "huge",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 21,
+    "dexterity": 9,
+    "constitution": 17,
+    "intelligence": 2,
+    "wisdom": 10,
+    "charisma": 7
+  },
+  "armor_class": 14,
+  "max_hit_points": 85,
+  "hit_dice": "9d12",
+  "speed": {
+    "walk": 30,
+    "swim": 50
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 21 (3d10 + 5) piercing damage, and the target is grappled (escape DC 16). Until this grapple ends, the target is restrained, and the crocodile can't bite another target.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "3d10",
+            "damage_type": "piercing",
+            "bonus": 5
+          }
+        ]
+      }
+    },
+    {
+      "name": "Tail",
+      "description": "Melee Weapon Attack: +8 to hit, reach 10 ft., one target not grappled by the crocodile. Hit: 14 (2d8 + 5) bludgeoning damage. If the target is a creature, it must succeed on a DC 16 Strength saving throw or be knocked prone.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Tail",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "bludgeoning",
+            "bonus": 5
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The crocodile makes two attacks: one with its bite and one with its tail.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Hold Breath",
+      "description": "The crocodile can hold its breath for 30 minutes."
+    }
+  ],
+  "challenge_rating": 5.0,
+  "experience_points": 1800,
+  "is_player_controlled": false
+}

@@ -1,0 +1,38 @@
+{
+  "name": "Tribal Warrior",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "any alignment",
+  "ability_scores": {
+    "strength": 13,
+    "dexterity": 11,
+    "constitution": 12,
+    "intelligence": 8,
+    "wisdom": 11,
+    "charisma": 8
+  },
+  "armor_class": 12,
+  "max_hit_points": 11,
+  "hit_dice": "2d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 10,
+  "actions": [],
+  "special_abilities": [
+    {
+      "name": "Pack Tactics",
+      "description": "The warrior has advantage on an attack roll against a creature if at least one of the warrior's allies is within 5 ft. of the creature and the ally isn't incapacitated."
+    }
+  ],
+  "challenge_rating": 0.125,
+  "experience_points": 25,
+  "is_player_controlled": false
+}

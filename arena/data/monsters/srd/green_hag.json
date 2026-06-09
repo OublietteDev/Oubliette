@@ -1,0 +1,69 @@
+{
+  "name": "Green Hag",
+  "size": "medium",
+  "creature_type": "fey",
+  "alignment": "neutral evil",
+  "ability_scores": {
+    "strength": 18,
+    "dexterity": 12,
+    "constitution": 16,
+    "intelligence": 13,
+    "wisdom": 14,
+    "charisma": 14
+  },
+  "armor_class": 17,
+  "max_hit_points": 82,
+  "hit_dice": "11d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 14,
+  "actions": [
+    {
+      "name": "Claws",
+      "description": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 13 (2d8 + 4) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claws",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "slashing",
+            "bonus": 4
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Amphibious",
+      "description": "The hag can breathe air and water."
+    },
+    {
+      "name": "Innate Spellcasting",
+      "description": "The hag's innate spellcasting ability is Charisma (spell save DC 12). She can innately cast the following spells, requiring no material components:\n\nAt will: dancing lights, minor illusion, vicious mockery"
+    },
+    {
+      "name": "Mimicry",
+      "description": "The hag can mimic animal sounds and humanoid voices. A creature that hears the sounds can tell they are imitations with a successful DC 14 Wisdom (Insight) check."
+    }
+  ],
+  "challenge_rating": 3.0,
+  "experience_points": 700,
+  "is_player_controlled": false
+}

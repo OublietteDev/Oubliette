@@ -1,0 +1,76 @@
+{
+  "name": "Doppelganger",
+  "size": "medium",
+  "creature_type": "monstrosity",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 11,
+    "dexterity": 18,
+    "constitution": 14,
+    "intelligence": 11,
+    "wisdom": 12,
+    "charisma": 14
+  },
+  "armor_class": 14,
+  "max_hit_points": 52,
+  "hit_dice": "8d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "charmed"
+  ],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 11,
+  "actions": [
+    {
+      "name": "Slam",
+      "description": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 7 (1d6 + 4) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Slam",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "bludgeoning",
+            "bonus": 4
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The doppelganger makes two melee attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Shapechanger",
+      "description": "The doppelganger can use its action to polymorph into a Small or Medium humanoid it has seen, or back into its true form. Its statistics, other than its size, are the same in each form. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies."
+    },
+    {
+      "name": "Ambusher",
+      "description": "In the first round of combat, the doppelganger has advantage on attack rolls against any creature it has surprised."
+    },
+    {
+      "name": "Surprise Attack",
+      "description": "If the doppelganger surprises a creature and hits it with an attack during the first round of combat, the target takes an extra 10 (3d6) damage from the attack."
+    }
+  ],
+  "challenge_rating": 3.0,
+  "experience_points": 700,
+  "is_player_controlled": false
+}

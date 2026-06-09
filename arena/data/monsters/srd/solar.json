@@ -1,0 +1,124 @@
+{
+  "name": "Solar",
+  "size": "large",
+  "creature_type": "celestial",
+  "alignment": "lawful good",
+  "ability_scores": {
+    "strength": 26,
+    "dexterity": 22,
+    "constitution": 26,
+    "intelligence": 25,
+    "wisdom": 25,
+    "charisma": 30
+  },
+  "armor_class": 21,
+  "max_hit_points": 243,
+  "hit_dice": "18d10",
+  "speed": {
+    "walk": 50,
+    "fly": 150
+  },
+  "proficiency_bonus": 7,
+  "saving_throw_proficiencies": [
+    "intelligence",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [
+    "radiant",
+    "bludgeoning, piercing, and slashing from nonmagical weapons"
+  ],
+  "damage_immunities": [
+    "necrotic",
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "charmed",
+    "exhaustion",
+    "frightened",
+    "poisoned"
+  ],
+  "senses": {
+    "truesight": 120
+  },
+  "passive_perception": 24,
+  "actions": [
+    {
+      "name": "Greatsword",
+      "description": "Melee Weapon Attack: +15 to hit, reach 5 ft., one target. Hit: 22 (4d6 + 8) slashing damage plus 27 (6d8) radiant damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Greatsword",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "4d6",
+            "damage_type": "slashing",
+            "bonus": 8
+          },
+          {
+            "dice": "6d8",
+            "damage_type": "radiant",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Slaying Longbow",
+      "description": "Ranged Weapon Attack: +13 to hit, range 150/600 ft., one target. Hit: 15 (2d8 + 6) piercing damage plus 27 (6d8) radiant damage. If the target is a creature that has 190 hit points or fewer, it must succeed on a DC 15 Constitution saving throw or die.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Slaying Longbow",
+        "attack_type": "ranged_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "piercing",
+            "bonus": 6
+          },
+          {
+            "dice": "6d8",
+            "damage_type": "radiant",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The solar makes two greatsword attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Angelic Weapons",
+      "description": "The solar's weapon attacks are magical. When the solar hits with any weapon, the weapon deals an extra 6d8 radiant damage (included in the attack)."
+    },
+    {
+      "name": "Divine Awareness",
+      "description": "The solar knows if it hears a lie."
+    },
+    {
+      "name": "Innate Spellcasting",
+      "description": "The solar's spell casting ability is Charisma (spell save DC 25). It can innately cast the following spells, requiring no material components:\nAt will: detect evil and good, invisibility (self only)\n3/day each: blade barrier, dispel evil and good, resurrection\n1/day each: commune, control weather"
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The solar has advantage on saving throws against spells and other magical effects."
+    }
+  ],
+  "challenge_rating": 21.0,
+  "experience_points": 33000,
+  "is_player_controlled": false
+}

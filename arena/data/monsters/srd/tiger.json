@@ -1,0 +1,85 @@
+{
+  "name": "Tiger",
+  "size": "large",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 17,
+    "dexterity": 15,
+    "constitution": 14,
+    "intelligence": 3,
+    "wisdom": 12,
+    "charisma": 8
+  },
+  "armor_class": 12,
+  "max_hit_points": 37,
+  "hit_dice": "5d10",
+  "speed": {
+    "walk": 40
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 13,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 8 (1d10 + 3) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d10",
+            "damage_type": "piercing",
+            "bonus": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 7 (1d8 + 3) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claw",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "slashing",
+            "bonus": 3
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Keen Smell",
+      "description": "The tiger has advantage on Wisdom (Perception) checks that rely on smell."
+    },
+    {
+      "name": "Pounce",
+      "description": "If the tiger moves at least 20 ft. straight toward a creature and then hits it with a claw attack on the same turn, that target must succeed on a DC 13 Strength saving throw or be knocked prone. If the target is prone, the tiger can make one bite attack against it as a bonus action."
+    }
+  ],
+  "challenge_rating": 1.0,
+  "experience_points": 200,
+  "is_player_controlled": false
+}

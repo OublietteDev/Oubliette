@@ -1,0 +1,57 @@
+{
+  "name": "Cockatrice",
+  "size": "small",
+  "creature_type": "monstrosity",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 6,
+    "dexterity": 12,
+    "constitution": 12,
+    "intelligence": 2,
+    "wisdom": 13,
+    "charisma": 5
+  },
+  "armor_class": 11,
+  "max_hit_points": 27,
+  "hit_dice": "6d6",
+  "speed": {
+    "walk": 20,
+    "fly": 40
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 11,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +3 to hit, reach 5 ft., one creature. Hit: 3 (1d4 + 1) piercing damage, and the target must succeed on a DC 11 Constitution saving throw against being magically petrified. On a failed save, the creature begins to turn to stone and is restrained. It must repeat the saving throw at the end of its next turn. On a success, the effect ends. On a failure, the creature is petrified for 24 hours.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "piercing",
+            "bonus": 1
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [],
+  "challenge_rating": 0.5,
+  "experience_points": 100,
+  "is_player_controlled": false
+}

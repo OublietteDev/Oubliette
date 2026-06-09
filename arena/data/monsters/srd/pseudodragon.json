@@ -1,0 +1,91 @@
+{
+  "name": "Pseudodragon",
+  "size": "tiny",
+  "creature_type": "dragon",
+  "alignment": "neutral good",
+  "ability_scores": {
+    "strength": 6,
+    "dexterity": 15,
+    "constitution": 13,
+    "intelligence": 10,
+    "wisdom": 12,
+    "charisma": 10
+  },
+  "armor_class": 13,
+  "max_hit_points": 7,
+  "hit_dice": "2d4",
+  "speed": {
+    "walk": 15,
+    "fly": 60
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 10,
+    "darkvision": 60
+  },
+  "passive_perception": 13,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 4 (1d4 + 2) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "Sting",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one creature. Hit: 4 (1d4 + 2) piercing damage, and the target must succeed on a DC 11 Constitution saving throw or become poisoned for 1 hour. If the saving throw fails by 5 or more, the target falls unconscious for the same duration, or until it takes damage or another creature uses an action to shake it awake.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Sting",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Keen Senses",
+      "description": "The pseudodragon has advantage on Wisdom (Perception) checks that rely on sight, hearing, or smell."
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The pseudodragon has advantage on saving throws against spells and other magical effects."
+    },
+    {
+      "name": "Limited Telepathy",
+      "description": "The pseudodragon can magically communicate simple ideas, emotions, and images telepathically with any creature within 100 ft. of it that can understand a language."
+    }
+  ],
+  "challenge_rating": 0.25,
+  "experience_points": 50,
+  "is_player_controlled": false
+}

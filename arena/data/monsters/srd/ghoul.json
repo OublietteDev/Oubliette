@@ -1,0 +1,82 @@
+{
+  "name": "Ghoul",
+  "size": "medium",
+  "creature_type": "undead",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 13,
+    "dexterity": 15,
+    "constitution": 10,
+    "intelligence": 7,
+    "wisdom": 10,
+    "charisma": 6
+  },
+  "armor_class": 12,
+  "max_hit_points": 22,
+  "hit_dice": "5d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "poisoned",
+    "charmed",
+    "exhaustion"
+  ],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +2 to hit, reach 5 ft., one creature. Hit: 9 (2d6 + 2) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "constitution",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claws",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 7 (2d4 + 2) slashing damage. If the target is a creature other than an elf or undead, it must succeed on a DC 10 Constitution saving throw or be paralyzed for 1 minute. The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claws",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d4",
+            "damage_type": "slashing",
+            "bonus": 2
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [],
+  "challenge_rating": 1.0,
+  "experience_points": 200,
+  "is_player_controlled": false
+}

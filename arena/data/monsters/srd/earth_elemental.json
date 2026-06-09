@@ -1,0 +1,84 @@
+{
+  "name": "Earth Elemental",
+  "size": "large",
+  "creature_type": "elemental",
+  "alignment": "neutral",
+  "ability_scores": {
+    "strength": 20,
+    "dexterity": 8,
+    "constitution": 20,
+    "intelligence": 5,
+    "wisdom": 10,
+    "charisma": 5
+  },
+  "armor_class": 17,
+  "max_hit_points": 126,
+  "hit_dice": "12d10",
+  "speed": {
+    "walk": 30,
+    "burrow": 30
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [
+    "bludgeoning, piercing, and slashing from nonmagical weapons"
+  ],
+  "damage_immunities": [
+    "poison"
+  ],
+  "damage_vulnerabilities": [
+    "thunder"
+  ],
+  "condition_immunities": [
+    "exhaustion",
+    "paralyzed",
+    "petrified",
+    "poisoned",
+    "unconscious"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "tremorsense": 60
+  },
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Slam",
+      "description": "Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 14 (2d8 + 5) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Slam",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "bludgeoning",
+            "bonus": 5
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The elemental makes two slam attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Earth Glide",
+      "description": "The elemental can burrow through nonmagical, unworked earth and stone. While doing so, the elemental doesn't disturb the material it moves through."
+    },
+    {
+      "name": "Siege Monster",
+      "description": "The elemental deals double damage to objects and structures."
+    }
+  ],
+  "challenge_rating": 5.0,
+  "experience_points": 1800,
+  "is_player_controlled": false
+}

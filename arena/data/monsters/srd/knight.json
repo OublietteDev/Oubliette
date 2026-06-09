@@ -1,0 +1,87 @@
+{
+  "name": "Knight",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "any alignment",
+  "ability_scores": {
+    "strength": 16,
+    "dexterity": 11,
+    "constitution": 14,
+    "intelligence": 11,
+    "wisdom": 11,
+    "charisma": 15
+  },
+  "armor_class": 18,
+  "max_hit_points": 52,
+  "hit_dice": "8d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [
+    "constitution",
+    "wisdom"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Greatsword",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Greatsword",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "slashing",
+            "bonus": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "Heavy Crossbow",
+      "description": "Ranged Weapon Attack: +2 to hit, range 100/400 ft., one target. Hit: 5 (1d10) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Heavy Crossbow",
+        "attack_type": "ranged_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d10",
+            "damage_type": "piercing",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The knight makes two melee attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Brave",
+      "description": "The knight has advantage on saving throws against being frightened."
+    }
+  ],
+  "challenge_rating": 3.0,
+  "experience_points": 700,
+  "is_player_controlled": false
+}

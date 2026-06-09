@@ -1,0 +1,79 @@
+{
+  "name": "Azer",
+  "size": "medium",
+  "creature_type": "elemental",
+  "alignment": "lawful neutral",
+  "ability_scores": {
+    "strength": 17,
+    "dexterity": 12,
+    "constitution": 15,
+    "intelligence": 12,
+    "wisdom": 13,
+    "charisma": 10
+  },
+  "armor_class": 15,
+  "max_hit_points": 39,
+  "hit_dice": "6d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [
+    "constitution"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "fire",
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "poisoned"
+  ],
+  "senses": {},
+  "passive_perception": 11,
+  "actions": [
+    {
+      "name": "Warhammer",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 7 (1d8 + 3) bludgeoning damage, or 8 (1d10 + 3) bludgeoning damage if used with two hands to make a melee attack, plus 3 (1d6) fire damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Warhammer",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "bludgeoning",
+            "bonus": 3
+          },
+          {
+            "dice": "1d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Heated Body",
+      "description": "A creature that touches the azer or hits it with a melee attack while within 5 ft. of it takes 5 (1d10) fire damage."
+    },
+    {
+      "name": "Heated Weapons",
+      "description": "When the azer hits with a metal melee weapon, it deals an extra 3 (1d6) fire damage (included in the attack)."
+    },
+    {
+      "name": "Illumination",
+      "description": "The azer sheds bright light in a 10-foot radius and dim light for an additional 10 ft.."
+    }
+  ],
+  "challenge_rating": 2.0,
+  "experience_points": 450,
+  "is_player_controlled": false
+}

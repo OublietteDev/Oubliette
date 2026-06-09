@@ -1,0 +1,71 @@
+{
+  "name": "Remorhaz",
+  "size": "huge",
+  "creature_type": "monstrosity",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 24,
+    "dexterity": 13,
+    "constitution": 21,
+    "intelligence": 4,
+    "wisdom": 10,
+    "charisma": 5
+  },
+  "armor_class": 17,
+  "max_hit_points": 195,
+  "hit_dice": "17d12",
+  "speed": {
+    "walk": 30,
+    "burrow": 20
+  },
+  "proficiency_bonus": 4,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "cold",
+    "fire"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "tremorsense": 60
+  },
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +11 to hit, reach 10 ft., one target. Hit: 40 (6d10 + 7) piercing damage plus 10 (3d6) fire damage. If the target is a creature, it is grappled (escape DC 17). Until this grapple ends, the target is restrained, and the remorhaz can't bite another target.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "6d10",
+            "damage_type": "piercing",
+            "bonus": 7
+          },
+          {
+            "dice": "3d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Heated Body",
+      "description": "A creature that touches the remorhaz or hits it with a melee attack while within 5 feet of it takes 10 (3d6) fire damage."
+    }
+  ],
+  "challenge_rating": 11.0,
+  "experience_points": 7200,
+  "is_player_controlled": false
+}

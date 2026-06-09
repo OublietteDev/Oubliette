@@ -326,13 +326,14 @@ class EnemyInstance:
     entity_id: str | None = None
 
 
-def authored_arena_monster(monster_id: str) -> Monster | None:
-    """The Arena's hand-authored, fully-mechanized version of a monster, if one
-    exists (`arena/data/monsters/<id>.json`). These carry real, AI-driven kit —
-    breath weapons and other save-for-half actions, multi-type attacks,
-    spellcasting — that the flat StatBlock mapping can't express. Matched by id;
-    returns None when there's no authored file (the ~317 not yet hand-built)."""
-    path = DATA_DIR / "monsters" / f"{monster_id}.json"
+def arena_monster_file(monster_id: str) -> Monster | None:
+    """The full-fidelity Arena `Monster` for an id, from the generated SRD set
+    (`arena/data/monsters/srd/<id>.json`, produced by tools/gen_arena_monsters.py
+    — a deterministic parse of the same 5e-database the bestiary came from). These
+    carry the real combat kit — multi-type attacks, save-for-half breath weapons,
+    multiattack data — that the flat StatBlock mapping can't express. Returns None
+    when there's no file (then we fall back to the basic mapping)."""
+    path = DATA_DIR / "monsters" / "srd" / f"{monster_id}.json"
     if not path.is_file():
         return None
     try:
@@ -342,15 +343,15 @@ def authored_arena_monster(monster_id: str) -> Monster | None:
 
 
 def enemy_from_statblock(sb: StatBlock) -> EnemyInstance:
-    """Prefer the Arena's authored monster (full mechanical fidelity) when one
-    exists for this id; otherwise fall back to the flat basic-attack mapping.
-    Either way, Oubliette's bestiary stays the source of truth for the reward
-    (its `xp`) and the loot table."""
-    authored = authored_arena_monster(sb.id)
-    if authored is not None:
+    """Prefer the generated full-fidelity Arena monster when one exists for this id
+    (essentially every SRD bestiary monster); otherwise fall back to the flat
+    basic-attack mapping (templates, synthetic ids). Either way, Oubliette's
+    bestiary stays the source of truth for the reward (its `xp`) and loot."""
+    rich = arena_monster_file(sb.id)
+    if rich is not None:
         if sb.xp:
-            authored.experience_points = sb.xp   # reward = Oubliette's bestiary
-        creature: Monster = authored
+            rich.experience_points = sb.xp   # reward = Oubliette's bestiary
+        creature: Monster = rich
     else:
         creature = statblock_to_monster(sb)
     return EnemyInstance(creature=creature, xp=sb.xp, loot=_loot_to_value(sb.loot))

@@ -1,0 +1,81 @@
+{
+  "name": "Harpy",
+  "size": "medium",
+  "creature_type": "monstrosity",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 12,
+    "dexterity": 13,
+    "constitution": 12,
+    "intelligence": 7,
+    "wisdom": 10,
+    "charisma": 13
+  },
+  "armor_class": 11,
+  "max_hit_points": 38,
+  "hit_dice": "7d8",
+  "speed": {
+    "walk": 20,
+    "fly": 40
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Claws",
+      "description": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 6 (2d4 + 1) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claws",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d4",
+            "damage_type": "slashing",
+            "bonus": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "Club",
+      "description": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 3 (1d4 + 1) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Club",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "bludgeoning",
+            "bonus": 1
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The harpy makes two attacks: one with its claws and one with its club.",
+      "extra_attack_count": 1
+    }
+  ],
+  "challenge_rating": 1.0,
+  "experience_points": 200,
+  "is_player_controlled": false
+}

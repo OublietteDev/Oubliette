@@ -1,0 +1,66 @@
+{
+  "name": "Death Dog",
+  "size": "medium",
+  "creature_type": "monstrosity",
+  "alignment": "neutral evil",
+  "ability_scores": {
+    "strength": 15,
+    "dexterity": 14,
+    "constitution": 14,
+    "intelligence": 3,
+    "wisdom": 13,
+    "charisma": 6
+  },
+  "armor_class": 12,
+  "max_hit_points": 39,
+  "hit_dice": "6d8",
+  "speed": {
+    "walk": 40
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 120
+  },
+  "passive_perception": 15,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) piercing damage. If the target is a creature, it must succeed on a DC 12 Constitution saving throw against disease or become poisoned until the disease is cured. Every 24 hours that elapse, the creature must repeat the saving throw, reducing its hit point maximum by 5 (1d10) on a failure. This reduction lasts until the disease is cured. The creature dies if the disease reduces its hit point maximum to 0.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The dog makes two bite attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Two-Headed",
+      "description": "The dog has advantage on Wisdom (Perception) checks and on saving throws against being blinded, charmed, deafened, frightened, stunned, or knocked unconscious."
+    }
+  ],
+  "challenge_rating": 1.0,
+  "experience_points": 200,
+  "is_player_controlled": false
+}

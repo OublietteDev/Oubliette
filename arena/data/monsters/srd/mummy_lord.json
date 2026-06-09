@@ -1,0 +1,108 @@
+{
+  "name": "Mummy Lord",
+  "size": "medium",
+  "creature_type": "undead",
+  "alignment": "lawful evil",
+  "ability_scores": {
+    "strength": 18,
+    "dexterity": 10,
+    "constitution": 17,
+    "intelligence": 11,
+    "wisdom": 18,
+    "charisma": 16
+  },
+  "armor_class": 17,
+  "max_hit_points": 97,
+  "hit_dice": "13d8",
+  "speed": {
+    "walk": 20
+  },
+  "proficiency_bonus": 5,
+  "saving_throw_proficiencies": [
+    "constitution",
+    "intelligence",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "necrotic",
+    "poison",
+    "bludgeoning, piercing, and slashing from nonmagical weapons"
+  ],
+  "damage_vulnerabilities": [
+    "fire"
+  ],
+  "condition_immunities": [
+    "charmed",
+    "exhaustion",
+    "frightened",
+    "paralyzed",
+    "poisoned"
+  ],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 14,
+  "actions": [
+    {
+      "name": "Rotting Fist",
+      "description": "Melee Weapon Attack: +9 to hit, reach 5 ft., one target. Hit: 14 (3d6 + 4) bludgeoning damage plus 21 (6d6) necrotic damage. If the target is a creature, it must succeed on a DC 16 Constitution saving throw or be cursed with mummy rot. The cursed target can't regain hit points, and its hit point maximum decreases by 10 (3d6) for every 24 hours that elapse. If the curse reduces the target's hit point maximum to 0, the target dies, and its body turns to dust. The curse lasts until removed by the remove curse spell or other magic.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Rotting Fist",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "3d6",
+            "damage_type": "bludgeoning",
+            "bonus": 4
+          },
+          {
+            "dice": "6d6",
+            "damage_type": "necrotic",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Dreadful Glare",
+      "description": "The mummy lord targets one creature it can see within 60 feet of it. If the target can see the mummy lord, it must succeed on a DC 16 Wisdom saving throw against this magic or become frightened until the end of the mummy's next turn. If the target fails the saving throw by 5 or more, it is also paralyzed for the same duration. A target that succeeds on the saving throw is immune to the Dreadful Glare of all mummies and mummy lords for the next 24 hours.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 16,
+        "damage_on_fail": [],
+        "damage_on_success": "none"
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The mummy can use its Dreadful Glare and makes one attack with its rotting fist.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The mummy lord has advantage on saving throws against spells and other magical effects."
+    },
+    {
+      "name": "Rejuvenation",
+      "description": "A destroyed mummy lord gains a new body in 24 hours if its heart is intact, regaining all its hit points and becoming active again. The new body appears within 5 feet of the mummy lord's heart."
+    },
+    {
+      "name": "Spellcasting",
+      "description": "The mummy lord is a 10th-level spellcaster. Its spellcasting ability is Wisdom (spell save DC 17, +9 to hit with spell attacks). The mummy lord has the following cleric spells prepared:\n\n- Cantrips (at will): sacred flame, thaumaturgy\n- 1st level (4 slots): command, guiding bolt, shield of faith\n- 2nd level (3 slots): hold person, silence, spiritual weapon\n- 3rd level (3 slots): animate dead, dispel magic\n- 4th level (3 slots): divination, guardian of faith\n- 5th level (2 slots): contagion, insect plague\n- 6th level (1 slot): harm"
+    }
+  ],
+  "challenge_rating": 15.0,
+  "experience_points": 13000,
+  "is_player_controlled": false
+}

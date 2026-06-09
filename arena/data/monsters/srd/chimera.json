@@ -1,0 +1,125 @@
+{
+  "name": "Chimera",
+  "size": "large",
+  "creature_type": "monstrosity",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 19,
+    "dexterity": 11,
+    "constitution": 19,
+    "intelligence": 3,
+    "wisdom": 14,
+    "charisma": 10
+  },
+  "armor_class": 14,
+  "max_hit_points": 114,
+  "hit_dice": "12d10",
+  "speed": {
+    "walk": 30,
+    "fly": 60
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 18,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 11 (2d6 + 4) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "piercing",
+            "bonus": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "Horns",
+      "description": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 10 (1d12 + 4) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Horns",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d12",
+            "damage_type": "bludgeoning",
+            "bonus": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claws",
+      "description": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 11 (2d6 + 4) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claws",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "slashing",
+            "bonus": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "Fire Breath",
+      "description": "The dragon head exhales fire in a 15-foot cone. Each creature in that area must make a DC 15 Dexterity saving throw, taking 31 (7d8) fire damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "target_type": "area_cone",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 15,
+        "damage_on_fail": [
+          {
+            "dice": "7d8",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "area_size": 15,
+      "uses_per_rest": 2,
+      "rest_type": "short",
+      "current_uses": 2
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The chimera makes three attacks: one with its bite, one with its horns, and one with its claws. When its fire breath is available, it can use the breath in place of its bite or horns.",
+      "extra_attack_count": 2
+    }
+  ],
+  "challenge_rating": 6.0,
+  "experience_points": 2300,
+  "is_player_controlled": false
+}

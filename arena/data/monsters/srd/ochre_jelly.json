@@ -1,0 +1,83 @@
+{
+  "name": "Ochre Jelly",
+  "size": "large",
+  "creature_type": "ooze",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 15,
+    "dexterity": 6,
+    "constitution": 14,
+    "intelligence": 2,
+    "wisdom": 6,
+    "charisma": 1
+  },
+  "armor_class": 8,
+  "max_hit_points": 45,
+  "hit_dice": "6d10",
+  "speed": {
+    "walk": 10,
+    "climb": 10
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [
+    "acid"
+  ],
+  "damage_immunities": [
+    "lightning",
+    "slashing"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "blinded",
+    "charmed",
+    "blinded",
+    "exhaustion",
+    "frightened",
+    "prone"
+  ],
+  "senses": {
+    "blindsight": 60
+  },
+  "passive_perception": 8,
+  "actions": [
+    {
+      "name": "Pseudopod",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 9 (2d6 + 2) bludgeoning damage plus 3 (1d6) acid damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Pseudopod",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "bludgeoning",
+            "bonus": 2
+          },
+          {
+            "dice": "1d6",
+            "damage_type": "acid",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Amorphous",
+      "description": "The jelly can move through a space as narrow as 1 inch wide without squeezing."
+    },
+    {
+      "name": "Spider Climb",
+      "description": "The jelly can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check."
+    }
+  ],
+  "challenge_rating": 2.0,
+  "experience_points": 450,
+  "is_player_controlled": false
+}

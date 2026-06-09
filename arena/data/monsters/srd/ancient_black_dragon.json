@@ -1,0 +1,159 @@
+{
+  "name": "Ancient Black Dragon",
+  "size": "gargantuan",
+  "creature_type": "dragon",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 27,
+    "dexterity": 14,
+    "constitution": 25,
+    "intelligence": 16,
+    "wisdom": 15,
+    "charisma": 19
+  },
+  "armor_class": 22,
+  "max_hit_points": 367,
+  "hit_dice": "21d20",
+  "speed": {
+    "walk": 40,
+    "fly": 80,
+    "swim": 40
+  },
+  "proficiency_bonus": 7,
+  "saving_throw_proficiencies": [
+    "dexterity",
+    "constitution",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "acid"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60,
+    "darkvision": 120
+  },
+  "passive_perception": 26,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +15 to hit, reach 15 ft., one target. Hit: 19 (2d10 + 8) piercing damage plus 9 (2d8) acid damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 15,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 15,
+        "damage": [
+          {
+            "dice": "2d10",
+            "damage_type": "piercing",
+            "bonus": 8
+          },
+          {
+            "dice": "2d8",
+            "damage_type": "acid",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Weapon Attack: +15 to hit, reach 10 ft., one target. Hit: 15 (2d6 + 8) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Claw",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "slashing",
+            "bonus": 8
+          }
+        ]
+      }
+    },
+    {
+      "name": "Tail",
+      "description": "Melee Weapon Attack: +15 to hit, reach 20 ft., one target. Hit: 17 (2d8 + 8) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 20,
+      "attack": {
+        "name": "Tail",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 20,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "bludgeoning",
+            "bonus": 8
+          }
+        ]
+      }
+    },
+    {
+      "name": "Frightful Presence",
+      "description": "Each creature of the dragon's choice that is within 120 feet of the dragon and aware of it must succeed on a DC 19 Wisdom saving throw or become frightened for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. If a creature's saving throw is successful or the effect ends for it, the creature is immune to the dragon's Frightful Presence for the next 24 hours.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 19,
+        "damage_on_fail": [],
+        "damage_on_success": "none"
+      }
+    },
+    {
+      "name": "Acid Breath",
+      "description": "The dragon exhales acid in a 90-foot line that is 10 feet wide. Each creature in that line must make a DC 22 Dexterity saving throw, taking 67 (15d8) acid damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "target_type": "area_line",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 22,
+        "damage_on_fail": [
+          {
+            "dice": "15d8",
+            "damage_type": "acid",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "area_size": 90,
+      "uses_per_rest": 2,
+      "rest_type": "short",
+      "current_uses": 2
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon can use its Frightful Presence. It then makes three attacks: one with its bite and two with its claws.",
+      "extra_attack_count": 3
+    },
+    {
+      "name": "Amphibious",
+      "description": "The dragon can breathe air and water."
+    },
+    {
+      "name": "Legendary Resistance",
+      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+    }
+  ],
+  "challenge_rating": 21.0,
+  "experience_points": 33000,
+  "is_player_controlled": false
+}

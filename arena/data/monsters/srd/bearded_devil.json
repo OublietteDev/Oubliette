@@ -1,0 +1,106 @@
+{
+  "name": "Bearded Devil",
+  "size": "medium",
+  "creature_type": "fiend",
+  "alignment": "lawful evil",
+  "ability_scores": {
+    "strength": 16,
+    "dexterity": 15,
+    "constitution": 15,
+    "intelligence": 9,
+    "wisdom": 11,
+    "charisma": 11
+  },
+  "armor_class": 13,
+  "max_hit_points": 52,
+  "hit_dice": "8d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [
+    "strength",
+    "constitution",
+    "wisdom"
+  ],
+  "damage_resistances": [
+    "cold",
+    "bludgeoning, piercing, and slashing from nonmagical weapons that aren't silvered"
+  ],
+  "damage_immunities": [
+    "fire",
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "poisoned"
+  ],
+  "senses": {
+    "darkvision": 120
+  },
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Beard",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one creature. Hit: 6 (1d8 + 2) piercing damage, and the target must succeed on a DC 12 Constitution saving throw or be poisoned for 1 minute. While poisoned in this way, the target can't regain hit points. The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Beard",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "Glaive",
+      "description": "Melee Weapon Attack: +5 to hit, reach 10 ft., one target. Hit: 8 (1d10 + 3) slashing damage. If the target is a creature other than an undead or a construct, it must succeed on a DC 12 Constitution saving throw or lose 5 (1d10) hit points at the start of each of its turns due to an infernal wound. Each time the devil hits the wounded target with this attack, the damage dealt by the wound increases by 5 (1d10). Any creature can take an action to stanch the wound with a successful DC 12 Wisdom (Medicine) check. The wound also closes if the target receives magical healing.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Glaive",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "1d10",
+            "damage_type": "slashing",
+            "bonus": 3
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The devil makes two attacks: one with its beard and one with its glaive.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Devil's Sight",
+      "description": "Magical darkness doesn't impede the devil's darkvision."
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The devil has advantage on saving throws against spells and other magical effects."
+    },
+    {
+      "name": "Steadfast",
+      "description": "The devil can't be frightened while it can see an allied creature within 30 feet of it."
+    }
+  ],
+  "challenge_rating": 3.0,
+  "experience_points": 700,
+  "is_player_controlled": false
+}

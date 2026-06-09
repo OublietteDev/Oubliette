@@ -1,0 +1,83 @@
+{
+  "name": "Swarm of Bats",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 5,
+    "dexterity": 15,
+    "constitution": 10,
+    "intelligence": 2,
+    "wisdom": 12,
+    "charisma": 4
+  },
+  "armor_class": 12,
+  "max_hit_points": 22,
+  "hit_dice": "5d8",
+  "speed": {
+    "walk": 0,
+    "fly": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [
+    "bludgeoning",
+    "piercing",
+    "slashing"
+  ],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "charmed",
+    "frightened",
+    "grappled",
+    "paralyzed",
+    "petrified",
+    "prone",
+    "restrained",
+    "stunned"
+  ],
+  "senses": {
+    "blindsight": 60
+  },
+  "passive_perception": 11,
+  "actions": [
+    {
+      "name": "Bites",
+      "description": "Melee Weapon Attack: +4 to hit, reach 0 ft., one creature in the swarm's space. Hit: 5 (2d4) piercing damage, or 2 (1d4) piercing damage if the swarm has half of its hit points or fewer.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bites",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d4",
+            "damage_type": "piercing",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Echolocation",
+      "description": "The swarm can't use its blindsight while deafened."
+    },
+    {
+      "name": "Keen Hearing",
+      "description": "The swarm has advantage on Wisdom (Perception) checks that rely on hearing."
+    },
+    {
+      "name": "Swarm",
+      "description": "The swarm can occupy another creature's space and vice versa, and the swarm can move through any opening large enough for a Tiny bat. The swarm can't regain hit points or gain temporary hit points."
+    }
+  ],
+  "challenge_rating": 0.25,
+  "experience_points": 50,
+  "is_player_controlled": false
+}

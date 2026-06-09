@@ -1,0 +1,99 @@
+{
+  "name": "Gorgon",
+  "size": "large",
+  "creature_type": "monstrosity",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 20,
+    "dexterity": 11,
+    "constitution": 18,
+    "intelligence": 2,
+    "wisdom": 12,
+    "charisma": 7
+  },
+  "armor_class": 19,
+  "max_hit_points": 114,
+  "hit_dice": "12d10",
+  "speed": {
+    "walk": 40
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "petrified"
+  ],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 14,
+  "actions": [
+    {
+      "name": "Gore",
+      "description": "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 18 (2d12 + 5) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Gore",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d12",
+            "damage_type": "piercing",
+            "bonus": 5
+          }
+        ]
+      }
+    },
+    {
+      "name": "Hooves",
+      "description": "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 16 (2d10 + 5) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Hooves",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d10",
+            "damage_type": "bludgeoning",
+            "bonus": 5
+          }
+        ]
+      }
+    },
+    {
+      "name": "Petrifying Breath",
+      "description": "The gorgon exhales petrifying gas in a 30-foot cone. Each creature in that area must succeed on a DC 13 Constitution saving throw. On a failed save, a target begins to turn to stone and is restrained. The restrained target must repeat the saving throw at the end of its next turn. On a success, the effect ends on the target. On a failure, the target is petrified until freed by the greater restoration spell or other magic.",
+      "action_type": "action",
+      "target_type": "area_cone",
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 13,
+        "damage_on_fail": [],
+        "damage_on_success": "none"
+      },
+      "area_size": 30,
+      "uses_per_rest": 2,
+      "rest_type": "short",
+      "current_uses": 2
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Trampling Charge",
+      "description": "If the gorgon moves at least 20 feet straight toward a creature and then hits it with a gore attack on the same turn, that target must succeed on a DC 16 Strength saving throw or be knocked prone. If the target is prone, the gorgon can make one attack with its hooves against it as a bonus action."
+    }
+  ],
+  "challenge_rating": 5.0,
+  "experience_points": 1800,
+  "is_player_controlled": false
+}

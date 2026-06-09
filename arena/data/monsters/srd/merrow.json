@@ -1,0 +1,107 @@
+{
+  "name": "Merrow",
+  "size": "large",
+  "creature_type": "monstrosity",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 18,
+    "dexterity": 10,
+    "constitution": 15,
+    "intelligence": 8,
+    "wisdom": 10,
+    "charisma": 9
+  },
+  "armor_class": 13,
+  "max_hit_points": 45,
+  "hit_dice": "6d10",
+  "speed": {
+    "walk": 10,
+    "swim": 40
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 8 (1d8 + 4) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "piercing",
+            "bonus": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claws",
+      "description": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 9 (2d4 + 4) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claws",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d4",
+            "damage_type": "slashing",
+            "bonus": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "Harpoon",
+      "description": "Melee or Ranged Weapon Attack: +6 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 11 (2d6 + 4) piercing damage. If the target is a Huge or smaller creature, it must succeed on a Strength contest against the merrow or be pulled up to 20 feet toward the merrow.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Harpoon",
+        "attack_type": "ranged_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "piercing",
+            "bonus": 4
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The merrow makes two attacks: one with its bite and one with its claws or harpoon.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Amphibious",
+      "description": "The merrow can breathe air and water."
+    }
+  ],
+  "challenge_rating": 2.0,
+  "experience_points": 450,
+  "is_player_controlled": false
+}

@@ -1,0 +1,76 @@
+{
+  "name": "Ogre",
+  "size": "large",
+  "creature_type": "giant",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 19,
+    "dexterity": 8,
+    "constitution": 16,
+    "intelligence": 5,
+    "wisdom": 7,
+    "charisma": 7
+  },
+  "armor_class": 11,
+  "max_hit_points": 59,
+  "hit_dice": "7d10",
+  "speed": {
+    "walk": 40
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 8,
+  "actions": [
+    {
+      "name": "Greatclub",
+      "description": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 13 (2d8 + 4) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Greatclub",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "bludgeoning",
+            "bonus": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "Javelin",
+      "description": "Melee or Ranged Weapon Attack: +6 to hit, reach 5 ft. or range 30/120 ft., one target. Hit: 11 (2d6 + 4) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Javelin",
+        "attack_type": "ranged_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "piercing",
+            "bonus": 4
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [],
+  "challenge_rating": 2.0,
+  "experience_points": 450,
+  "is_player_controlled": false
+}

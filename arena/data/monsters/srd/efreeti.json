@@ -1,0 +1,102 @@
+{
+  "name": "Efreeti",
+  "size": "large",
+  "creature_type": "elemental",
+  "alignment": "lawful evil",
+  "ability_scores": {
+    "strength": 22,
+    "dexterity": 12,
+    "constitution": 24,
+    "intelligence": 16,
+    "wisdom": 15,
+    "charisma": 16
+  },
+  "armor_class": 17,
+  "max_hit_points": 200,
+  "hit_dice": "16d10",
+  "speed": {
+    "walk": 40,
+    "fly": 60
+  },
+  "proficiency_bonus": 4,
+  "saving_throw_proficiencies": [
+    "intelligence",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "fire"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 120
+  },
+  "passive_perception": 12,
+  "actions": [
+    {
+      "name": "Scimitar",
+      "description": "Melee Weapon Attack: +10 to hit, reach 5 ft., one target. Hit: 13 (2d6 + 6) slashing damage plus 7 (2d6) fire damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Scimitar",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "slashing",
+            "bonus": 6
+          },
+          {
+            "dice": "2d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Hurl Flame",
+      "description": "Ranged Spell Attack: +7 to hit, range 120 ft., one target. Hit: 17 (5d6) fire damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Hurl Flame",
+        "attack_type": "ranged_weapon",
+        "ability": "intelligence",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "5d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The efreeti makes two scimitar attacks or uses its Hurl Flame twice.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Elemental Demise",
+      "description": "If the efreeti dies, its body disintegrates in a flash of fire and puff of smoke, leaving behind only equipment the djinni was wearing or carrying."
+    },
+    {
+      "name": "Innate Spellcasting",
+      "description": "The efreeti's innate spell casting ability is Charisma (spell save DC 15, +7 to hit with spell attacks). It can innately cast the following spells, requiring no material components:\n\nAt will: detect magic\n3/day: enlarge/reduce, tongues\n1/day each: conjure elemental (fire elemental only), gaseous form, invisibility, major image, plane shift, wall of fire"
+    }
+  ],
+  "challenge_rating": 11.0,
+  "experience_points": 7200,
+  "is_player_controlled": false
+}

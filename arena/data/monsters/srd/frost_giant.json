@@ -1,0 +1,86 @@
+{
+  "name": "Frost Giant",
+  "size": "huge",
+  "creature_type": "giant",
+  "alignment": "neutral evil",
+  "ability_scores": {
+    "strength": 23,
+    "dexterity": 9,
+    "constitution": 21,
+    "intelligence": 9,
+    "wisdom": 10,
+    "charisma": 12
+  },
+  "armor_class": 15,
+  "max_hit_points": 138,
+  "hit_dice": "12d12",
+  "speed": {
+    "walk": 40
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [
+    "constitution",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "cold"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 13,
+  "actions": [
+    {
+      "name": "Greataxe",
+      "description": "Melee Weapon Attack: +9 to hit, reach 10 ft., one target. Hit: 25 (3d12 + 6) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Greataxe",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "3d12",
+            "damage_type": "slashing",
+            "bonus": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "Rock",
+      "description": "Ranged Weapon Attack: +9 to hit, range 60/240 ft., one target. Hit: 28 (4d10 + 6) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Rock",
+        "attack_type": "ranged_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "4d10",
+            "damage_type": "bludgeoning",
+            "bonus": 6
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The giant makes two greataxe attacks.",
+      "extra_attack_count": 1
+    }
+  ],
+  "challenge_rating": 8.0,
+  "experience_points": 3900,
+  "is_player_controlled": false
+}

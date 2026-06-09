@@ -1,0 +1,103 @@
+{
+  "name": "Dretch",
+  "size": "small",
+  "creature_type": "fiend",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 11,
+    "dexterity": 11,
+    "constitution": 12,
+    "intelligence": 5,
+    "wisdom": 8,
+    "charisma": 3
+  },
+  "armor_class": 11,
+  "max_hit_points": 18,
+  "hit_dice": "4d6",
+  "speed": {
+    "walk": 20
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [
+    "cold",
+    "fire",
+    "lightning"
+  ],
+  "damage_immunities": [
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "poisoned"
+  ],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 9,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +2 to hit, reach 5 ft., one target. Hit: 3 (1d6) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "piercing",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claws",
+      "description": "Melee Weapon Attack: +2 to hit, reach 5 ft., one target. Hit: 5 (2d4) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claws",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d4",
+            "damage_type": "slashing",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Fetid Cloud",
+      "description": "A 10-foot radius of disgusting green gas extends out from the dretch. The gas spreads around corners, and its area is lightly obscured. It lasts for 1 minute or until a strong wind disperses it. Any creature that starts its turn in that area must succeed on a DC 11 Constitution saving throw or be poisoned until the start of its next turn. While poisoned in this way, the target can take either an action or a bonus action on its turn, not both, and can't take reactions.",
+      "action_type": "action",
+      "target_type": "area_sphere",
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 11,
+        "damage_on_fail": [],
+        "damage_on_success": "none"
+      },
+      "area_size": 10
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The dretch makes two attacks: one with its bite and one with its claws.",
+      "extra_attack_count": 1
+    }
+  ],
+  "challenge_rating": 0.25,
+  "experience_points": 25,
+  "is_player_controlled": false
+}

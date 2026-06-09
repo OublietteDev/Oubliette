@@ -1,0 +1,59 @@
+{
+  "name": "Pegasus",
+  "size": "large",
+  "creature_type": "celestial",
+  "alignment": "chaotic good",
+  "ability_scores": {
+    "strength": 18,
+    "dexterity": 15,
+    "constitution": 16,
+    "intelligence": 10,
+    "wisdom": 15,
+    "charisma": 13
+  },
+  "armor_class": 12,
+  "max_hit_points": 59,
+  "hit_dice": "7d10",
+  "speed": {
+    "walk": 60,
+    "fly": 90
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [
+    "dexterity",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 16,
+  "actions": [
+    {
+      "name": "Hooves",
+      "description": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 11 (2d6 + 4) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Hooves",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "bludgeoning",
+            "bonus": 4
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [],
+  "challenge_rating": 2.0,
+  "experience_points": 450,
+  "is_player_controlled": false
+}

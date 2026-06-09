@@ -1,0 +1,90 @@
+{
+  "name": "Roc",
+  "size": "gargantuan",
+  "creature_type": "monstrosity",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 28,
+    "dexterity": 10,
+    "constitution": 20,
+    "intelligence": 3,
+    "wisdom": 10,
+    "charisma": 9
+  },
+  "armor_class": 15,
+  "max_hit_points": 248,
+  "hit_dice": "16d20",
+  "speed": {
+    "walk": 20,
+    "fly": 120
+  },
+  "proficiency_bonus": 4,
+  "saving_throw_proficiencies": [
+    "dexterity",
+    "constitution",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 14,
+  "actions": [
+    {
+      "name": "Beak",
+      "description": "Melee Weapon Attack: +13 to hit, reach 10 ft., one target. Hit: 27 (4d8 + 9) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Beak",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "4d8",
+            "damage_type": "piercing",
+            "bonus": 9
+          }
+        ]
+      }
+    },
+    {
+      "name": "Talons",
+      "description": "Melee Weapon Attack: +13 to hit, reach 5 ft., one target. Hit: 23 (4d6 + 9) slashing damage, and the target is grappled (escape DC 19). Until this grapple ends, the target is restrained, and the roc can't use its talons on another target.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Talons",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "4d6",
+            "damage_type": "slashing",
+            "bonus": 9
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The roc makes two attacks: one with its beak and one with its talons.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Keen Sight",
+      "description": "The roc has advantage on Wisdom (Perception) checks that rely on sight."
+    }
+  ],
+  "challenge_rating": 11.0,
+  "experience_points": 7200,
+  "is_player_controlled": false
+}

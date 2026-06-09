@@ -1,0 +1,71 @@
+{
+  "name": "Bronze Dragon Wyrmling",
+  "size": "medium",
+  "creature_type": "dragon",
+  "alignment": "lawful good",
+  "ability_scores": {
+    "strength": 17,
+    "dexterity": 10,
+    "constitution": 15,
+    "intelligence": 12,
+    "wisdom": 11,
+    "charisma": 15
+  },
+  "armor_class": 17,
+  "max_hit_points": 32,
+  "hit_dice": "5d8",
+  "speed": {
+    "walk": 30,
+    "fly": 60,
+    "swim": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [
+    "dexterity",
+    "constitution",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "lightning"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 10,
+    "darkvision": 60
+  },
+  "passive_perception": 14,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 8 (1d10 + 3) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d10",
+            "damage_type": "piercing",
+            "bonus": 3
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Amphibious",
+      "description": "The dragon can breathe air and water."
+    }
+  ],
+  "challenge_rating": 2.0,
+  "experience_points": 450,
+  "is_player_controlled": false
+}

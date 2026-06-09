@@ -1,0 +1,132 @@
+{
+  "name": "Iron Golem",
+  "size": "large",
+  "creature_type": "construct",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 24,
+    "dexterity": 9,
+    "constitution": 20,
+    "intelligence": 3,
+    "wisdom": 11,
+    "charisma": 1
+  },
+  "armor_class": 20,
+  "max_hit_points": 210,
+  "hit_dice": "20d10",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 5,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "fire",
+    "poison",
+    "psychic",
+    "bludgeoning, piercing, and slashing from nonmagical weapons that aren't adamantine"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "charmed",
+    "exhaustion",
+    "frightened",
+    "paralyzed",
+    "petrified",
+    "poisoned"
+  ],
+  "senses": {
+    "darkvision": 120
+  },
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Slam",
+      "description": "Melee Weapon Attack: +13 to hit, reach 5 ft., one target. Hit: 20 (3d8 + 7) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Slam",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "3d8",
+            "damage_type": "bludgeoning",
+            "bonus": 7
+          }
+        ]
+      }
+    },
+    {
+      "name": "Sword",
+      "description": "Melee Weapon Attack: +13 to hit, reach 10 ft., one target. Hit: 23 (3d10 + 7) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Sword",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "3d10",
+            "damage_type": "slashing",
+            "bonus": 7
+          }
+        ]
+      }
+    },
+    {
+      "name": "Poison Breath",
+      "description": "The golem exhales poisonous gas in a 15-foot cone. Each creature in that area must make a DC 19 Constitution saving throw, taking 45 (10d8) poison damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "target_type": "area_cone",
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 19,
+        "damage_on_fail": [
+          {
+            "dice": "10d8",
+            "damage_type": "poison",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "area_size": 15,
+      "uses_per_rest": 2,
+      "rest_type": "short",
+      "current_uses": 2
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The golem makes two melee attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Fire Absorption",
+      "description": "Whenever the golem is subjected to fire damage, it takes no damage and instead regains a number of hit points equal to the fire damage dealt."
+    },
+    {
+      "name": "Immutable Form",
+      "description": "The golem is immune to any spell or effect that would alter its form."
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The golem has advantage on saving throws against spells and other magical effects."
+    },
+    {
+      "name": "Magic Weapons",
+      "description": "The golem's weapon attacks are magical."
+    }
+  ],
+  "challenge_rating": 16.0,
+  "experience_points": 15000,
+  "is_player_controlled": false
+}

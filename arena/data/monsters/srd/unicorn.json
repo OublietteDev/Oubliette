@@ -1,0 +1,104 @@
+{
+  "name": "Unicorn",
+  "size": "large",
+  "creature_type": "celestial",
+  "alignment": "lawful good",
+  "ability_scores": {
+    "strength": 18,
+    "dexterity": 14,
+    "constitution": 15,
+    "intelligence": 11,
+    "wisdom": 17,
+    "charisma": 16
+  },
+  "armor_class": 12,
+  "max_hit_points": 67,
+  "hit_dice": "9d10",
+  "speed": {
+    "walk": 50
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "charmed",
+    "paralyzed",
+    "poisoned"
+  ],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 13,
+  "actions": [
+    {
+      "name": "Hooves",
+      "description": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 11 (2d6 + 4) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Hooves",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "bludgeoning",
+            "bonus": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "Horn",
+      "description": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 8 (1d8 + 4) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Horn",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "piercing",
+            "bonus": 4
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The unicorn makes two attacks: one with its hooves and one with its horn.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Charge",
+      "description": "If the unicorn moves at least 20 ft. straight toward a target and then hits it with a horn attack on the same turn, the target takes an extra 9 (2d8) piercing damage. If the target is a creature, it must succeed on a DC 15 Strength saving throw or be knocked prone."
+    },
+    {
+      "name": "Innate Spellcasting",
+      "description": "The unicorn's innate spellcasting ability is Charisma (spell save DC 14). The unicorn can innately cast the following spells, requiring no components:\n\nAt will: detect evil and good, druidcraft, pass without trace\n1/day each: calm emotions, dispel evil and good, entangle"
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The unicorn has advantage on saving throws against spells and other magical effects."
+    },
+    {
+      "name": "Magic Weapons",
+      "description": "The unicorn's weapon attacks are magical."
+    }
+  ],
+  "challenge_rating": 5.0,
+  "experience_points": 1800,
+  "is_player_controlled": false
+}

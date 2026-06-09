@@ -1,0 +1,100 @@
+{
+  "name": "Ettercap",
+  "size": "medium",
+  "creature_type": "monstrosity",
+  "alignment": "neutral evil",
+  "ability_scores": {
+    "strength": 14,
+    "dexterity": 15,
+    "constitution": 13,
+    "intelligence": 7,
+    "wisdom": 12,
+    "charisma": 8
+  },
+  "armor_class": 13,
+  "max_hit_points": 44,
+  "hit_dice": "8d8",
+  "speed": {
+    "walk": 30,
+    "climb": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 13,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one creature. Hit: 6 (1d8 + 2) piercing damage plus 4 (1d8) poison damage. The target must succeed on a DC 11 Constitution saving throw or be poisoned for 1 minute. The creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "piercing",
+            "bonus": 2
+          },
+          {
+            "dice": "1d8",
+            "damage_type": "poison",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claws",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 7 (2d4 + 2) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claws",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d4",
+            "damage_type": "slashing",
+            "bonus": 2
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The ettercap makes two attacks: one with its bite and one with its claws.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Spider Climb",
+      "description": "The ettercap can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check."
+    },
+    {
+      "name": "Web Sense",
+      "description": "While in contact with a web, the ettercap knows the exact location of any other creature in contact with the same web."
+    },
+    {
+      "name": "Web Walker",
+      "description": "The ettercap ignores movement restrictions caused by webbing."
+    }
+  ],
+  "challenge_rating": 2.0,
+  "experience_points": 450,
+  "is_player_controlled": false
+}

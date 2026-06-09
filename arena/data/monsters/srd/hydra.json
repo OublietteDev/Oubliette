@@ -1,0 +1,74 @@
+{
+  "name": "Hydra",
+  "size": "huge",
+  "creature_type": "monstrosity",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 20,
+    "dexterity": 12,
+    "constitution": 20,
+    "intelligence": 2,
+    "wisdom": 10,
+    "charisma": 7
+  },
+  "armor_class": 15,
+  "max_hit_points": 172,
+  "hit_dice": "15d12",
+  "speed": {
+    "walk": 30,
+    "swim": 30
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 16,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 10 (1d10 + 5) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "1d10",
+            "damage_type": "piercing",
+            "bonus": 5
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Hold Breath",
+      "description": "The hydra can hold its breath for 1 hour."
+    },
+    {
+      "name": "Multiple Heads",
+      "description": "The hydra has five heads. While it has more than one head, the hydra has advantage on saving throws against being blinded, charmed, deafened, frightened, stunned, and knocked unconscious.\nWhenever the hydra takes 25 or more damage in a single turn, one of its heads dies. If all its heads die, the hydra dies.\nAt the end of its turn, it grows two heads for each of its heads that died since its last turn, unless it has taken fire damage since its last turn. The hydra regains 10 hit points for each head regrown in this way."
+    },
+    {
+      "name": "Reactive Heads",
+      "description": "For each head the hydra has beyond one, it gets an extra reaction that can be used only for opportunity attacks."
+    },
+    {
+      "name": "Wakeful",
+      "description": "While the hydra sleeps, at least one of its heads is awake."
+    }
+  ],
+  "challenge_rating": 8.0,
+  "experience_points": 3900,
+  "is_player_controlled": false
+}

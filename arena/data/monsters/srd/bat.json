@@ -1,0 +1,66 @@
+{
+  "name": "Bat",
+  "size": "tiny",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 2,
+    "dexterity": 15,
+    "constitution": 8,
+    "intelligence": 2,
+    "wisdom": 12,
+    "charisma": 4
+  },
+  "armor_class": 12,
+  "max_hit_points": 1,
+  "hit_dice": "1d4",
+  "speed": {
+    "walk": 5,
+    "fly": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60
+  },
+  "passive_perception": 11,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +0 to hit, reach 5 ft., one creature. Hit: 1 piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "constitution",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1",
+            "damage_type": "piercing",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Echolocation",
+      "description": "The bat can't use its blindsight while deafened."
+    },
+    {
+      "name": "Keen Hearing",
+      "description": "The bat has advantage on Wisdom (Perception) checks that rely on hearing."
+    }
+  ],
+  "challenge_rating": 0.0,
+  "experience_points": 10,
+  "is_player_controlled": false
+}

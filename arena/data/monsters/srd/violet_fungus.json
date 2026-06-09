@@ -1,0 +1,65 @@
+{
+  "name": "Violet Fungus",
+  "size": "medium",
+  "creature_type": "plant",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 3,
+    "dexterity": 1,
+    "constitution": 10,
+    "intelligence": 1,
+    "wisdom": 3,
+    "charisma": 1
+  },
+  "armor_class": 5,
+  "max_hit_points": 18,
+  "hit_dice": "4d8",
+  "speed": {
+    "walk": 5
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "blinded",
+    "blinded",
+    "frightened"
+  ],
+  "senses": {
+    "blindsight": 30
+  },
+  "passive_perception": 6,
+  "actions": [
+    {
+      "name": "Rotting Touch",
+      "description": "Melee Weapon Attack: +2 to hit, reach 10 ft., one creature. Hit: 4 (1d8) necrotic damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Rotting Touch",
+        "attack_type": "melee_weapon",
+        "ability": "constitution",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "necrotic",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "False Appearance",
+      "description": "While the violet fungus remains motionless, it is indistinguishable from an ordinary fungus."
+    }
+  ],
+  "challenge_rating": 0.25,
+  "experience_points": 50,
+  "is_player_controlled": false
+}

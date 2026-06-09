@@ -1,0 +1,91 @@
+{
+  "name": "Djinni",
+  "size": "large",
+  "creature_type": "elemental",
+  "alignment": "chaotic good",
+  "ability_scores": {
+    "strength": 21,
+    "dexterity": 15,
+    "constitution": 22,
+    "intelligence": 15,
+    "wisdom": 16,
+    "charisma": 20
+  },
+  "armor_class": 17,
+  "max_hit_points": 161,
+  "hit_dice": "14d10",
+  "speed": {
+    "walk": 30,
+    "fly": 90
+  },
+  "proficiency_bonus": 4,
+  "saving_throw_proficiencies": [
+    "dexterity",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "lightning",
+    "thunder"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 120
+  },
+  "passive_perception": 13,
+  "actions": [
+    {
+      "name": "Scimitar",
+      "description": "Melee Weapon Attack: +9 to hit, reach 5 ft., one target. Hit: 12 (2d6 + 5) slashing damage plus 3 (1d6) lightning or thunder damage (djinni's choice).",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Scimitar",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "slashing",
+            "bonus": 5
+          }
+        ]
+      }
+    },
+    {
+      "name": "Create Whirlwind",
+      "description": "A 5-foot-radius, 30-foot-tall cylinder of swirling air magically forms on a point the djinni can see within 120 feet of it. The whirlwind lasts as long as the djinni maintains concentration (as if concentrating on a spell). Any creature but the djinni that enters the whirlwind must succeed on a DC 18 Strength saving throw or be restrained by it. The djinni can move the whirlwind up to 60 feet as an action, and creatures restrained by the whirlwind move with it. The whirlwind ends if the djinni loses sight of it.\nA creature can use its action to free a creature restrained by the whirlwind, including itself, by succeeding on a DC 18 Strength check. If the check succeeds, the creature is no longer restrained and moves to the nearest space outside the whirlwind.",
+      "action_type": "action",
+      "target_type": "area_sphere",
+      "saving_throw": {
+        "ability": "strength",
+        "dc": 18,
+        "damage_on_fail": [],
+        "damage_on_success": "none"
+      },
+      "area_size": 5
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The djinni makes three scimitar attacks.",
+      "extra_attack_count": 2
+    },
+    {
+      "name": "Elemental Demise",
+      "description": "If the djinni dies, its body disintegrates into a warm breeze, leaving behind only equipment the djinni was wearing or carrying."
+    },
+    {
+      "name": "Innate Spellcasting",
+      "description": "The djinni's innate spellcasting ability is Charisma (spell save DC 17, +9 to hit with spell attacks). It can innately cast the following spells, requiring no material components:\n\nAt will: detect evil and good, detect magic, thunderwave\n3/day each: create food and water (can create wine instead of water), tongues, wind walk\n1/day each: conjure elemental (air elemental only), creation, gaseous form, invisibility, major image, plane shift"
+    }
+  ],
+  "challenge_rating": 11.0,
+  "experience_points": 7200,
+  "is_player_controlled": false
+}

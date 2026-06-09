@@ -1,0 +1,70 @@
+{
+  "name": "Giant Octopus",
+  "size": "large",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 17,
+    "dexterity": 13,
+    "constitution": 13,
+    "intelligence": 4,
+    "wisdom": 10,
+    "charisma": 4
+  },
+  "armor_class": 11,
+  "max_hit_points": 52,
+  "hit_dice": "8d10",
+  "speed": {
+    "walk": 10,
+    "swim": 60
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 14,
+  "actions": [
+    {
+      "name": "Tentacles",
+      "description": "Melee Weapon Attack: +5 to hit, reach 15 ft., one target. Hit: 10 (2d6 + 3) bludgeoning damage. If the target is a creature, it is grappled (escape DC 16). Until this grapple ends, the target is restrained, and the octopus can't use its tentacles on another target.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 15,
+      "attack": {
+        "name": "Tentacles",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 15,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "bludgeoning",
+            "bonus": 3
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Hold Breath",
+      "description": "While out of water, the octopus can hold its breath for 1 hour."
+    },
+    {
+      "name": "Underwater Camouflage",
+      "description": "The octopus has advantage on Dexterity (Stealth) checks made while underwater."
+    },
+    {
+      "name": "Water Breathing",
+      "description": "The octopus can breathe only underwater."
+    }
+  ],
+  "challenge_rating": 1.0,
+  "experience_points": 200,
+  "is_player_controlled": false
+}

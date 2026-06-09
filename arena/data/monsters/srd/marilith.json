@@ -1,0 +1,108 @@
+{
+  "name": "Marilith",
+  "size": "large",
+  "creature_type": "fiend",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 18,
+    "dexterity": 20,
+    "constitution": 20,
+    "intelligence": 18,
+    "wisdom": 16,
+    "charisma": 20
+  },
+  "armor_class": 18,
+  "max_hit_points": 189,
+  "hit_dice": "18d10",
+  "speed": {
+    "walk": 40
+  },
+  "proficiency_bonus": 5,
+  "saving_throw_proficiencies": [
+    "strength",
+    "constitution",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [
+    "cold",
+    "fire",
+    "lightning",
+    "bludgeoning, piercing, and slashing from nonmagical weapons"
+  ],
+  "damage_immunities": [
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "poisoned"
+  ],
+  "senses": {
+    "truesight": 120
+  },
+  "passive_perception": 13,
+  "actions": [
+    {
+      "name": "Longsword",
+      "description": "Melee Weapon Attack: +9 to hit, reach 5 ft., one target. Hit: 13 (2d8 + 4) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Longsword",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "slashing",
+            "bonus": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "Tail",
+      "description": "Melee Weapon Attack: +9 to hit, reach 10 ft., one creature. Hit: 15 (2d10 + 4) bludgeoning damage. If the target is Medium or smaller, it is grappled (escape DC 19). Until this grapple ends, the target is restrained, the marilith can automatically hit the target with its tail, and the marilith can't make tail attacks against other targets.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Tail",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "2d10",
+            "damage_type": "bludgeoning",
+            "bonus": 4
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The marilith can make seven attacks: six with its longswords and one with its tail.",
+      "extra_attack_count": 6
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The marilith has advantage on saving throws against spells and other magical effects."
+    },
+    {
+      "name": "Magic Weapons",
+      "description": "The marilith's weapon attacks are magical."
+    },
+    {
+      "name": "Reactive",
+      "description": "The marilith can take one reaction on every turn in combat."
+    }
+  ],
+  "challenge_rating": 16.0,
+  "experience_points": 15000,
+  "is_player_controlled": false
+}

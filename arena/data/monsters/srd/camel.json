@@ -1,0 +1,54 @@
+{
+  "name": "Camel",
+  "size": "large",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 16,
+    "dexterity": 8,
+    "constitution": 14,
+    "intelligence": 2,
+    "wisdom": 8,
+    "charisma": 5
+  },
+  "armor_class": 9,
+  "max_hit_points": 15,
+  "hit_dice": "2d10",
+  "speed": {
+    "walk": 50
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 9,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 2 (1d4) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "bludgeoning",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [],
+  "challenge_rating": 0.125,
+  "experience_points": 25,
+  "is_player_controlled": false
+}

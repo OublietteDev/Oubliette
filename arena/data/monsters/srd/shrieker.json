@@ -1,0 +1,44 @@
+{
+  "name": "Shrieker",
+  "size": "medium",
+  "creature_type": "plant",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 1,
+    "dexterity": 1,
+    "constitution": 10,
+    "intelligence": 1,
+    "wisdom": 3,
+    "charisma": 1
+  },
+  "armor_class": 5,
+  "max_hit_points": 13,
+  "hit_dice": "3d8",
+  "speed": {
+    "walk": 0
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "blinded",
+    "blinded",
+    "frightened"
+  ],
+  "senses": {
+    "blindsight": 30
+  },
+  "passive_perception": 6,
+  "actions": [],
+  "special_abilities": [
+    {
+      "name": "False Appearance",
+      "description": "While the shrieker remains motionless, it is indistinguishable from an ordinary fungus."
+    }
+  ],
+  "challenge_rating": 0.0,
+  "experience_points": 10,
+  "is_player_controlled": false
+}

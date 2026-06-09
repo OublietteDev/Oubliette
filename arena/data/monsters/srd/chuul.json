@@ -1,0 +1,87 @@
+{
+  "name": "Chuul",
+  "size": "large",
+  "creature_type": "aberration",
+  "alignment": "chaotic evil",
+  "ability_scores": {
+    "strength": 19,
+    "dexterity": 10,
+    "constitution": 16,
+    "intelligence": 5,
+    "wisdom": 11,
+    "charisma": 5
+  },
+  "armor_class": 16,
+  "max_hit_points": 93,
+  "hit_dice": "11d10",
+  "speed": {
+    "walk": 30,
+    "swim": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "poisoned"
+  ],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 14,
+  "actions": [
+    {
+      "name": "Pincer",
+      "description": "Melee Weapon Attack: +6 to hit, reach 10 ft., one target. Hit: 11 (2d6 + 4) bludgeoning damage. The target is grappled (escape DC 14) if it is a Large or smaller creature and the chuul doesn't have two other creatures grappled.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Pincer",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "bludgeoning",
+            "bonus": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "Tentacles",
+      "description": "One creature grappled by the chuul must succeed on a DC 13 Constitution saving throw or be poisoned for 1 minute. Until this poison ends, the target is paralyzed. The target can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 13,
+        "damage_on_fail": [],
+        "damage_on_success": "none"
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The chuul makes two pincer attacks. If the chuul is grappling a creature, the chuul can also use its tentacles once.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Amphibious",
+      "description": "The chuul can breathe air and water."
+    },
+    {
+      "name": "Sense Magic",
+      "description": "The chuul senses magic within 120 feet of it at will. This trait otherwise works like the detect magic spell but isn't itself magical."
+    }
+  ],
+  "challenge_rating": 4.0,
+  "experience_points": 1100,
+  "is_player_controlled": false
+}

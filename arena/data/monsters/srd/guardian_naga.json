@@ -1,0 +1,76 @@
+{
+  "name": "Guardian Naga",
+  "size": "large",
+  "creature_type": "monstrosity",
+  "alignment": "lawful good",
+  "ability_scores": {
+    "strength": 19,
+    "dexterity": 18,
+    "constitution": 16,
+    "intelligence": 16,
+    "wisdom": 19,
+    "charisma": 18
+  },
+  "armor_class": 18,
+  "max_hit_points": 127,
+  "hit_dice": "15d10",
+  "speed": {
+    "walk": 40
+  },
+  "proficiency_bonus": 4,
+  "saving_throw_proficiencies": [
+    "dexterity",
+    "constitution",
+    "intelligence",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "charmed",
+    "poisoned"
+  ],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 14,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +8 to hit, reach 10 ft., one creature. Hit: 8 (1d8 + 4) piercing damage, and the target must make a DC 15 Constitution saving throw, taking 45 (10d8) poison damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "piercing",
+            "bonus": 4
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Rejuvenation",
+      "description": "If it dies, the naga returns to life in 1d6 days and regains all its hit points. Only a wish spell can prevent this trait from functioning."
+    },
+    {
+      "name": "Spellcasting",
+      "description": "The naga is an 11th-level spellcaster. Its spellcasting ability is Wisdom (spell save DC 16, +8 to hit with spell attacks), and it needs only verbal components to cast its spells. It has the following cleric spells prepared:\n\n- Cantrips (at will): mending, sacred flame, thaumaturgy\n- 1st level (4 slots): command, cure wounds, shield of faith\n- 2nd level (3 slots): calm emotions, hold person\n- 3rd level (3 slots): bestow curse, clairvoyance\n- 4th level (3 slots): banishment, freedom of movement\n- 5th level (2 slots): flame strike, geas\n- 6th level (1 slot): true seeing"
+    }
+  ],
+  "challenge_rating": 10.0,
+  "experience_points": 5900,
+  "is_player_controlled": false
+}

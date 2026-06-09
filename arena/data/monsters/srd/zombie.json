@@ -1,0 +1,67 @@
+{
+  "name": "Zombie",
+  "size": "medium",
+  "creature_type": "undead",
+  "alignment": "neutral evil",
+  "ability_scores": {
+    "strength": 13,
+    "dexterity": 6,
+    "constitution": 16,
+    "intelligence": 3,
+    "wisdom": 6,
+    "charisma": 5
+  },
+  "armor_class": 8,
+  "max_hit_points": 22,
+  "hit_dice": "3d8",
+  "speed": {
+    "walk": 20
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [
+    "wisdom"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "poisoned"
+  ],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 8,
+  "actions": [
+    {
+      "name": "Slam",
+      "description": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 4 (1d6 + 1) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Slam",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "bludgeoning",
+            "bonus": 1
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Undead Fortitude",
+      "description": "If damage reduces the zombie to 0 hit points, it must make a Constitution saving throw with a DC of 5+the damage taken, unless the damage is radiant or from a critical hit. On a success, the zombie drops to 1 hit point instead."
+    }
+  ],
+  "challenge_rating": 0.25,
+  "experience_points": 50,
+  "is_player_controlled": false
+}

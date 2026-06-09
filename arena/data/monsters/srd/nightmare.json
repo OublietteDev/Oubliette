@@ -1,0 +1,71 @@
+{
+  "name": "Nightmare",
+  "size": "large",
+  "creature_type": "fiend",
+  "alignment": "neutral evil",
+  "ability_scores": {
+    "strength": 18,
+    "dexterity": 15,
+    "constitution": 16,
+    "intelligence": 10,
+    "wisdom": 13,
+    "charisma": 15
+  },
+  "armor_class": 13,
+  "max_hit_points": 68,
+  "hit_dice": "8d10",
+  "speed": {
+    "walk": 60,
+    "fly": 90
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "fire"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 11,
+  "actions": [
+    {
+      "name": "Hooves",
+      "description": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 13 (2d8 + 4) bludgeoning damage plus 7 (2d6) fire damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Hooves",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "bludgeoning",
+            "bonus": 4
+          },
+          {
+            "dice": "2d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Confer Fire Resistance",
+      "description": "The nightmare can grant resistance to fire damage to anyone riding it."
+    },
+    {
+      "name": "Illumination",
+      "description": "The nightmare sheds bright light in a 10-foot radius and dim light for an additional 10 feet."
+    }
+  ],
+  "challenge_rating": 3.0,
+  "experience_points": 700,
+  "is_player_controlled": false
+}

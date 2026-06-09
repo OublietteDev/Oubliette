@@ -1,0 +1,89 @@
+{
+  "name": "Grick",
+  "size": "medium",
+  "creature_type": "monstrosity",
+  "alignment": "neutral",
+  "ability_scores": {
+    "strength": 14,
+    "dexterity": 14,
+    "constitution": 11,
+    "intelligence": 3,
+    "wisdom": 14,
+    "charisma": 5
+  },
+  "armor_class": 14,
+  "max_hit_points": 27,
+  "hit_dice": "6d8",
+  "speed": {
+    "walk": 30,
+    "climb": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [
+    "bludgeoning, piercing, and slashing from nonmagical weapons"
+  ],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60
+  },
+  "passive_perception": 12,
+  "actions": [
+    {
+      "name": "Tentacles",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 9 (2d6 + 2) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Tentacles",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "slashing",
+            "bonus": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "Beak",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Beak",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The grick makes one attack with its tentacles. If that attack hits, the grick can make one beak attack against the same target.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "Stone Camouflage",
+      "description": "The grick has advantage on Dexterity (Stealth) checks made to hide in rocky terrain."
+    }
+  ],
+  "challenge_rating": 2.0,
+  "experience_points": 450,
+  "is_player_controlled": false
+}

@@ -1,0 +1,124 @@
+{
+  "name": "Horned Devil",
+  "size": "large",
+  "creature_type": "fiend",
+  "alignment": "lawful evil",
+  "ability_scores": {
+    "strength": 22,
+    "dexterity": 17,
+    "constitution": 21,
+    "intelligence": 12,
+    "wisdom": 16,
+    "charisma": 17
+  },
+  "armor_class": 18,
+  "max_hit_points": 178,
+  "hit_dice": "17d10",
+  "speed": {
+    "walk": 20,
+    "fly": 60
+  },
+  "proficiency_bonus": 4,
+  "saving_throw_proficiencies": [
+    "strength",
+    "dexterity",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [
+    "cold",
+    "bludgeoning, piercing, and slashing from nonmagical weapons that aren't silvered"
+  ],
+  "damage_immunities": [
+    "fire",
+    "poison"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [
+    "poisoned"
+  ],
+  "senses": {
+    "darkvision": 120
+  },
+  "passive_perception": 13,
+  "actions": [
+    {
+      "name": "Fork",
+      "description": "Melee Weapon Attack: +10 to hit, reach 10 ft., one target. Hit: 15 (2d8 + 6) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Fork",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "piercing",
+            "bonus": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "Tail",
+      "description": "Melee Weapon Attack: +10 to hit, reach 10 ft., one target. Hit: 10 (1d8 + 6) piercing damage. If the target is a creature other than an undead or a construct, it must succeed on a DC 17 Constitution saving throw or lose 10 (3d6) hit points at the start of each of its turns due to an infernal wound. Each time the devil hits the wounded target with this attack, the damage dealt by the wound increases by 10 (3d6). Any creature can take an action to stanch the wound with a successful DC 12 Wisdom (Medicine) check. The wound also closes if the target receives magical healing.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Tail",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "piercing",
+            "bonus": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "Hurl Flame",
+      "description": "Ranged Spell Attack: +7 to hit, range 150 ft., one target. Hit: 14 (4d6) fire damage. If the target is a flammable object that isn't being worn or carried, it also catches fire.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Hurl Flame",
+        "attack_type": "ranged_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "4d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The devil makes three melee attacks: two with its fork and one with its tail. It can use Hurl Flame in place of any melee attack.",
+      "extra_attack_count": 2
+    },
+    {
+      "name": "Devil's Sight",
+      "description": "Magical darkness doesn't impede the devil's darkvision."
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The devil has advantage on saving throws against spells and other magical effects."
+    }
+  ],
+  "challenge_rating": 11.0,
+  "experience_points": 7200,
+  "is_player_controlled": false
+}

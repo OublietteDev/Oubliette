@@ -1,0 +1,33 @@
+{
+  "name": "Guard",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "any alignment",
+  "ability_scores": {
+    "strength": 13,
+    "dexterity": 12,
+    "constitution": 12,
+    "intelligence": 10,
+    "wisdom": 11,
+    "charisma": 10
+  },
+  "armor_class": 16,
+  "max_hit_points": 11,
+  "hit_dice": "2d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 12,
+  "actions": [],
+  "special_abilities": [],
+  "challenge_rating": 0.125,
+  "experience_points": 25,
+  "is_player_controlled": false
+}

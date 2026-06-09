@@ -24,6 +24,9 @@ arena/assets/
 # Combat handoff: the transient Arena→Oubliette result JSON (runtime output).
 result.json
 
+# Transient SRD source dumps (fetched on demand by the generators, never committed).
+srd-monsters-raw.json
+
 # Secrets — never commit
 APIKey.txt
 *.key

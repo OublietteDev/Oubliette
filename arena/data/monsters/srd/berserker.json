@@ -1,0 +1,59 @@
+{
+  "name": "Berserker",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "alignment": "any chaotic alignment",
+  "ability_scores": {
+    "strength": 16,
+    "dexterity": 12,
+    "constitution": 17,
+    "intelligence": 9,
+    "wisdom": 11,
+    "charisma": 9
+  },
+  "armor_class": 13,
+  "max_hit_points": 67,
+  "hit_dice": "9d8",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 10,
+  "actions": [
+    {
+      "name": "Greataxe",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 9 (1d12 + 3) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Greataxe",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d12",
+            "damage_type": "slashing",
+            "bonus": 3
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Reckless",
+      "description": "At the start of its turn, the berserker can gain advantage on all melee weapon attack rolls during that turn, but attack rolls against it have advantage until the start of its next turn."
+    }
+  ],
+  "challenge_rating": 2.0,
+  "experience_points": 450,
+  "is_player_controlled": false
+}

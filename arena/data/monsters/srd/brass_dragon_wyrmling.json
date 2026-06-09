@@ -1,0 +1,66 @@
+{
+  "name": "Brass Dragon Wyrmling",
+  "size": "medium",
+  "creature_type": "dragon",
+  "alignment": "chaotic good",
+  "ability_scores": {
+    "strength": 15,
+    "dexterity": 10,
+    "constitution": 13,
+    "intelligence": 10,
+    "wisdom": 11,
+    "charisma": 13
+  },
+  "armor_class": 16,
+  "max_hit_points": 16,
+  "hit_dice": "3d8",
+  "speed": {
+    "walk": 30,
+    "burrow": 15,
+    "fly": 60
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [
+    "dexterity",
+    "constitution",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "fire"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 10,
+    "darkvision": 60
+  },
+  "passive_perception": 14,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 7 (1d10 + 2) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d10",
+            "damage_type": "piercing",
+            "bonus": 2
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [],
+  "challenge_rating": 1.0,
+  "experience_points": 100,
+  "is_player_controlled": false
+}

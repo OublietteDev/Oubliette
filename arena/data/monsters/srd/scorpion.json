@@ -1,0 +1,56 @@
+{
+  "name": "Scorpion",
+  "size": "tiny",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 2,
+    "dexterity": 11,
+    "constitution": 8,
+    "intelligence": 1,
+    "wisdom": 8,
+    "charisma": 2
+  },
+  "armor_class": 11,
+  "max_hit_points": 1,
+  "hit_dice": "1d4",
+  "speed": {
+    "walk": 10
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 10
+  },
+  "passive_perception": 9,
+  "actions": [
+    {
+      "name": "Sting",
+      "description": "Melee Weapon Attack: +2 to hit, reach 5 ft., one creature. Hit: 1 piercing damage, and the target must make a DC 9 Constitution saving throw, taking 4 (1d8) poison damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Sting",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1",
+            "damage_type": "piercing",
+            "bonus": 0
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [],
+  "challenge_rating": 0.0,
+  "experience_points": 10,
+  "is_player_controlled": false
+}

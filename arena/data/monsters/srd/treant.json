@@ -1,0 +1,93 @@
+{
+  "name": "Treant",
+  "size": "huge",
+  "creature_type": "plant",
+  "alignment": "chaotic good",
+  "ability_scores": {
+    "strength": 23,
+    "dexterity": 8,
+    "constitution": 21,
+    "intelligence": 12,
+    "wisdom": 16,
+    "charisma": 12
+  },
+  "armor_class": 16,
+  "max_hit_points": 138,
+  "hit_dice": "12d12",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 4,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [
+    "bludgeoning",
+    "piercing"
+  ],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [
+    "fire"
+  ],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 13,
+  "actions": [
+    {
+      "name": "Slam",
+      "description": "Melee Weapon Attack: +10 to hit, reach 5 ft., one target. Hit: 16 (3d6 + 6) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Slam",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "3d6",
+            "damage_type": "bludgeoning",
+            "bonus": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "Rock",
+      "description": "Ranged Weapon Attack: +10 to hit, range 60/180 ft., one target. Hit: 28 (4d10 + 6) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Rock",
+        "attack_type": "ranged_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "4d10",
+            "damage_type": "bludgeoning",
+            "bonus": 6
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The treant makes two slam attacks.",
+      "extra_attack_count": 1
+    },
+    {
+      "name": "False Appearance",
+      "description": "While the treant remains motionless, it is indistinguishable from a normal tree."
+    },
+    {
+      "name": "Siege Monster",
+      "description": "The treant deals double damage to objects and structures."
+    }
+  ],
+  "challenge_rating": 9.0,
+  "experience_points": 5000,
+  "is_player_controlled": false
+}

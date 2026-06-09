@@ -1,0 +1,61 @@
+{
+  "name": "Giant Fire Beetle",
+  "size": "small",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 8,
+    "dexterity": 10,
+    "constitution": 12,
+    "intelligence": 1,
+    "wisdom": 7,
+    "charisma": 3
+  },
+  "armor_class": 13,
+  "max_hit_points": 4,
+  "hit_dice": "1d6",
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 30
+  },
+  "passive_perception": 8,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +1 to hit, reach 5 ft., one target. Hit: 2 (1d6 - 1) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "slashing",
+            "bonus": -1
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Illumination",
+      "description": "The beetle sheds bright light in a 10-foot radius and dim light for an additional 10 ft.."
+    }
+  ],
+  "challenge_rating": 0.0,
+  "experience_points": 10,
+  "is_player_controlled": false
+}

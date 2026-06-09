@@ -1,0 +1,127 @@
+{
+  "name": "Ancient Silver Dragon",
+  "size": "gargantuan",
+  "creature_type": "dragon",
+  "alignment": "lawful good",
+  "ability_scores": {
+    "strength": 30,
+    "dexterity": 10,
+    "constitution": 29,
+    "intelligence": 18,
+    "wisdom": 15,
+    "charisma": 23
+  },
+  "armor_class": 22,
+  "max_hit_points": 487,
+  "hit_dice": "25d20",
+  "speed": {
+    "walk": 40,
+    "fly": 80
+  },
+  "proficiency_bonus": 7,
+  "saving_throw_proficiencies": [
+    "dexterity",
+    "constitution",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "cold"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60,
+    "darkvision": 120
+  },
+  "passive_perception": 26,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +17 to hit, reach 15 ft., one target. Hit: 21 (2d10 + 10) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 15,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 15,
+        "damage": [
+          {
+            "dice": "2d10",
+            "damage_type": "piercing",
+            "bonus": 10
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Weapon Attack: +17 to hit, reach 10 ft., one target. Hit: 17 (2d6 + 10) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Claw",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "slashing",
+            "bonus": 10
+          }
+        ]
+      }
+    },
+    {
+      "name": "Tail",
+      "description": "Melee Weapon Attack: +17 to hit, reach 20 ft., one target. Hit: 19 (2d8 + 10) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 20,
+      "attack": {
+        "name": "Tail",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 20,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "bludgeoning",
+            "bonus": 10
+          }
+        ]
+      }
+    },
+    {
+      "name": "Frightful Presence",
+      "description": "Each creature of the dragon's choice that is within 120 feet of the dragon and aware of it must succeed on a DC 21 Wisdom saving throw or become frightened for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. If a creature's saving throw is successful or the effect ends for it, the creature is immune to the dragon's Frightful Presence for the next 24 hours.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 21,
+        "damage_on_fail": [],
+        "damage_on_success": "none"
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon can use its Frightful Presence. It then makes three attacks: one with its bite and two with its claws.",
+      "extra_attack_count": 3
+    },
+    {
+      "name": "Legendary Resistance",
+      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+    }
+  ],
+  "challenge_rating": 23.0,
+  "experience_points": 50000,
+  "is_player_controlled": false
+}

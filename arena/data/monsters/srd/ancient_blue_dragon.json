@@ -1,0 +1,155 @@
+{
+  "name": "Ancient Blue Dragon",
+  "size": "gargantuan",
+  "creature_type": "dragon",
+  "alignment": "lawful evil",
+  "ability_scores": {
+    "strength": 29,
+    "dexterity": 10,
+    "constitution": 27,
+    "intelligence": 18,
+    "wisdom": 17,
+    "charisma": 21
+  },
+  "armor_class": 22,
+  "max_hit_points": 481,
+  "hit_dice": "26d20",
+  "speed": {
+    "walk": 40,
+    "burrow": 40,
+    "fly": 80
+  },
+  "proficiency_bonus": 7,
+  "saving_throw_proficiencies": [
+    "dexterity",
+    "constitution",
+    "wisdom",
+    "charisma"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "lightning"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60,
+    "darkvision": 120
+  },
+  "passive_perception": 27,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +16 to hit, reach 15 ft., one target. Hit: 20 (2d10 + 9) piercing damage plus 11 (2d10) lightning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 15,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 15,
+        "damage": [
+          {
+            "dice": "2d10",
+            "damage_type": "piercing",
+            "bonus": 9
+          },
+          {
+            "dice": "2d10",
+            "damage_type": "lightning",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Weapon Attack: +16 to hit, reach 10 ft., one target. Hit: 16 (2d6 + 9) slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Claw",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "slashing",
+            "bonus": 9
+          }
+        ]
+      }
+    },
+    {
+      "name": "Tail",
+      "description": "Melee Weapon Attack: +16 to hit, reach 20 ft., one target. Hit: 18 (2d8 + 9) bludgeoning damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 20,
+      "attack": {
+        "name": "Tail",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 20,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "bludgeoning",
+            "bonus": 9
+          }
+        ]
+      }
+    },
+    {
+      "name": "Frightful Presence",
+      "description": "Each creature of the dragon's choice that is within 120 feet of the dragon and aware of it must succeed on a DC 20 Wisdom saving throw or become frightened for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. If a creature's saving throw is successful or the effect ends for it, the creature is immune to the dragon's Frightful Presence for the next 24 hours.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 20,
+        "damage_on_fail": [],
+        "damage_on_success": "none"
+      }
+    },
+    {
+      "name": "Lightning Breath",
+      "description": "The dragon exhales lightning in a 120-foot line that is 10 feet wide. Each creature in that line must make a DC 23 Dexterity saving throw, taking 88 (16d10) lightning damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "target_type": "area_line",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 23,
+        "damage_on_fail": [
+          {
+            "dice": "16d10",
+            "damage_type": "lightning",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "area_size": 120,
+      "uses_per_rest": 2,
+      "rest_type": "short",
+      "current_uses": 2
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon can use its Frightful Presence. It then makes three attacks: one with its bite and two with its claws.",
+      "extra_attack_count": 3
+    },
+    {
+      "name": "Legendary Resistance",
+      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+    }
+  ],
+  "challenge_rating": 23.0,
+  "experience_points": 50000,
+  "is_player_controlled": false
+}

@@ -1,0 +1,84 @@
+{
+  "name": "Ankheg",
+  "size": "large",
+  "creature_type": "monstrosity",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 17,
+    "dexterity": 11,
+    "constitution": 13,
+    "intelligence": 1,
+    "wisdom": 13,
+    "charisma": 6
+  },
+  "armor_class": 14,
+  "max_hit_points": 39,
+  "hit_dice": "6d10",
+  "speed": {
+    "walk": 30,
+    "burrow": 10
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "tremorsense": 60
+  },
+  "passive_perception": 11,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) slashing damage plus 3 (1d6) acid damage. If the target is a Large or smaller creature, it is grappled (escape DC 13). Until this grapple ends, the ankheg can bite only the grappled creature and has advantage on attack rolls to do so.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d6",
+            "damage_type": "slashing",
+            "bonus": 3
+          },
+          {
+            "dice": "1d6",
+            "damage_type": "acid",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Acid Spray",
+      "description": "The ankheg spits acid in a line that is 30 ft. long and 5 ft. wide, provided that it has no creature grappled. Each creature in that line must make a DC 13 Dexterity saving throw, taking 10 (3d6) acid damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "target_type": "area_line",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 13,
+        "damage_on_fail": [
+          {
+            "dice": "3d6",
+            "damage_type": "acid",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "uses_per_rest": 2,
+      "rest_type": "short",
+      "current_uses": 2
+    }
+  ],
+  "special_abilities": [],
+  "challenge_rating": 2.0,
+  "experience_points": 450,
+  "is_player_controlled": false
+}

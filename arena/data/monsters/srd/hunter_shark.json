@@ -1,0 +1,65 @@
+{
+  "name": "Hunter Shark",
+  "size": "large",
+  "creature_type": "beast",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 18,
+    "dexterity": 13,
+    "constitution": 15,
+    "intelligence": 1,
+    "wisdom": 10,
+    "charisma": 4
+  },
+  "armor_class": 12,
+  "max_hit_points": 45,
+  "hit_dice": "6d10",
+  "speed": {
+    "swim": 40
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 30
+  },
+  "passive_perception": 12,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 13 (2d8 + 4) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "piercing",
+            "bonus": 4
+          }
+        ]
+      }
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Blood Frenzy",
+      "description": "The shark has advantage on melee attack rolls against any creature that doesn't have all its hit points."
+    },
+    {
+      "name": "Water Breathing",
+      "description": "The shark can breathe only underwater."
+    }
+  ],
+  "challenge_rating": 2.0,
+  "experience_points": 450,
+  "is_player_controlled": false
+}

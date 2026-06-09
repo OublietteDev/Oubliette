@@ -1,0 +1,111 @@
+{
+  "name": "Behir",
+  "size": "huge",
+  "creature_type": "monstrosity",
+  "alignment": "neutral evil",
+  "ability_scores": {
+    "strength": 23,
+    "dexterity": 16,
+    "constitution": 18,
+    "intelligence": 7,
+    "wisdom": 14,
+    "charisma": 12
+  },
+  "armor_class": 17,
+  "max_hit_points": 168,
+  "hit_dice": "16d12",
+  "speed": {
+    "walk": 50,
+    "climb": 40
+  },
+  "proficiency_bonus": 4,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "lightning"
+  ],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 90
+  },
+  "passive_perception": 16,
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Weapon Attack: +10 to hit, reach 10 ft., one target. Hit: 22 (3d10 + 6) piercing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "3d10",
+            "damage_type": "piercing",
+            "bonus": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "Constrict",
+      "description": "Melee Weapon Attack: +10 to hit, reach 5 ft., one Large or smaller creature. Hit: 17 (2d10 + 6) bludgeoning damage plus 17 (2d10 + 6) slashing damage. The target is grappled (escape DC 16) if the behir isn't already constricting a creature, and the target is restrained until this grapple ends.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Constrict",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d10",
+            "damage_type": "bludgeoning",
+            "bonus": 6
+          },
+          {
+            "dice": "2d10",
+            "damage_type": "slashing",
+            "bonus": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "Lightning Breath",
+      "description": "The behir exhales a line of lightning that is 20 ft. long and 5 ft. wide. Each creature in that line must make a DC 16 Dexterity saving throw, taking 66 (12d10) lightning damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "target_type": "area_line",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 16,
+        "damage_on_fail": [
+          {
+            "dice": "12d10",
+            "damage_type": "lightning",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "uses_per_rest": 2,
+      "rest_type": "short",
+      "current_uses": 2
+    }
+  ],
+  "special_abilities": [
+    {
+      "name": "Multiattack",
+      "description": "The behir makes two attacks: one with its bite and one to constrict.",
+      "extra_attack_count": 1
+    }
+  ],
+  "challenge_rating": 11.0,
+  "experience_points": 7200,
+  "is_player_controlled": false
+}
