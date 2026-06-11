@@ -38,6 +38,7 @@ class EventKind(str, Enum):
     CHARACTER_CREATED = "character_created"  # chargen output: the built PC + granted SRD gear
     CHARACTER_LEVELED = "character_leveled"  # level-up output: the rebuilt PC (CS5)
     REST_TAKEN = "rest_taken"           # short/long rest: ops restoring hp/slots/hit-dice/resources
+    PORTRAIT_SET = "portrait_set"       # player attached/changed a PC portrait (bounded player action)
 
 
 class StateOp(BaseModel):
@@ -45,7 +46,8 @@ class StateOp(BaseModel):
     `hp_set`/`conditions` are absolute (D7)."""
 
     op: Literal["gold", "item", "hp_set", "xp", "conditions", "equip",
-                "slots_used", "hit_dice_used", "resources_used", "max_hp", "level"]
+                "slots_used", "hit_dice_used", "resources_used", "max_hp", "level",
+                "portrait"]
     char: str
     item_id: str | None = None
     delta: int | None = None
@@ -53,6 +55,7 @@ class StateOp(BaseModel):
     conditions: list[str] | None = None
     item_ids: list[str] | None = None       # for the 'equip' op (absolute loadout)
     mapping: dict | None = None             # for slots_used / resources_used (absolute)
+    text: str | None = None                 # for the 'portrait' op (filename; None clears it)
 
     # --- typed constructors ---------------------------------------------------
     @classmethod
@@ -99,6 +102,10 @@ class StateOp(BaseModel):
     def level(cls, char: str, value: int) -> "StateOp":
         return cls(op="level", char=char, value=value)
 
+    @classmethod
+    def portrait(cls, char: str, filename: str | None) -> "StateOp":
+        return cls(op="portrait", char=char, text=filename)
+
     def apply(self, repo: "Repository") -> None:
         if self.op == "gold":
             repo.adjust_gold(self.char, self.delta or 0)
@@ -126,6 +133,8 @@ class StateOp(BaseModel):
             repo.set_max_hp(self.char, self.value or 1)
         elif self.op == "level":
             repo.set_level(self.char, self.value or 1)
+        elif self.op == "portrait":
+            repo.set_portrait(self.char, self.text)
 
 
 def apply_ops(ops: list[StateOp], repo: "Repository", strict: bool = True) -> None:

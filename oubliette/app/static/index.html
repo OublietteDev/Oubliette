@@ -317,6 +317,17 @@
   .sheet-modal { width: min(820px, 96vw); }
   .sh-name { font-family: var(--serif); font-size: 22px; color: var(--gold); }
   .sh-sub { color: var(--muted); font-size: 13px; margin: 2px 0 14px; }
+  /* portrait header (A3) */
+  .sh-head { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
+  .sh-head-meta { min-width: 0; }
+  .sh-head-meta .sh-sub { margin: 2px 0 0; }
+  .sh-portrait-wrap { position: relative; flex: none; cursor: pointer; display: block; }
+  .sh-portrait-wrap input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .sh-portrait { width: 84px; height: 84px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); display: block; }
+  .sh-portrait.is-fallback { opacity: 0.85; }
+  .sh-portrait-edit { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--ink); background: rgba(0,0,0,0.55); border-radius: 0 0 12px 12px; padding: 3px 0; opacity: 0; transition: opacity 0.12s; }
+  .sh-portrait-wrap:hover .sh-portrait-edit, .sh-portrait-wrap:focus-within .sh-portrait-edit { opacity: 1; }
   .sh-top { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 16px; }
   @media (max-width: 560px) { .sh-top { grid-template-columns: repeat(3, 1fr); } }
   .sh-cell { background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 4px; text-align: center; }
@@ -2285,6 +2296,16 @@ async function openSheet() {
   $("sheet-overlay").classList.remove("hidden");
 }
 function closeSheet() { $("sheet-overlay").classList.add("hidden"); }
+async function uploadPortrait(charId, fileObj) {
+  // POST the raw file bytes; the browser sets Content-Type to the image's MIME type.
+  let data;
+  try {
+    data = await (await fetch(`/api/character-portrait/${charId}`, {
+      method: "POST", headers: { "Content-Type": fileObj.type }, body: fileObj })).json();
+  } catch (e) { data = { ok: false, error: "upload failed" }; }
+  if (!data.ok) { alert(data.error || "portrait upload failed"); return; }
+  openSheet();   // re-fetch so the new portrait (and Add→Change label) shows immediately
+}
 const shSigned = (n) => (n == null ? "—" : (n >= 0 ? "+" : "") + n);
 const ABIL_ORDER = ["str", "dex", "con", "int", "wis", "cha"];
 
@@ -2308,17 +2329,36 @@ function renderSheet(data) {
 }
 function renderSheetMember(m) {
   const root = el("div", "inv-member");
-  root.appendChild(el("div", "sh-name", m.name));
+
+  // portrait + identity header (A3: the player's token art, board-ready for the Arena)
+  const head = el("div", "sh-head");
+  const fig = el("label", "sh-portrait-wrap");
+  fig.title = "Upload a portrait (PNG, JPG, WEBP, or GIF)";
+  const img = el("img", "sh-portrait" + (m.has_portrait ? "" : " is-fallback"));
+  img.src = m.portrait_url + "?t=" + Date.now();   // bust the cache after a re-upload
+  img.alt = m.name + " portrait";
+  fig.appendChild(img);
+  fig.appendChild(el("span", "sh-portrait-edit", m.has_portrait ? "Change" : "Add photo"));
+  const inp = el("input"); inp.type = "file";
+  inp.accept = "image/png,image/jpeg,image/webp,image/gif";
+  inp.addEventListener("change", () => { if (inp.files[0]) uploadPortrait(m.id, inp.files[0]); });
+  fig.appendChild(inp);
+  head.appendChild(fig);
+
+  const meta = el("div", "sh-head-meta");
+  meta.appendChild(el("div", "sh-name", m.name));
   if (m.has_sheet) {
     const id = m.identity;
     const bits = [`Level ${m.level}`,
       id.race + (id.subrace ? ` (${id.subrace})` : ""),
       id.char_class + (id.subclass ? ` — ${id.subclass}` : ""), id.background];
     if (id.alignment) bits.push(id.alignment);
-    root.appendChild(el("div", "sh-sub", bits.filter(Boolean).join(" · ")));
+    meta.appendChild(el("div", "sh-sub", bits.filter(Boolean).join(" · ")));
   } else {
-    root.appendChild(el("div", "sh-sub", `Level ${m.level} · pre-made hero`));
+    meta.appendChild(el("div", "sh-sub", `Level ${m.level} · pre-made hero`));
   }
+  head.appendChild(meta);
+  root.appendChild(head);
 
   // top combat stats
   const d = m.derived;

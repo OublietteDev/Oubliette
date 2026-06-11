@@ -107,6 +107,32 @@ def test_reload_rebuilds_byte_identical_state(tmp_path):
     store2.close()
 
 
+def test_portrait_survives_reload(tmp_path):
+    """A3: a PC portrait is set live (player upload), so it must be event-sourced —
+    a PORTRAIT_SET event whose op replays the filename. Set one, reload from disk, and
+    the reference must come back (the verify-ledger 'survives save/replay' criterion)."""
+    from oubliette.record.events import StateOp
+
+    db = str(tmp_path / "p.sqlite")
+    store = SqliteEventStore(db)
+    session = Session.open(store)
+    session.emit_state(EventKind.PORTRAIT_SET, [StateOp.portrait("pc", "pc.png")],
+                       reason="player set a portrait")
+    assert session.repo.get_character("pc").portrait == "pc.png"
+    store.close()
+
+    # reload: seed + replay must restore the portrait reference
+    store2 = SqliteEventStore(db)
+    reloaded = Session.open(store2)
+    assert reloaded.repo.get_character("pc").portrait == "pc.png"
+
+    # and it's a normal mutation: a later event can change or clear it
+    reloaded.emit_state(EventKind.PORTRAIT_SET, [StateOp.portrait("pc", None)],
+                        reason="player cleared the portrait")
+    assert reloaded.repo.get_character("pc").portrait is None
+    store2.close()
+
+
 def test_replay_skips_rolls_for_state(tmp_path):
     """ROLL events are history, not state: stripping them from the log leaves the
     rebuilt protected state unchanged (rolls never mutate protected state)."""

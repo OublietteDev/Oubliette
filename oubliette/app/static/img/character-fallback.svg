@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" preserveAspectRatio="xMidYMid slice" role="img" aria-label="No portrait">
+  <defs>
+    <radialGradient id="cbg" cx="50%" cy="40%" r="80%">
+      <stop offset="0%" stop-color="#2a221b"/>
+      <stop offset="64%" stop-color="#1b1713"/>
+      <stop offset="100%" stop-color="#14110f"/>
+    </radialGradient>
+  </defs>
+  <rect width="240" height="240" fill="url(#cbg)"/>
+  <!-- a generic adventurer bust: stand-in until the player uploads their own art -->
+  <g fill="#d9b25a" fill-opacity="0.22" stroke="#d9b25a" stroke-opacity="0.5" stroke-width="1.5">
+    <!-- head -->
+    <circle cx="120" cy="96" r="34"/>
+    <!-- shoulders / bust -->
+    <path d="M58 196
+             C58 158 84 138 120 138
+             C156 138 182 158 182 196
+             Z"/>
+  </g>
+  <text x="120" y="218" text-anchor="middle" fill="#a99d88" fill-opacity="0.7"
+        font-family="Georgia, serif" font-style="italic" font-size="15">no portrait</text>
+</svg>

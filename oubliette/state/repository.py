@@ -34,6 +34,7 @@ class Repository(Protocol):
     def set_resources_used(self, char_id: str, mapping: dict) -> None: ...
     def set_max_hp(self, char_id: str, value: int) -> None: ...
     def set_level(self, char_id: str, value: int) -> None: ...
+    def set_portrait(self, char_id: str, filename: str | None) -> None: ...
 
     # --- protected mutators (dispatcher- and combat-boundary-only) ---
     def adjust_gold(self, char_id: str, delta: int) -> None: ...
@@ -186,3 +187,8 @@ class InMemoryRepository:
 
     def set_level(self, char_id: str, value: int) -> None:
         self.get_character(char_id).level = max(1, value)
+
+    def set_portrait(self, char_id: str, filename: str | None) -> None:
+        """Attach (or clear, with None) a PC's portrait token. Event-sourced via
+        PORTRAIT_SET so the reference survives replay; the image bytes live on disk."""
+        self.get_character(char_id).portrait = filename

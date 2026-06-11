@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
@@ -47,6 +47,13 @@ from .repl import _load_dotenv, _pick_client
 STATIC = Path(__file__).parent / "static"
 _SRD_PORTRAITS = Path(__file__).parents[1] / "content" / "srd" / "portraits"
 DB_PATH = os.environ.get("OUBLIETTE_DB", "oubliette-save.sqlite")
+# Player-uploaded PC portraits — campaign runtime data, so they live beside the save
+# DB (not in shipped content). The event log records the filename; the bytes live here.
+_PC_PORTRAITS = Path(DB_PATH).resolve().parent / "character-portraits"
+# image MIME (sent as the upload's Content-Type) -> stored file extension
+_PORTRAIT_MIME_EXT = {"image/png": ".png", "image/jpeg": ".jpg",
+                      "image/webp": ".webp", "image/gif": ".gif"}
+_PORTRAIT_MAX_BYTES = 8 * 1024 * 1024          # 8 MB — generous for a portrait, bounded
 
 app = FastAPI(title="Oubliette Table")
 
@@ -923,6 +930,8 @@ def _sheet_member(char: Character, rs: Ruleset) -> dict:
               for s in Skill}
     out = {
         "id": char.id, "name": char.name, "has_sheet": sheet is not None,
+        "portrait_url": f"/api/character-portrait/{char.id}",
+        "has_portrait": char.portrait is not None,
         "level": char.level, "hp": char.hp, "max_hp": char.max_hp,
         "abilities": {a.value: {"score": char.abilities.get(a, 10), "mod": char.ability_mod(a)}
                       for a in Ability},
@@ -979,6 +988,67 @@ async def get_sheet() -> JSONResponse:
     """The party's read-only character sheets (PC-only today, built to hold a party)."""
     rs = _ruleset()
     return JSONResponse({"party": [_sheet_member(c, rs) for c in GAME.session.repo.party()]})
+
+
+# --- PC portraits (A3): the player's token art, board-ready for the Arena ------
+def _pc_portrait_path(char_id: str) -> Path | None:
+    """Resolve a PC's portrait file from its recorded filename, under the campaign's
+    character-portraits/ dir. None if unset or missing. Path-traversal guarded."""
+    try:
+        char = GAME.session.repo.get_character(char_id)
+    except StateError:
+        return None
+    fname = char.portrait
+    if not fname or "/" in fname or "\\" in fname:
+        return None
+    path = _PC_PORTRAITS / fname
+    return path if path.is_file() else None
+
+
+@app.get("/api/character-portrait/{char_id}")
+async def character_portrait(char_id: str) -> FileResponse:
+    """A PC's portrait (character sheet + Arena board token). Serves the uploaded image
+    if present, else a neutral silhouette so every character has a token."""
+    path = _pc_portrait_path(char_id)
+    if path is not None:
+        return FileResponse(path, headers={"Cache-Control": "no-cache"})
+    return FileResponse(STATIC / "img" / "character-fallback.svg",
+                        headers={"Cache-Control": "no-cache"})
+
+
+@app.post("/api/character-portrait/{char_id}")
+async def upload_character_portrait(char_id: str, request: Request) -> JSONResponse:
+    """Attach a portrait to a PC (fork F2 = player upload). The image is POSTed as the
+    raw request body (the browser sets Content-Type from the file); we validate it,
+    store it beside the save keyed by character id, and record a PORTRAIT_SET event so
+    the reference survives save/replay. Re-uploading replaces the previous image."""
+    async with GAME.lock:
+        repo = GAME.session.repo
+        try:
+            char = repo.get_character(char_id)
+            if char.kind != "pc":
+                raise StateError("portraits are for player characters")
+            mime = request.headers.get("content-type", "").split(";")[0].strip().lower()
+            ext = _PORTRAIT_MIME_EXT.get(mime)
+            if ext is None:
+                raise StateError("unsupported image type; use PNG, JPG, WEBP, or GIF")
+            data = await request.body()
+            if not data:
+                raise StateError("the uploaded file is empty")
+            if len(data) > _PORTRAIT_MAX_BYTES:
+                raise StateError(f"image too large ({len(data) // (1024 * 1024)} MB); max is 8 MB")
+            _PC_PORTRAITS.mkdir(parents=True, exist_ok=True)
+            for old in _PC_PORTRAITS.glob(f"{char_id}.*"):   # drop any prior-extension image
+                old.unlink()
+            fname = f"{char_id}{ext}"
+            (_PC_PORTRAITS / fname).write_bytes(data)
+            GAME.session.emit_state(
+                EventKind.PORTRAIT_SET, [StateOp.portrait(char_id, fname)],
+                reason=f"player set a portrait for {char.name}")
+            ok, error = True, None
+        except StateError as e:
+            ok, error = False, str(e)
+        return JSONResponse({"ok": ok, "error": error, "state": _snapshot()})
 
 
 class RestIn(BaseModel):
