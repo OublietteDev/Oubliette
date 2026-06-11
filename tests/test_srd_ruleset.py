@@ -74,12 +74,15 @@ def test_srd_magic_item_chapter_present():
     with `mechanics == "none"` — a deliberate success state, not a gap."""
     rs = load_ruleset()
     magic = {k: e for k, e in rs.equipment.items() if "magic" in e.tags}
-    assert len(magic) == 340
+    assert len(magic) == 331
     by_type = Counter(e.item_type for e in magic.values())
+    # scroll == 1: the 10 per-level Spell Scrolls collapse to one generic record; the
+    # spell (and thus the level) is inscribed per-inventory-item at grant time (A5).
     assert by_type == {"wondrous": 167, "ring": 34, "potion": 36, "weapon": 29,
-                       "armor": 27, "wand": 15, "staff": 12, "scroll": 10,
+                       "armor": 27, "wand": 15, "staff": 12, "scroll": 1,
                        "rod": 6, "ammunition": 4}
     assert "mundane" not in by_type            # every magic item carries a granular type
+    assert rs.equipment["spell_scroll"].item_type == "scroll"   # the single generic scroll
     # the four healing tiers keep their structured dice for the bridge
     healing = {rs.equipment[i].consumable.healing for i in
                ("potion_of_healing", "potion_of_healing_greater",

@@ -56,6 +56,8 @@ class StateOp(BaseModel):
     item_ids: list[str] | None = None       # for the 'equip' op (absolute loadout)
     mapping: dict | None = None             # for slots_used / resources_used (absolute)
     text: str | None = None                 # for the 'portrait' op (filename; None clears it)
+    spell: str | None = None                # for the 'item' op: a scroll's inscribed spell (rider)
+    spell_level: int | None = None          # for the 'item' op: a scroll's cast level (upcast rider)
 
     # --- typed constructors ---------------------------------------------------
     @classmethod
@@ -63,8 +65,10 @@ class StateOp(BaseModel):
         return cls(op="gold", char=char, delta=delta)
 
     @classmethod
-    def item(cls, char: str, item_id: str, delta: int) -> "StateOp":
-        return cls(op="item", char=char, item_id=item_id, delta=delta)
+    def item(cls, char: str, item_id: str, delta: int, spell: str | None = None,
+             spell_level: int | None = None) -> "StateOp":
+        return cls(op="item", char=char, item_id=item_id, delta=delta,
+                   spell=spell, spell_level=spell_level)
 
     @classmethod
     def hp_set(cls, char: str, value: int) -> "StateOp":
@@ -112,9 +116,9 @@ class StateOp(BaseModel):
         elif self.op == "item":
             d = self.delta or 0
             if d > 0:
-                repo.add_item(self.char, self.item_id, d)
+                repo.add_item(self.char, self.item_id, d, spell=self.spell, spell_level=self.spell_level)
             elif d < 0:
-                repo.remove_item(self.char, self.item_id, -d)
+                repo.remove_item(self.char, self.item_id, -d, spell=self.spell, spell_level=self.spell_level)
         elif self.op == "hp_set":
             repo.set_hp(self.char, self.value or 0)
         elif self.op == "xp":

@@ -132,7 +132,8 @@ def _snapshot() -> dict:
             "armor_class": pc.armor_class,
             "conditions": list(pc.conditions),
             "inventory": [
-                {"id": s.item_id, "name": repo.get_item(s.item_id).name, "qty": s.qty}
+                {"id": s.item_id, "name": _stack_label(_ruleset(), s), "qty": s.qty,
+                 "spell": s.spell, "spell_level": s.spell_level}
                 for s in pc.inventory
             ],
         },
@@ -165,13 +166,15 @@ def _build_inventory() -> dict:
     party = []
     for c in repo.party():
         items = []
+        rs = _ruleset()
         for s in c.inventory:
             it = repo.get_item(s.item_id)
             items.append({
-                "item_id": s.item_id, "name": it.name, "category": it.category,
+                "item_id": s.item_id, "name": _stack_label(rs, s), "category": it.category,
                 "qty": s.qty, "value": it.base_value, "armor_class": it.armor_class,
                 "equippable": it.equippable, "equipped": s.item_id in c.equipped,
-                "tags": it.tags,
+                "tags": it.tags, "spell": s.spell, "spell_name": _spell_name(rs, s.spell),
+                "spell_level": s.spell_level,
             })
         party.append({"id": c.id, "name": c.name, "items": items})
     return {"party": party}
@@ -678,6 +681,33 @@ def _item_name(rs: Ruleset, item_id: str) -> str:
     return it.name if it is not None else item_id
 
 
+def _spell_name(rs: Ruleset, spell_id: str | None) -> str | None:
+    """Display name for a scroll's inscribed spell (A5). Falls back to a title-cased id
+    so an authored spell not in the SRD ruleset still reads cleanly."""
+    if not spell_id:
+        return None
+    s = rs.spells.get(spell_id)
+    return s.name if s is not None else spell_id.replace("_", " ").title()
+
+
+_ORDINALS = {1: "1st", 2: "2nd", 3: "3rd", 4: "4th", 5: "5th",
+             6: "6th", 7: "7th", 8: "8th", 9: "9th"}
+
+
+def _stack_label(rs: Ruleset, stack) -> str:
+    """An inventory line's display name, annotated with a scroll's inscribed spell — and
+    its cast level when it's a commissioned/upcast scroll (e.g. 'Spell Scroll: Fireball
+    (5th-level)')."""
+    base = _item_name(rs, stack.item_id)
+    sp = _spell_name(rs, stack.spell)
+    if not sp:
+        return base
+    lvl = getattr(stack, "spell_level", None)
+    if lvl:                                    # 0 (cantrip) and None both read plainly
+        return f"{base}: {sp} ({_ORDINALS.get(lvl, str(lvl))}-level)"
+    return f"{base}: {sp}"
+
+
 def _grant_view(rs: Ruleset, grants) -> list[dict]:
     return [{"item": g.item, "name": _item_name(rs, g.item), "qty": g.qty} for g in grants]
 
@@ -773,7 +803,7 @@ def _preview_payload(char: Character, items, rs: Ruleset) -> dict:
         "max_hp": char.max_hp, "speed": char.sheet.speed, "size": char.sheet.size,
         "gold": char.gold,
         "derived": derive.sheet_stats(char, rs, equipped_items),
-        "inventory": [{"name": _item_name(rs, s.item_id), "qty": s.qty} for s in char.inventory],
+        "inventory": [{"name": _stack_label(rs, s), "qty": s.qty} for s in char.inventory],
         "equipped": [_item_name(rs, i) for i in char.equipped],
         "features": [{"source": f.source, "name": f.name, "text": f.text}
                      for f in char.sheet.features],
@@ -936,7 +966,7 @@ def _sheet_member(char: Character, rs: Ruleset) -> dict:
         "abilities": {a.value: {"score": char.abilities.get(a, 10), "mod": char.ability_mod(a)}
                       for a in Ability},
         "saves": saves, "skills": skills, "derived": d,
-        "inventory": [{"name": _item_name(rs, s.item_id), "qty": s.qty,
+        "inventory": [{"name": _stack_label(rs, s), "qty": s.qty,
                        "equipped": s.item_id in char.equipped} for s in char.inventory],
         "gold": char.gold, "xp": char.xp, "xp_progress": xp_progress(char),
         "conditions": list(char.conditions),

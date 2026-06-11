@@ -20,6 +20,15 @@ class ValueEntry(BaseModel):
     gold: int | None = None
     item_id: str | None = None
     qty: int = 1
+    spell: str | None = Field(
+        default=None,
+        description="only for a Spell Scroll: the spell id inscribed on it (any spell, "
+                    "SRD or this world's own). Sets which spell the scroll casts.")
+    spell_level: int | None = Field(
+        default=None,
+        description="only for a Spell Scroll: the level the scroll casts the spell at "
+                    "(0-9). Omit for the spell's normal level; set higher only for a "
+                    "commissioned/upcast scroll. Never below the spell's own level.")
 
     @model_validator(mode="after")
     def _exactly_one(self) -> "ValueEntry":
@@ -31,6 +40,18 @@ class ValueEntry(BaseModel):
             raise ValueError("gold amount must be positive")
         if has_item and self.qty <= 0:
             raise ValueError("item qty must be positive")
+        if self.spell is not None:
+            if not has_item:
+                raise ValueError("spell can only be set on an item entry (a scroll), not gold")
+            # canonicalize to the spell-id convention (lowercase, underscores) so
+            # "Fireball" / "Cure Wounds" land on the real ids the bridge resolves
+            norm = "_".join(self.spell.strip().lower().split()).replace("-", "_")
+            self.spell = norm or None
+        if self.spell_level is not None:
+            if self.spell is None:
+                raise ValueError("spell_level only applies to a scroll's inscribed spell")
+            if not 0 <= self.spell_level <= 9:
+                raise ValueError("spell_level must be 0 (cantrip) through 9")
         return self
 
 

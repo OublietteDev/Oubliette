@@ -62,7 +62,8 @@ class TurnLoop:
         # Scene/location live on the session (they change as the party travels); an
         # explicit scene arg still overrides the opening text if given.
         self._scene_override = scene
-        self.dispatcher = Dispatcher(session.repo, session.canon, session.places, session.quests)
+        self.dispatcher = Dispatcher(session.repo, session.canon, session.places,
+                                     session.quests, ruleset=session.ruleset)
         self.history: list[str] = []   # short-term continuity beats (gap G5)
 
     async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:

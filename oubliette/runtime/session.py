@@ -106,6 +106,16 @@ class Session:
         # not the event log, so reload re-seeds it identically.
         for rec in authored_canon:
             canon.add(rec)
+        # Attach the global SRD equipment catalog as the repo's fallback tier so the DM
+        # can `give`/reference ANY SRD item (potions, scrolls, magic gear, poisons), not
+        # just the handful a pack ships or chargen granted. It's a SECOND-tier lookup —
+        # the lean campaign catalog keeps precedence — so the rich SRD set never makes a
+        # pack-specific abbreviation ambiguous. Deterministic content, re-attached on every
+        # open (not event-sourced), like authored canon.
+        if ruleset is not None:
+            from ..rules.chargen import _project_srd_item
+            repo.set_fallback_catalog(
+                {i.id: _project_srd_item(i) for i in ruleset.equipment.values()})
         # The current location is the start, with every LOCATION_CHANGED folded over
         # it — so reload lands the party exactly where they last travelled to.
         location = start_location

@@ -129,6 +129,8 @@ def build_record(src: dict) -> SrdEquipment:
     cat_name = (src.get("equipment_category") or {}).get("name", "")
     category, item_type = _CATEGORY_MAP.get(cat_name, ("misc", "wondrous"))
     rarity = ((src.get("rarity") or {}).get("name") or "").lower() or None
+    if rarity == "varies":                   # the generic Spell Scroll: rarity follows its contents
+        rarity = None
     full_desc = " ".join(src.get("desc", []))
     text = _join_desc(src.get("desc", []))
     attune = "requires attunement" in (src.get("desc") or [""])[0].lower()
@@ -172,8 +174,21 @@ def main(raw_path: str, out_path: str) -> None:
     existing = json.load(open(out_path, encoding="utf-8"))
     by_norm = {_norm(x["name"]): x for x in existing}
 
-    # drop the 21 parent templates (those carrying a `variants` list)
-    concrete = [x for x in raw if not x.get("variants")]
+    # Drop the 21 parent templates (those carrying a `variants` list) — every concrete
+    # child is its own record. EXCEPTION: scrolls. Rather than 10 per-level scroll items
+    # (Spell Scroll (Cantrip) .. (9th)), keep the single generic `spell-scroll` PARENT
+    # and drop its children: the scroll's level is derived from whichever spell the DM
+    # inscribes onto it at grant time, carried as a per-inventory-item rider (A5), so one
+    # generic Spell Scroll covers every spell — SRD or authored — with no item explosion.
+    concrete = []
+    for x in raw:
+        if x.get("variants"):
+            if x["index"] == "spell-scroll":
+                concrete.append(x)            # keep the one generic Spell Scroll
+            continue                          # drop every other parent template
+        if x["index"].startswith("spell-scroll-"):
+            continue                          # drop the per-level scroll children
+        concrete.append(x)
 
     new_records: list[dict] = []
     enriched = 0
@@ -199,7 +214,8 @@ def main(raw_path: str, out_path: str) -> None:
         json.dump(merged, f, indent=2, ensure_ascii=False)
         f.write("\n")
 
-    print(f"source concrete items: {len(concrete)} (dropped {len(raw) - len(concrete)} parent templates)")
+    print(f"source items kept: {len(concrete)} (dropped {len(raw) - len(concrete)} "
+          f"parent templates + per-level scroll variants)")
     print(f"enriched existing records: {enriched}")
     print(f"new magic-item records: {len(new_records)}")
     print(f"total catalog: {len(merged)}")

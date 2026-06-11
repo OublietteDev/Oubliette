@@ -42,11 +42,12 @@ class ResolvedTool:
 
 class Dispatcher:
     def __init__(self, repo: Repository, canon: CanonStore | None = None,
-                 places: dict | None = None, quests=None) -> None:
+                 places: dict | None = None, quests=None, ruleset=None) -> None:
         self.repo = repo
         self.canon = canon
         self.places = places or {}       # {place_id: PlaceNode} — for travel resolution
         self.quests = quests             # QuestStore — for update_quest validation
+        self.ruleset = ruleset           # SRD ruleset — for scroll min-level validation (A5)
 
     def resolve(self, call: ToolCall) -> ResolvedTool:
         if isinstance(call, Transact):
@@ -141,9 +142,9 @@ class Dispatcher:
         for e in entries:
             if e.item_id is not None:
                 item_id = self._canon_item(e.item_id)
-                if char.item_qty(item_id) < e.qty:
-                    raise ToolApplyError(
-                        f"{char.name} lacks {e.qty}x {item_id} (has {char.item_qty(item_id)})")
+                have = char.variant_qty(item_id, e.spell)   # the exact (item_id, spell) stack
+                if have < e.qty:
+                    raise ToolApplyError(f"{char.name} lacks {e.qty}x {item_id} (has {have})")
 
     def _canon_item(self, ref: str) -> str:
         try:
@@ -157,9 +158,24 @@ class Dispatcher:
     def _debit_op(self, char_id: str, e: ValueEntry) -> StateOp:
         if e.gold is not None:
             return StateOp.gold(char_id, -e.gold)
-        return StateOp.item(char_id, self._canon_item(e.item_id), -e.qty)
+        return StateOp.item(char_id, self._canon_item(e.item_id), -e.qty,
+                            spell=e.spell, spell_level=e.spell_level)
 
     def _credit_op(self, char_id: str, e: ValueEntry) -> StateOp:
         if e.gold is not None:
             return StateOp.gold(char_id, e.gold)
-        return StateOp.item(char_id, self._canon_item(e.item_id), e.qty)
+        self._check_scroll_level(e)
+        return StateOp.item(char_id, self._canon_item(e.item_id), e.qty,
+                            spell=e.spell, spell_level=e.spell_level)
+
+    def _check_scroll_level(self, e: ValueEntry) -> None:
+        """A scroll can't cast its spell below the spell's own base level — a 'Spell Scroll
+        of Fireball' is 3rd at minimum. Only enforced when the spell is a known SRD spell;
+        an authored spell (not in the ruleset) is trusted as-is."""
+        if e.spell is None or e.spell_level is None or self.ruleset is None:
+            return
+        spell = self.ruleset.spells.get(e.spell)
+        if spell is not None and e.spell_level < spell.level:
+            raise ToolApplyError(
+                f"a scroll of {spell.name} can't cast below its base level "
+                f"({spell.level}); got {e.spell_level}")

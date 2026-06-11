@@ -34,6 +34,15 @@ class Item(BaseModel):
 class ItemStack(BaseModel):
     item_id: str
     qty: int = 1
+    # Per-instance rider (A5). For a Spell Scroll, the spell inscribed on it (any spell
+    # id — SRD or authored) — so one generic `spell_scroll` catalog item covers every
+    # spell with no item explosion, and the Arena bridge just reads this. None for plain
+    # items. Stack identity is (item_id, spell, spell_level): two differently-inscribed
+    # scrolls are distinct stacks; two identical ones stack.
+    spell: str | None = None
+    # The level the scroll casts the spell at (a commissioned/upcast scroll). None =
+    # the spell's own base level. Can't be below it (enforced where the ruleset is known).
+    spell_level: int | None = None
 
 
 class FeatureRef(BaseModel):
@@ -127,4 +136,12 @@ class Character(BaseModel):
         return ability_modifier(self.abilities.get(ability, 10))
 
     def item_qty(self, item_id: str) -> int:
+        """Total held across every rider variant (the loose 'do you have any')."""
         return sum(s.qty for s in self.inventory if s.item_id == item_id)
+
+    def variant_qty(self, item_id: str, spell: str | None = None,
+                    spell_level: int | None = None) -> int:
+        """Held count of the EXACT (item_id, spell, spell_level) stack — e.g. scrolls of
+        one spell at one cast level."""
+        return sum(s.qty for s in self.inventory if s.item_id == item_id
+                   and s.spell == spell and s.spell_level == spell_level)

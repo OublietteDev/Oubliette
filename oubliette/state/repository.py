@@ -28,6 +28,7 @@ class Repository(Protocol):
     def npcs(self) -> list[Character]: ...
     def set_equipped(self, char_id: str, item_ids: list[str]) -> None: ...
     def register_item(self, item: Item) -> None: ...
+    def set_fallback_catalog(self, items: dict[str, Item]) -> None: ...
     def install_pc(self, char: Character) -> None: ...
     def set_slots_used(self, char_id: str, mapping: dict) -> None: ...
     def set_hit_dice_used(self, char_id: str, value: int) -> None: ...
@@ -38,8 +39,10 @@ class Repository(Protocol):
 
     # --- protected mutators (dispatcher- and combat-boundary-only) ---
     def adjust_gold(self, char_id: str, delta: int) -> None: ...
-    def add_item(self, char_id: str, item_id: str, qty: int) -> None: ...
-    def remove_item(self, char_id: str, item_id: str, qty: int) -> None: ...
+    def add_item(self, char_id: str, item_id: str, qty: int, spell: str | None = None,
+                 spell_level: int | None = None) -> None: ...
+    def remove_item(self, char_id: str, item_id: str, qty: int, spell: str | None = None,
+                    spell_level: int | None = None) -> None: ...
     def set_hp(self, char_id: str, value: int) -> None: ...
     def adjust_xp(self, char_id: str, amount: int) -> None: ...
     def set_conditions(self, char_id: str, conditions: list[str]) -> None: ...
@@ -51,7 +54,15 @@ class InMemoryRepository:
     def __init__(self, characters: list[Character], items: list[Item], pc_id: str):
         self._chars: dict[str, Character] = {c.id: c for c in characters}
         self._items: dict[str, Item] = {i.id: i for i in items}
+        # The global SRD equipment catalog, attached at session open. A second-tier
+        # lookup so the DM can `give`/reference ANY SRD item, while the lean campaign
+        # catalog (`_items`) keeps PRECEDENCE — exact names and short abbreviations still
+        # resolve to pack/owned items, not the hundreds of SRD entries (A5).
+        self._fallback: dict[str, Item] = {}
         self._pc_id = pc_id
+
+    def set_fallback_catalog(self, items: dict[str, Item]) -> None:
+        self._fallback = dict(items)
 
     def pc(self) -> Character:
         return self._chars[self._pc_id]
@@ -69,32 +80,43 @@ class InMemoryRepository:
             raise StateError(f"no such character: {char_id!r}")
 
     def get_item(self, item_id: str) -> Item:
-        try:
-            return self._items[item_id]
-        except KeyError:
+        item = self._items.get(item_id) or self._fallback.get(item_id)
+        if item is None:
             raise StateError(f"no such item: {item_id!r}")
+        return item
 
     def resolve_item_id(self, ref: str) -> str:
         """Map an item reference (id OR display name, loosely) to its canonical id.
         Lets the DM name an item by its prose label — exact id/name first, then a
-        word-subset fallback (so 'belt' resolves 'sturdy belt' when unambiguous)."""
-        if ref in self._items:
+        word-subset fallback (so 'belt' resolves 'sturdy belt' when unambiguous).
+        The campaign catalog is tried first and wins; only if it has no match do we
+        consult the global SRD catalog — so the rich SRD set never makes a short,
+        pack-specific abbreviation ambiguous."""
+        for catalog in (self._items, self._fallback):
+            hit = self._resolve_in(catalog, ref)
+            if hit is not None:
+                return hit
+        raise StateError(f"no such item: {ref!r}")
+
+    @staticmethod
+    def _resolve_in(catalog: dict[str, Item], ref: str) -> str | None:
+        if ref in catalog:
             return ref
         norm = ref.strip().lower().replace("_", " ")
-        for item in self._items.values():
+        for item in catalog.values():
             if item.name.strip().lower() == norm or item.id.replace("_", " ") == norm:
                 return item.id
         # Fuzzy: the ref's words are a subset of exactly one item's name/id words.
         ref_words = set(norm.split())
         if ref_words:
             hits = [
-                item.id for item in self._items.values()
+                item.id for item in catalog.values()
                 if ref_words <= set(item.name.lower().split())
                 or ref_words <= set(item.id.replace("_", " ").split())
             ]
             if len(hits) == 1:
                 return hits[0]
-        raise StateError(f"no such item: {ref!r}")
+        return None
 
     # --- protected mutators ---------------------------------------------------
     def adjust_gold(self, char_id: str, delta: int) -> None:
@@ -105,28 +127,29 @@ class InMemoryRepository:
             )
         c.gold += delta
 
-    def add_item(self, char_id: str, item_id: str, qty: int) -> None:
+    def add_item(self, char_id: str, item_id: str, qty: int, spell: str | None = None,
+                 spell_level: int | None = None) -> None:
         if qty <= 0:
             raise StateError(f"add_item qty must be positive, got {qty}")
         self.get_item(item_id)  # validate it exists
         c = self.get_character(char_id)
-        for stack in c.inventory:
-            if stack.item_id == item_id:
+        for stack in c.inventory:               # stack identity is (item_id, spell, spell_level)
+            if stack.item_id == item_id and stack.spell == spell and stack.spell_level == spell_level:
                 stack.qty += qty
                 return
-        c.inventory.append(ItemStack(item_id=item_id, qty=qty))
+        c.inventory.append(ItemStack(item_id=item_id, qty=qty, spell=spell, spell_level=spell_level))
 
-    def remove_item(self, char_id: str, item_id: str, qty: int) -> None:
+    def remove_item(self, char_id: str, item_id: str, qty: int, spell: str | None = None,
+                    spell_level: int | None = None) -> None:
         if qty <= 0:
             raise StateError(f"remove_item qty must be positive, got {qty}")
         c = self.get_character(char_id)
-        if c.item_qty(item_id) < qty:
-            raise StateError(
-                f"{c.name} does not hold {qty}x {item_id} (has {c.item_qty(item_id)})"
-            )
+        have = c.variant_qty(item_id, spell, spell_level)   # the exact variant
+        if have < qty:
+            raise StateError(f"{c.name} does not hold {qty}x {item_id} (has {have})")
         remaining = qty
         for stack in list(c.inventory):
-            if stack.item_id == item_id:
+            if stack.item_id == item_id and stack.spell == spell and stack.spell_level == spell_level:
                 take = min(stack.qty, remaining)
                 stack.qty -= take
                 remaining -= take
