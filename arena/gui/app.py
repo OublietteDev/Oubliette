@@ -5,10 +5,7 @@ from pathlib import Path
 import pygame
 
 from arena.gui.screens.base import Screen
-from arena.gui.screens.main_menu import MainMenuScreen
 from arena.gui.screens.combat import CombatScreen
-from arena.gui.screens.encounter_select import EncounterSelectScreen
-from arena.gui.screens.stub_screen import StubScreen
 from arena.gui.background_slideshow import BackgroundSlideshow
 from arena.gui.custom_cursor import CustomCursorManager
 from arena.util.constants import COLORS, parse_color
@@ -72,9 +69,10 @@ class App:
             animations_enabled=settings.display.cursor_animations,
         )
 
-        # Screen management
+        # Screen management. The Arena now runs ONLY as Oubliette's combat subprocess
+        # (the standalone menu/builders were removed); `play_encounter` navigates straight
+        # to combat via `go_to_combat` before `run()`, so there's no initial screen here.
         self.current_screen: Screen | None = None
-        self._switch_to(MainMenuScreen(width, height))
 
     def _switch_to(self, new_screen: Screen) -> None:
         """Transition from current screen to new_screen."""
@@ -98,8 +96,10 @@ class App:
     # --- Public navigation methods (called by screens) ---
 
     def go_to_main_menu(self) -> None:
-        """Switch to the main menu screen."""
-        self._switch_to(MainMenuScreen(self.width, self.height))
+        """No standalone menu exists in subprocess mode, so 'return to menu' (the combat
+        and error screens' exit path) ends the session — the same as ESC in handoff mode.
+        play_encounter then writes the result from the final state."""
+        self.quit()
 
     def go_to_combat(self, encounter_path: Path) -> None:
         """Load an encounter and switch to the combat screen."""
@@ -123,67 +123,6 @@ class App:
                 title="Unable to Load Encounter",
                 message=str(exc),
             ))
-
-    def go_to_encounter_select(self) -> None:
-        """Switch to the encounter file picker screen."""
-        self._switch_to(EncounterSelectScreen(self.width, self.height))
-
-    def go_to_encounter_setup(self) -> None:
-        """Switch to the encounter setup screen for a new encounter."""
-        from arena.gui.screens.encounter_setup import EncounterSetupScreen
-        self._switch_to(EncounterSetupScreen(self.width, self.height))
-
-    def go_to_encounter_setup_with(self, encounter_path: Path) -> None:
-        """Switch to the encounter setup screen to edit an existing encounter."""
-        from arena.gui.screens.encounter_setup import EncounterSetupScreen
-        self._switch_to(EncounterSetupScreen(self.width, self.height, encounter_path))
-
-    def go_to_creature_select(self) -> None:
-        """Switch to the creature file picker screen."""
-        from arena.gui.screens.creature_select import CreatureSelectScreen
-        self._switch_to(CreatureSelectScreen(self.width, self.height))
-
-    def go_to_creature_builder(self, creature_path: Path | None = None) -> None:
-        """Switch to the creature builder screen, optionally loading an existing file."""
-        from arena.gui.screens.character_builder import CreatureBuilderScreen
-        self._switch_to(CreatureBuilderScreen(self.width, self.height, creature_path))
-
-    def go_to_settings(self) -> None:
-        """Switch to the settings screen."""
-        from arena.gui.screens.settings_screen import SettingsScreen
-        self._switch_to(SettingsScreen(self.width, self.height))
-
-    def go_to_save_select(self) -> None:
-        """Switch to the save file picker screen."""
-        from arena.gui.screens.save_select import SaveSelectScreen
-        self._switch_to(SaveSelectScreen(self.width, self.height))
-
-    def go_to_combat_from_save(self, save_path: Path) -> None:
-        """Load a saved combat state and switch to the combat screen."""
-        from arena.gui.screens.error_screen import ErrorScreen
-        from arena.util.loader import load_combat_state
-
-        try:
-            cm = load_combat_state(save_path)
-            combat_screen = CombatScreen(self.width, self.height)
-            combat_screen.load_from_save(cm)
-            self._switch_to(combat_screen)
-        except FileNotFoundError as exc:
-            self._switch_to(ErrorScreen(
-                self.width, self.height,
-                title="Unable to Load Save",
-                message=f"Save file not found: {exc}",
-            ))
-        except Exception as exc:
-            self._switch_to(ErrorScreen(
-                self.width, self.height,
-                title="Unable to Load Save",
-                message=str(exc),
-            ))
-
-    def go_to_stub(self, title: str) -> None:
-        """Switch to a 'Coming Soon' placeholder screen."""
-        self._switch_to(StubScreen(self.width, self.height, title))
 
     def render_background(self, surface: pygame.Surface) -> None:
         """Draw the slideshow background + dark overlay onto *surface*.
