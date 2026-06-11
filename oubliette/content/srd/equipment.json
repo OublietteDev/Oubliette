@@ -1685,7 +1685,17 @@
     "category": "consumable",
     "description": "You can use the poison in this vial to coat one slashing or piercing weapon or up to three pieces of ammunition. Applying the poison takes an action. A creature hit by the poisoned weapon or ammunition must make a DC 10 Constitution saving throw or take 1d4 poison damage. Once applied, the poison retains potency for 1 minute before drying.",
     "cost": 100,
-    "base_value": 100
+    "base_value": 100,
+    "item_type": "poison",
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "injury",
+      "save_dc": 10,
+      "save_ability": "con",
+      "damage": "1d4",
+      "damage_type": "poison",
+      "conditions": []
+    }
   },
   {
     "id": "pole_10_foot",
@@ -7665,5 +7675,324 @@
     "rarity": "artifact",
     "requires_attunement": true,
     "mechanics": "none"
+  },
+  {
+    "id": "assassins_blood",
+    "name": "Assassin's Blood",
+    "category": "consumable",
+    "description": "A creature subjected to this poison must make a DC 10 Constitution saving throw. On a failed save, it takes 6 (1d12) poison damage and is poisoned for 24 hours. On a successful save, the creature takes half damage and isn't poisoned.",
+    "base_value": 150,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "ingested",
+      "save_dc": 10,
+      "save_ability": "con",
+      "damage": "1d12",
+      "damage_type": "poison",
+      "conditions": [
+        "poisoned"
+      ],
+      "duration": "24 hours"
+    }
+  },
+  {
+    "id": "burnt_othur_fumes",
+    "name": "Burnt Othur Fumes",
+    "category": "consumable",
+    "description": "A creature subjected to this poison must succeed on a DC 13 Constitution saving throw or take 10 (3d6) poison damage, and must repeat the saving throw at the start of each of its turns. On each successive failed save, the character takes 3 (1d6) poison damage. After three successful saves, the poison ends.",
+    "base_value": 500,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "inhaled",
+      "save_dc": 13,
+      "save_ability": "con",
+      "damage": "3d6",
+      "damage_type": "poison",
+      "conditions": []
+    }
+  },
+  {
+    "id": "crawler_mucus",
+    "name": "Crawler Mucus",
+    "category": "consumable",
+    "description": "This poison must be harvested from a dead or incapacitated crawler. A creature subjected to this poison must succeed on a DC 13 Constitution saving throw or be poisoned for 1 minute. The poisoned creature is paralyzed. The creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.",
+    "base_value": 200,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "contact",
+      "save_dc": 13,
+      "save_ability": "con",
+      "damage_type": "poison",
+      "conditions": [
+        "poisoned",
+        "paralyzed"
+      ],
+      "duration": "1 minute"
+    }
+  },
+  {
+    "id": "drow_poison",
+    "name": "Drow Poison",
+    "category": "consumable",
+    "description": "This poison is typically made only by the drow, and only in a place far removed from sunlight. A creature subjected to this poison must succeed on a DC 13 Constitution saving throw or be poisoned for 1 hour. If the saving throw fails by 5 or more, the creature is also unconscious while poisoned in this way. The creature wakes up if it takes damage or if another creature takes an action to shake it awake.",
+    "base_value": 200,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "injury",
+      "save_dc": 13,
+      "save_ability": "con",
+      "damage_type": "poison",
+      "conditions": [
+        "poisoned",
+        "unconscious"
+      ],
+      "duration": "1 hour"
+    }
+  },
+  {
+    "id": "essence_of_ether",
+    "name": "Essence Of Ether",
+    "category": "consumable",
+    "description": "A creature subjected to this poison must succeed on a DC 15 Constitution saving throw or become poisoned for 8 hours. The poisoned creature is unconscious. The creature wakes up if it takes damage or if another creature takes an action to shake it awake.",
+    "base_value": 300,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "inhaled",
+      "save_dc": 15,
+      "save_ability": "con",
+      "damage_type": "poison",
+      "conditions": [
+        "poisoned",
+        "unconscious"
+      ],
+      "duration": "8 hours"
+    }
+  },
+  {
+    "id": "malice",
+    "name": "Malice",
+    "category": "consumable",
+    "description": "A creature subjected to this poison must succeed on a DC 15 Constitution saving throw or become poisoned for 1 hour. The poisoned creature is blinded.",
+    "base_value": 250,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "inhaled",
+      "save_dc": 15,
+      "save_ability": "con",
+      "damage_type": "poison",
+      "conditions": [
+        "poisoned",
+        "blinded"
+      ],
+      "duration": "1 hour"
+    }
+  },
+  {
+    "id": "midnight_tears",
+    "name": "Midnight Tears",
+    "category": "consumable",
+    "description": "A creature that ingests this poison suffers no effect until the stroke of midnight. If the poison has not been neutralized before then, the creature must succeed on a DC 17 Constitution saving throw, taking 31 (9d6) poison damage on a failed save, or half as much damage on a successful one.",
+    "base_value": 1500,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "ingested",
+      "save_dc": 17,
+      "save_ability": "con",
+      "damage": "9d6",
+      "damage_type": "poison",
+      "conditions": []
+    }
+  },
+  {
+    "id": "oil_of_taggit",
+    "name": "Oil Of Taggit",
+    "category": "consumable",
+    "description": "A creature subjected to this poison must succeed on a DC 13 Constitution saving throw or become poisoned for 24 hours. The poisoned creature is unconscious. The creature wakes up if it takes damage.",
+    "base_value": 400,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "contact",
+      "save_dc": 13,
+      "save_ability": "con",
+      "damage_type": "poison",
+      "conditions": [
+        "poisoned",
+        "unconscious"
+      ],
+      "duration": "24 hours"
+    }
+  },
+  {
+    "id": "pale_tincture",
+    "name": "Pale Tincture",
+    "category": "consumable",
+    "description": "A creature subjected to this poison must succeed on a DC 16 Constitution saving throw or take 3 (1d6) poison damage and become poisoned. The poisoned creature must repeat the saving throw every 24 hours, taking 3 (1d6) poison damage on a failed save. Until this poison ends, the damage the poison deals can't be healed by any means. After seven successful saving throws, the effect ends and the creature can heal normally.",
+    "base_value": 250,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "ingested",
+      "save_dc": 16,
+      "save_ability": "con",
+      "damage": "1d6",
+      "damage_type": "poison",
+      "conditions": [
+        "poisoned"
+      ]
+    }
+  },
+  {
+    "id": "purple_worm_poison",
+    "name": "Purple Worm Poison",
+    "category": "consumable",
+    "description": "This poison must be harvested from a dead or incapacitated purple worm. A creature subjected to this poison must make a DC 19 Constitution saving throw, taking 42 (12d6) poison damage on a failed save, or half as much damage on a successful one.",
+    "base_value": 2000,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "injury",
+      "save_dc": 19,
+      "save_ability": "con",
+      "damage": "12d6",
+      "damage_type": "poison",
+      "conditions": []
+    }
+  },
+  {
+    "id": "serpent_venom",
+    "name": "Serpent Venom",
+    "category": "consumable",
+    "description": "This poison must be harvested from a dead or incapacitated giant poisonous snake. A creature subjected to this poison must succeed on a DC 11 Constitution saving throw, taking 10 (3d6) poison damage on a failed save, or half as much damage on a successful one.",
+    "base_value": 200,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "injury",
+      "save_dc": 11,
+      "save_ability": "con",
+      "damage": "3d6",
+      "damage_type": "poison",
+      "conditions": []
+    }
+  },
+  {
+    "id": "torpor",
+    "name": "Torpor",
+    "category": "consumable",
+    "description": "A creature subjected to this poison must succeed on a DC 15 Constitution saving throw or become poisoned for 4d6 hours. The poisoned creature is incapacitated.",
+    "base_value": 600,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "ingested",
+      "save_dc": 15,
+      "save_ability": "con",
+      "damage_type": "poison",
+      "conditions": [
+        "poisoned",
+        "incapacitated"
+      ],
+      "duration": "4d6 hours"
+    }
+  },
+  {
+    "id": "truth_serum",
+    "name": "Truth Serum",
+    "category": "consumable",
+    "description": "A creature subjected to this poison must succeed on a DC 11 Constitution saving throw or become poisoned for 1 hour. The poisoned creature can't knowingly speak a lie, as if under the effect of a *zone of truth* spell.",
+    "base_value": 150,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "ingested",
+      "save_dc": 11,
+      "save_ability": "con",
+      "damage_type": "poison",
+      "conditions": [
+        "poisoned"
+      ],
+      "duration": "1 hour"
+    }
+  },
+  {
+    "id": "wyvern_poison",
+    "name": "Wyvern Poison",
+    "category": "consumable",
+    "description": "This poison must be harvested from a dead or incapacitated wyvern. A creature subjected to this poison must make a DC 15 Constitution saving throw, taking 24 (7d6) poison damage on a failed save, or half as much damage on a successful one.",
+    "base_value": 1200,
+    "tags": [
+      "poison"
+    ],
+    "item_type": "poison",
+    "requires_attunement": false,
+    "mechanics": "structured",
+    "poison": {
+      "poison_type": "injury",
+      "save_dc": 15,
+      "save_ability": "con",
+      "damage": "7d6",
+      "damage_type": "poison",
+      "conditions": []
+    }
   }
 ]

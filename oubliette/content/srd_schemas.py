@@ -73,7 +73,7 @@ class SkillChoice(_Strict):
 # magic-item chapter families.
 ItemType = Literal[
     "mundane", "weapon", "armor", "ammunition",
-    "potion", "scroll", "wand", "ring", "rod", "staff", "wondrous",
+    "potion", "scroll", "wand", "ring", "rod", "staff", "wondrous", "poison",
 ]
 
 
@@ -91,6 +91,23 @@ class ConsumableMechanics(_Strict):
     casts_spell_level: int | None = None    # spell scrolls (0 = cantrip); casting deferred (F3)
     duration: str | None = None             # e.g. "1 hour" (buff potions)
     action: str = "action"                  # how it's consumed (action / bonus action)
+
+
+class PoisonMechanics(_Strict):
+    """Structured, bridge-readable mechanics for an SRD poison. Unlike
+    `ConsumableMechanics` (a buff the user drinks), a poison targets ANOTHER creature
+    with a saving throw, so it gets its own shape: the Arena bridge (Phase B) can let
+    a PC coat a blade with an injury poison and force the save on a hit. All 14 SRD
+    poisons use a Constitution save; `damage` and/or `conditions` carry the failure
+    effect. Designed once, here (A2), alongside the rest of the Phase-A freeze."""
+
+    poison_type: Literal["contact", "ingested", "inhaled", "injury"]
+    save_dc: int
+    save_ability: str = "con"                # every SRD poison saves vs Constitution
+    damage: str | None = None               # dice on a failed save, e.g. "3d6" (None = no damage)
+    damage_type: str = "poison"
+    conditions: list[str] = Field(default_factory=list)  # SRD condition ids imposed (e.g. "poisoned")
+    duration: str | None = None             # how long the conditions last, e.g. "1 hour"
 
 
 class SrdEquipment(_Strict):
@@ -121,8 +138,9 @@ class SrdEquipment(_Strict):
     rarity: str | None = None        # common / uncommon / rare / very rare / legendary / artifact
     magic_bonus: int | None = None   # +N to attack&damage (weapon) or AC (armor/shield/ring)
     requires_attunement: bool = False  # recorded, NOT enforced (attunement mechanics deferred)
-    mechanics: Literal["none", "structured"] = "none"  # does `consumable`/`magic_bonus` carry combat data?
+    mechanics: Literal["none", "structured"] = "none"  # does `consumable`/`magic_bonus`/`poison` carry combat data?
     consumable: ConsumableMechanics | None = None
+    poison: PoisonMechanics | None = None
 
 
 # --- spells -------------------------------------------------------------------

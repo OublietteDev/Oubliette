@@ -27,6 +27,7 @@ result.json
 # Transient SRD source dumps (fetched on demand by the generators, never committed).
 srd-monsters-raw.json
 srd-magic-items-raw.json
+srd-rule-sections-raw.json
 
 # Secrets — never commit
 APIKey.txt

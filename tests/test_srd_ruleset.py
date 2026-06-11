@@ -46,7 +46,8 @@ def test_full_equipment_catalog_present():
     and a Potion of Healing. The magic-item chapter (A1) is tagged `magic` and lives
     alongside it — split it out here so this base tripwire still catches a dropped row."""
     rs = load_ruleset()
-    base = {k: e for k, e in rs.equipment.items() if "magic" not in e.tags}
+    base = {k: e for k, e in rs.equipment.items()
+            if "magic" not in e.tags and "poison" not in e.tags}
     assert len(base) == 238
     by_cat = Counter(e.category for e in base.values())
     assert by_cat == {"gear": 141, "misc": 40, "weapon": 37, "armor": 13,
@@ -93,6 +94,32 @@ def test_srd_magic_item_chapter_present():
     structured = [e for e in magic.values() if e.mechanics == "structured"]
     assert 60 <= len(structured) <= 70
     assert all(e.consumable or e.magic_bonus is not None for e in structured)
+
+
+def test_srd_poison_catalog_present():
+    """A2 (completeness sweep): the SRD poison chapter (the one combat-relevant gap the
+    sweep found) is parsed from the prose 'Poisons' rule-section (tools/gen_poisons.py).
+    14 sample poisons carry the `poison` tag; the pre-existing basic poison vial keeps
+    its place in the mundane 238 but is enriched with the same structured shape, so all
+    15 carry combat mechanics (Con save DC, type, failed-save damage and/or conditions)."""
+    rs = load_ruleset()
+    tagged = {k: e for k, e in rs.equipment.items() if "poison" in e.tags}
+    assert len(tagged) == 14                    # the 14 SRD sample poisons
+    poisons = [e for e in rs.equipment.values() if e.item_type == "poison"]
+    assert len(poisons) == 15                   # + the enriched basic vial
+    for e in poisons:                           # every one is fully structured
+        assert e.mechanics == "structured" and e.poison is not None
+        assert e.poison.save_ability == "con" and e.poison.save_dc > 0
+        assert e.poison.damage or e.poison.conditions   # damage and/or a condition
+    # the four poison types are all represented (the bridge keys delivery off this)
+    assert {e.poison.poison_type for e in poisons} == {"contact", "ingested", "inhaled", "injury"}
+    # spot-check the extraction against the SRD table
+    wyvern = rs.equipment["wyvern_poison"].poison
+    assert wyvern.poison_type == "injury" and wyvern.save_dc == 15 and wyvern.damage == "7d6"
+    crawler = rs.equipment["crawler_mucus"].poison
+    assert crawler.conditions == ["poisoned", "paralyzed"] and crawler.damage is None
+    # the harvesting flavor ("a dead or incapacitated purple worm") is NOT read as an effect
+    assert rs.equipment["purple_worm_poison"].poison.conditions == []
 
 
 def test_full_class_and_subclass_sets_present():
