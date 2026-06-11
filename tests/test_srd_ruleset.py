@@ -40,27 +40,59 @@ def test_full_race_and_condition_sets_present():
 
 
 def test_full_equipment_catalog_present():
-    """CS4 Gate 3: the complete SRD equipment chapter is loaded (the slice shipped
-    only 10 items). Transcribed deterministically from the 5e-database 2014 dataset:
-    37 weapons, 13 armor, plus adventuring gear / tools / mounts & vehicles, and a
-    Potion of Healing. Count tripwire so a future edit can't silently drop a row."""
+    """CS4 Gate 3: the complete SRD MUNDANE equipment chapter is loaded (the slice
+    shipped only 10 items). Transcribed deterministically from the 5e-database 2014
+    dataset: 37 weapons, 13 armor, plus adventuring gear / tools / mounts & vehicles,
+    and a Potion of Healing. The magic-item chapter (A1) is tagged `magic` and lives
+    alongside it — split it out here so this base tripwire still catches a dropped row."""
     rs = load_ruleset()
-    eq = rs.equipment
-    assert len(eq) == 238
-    by_cat = Counter(e.category for e in eq.values())
+    base = {k: e for k, e in rs.equipment.items() if "magic" not in e.tags}
+    assert len(base) == 238
+    by_cat = Counter(e.category for e in base.values())
     assert by_cat == {"gear": 141, "misc": 40, "weapon": 37, "armor": 13,
                       "consumable": 7}
     # the 13-piece armor set, each with the right type for the AC engine
-    armor_types = Counter(e.armor.type for e in eq.values() if e.armor)
+    armor_types = Counter(e.armor.type for e in base.values() if e.armor)
     assert armor_types == {"light": 3, "medium": 5, "heavy": 4, "shield": 1}
     # only medium armor caps DEX (=2); light/heavy leave it unset (derive.py rules)
-    assert all(e.armor.dex_cap == 2 for e in eq.values()
+    assert all(e.armor.dex_cap == 2 for e in base.values()
                if e.armor and e.armor.type == "medium")
-    assert all(e.armor.dex_cap is None for e in eq.values()
+    assert all(e.armor.dex_cap is None for e in base.values()
                if e.armor and e.armor.type != "medium")
     # regression guard: the WebFetch reader had scrambled these artisan-tool prices
-    assert eq["jewelers_tools"].cost == 25 and eq["cooks_utensils"].cost == 1
-    assert eq["cartographers_tools"].cost == 15 and eq["glassblowers_tools"].cost == 30
+    assert base["jewelers_tools"].cost == 25 and base["cooks_utensils"].cost == 1
+    assert base["cartographers_tools"].cost == 15 and base["glassblowers_tools"].cost == 30
+
+
+def test_srd_magic_item_chapter_present():
+    """A1 (content-first plan §3): the SRD magic-item chapter is folded into the same
+    catalog, deterministically parsed from 5e-database (tools/gen_magic_items.py). Count
+    + family tripwire so a future edit can't silently drop a row or a structured field.
+    `mechanics == "structured"` marks the families the Arena bridge can carry into
+    combat (healing / +X bonus / ability-set / resistance); the long tail ships as prose
+    with `mechanics == "none"` — a deliberate success state, not a gap."""
+    rs = load_ruleset()
+    magic = {k: e for k, e in rs.equipment.items() if "magic" in e.tags}
+    assert len(magic) == 340
+    by_type = Counter(e.item_type for e in magic.values())
+    assert by_type == {"wondrous": 167, "ring": 34, "potion": 36, "weapon": 29,
+                       "armor": 27, "wand": 15, "staff": 12, "scroll": 10,
+                       "rod": 6, "ammunition": 4}
+    assert "mundane" not in by_type            # every magic item carries a granular type
+    # the four healing tiers keep their structured dice for the bridge
+    healing = {rs.equipment[i].consumable.healing for i in
+               ("potion_of_healing", "potion_of_healing_greater",
+                "potion_of_healing_superior", "potion_of_healing_supreme")}
+    assert healing == {"2d4+2", "4d4+4", "8d4+8", "10d4+20"}
+    # +X gear carries the magic_bonus the AC/to-hit math will honor
+    assert rs.equipment["weapon_3"].magic_bonus == 3
+    assert rs.equipment["armor_2"].magic_bonus == 2
+    assert rs.equipment["ring_of_protection"].magic_bonus == 1
+    assert rs.equipment["ring_of_protection"].requires_attunement is True
+    # the structured/prose split is real and non-trivial on both sides
+    structured = [e for e in magic.values() if e.mechanics == "structured"]
+    assert 60 <= len(structured) <= 70
+    assert all(e.consumable or e.magic_bonus is not None for e in structured)
 
 
 def test_full_class_and_subclass_sets_present():

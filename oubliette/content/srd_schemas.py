@@ -66,11 +66,44 @@ class SkillChoice(_Strict):
 
 
 # --- equipment ----------------------------------------------------------------
+# The granular SRD item class. `category` (below) stays inside the closed set the
+# state.Item model accepts, so projection (`_project_srd_item`) is unaffected;
+# `item_type` is the FROZEN contract the Arena bridge reads to decide what a magic
+# item *is* (Phase B). "mundane" = the base SRD gear chapter; the rest are the
+# magic-item chapter families.
+ItemType = Literal[
+    "mundane", "weapon", "armor", "ammunition",
+    "potion", "scroll", "wand", "ring", "rod", "staff", "wondrous",
+]
+
+
+class ConsumableMechanics(_Strict):
+    """Structured, bridge-readable mechanics extracted from a magic item's prose.
+    Populated only for families the deterministic generator can pattern-match
+    (healing/ability-set/resistance/scroll); everything else carries prose only and
+    leaves this None (see `SrdEquipment.mechanics == "none"`). The Arena bridge
+    (Phase B) maps these fields onto engine effects; Oubliette itself does not read
+    them — this is the twin of the handoff-v2 contract, designed once, here."""
+
+    healing: str | None = None              # dice string, e.g. "2d4+2" (Potion of Healing tiers)
+    ability_set: dict[str, int] | None = None  # set a score, e.g. {"str": 21} (Giant Strength)
+    grants_resistance: str | None = None    # damage type, e.g. "fire" (Potion of Resistance)
+    casts_spell_level: int | None = None    # spell scrolls (0 = cantrip); casting deferred (F3)
+    duration: str | None = None             # e.g. "1 hour" (buff potions)
+    action: str = "action"                  # how it's consumed (action / bonus action)
+
+
 class SrdEquipment(_Strict):
     """The standard SRD gear catalog (weapons/armor/gear/etc.). Mirrors the world
     `content.Item` shape and adds the mechanical bits (cost/weight + the existing
     weapon/armor profiles). Registered into a campaign's item catalog when a
-    created character is granted it."""
+    created character is granted it.
+
+    The magic-item fields (`item_type`/`rarity`/`magic_bonus`/`requires_attunement`/
+    `mechanics`/`consumable`) are the Phase-A frozen contract: they carry the
+    structured data the Arena will later consume, even though Oubliette doesn't read
+    them yet. `mechanics == "none"` is a deliberate success state — the item is
+    grantable and flavorful, just not combat-mechanized (see content-first plan §3)."""
 
     id: str
     name: str
@@ -83,6 +116,13 @@ class SrdEquipment(_Strict):
     slot: str | None = None
     weapon: WeaponProfile | None = None
     armor: ArmorProfile | None = None
+    # --- magic-item contract (Phase A freeze; consumed by the Arena bridge later) ---
+    item_type: ItemType = "mundane"
+    rarity: str | None = None        # common / uncommon / rare / very rare / legendary / artifact
+    magic_bonus: int | None = None   # +N to attack&damage (weapon) or AC (armor/shield/ring)
+    requires_attunement: bool = False  # recorded, NOT enforced (attunement mechanics deferred)
+    mechanics: Literal["none", "structured"] = "none"  # does `consumable`/`magic_bonus` carry combat data?
+    consumable: ConsumableMechanics | None = None
 
 
 # --- spells -------------------------------------------------------------------
