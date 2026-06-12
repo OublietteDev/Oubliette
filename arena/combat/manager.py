@@ -3044,6 +3044,11 @@ class CombatManager:
             # Filter by team
             if c.team not in target_teams:
                 continue
+            # Creature-type filter (Turn Undead touches only the undead)
+            if (action.target_creature_types
+                    and c.creature.creature_type.value
+                    not in action.target_creature_types):
+                continue
             target_pos = c.position
             if target_pos is None:
                 continue
@@ -3056,11 +3061,15 @@ class CombatManager:
                 affected.append(cid)
 
         # Ensure clicked target is first (and included) — but never the caster,
-        # and never a creature the team filter excluded (clicking an enemy
-        # with Bless must not buff them).
+        # never a creature the team filter excluded (clicking an enemy
+        # with Bless must not buff them), and never one outside the
+        # creature-type filter.
         clicked = self.combatants.get(clicked_target_id)
         if (clicked_target_id != combatant.creature_id
-                and clicked is not None and clicked.team in target_teams):
+                and clicked is not None and clicked.team in target_teams
+                and not (action.target_creature_types
+                         and clicked.creature.creature_type.value
+                         not in action.target_creature_types)):
             if clicked_target_id in affected:
                 affected.remove(clicked_target_id)
             affected.insert(0, clicked_target_id)
@@ -3105,6 +3114,11 @@ class CombatManager:
             if not c.creature.is_conscious:
                 continue
             if c.team not in target_teams:
+                continue
+            # Creature-type filter (Turn Undead touches only the undead)
+            if (action.target_creature_types
+                    and c.creature.creature_type.value
+                    not in action.target_creature_types):
                 continue
             target_pos = c.position
             if target_pos is None:

@@ -154,6 +154,24 @@ def test_monk_kit_stages_flurry_stunning_strike_and_speed():
     assert by_name["Patient Defense"].conditions_applied == ["dodging"]
 
 
+def test_turn_undead_stages_with_dc_filter_and_channel_cost():
+    cleric = Character(
+        id="mira", name="Mira", kind="pc", level=2, hp=16, max_hp=16,
+        abilities={Ability.WIS: 16, Ability.STR: 12, Ability.CON: 14},
+        armor_class=16, attack_bonus=4, damage="1d8+1",
+        sheet=CharacterSheet(
+            race="human", char_class="cleric", background="acolyte",
+            spellcasting_ability=Ability.WIS,
+            features=_refs(("Channel Divinity: Turn Undead", 2))))
+    actions, _bonus = feature_actions(cleric, "wisdom")
+    turn = next(a for a in actions if a.name == "Turn Undead")
+    assert turn.saving_throw.dc == 13              # 8 + 2 prof + 3 WIS
+    assert turn.saving_throw.conditions_on_fail == ["frightened"]
+    assert turn.target_creature_types == ["undead"]
+    assert turn.resource_cost == {"channel_divinity": 1}
+    assert turn.area_size == 30
+
+
 def test_sculpt_spells_stages_the_exemption_flag():
     wiz = Character(
         id="elara", name="Elara", kind="pc", level=2, hp=14, max_hp=14,

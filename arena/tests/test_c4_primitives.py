@@ -519,6 +519,87 @@ class TestMirrorImage:
         assert any("spent" in e.message for e in hit.events)
 
 
+# ── C4e: Turn Undead — the creature-type target filter ───────────────
+
+
+def _turn_undead(dc=13):
+    return Action(
+        name="Turn Undead", description="Turn the undead",
+        action_type=ActionType.ACTION, target_type=TargetType.AREA_SPHERE,
+        range=0, area_size=30,
+        saving_throw=SavingThrowEffect(
+            ability="wisdom", dc=dc, conditions_on_fail=["frightened"],
+        ),
+        target_creature_types=["undead"],
+    )
+
+
+def _turn_combat():
+    from arena.models.character import CreatureType
+
+    cleric = _creature("Cleric", actions=[_turn_undead()])
+    skeleton = _creature("Skeleton", is_player=False)
+    skeleton.creature_type = CreatureType.UNDEAD
+    orc = _creature("Orc", is_player=False)
+    encounter = Encounter(
+        name="Turn", grid_width=10, grid_height=10,
+        combatants=[
+            CombatantEntry(creature_id="cleric", creature_data=cleric,
+                           team="player", starting_position=(4, 4)),
+            CombatantEntry(creature_id="skeleton", creature_data=skeleton,
+                           team="enemy", starting_position=(4, 5)),
+            CombatantEntry(creature_id="orc", creature_data=orc,
+                           team="enemy", starting_position=(5, 4)),
+        ],
+    )
+    cm = CombatManager()
+    cm.load_encounter(encounter, Path("."))
+    with patch("arena.combat.manager.roll_die", side_effect=[20, 10, 1]):
+        cm.roll_initiative()
+    cm.begin_combat()
+    by_name = {c.creature.name: (cid, c) for cid, c in cm.combatants.items()}
+    return cm, by_name
+
+
+class TestTurnUndeadFilter:
+    def test_only_the_undead_are_affected(self):
+        cm, by_name = _turn_combat()
+        _, cleric = by_name["Cleric"]
+        skeleton_id, _ = by_name["Skeleton"]
+        orc_id, _ = by_name["Orc"]
+        affected = cm._resolve_effect_targets(
+            _turn_undead(), cleric, skeleton_id,
+        )
+        assert skeleton_id in affected
+        assert orc_id not in affected           # not undead — untouched
+
+    def test_clicking_a_non_undead_does_not_force_include_it(self):
+        cm, by_name = _turn_combat()
+        _, cleric = by_name["Cleric"]
+        orc_id, _ = by_name["Orc"]
+        affected = cm._resolve_effect_targets(
+            _turn_undead(), cleric, orc_id,
+        )
+        assert orc_id not in affected
+
+    def test_failed_save_turns_with_a_resave(self):
+        from arena.models.conditions import Condition
+
+        cm, by_name = _turn_combat()
+        _, cleric = by_name["Cleric"]
+        skeleton_id, skeleton_c = by_name["Skeleton"]
+        with patch("arena.combat.actions.roll_die", return_value=2):
+            result = resolve_effect(
+                cleric.creature, "cl", skeleton_c.creature, skeleton_id,
+                _turn_undead(), cm.grid,
+            )
+        assert result.success
+        turned = [ac for ac in skeleton_c.creature.active_conditions
+                  if ac.condition == Condition.FRIGHTENED]
+        assert len(turned) == 1
+        assert turned[0].save_to_end == "wisdom"   # re-save each turn
+
+
 class TestSanctuary:
     def test_failed_save_loses_the_attack(self):
         attacker, target = _creature("Orc"), _creature("Cleric")

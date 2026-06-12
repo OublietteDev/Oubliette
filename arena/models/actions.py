@@ -181,6 +181,11 @@ class Action(BaseModel):
     creature_type_bonus_damage: str | None = None  # Extra dice vs matching types, e.g., "1d8"
     creature_type_bonus_types: list[str] = Field(default_factory=list)  # e.g., ["undead", "fiend"]
 
+    # Creature-type TARGET filter (C4: Turn Undead) — when non-empty, the
+    # effect only affects creatures of these types; everyone else is skipped
+    # by the AoE resolvers entirely (not even a save).
+    target_creature_types: list[str] = Field(default_factory=list)
+
     # Reaction trigger (what triggers this reaction, e.g., "when hit by attack")
     reaction_trigger: str | None = None  # Descriptive trigger for reaction-type actions
 

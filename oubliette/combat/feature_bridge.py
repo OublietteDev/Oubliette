@@ -39,6 +39,7 @@ from arena.models.actions import (
     Attack,
     DamageRoll,
     DamageType,
+    SavingThrowEffect,
     TargetType,
 )
 from arena.models.character import Feature, OnHitRider, RiderTrigger
@@ -503,6 +504,38 @@ def feature_actions(
             buff_effects=[BuffEffect(stat="attack_rolls",
                                      modifier_type="flat_bonus", value=cha)],
             buff_duration_rounds=10,
+            resource_cost={"channel_divinity": 1},
+            ai_priority=5,
+        ))
+
+    turn_variants = [
+        ("channel divinity: turn undead", "Turn Undead", ["undead"]),
+        ("channel divinity: turn the unholy", "Turn the Unholy",
+         ["undead", "fiend"]),
+    ]
+    for key, label, types in turn_variants:
+        if key not in names:
+            continue
+        # DC = the class's spell save DC. Approximations, stated: "turned"
+        # becomes frightened with a re-save each turn (the engine's
+        # save-to-end machinery; RAW's forced flee isn't modeled), and
+        # Destroy Undead's CR-threshold instant kill is dropped.
+        casting = sheet.spellcasting_ability or Ability.WIS
+        dc = 8 + char.proficiency_bonus + char.ability_mod(casting)
+        actions.append(Action(
+            name=label,
+            description=(f"Channel Divinity: each {' or '.join(types)} "
+                         f"within 30 feet must make a DC {dc} Wisdom save "
+                         "or be turned (frightened, re-save each turn)."),
+            action_type=ActionType.ACTION,
+            target_type=TargetType.AREA_SPHERE,
+            range=0,
+            area_size=30,
+            saving_throw=SavingThrowEffect(
+                ability="wisdom", dc=dc,
+                conditions_on_fail=["frightened"],
+            ),
+            target_creature_types=types,
             resource_cost={"channel_divinity": 1},
             ai_priority=5,
         ))
