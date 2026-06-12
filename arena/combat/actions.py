@@ -14,6 +14,7 @@ from arena.combat.damage import (
     roll_damage,
     apply_damage,
     apply_healing,
+    attack_is_magical,
     DamagePacket,
     halve_packets,
     zero_packets,
@@ -622,6 +623,12 @@ def resolve_attack_damage(
                     source_id=hit_result.attacker_id,
                     target_id=hit_result.target_id,
                 ))
+
+        # Magic weapons / spell attacks overcome "nonmagical" defenses: tag every
+        # packet of this attack so the per-packet defense check sees it.
+        if attack_is_magical(hit_result.attacker, hit_result.action, hit_result.attack):
+            for p in packets:
+                p.tags.add("magical")
 
         # Apply damage reduction from reactions (Parry, Uncanny Dodge, etc.)
         # damage_reduction == -1 is the "halve" sentinel (Uncanny Dodge).

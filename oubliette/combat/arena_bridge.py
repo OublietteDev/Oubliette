@@ -42,6 +42,7 @@ from arena.models.actions import (
     TargetType,
 )
 from arena.models.character import Creature, CreatureSize, CreatureType, PlayerCharacter
+from arena.models.conditions import BuffEffect
 from arena.models.encounter import CombatantEntry, Encounter, TerrainHex, TerrainType
 from arena.models.monster import Monster
 from arena.paths import DATA_DIR
@@ -151,10 +152,16 @@ def _basic_attack(
     damage_type: DamageType,
     proficiency_bonus: int,
     carrier_long: str,
+    magic_bonus: int = 0,
 ) -> Action:
     """One melee basic-attack Action whose to-hit resolves to `attack_bonus`
     (via the solved carrier ability + proficiency_bonus) and whose damage is the
-    literal dice spec with a flat bonus (no ability modifier, so it is exact)."""
+    literal dice spec with a flat bonus (no ability modifier, so it is exact).
+    A `magic_bonus` (an equipped +X weapon, B3) adds to the damage and flags the
+    attack magical for the packet tag; the to-hit half is the CALLER's job — it
+    solves (carrier, prof) against the already-boosted attack_bonus. The bridge
+    carries no Arena equipment at all: equipping anything would flip the engine
+    from stored-AC to computing AC from gear, clobbering the story-derived AC."""
     dice, flat = _parse_damage(damage)
     return Action(
         name=name,
@@ -167,28 +174,67 @@ def _basic_attack(
             attack_type="melee_weapon",
             ability=carrier_long,
             reach=5,
-            damage=[DamageRoll(dice=dice, damage_type=damage_type, bonus=flat)],
+            damage=[DamageRoll(dice=dice, damage_type=damage_type,
+                               bonus=flat + magic_bonus)],
+            magical=magic_bonus > 0,
         ),
         ai_priority=6,
     )
 
 
+def equipped_magic(
+    char: Character, catalog: dict[str, SrdEquipment] | None
+) -> tuple[int, int]:
+    """(weapon_bonus, ac_bonus) from the character's equipped +X magic items (B3).
+
+    The SRD's +X items are generic enchantments ("Weapon, +1", "Armor, +2",
+    Ring/Cloak of Protection...) with no base-item profile, so the deterministic
+    reading is: an equipped weapon-type magic item enchants THE wielded attack
+    (best one counts — bonuses of the same kind don't stack in 5e), and every
+    equipped defensive magic item adds its bonus to AC (armor + shield + ring DO
+    stack). Ammunition is skipped — the basic attack is melee. Pack items aren't
+    in the SRD catalog and carry no mechanics yet."""
+    weapon_bonus, ac_bonus = 0, 0
+    if not catalog:
+        return 0, 0
+    for item_id in char.equipped:
+        item = catalog.get(item_id)
+        if item is None or not item.magic_bonus:
+            continue
+        if item.item_type == "weapon":
+            weapon_bonus = max(weapon_bonus, item.magic_bonus)
+        elif item.item_type != "ammunition":
+            ac_bonus += item.magic_bonus
+    return weapon_bonus, ac_bonus
+
+
 def _drink_action(item: SrdEquipment, qty: int) -> Action:
-    """One self-targeted "drink it" Action for a healing consumable. The entry
+    """One self-targeted "drink it" Action for a mapped consumable. The entry
     invariant of the handoff-v2 contract is set HERE: the action enters combat with
     ``current_uses == uses_per_rest == the inventory stack quantity``, so the result's
     ``consumables_used`` diff is exactly what the fight consumed. ``source_item_id``
     carries the catalog id back out so the story side debits the right stack."""
     consumable = item.consumable
-    assert consumable is not None and consumable.healing
+    assert consumable is not None and (consumable.healing or consumable.grants_resistance)
+    if consumable.healing:
+        effect = f"regain {consumable.healing} hit points"
+        healing, buffs = consumable.healing, []
+    else:
+        # The buff is indefinite engine-side: the SRD durations ("1 hour")
+        # outlast any encounter, and buffs end with the combat anyway.
+        effect = f"resistance to {consumable.grants_resistance} damage"
+        healing = None
+        buffs = [BuffEffect(stat="damage_resistance", modifier_type="resistance",
+                            value=consumable.grants_resistance)]
     bonus = "bonus" in (consumable.action or "").lower()
     return Action(
         name=item.name,
-        description=f"Drink the {item.name}: regain {consumable.healing} hit points.",
+        description=f"Drink the {item.name}: {effect}.",
         action_type=ActionType.BONUS_ACTION if bonus else ActionType.ACTION,
         target_type=TargetType.SELF,
         range=0,
-        healing=consumable.healing,
+        healing=healing,
+        buff_effects=buffs,
         uses_per_rest=qty,
         current_uses=qty,
         source_item=item.name,
@@ -197,15 +243,23 @@ def _drink_action(item: SrdEquipment, qty: int) -> Action:
     )
 
 
+def _drinkable(item: SrdEquipment | None) -> bool:
+    """B3 scope: structured consumables the engine can express today — healing
+    dice (B1) and resistance grants. `ability_set` potions (Giant Strength) wait
+    on an engine buff that can SET a score; poisons wait on blade-coating."""
+    if item is None or item.mechanics != "structured" or item.consumable is None:
+        return False
+    return bool(item.consumable.healing or item.consumable.grants_resistance)
+
+
 def consumable_actions(
     char: Character, catalog: dict[str, SrdEquipment] | None
 ) -> list[Action]:
     """The Arena actions for the drinkable consumables in a character's inventory.
 
-    B1 scope — healing potions only: catalog items with structured mechanics whose
-    ``consumable.healing`` is set. Scroll variant stacks (a `spell` rider) and items
-    with ``mechanics == "none"`` stay story-side; other structured families
-    (ability_set / grants_resistance) are B3. Stacks of the same item aggregate
+    Catalog items with structured, engine-expressible mechanics (see `_drinkable`)
+    become drink actions. Scroll variant stacks (a `spell` rider) and items with
+    ``mechanics == "none"`` stay story-side. Stacks of the same item aggregate
     into ONE action carrying the total quantity as its uses."""
     if not catalog:
         return []
@@ -213,10 +267,7 @@ def consumable_actions(
     for stack in char.inventory:
         if stack.spell is not None:
             continue
-        item = catalog.get(stack.item_id)
-        if item is None or item.mechanics != "structured":
-            continue
-        if item.consumable is None or not item.consumable.healing:
+        if not _drinkable(catalog.get(stack.item_id)):
             continue
         qty_by_id[stack.item_id] = qty_by_id.get(stack.item_id, 0) + stack.qty
     return [_drink_action(catalog[item_id], qty) for item_id, qty in qty_by_id.items()]
@@ -309,7 +360,12 @@ def character_to_player(
     spell-slot/class-resource state is staged in (B2) — a wizard who already
     spent slots in the story does not arrive recharged."""
     short = _norm_abilities(char.abilities)
-    carrier, prof = _solve_to_hit(short, char.attack_bonus)
+    # +X gear (B3): the weapon bonus joins the to-hit BEFORE solving so the
+    # engine's carrier+prof roll lands on the boosted number exactly; the AC
+    # bonus joins the story-derived AC (the story derivation ignores magic).
+    weapon_bonus, ac_bonus = equipped_magic(char, catalog)
+    to_hit = char.attack_bonus + weapon_bonus
+    carrier, prof = _solve_to_hit(short, to_hit)
     char_class = char.sheet.char_class if char.sheet else "Adventurer"
     race = char.sheet.race if char.sheet else "Human"
     slots_max, class_res = _resources_in(staged_resources(char, ruleset))
@@ -317,7 +373,7 @@ def character_to_player(
         name=char.name,
         size=_size(char.sheet.size if char.sheet else None),
         ability_scores=_ability_scores(short),
-        armor_class=max(1, char.armor_class),
+        armor_class=max(1, char.armor_class + ac_bonus),
         max_hit_points=max(1, char.max_hp),
         current_hit_points=max(0, char.hp),
         proficiency_bonus=prof,
@@ -329,8 +385,8 @@ def character_to_player(
         class_resources=class_res,
         actions=[
             _basic_attack(
-                "Attack", short, char.attack_bonus, char.damage,
-                DEFAULT_DAMAGE_TYPE, prof, carrier,
+                "Attack", short, to_hit, char.damage,
+                DEFAULT_DAMAGE_TYPE, prof, carrier, magic_bonus=weapon_bonus,
             ),
             *consumable_actions(char, catalog),
         ],

@@ -72,6 +72,10 @@ class Attack(BaseModel):
     damage_on_miss: list[DamageRoll] | None = None  # Some features deal damage on miss
     extra_effects: list[str] = Field(default_factory=list)  # Description of effects
     properties: list[str] = Field(default_factory=list)  # e.g., ["light", "finesse", "thrown"]
+    # Counts as magical for overcoming "nonmagical" resistances/immunities.
+    # Set on magic-weapon attacks (e.g. by the Oubliette bridge for +X gear);
+    # spell attacks and "Magic Weapons" monsters are detected without this flag.
+    magical: bool = False
 
 
 class SavingThrowEffect(BaseModel):

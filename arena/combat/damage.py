@@ -146,6 +146,77 @@ def reduce_packets_flat(packets: list[DamagePacket], amount: int) -> list[Damage
     return packets
 
 
+def _parse_conditional_defense(entry: str) -> tuple[set[str], set[str]] | None:
+    """Parse a compound SRD defense entry into (damage_types, bypass_tags).
+
+    The SRD phrases physical-damage defenses conditionally — e.g.
+    ``"bludgeoning, piercing, and slashing from nonmagical weapons"`` or
+    ``"... from nonmagical weapons that aren't silvered"``. Such an entry can
+    never equal a packet's damage type, so the exact-match path treats it as
+    inert; here we decompose it: the defense applies to a packet whose type is
+    in ``damage_types`` UNLESS the packet carries any of ``bypass_tags``
+    ("magical" always bypasses a nonmagical-only defense; "silvered" /
+    "adamantine" additionally bypass their "that aren't X" variants).
+
+    Returns None for plain single-type entries (handled by exact match).
+    """
+    text = entry.lower()
+    if "nonmagical" not in text:
+        return None
+    types = {
+        w.strip()
+        for w in text.split("from")[0].replace(" and ", ",").split(",")
+        if w.strip()
+    }
+    bypass = {"magical"}
+    if "silvered" in text:
+        bypass.add("silvered")
+    if "adamantine" in text:
+        bypass.add("adamantine")
+    return types, bypass
+
+
+def _defense_applies(packet: DamagePacket, entries: list[str]) -> bool:
+    """Does any defense entry cover this packet? Exact type match, or a
+    conditional entry whose types include it and whose bypass tags it lacks."""
+    dtype = packet.dtype.lower()
+    for entry in entries:
+        parsed = _parse_conditional_defense(entry)
+        if parsed is None:
+            if dtype == entry:
+                return True
+        else:
+            types, bypass = parsed
+            if dtype in types and not (packet.tags & bypass):
+                return True
+    return False
+
+
+def attack_is_magical(attacker: Creature, action, attack) -> bool:
+    """Whether an attack's damage counts as magical for overcoming the SRD's
+    "nonmagical" defenses: an explicitly flagged magic-weapon attack (the
+    Oubliette bridge sets ``Attack.magical`` for +X gear), any spell attack, an
+    attack sourced from a magical equipped item, or any attack from a creature
+    with the "Magic Weapons" trait (balor, golems, sphinxes, ...)."""
+    if attack is not None:
+        if getattr(attack, "magical", False):
+            return True
+        if attack.attack_type in ("melee_spell", "ranged_spell"):
+            return True
+    if action is not None:
+        if getattr(action, "spell_level", None) is not None:
+            return True
+        src = getattr(action, "source_item", None)
+        if src:
+            for item in getattr(attacker, "equipment", []) or []:
+                if item.name == src and (item.is_magical or item.magic_bonus > 0):
+                    return True
+    for trait in getattr(attacker, "special_abilities", []) or []:
+        if (getattr(trait, "name", "") or "").strip().lower() == "magic weapons":
+            return True
+    return False
+
+
 def _defend_packet(
     packet: DamagePacket,
     immunities: list[str],
@@ -160,10 +231,9 @@ def _defend_packet(
     Returns:
         (modified_amount, modifier_text) for logging.
     """
-    dtype = packet.dtype.lower()
-    is_immune = dtype in immunities
-    is_resistant = dtype in resistances
-    is_vulnerable = dtype in vulnerabilities
+    is_immune = _defense_applies(packet, immunities)
+    is_resistant = _defense_applies(packet, resistances)
+    is_vulnerable = _defense_applies(packet, vulnerabilities)
 
     if is_immune:
         return 0, " [IMMUNE]"

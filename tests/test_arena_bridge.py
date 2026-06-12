@@ -244,6 +244,70 @@ def test_same_item_split_across_stacks_aggregates_uses():
     assert drink.uses_per_rest == 3 and drink.current_uses == 3
 
 
+# --- B3: +X gear bakes into the numbers; resistance potions ---------------
+
+def test_equipped_plus_one_weapon_boosts_to_hit_and_damage_and_is_magical():
+    pc = _pc(equipped=["weapon_1"])                       # generic "Weapon, +1"
+    creature = character_to_player(pc, RS.equipment)
+    attack_action = creature.actions[0]
+    assert _carrier_attack(creature) == 5 + 1             # story +5, exact via solver
+    assert attack_action.attack.damage[0].bonus == 3 + 1  # "1d8+3" flat + magic
+    assert attack_action.attack.magical is True
+
+
+def test_best_equipped_weapon_counts_not_the_sum():
+    pc = _pc(equipped=["weapon_1", "weapon_3"])
+    assert _carrier_attack(character_to_player(pc, RS.equipment)) == 5 + 3
+
+
+def test_defensive_magic_items_stack_into_ac():
+    pc = _pc(equipped=["armor_1", "ring_of_protection"])  # +1 armor, +1 ring
+    creature = character_to_player(pc, RS.equipment)
+    assert creature.armor_class == 15 + 2                 # story AC 15
+    assert creature.actions[0].attack.magical is False    # weapon untouched
+
+
+def test_ammunition_is_skipped_for_the_melee_basic_attack():
+    pc = _pc(equipped=["ammunition_1"])
+    creature = character_to_player(pc, RS.equipment)
+    assert _carrier_attack(creature) == 5
+    assert creature.armor_class == 15
+
+
+def test_resistance_potion_becomes_a_buff_drink_action():
+    pc = _pc(inventory=[ItemStack(item_id="potion_of_resistance_fire")])
+    (drink,) = consumable_actions(pc, RS.equipment)
+    assert drink.healing is None
+    (buff,) = drink.buff_effects
+    assert buff.stat == "damage_resistance" and buff.modifier_type == "resistance"
+    assert buff.value == "fire"
+    assert drink.uses_per_rest == 1 and drink.current_uses == 1
+    assert drink.source_item_id == "potion_of_resistance_fire"
+
+
+def test_drinking_a_resistance_potion_grants_resistance_in_the_real_engine():
+    from pathlib import Path
+
+    from arena.combat.actions import resolve_effect
+    from arena.combat.manager import CombatManager
+    from arena.combat.stat_modifiers import get_effective_damage_resistances
+
+    pc = _pc(inventory=[ItemStack(item_id="potion_of_resistance_fire")])
+    plan = build_encounter([pc], [enemy_from_template(ENEMY_TEMPLATES["bandit"])],
+                           TerrainSpec(), catalog=RS.equipment)
+    cm = CombatManager()
+    cm.load_encounter(plan.encounter, Path("."))
+    pc_cid, combatant = next((cid, c) for cid, c in cm.combatants.items()
+                             if c.team == "player")
+    creature = combatant.creature
+    drink = next(a for a in creature.actions if a.source_item)
+
+    res = resolve_effect(creature, pc_cid, creature, pc_cid, drink, cm.grid)
+    assert res.success
+    assert "fire" in [r.lower() for r in get_effective_damage_resistances(creature)]
+    assert drink.current_uses == 0                        # reported by handoff v2
+
+
 # --- B2: slot/resource state IN, spent state OUT --------------------------
 
 def _warlock(slots_used=None) -> Character:

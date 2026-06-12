@@ -11,6 +11,7 @@ from unittest.mock import patch
 from arena.combat.damage import (
     DamagePacket,
     apply_damage,
+    attack_is_magical,
     halve_packets,
     zero_packets,
     reduce_packets_flat,
@@ -18,8 +19,10 @@ from arena.combat.damage import (
 )
 from arena.combat.actions import resolve_attack_damage, AttackHitResult
 from arena.models.abilities import AbilityScores
-from arena.models.actions import Attack, DamageRoll, DamageType
-from arena.models.character import Creature
+from arena.models.actions import Action, Attack, DamageRoll, DamageType
+from arena.models.character import Creature, Feature
+from arena.models.items import Item, ItemType
+from arena.models.monster import Monster
 
 
 def _make_creature(hp=100, resistances=None, immunities=None, vulnerabilities=None,
@@ -153,6 +156,112 @@ class TestSingleTypeEquivalence:
         target = _make_creature(resistances=["fire"])
         dmg, text = _apply_damage_modifiers(target, 10, "fire")
         assert dmg == 5 and "RESISTANT" in text
+
+
+# ── Conditional ("nonmagical") defenses + the magical tag (B3) ───────
+
+WEREWOLF_IMMUNITY = ["bludgeoning, piercing, and slashing from nonmagical weapons"]
+DEVIL_RESISTANCE = ["cold",
+                    "bludgeoning, piercing, and slashing from nonmagical "
+                    "weapons that aren't silvered"]
+
+
+class TestNonmagicalDefenses:
+    """The compound SRD defense strings (70 monsters carry them) used to be
+    inert — they could never equal a packet's damage type. Now they parse."""
+
+    def test_nonmagical_slashing_is_blocked_by_werewolf_immunity(self):
+        target = _make_creature(hp=100, immunities=WEREWOLF_IMMUNITY)
+        apply_damage(target, [DamagePacket(amount=10, dtype="slashing")])
+        assert target.current_hit_points == 100
+
+    def test_magical_tag_bypasses_the_immunity(self):
+        target = _make_creature(hp=100, immunities=WEREWOLF_IMMUNITY)
+        apply_damage(target, [DamagePacket(amount=10, dtype="slashing",
+                                           tags={"magical"})])
+        assert target.current_hit_points == 90
+
+    def test_unlisted_type_is_unaffected_by_the_compound_entry(self):
+        target = _make_creature(hp=100, immunities=WEREWOLF_IMMUNITY)
+        apply_damage(target, [DamagePacket(amount=10, dtype="fire")])
+        assert target.current_hit_points == 90
+
+    def test_silvered_bypasses_the_arent_silvered_variant(self):
+        target = _make_creature(hp=100, resistances=DEVIL_RESISTANCE)
+        apply_damage(target, [DamagePacket(amount=10, dtype="piercing",
+                                           tags={"silvered"})])
+        assert target.current_hit_points == 90      # full damage, not halved
+
+    def test_nonmagical_is_resisted_and_plain_entries_still_work(self):
+        target = _make_creature(hp=100, resistances=DEVIL_RESISTANCE)
+        apply_damage(target, [
+            DamagePacket(amount=10, dtype="piercing"),   # halved: compound entry
+            DamagePacket(amount=10, dtype="cold"),       # halved: plain entry
+            DamagePacket(amount=10, dtype="fire"),       # full: unlisted
+        ])
+        assert target.current_hit_points == 80           # 5 + 5 + 10
+
+
+class TestAttackIsMagical:
+    def _attack(self, **over):
+        base = dict(name="Strike", attack_type="melee_weapon", ability="strength")
+        base.update(over)
+        return Attack(**base)
+
+    def test_plain_weapon_attack_is_not_magical(self):
+        attacker = Creature(name="Thug", max_hit_points=10,
+                            ability_scores=AbilityScores())
+        assert attack_is_magical(attacker, None, self._attack()) is False
+
+    def test_flagged_attack_is_magical(self):
+        attacker = Creature(name="Hero", max_hit_points=10,
+                            ability_scores=AbilityScores())
+        assert attack_is_magical(attacker, None, self._attack(magical=True)) is True
+
+    def test_spell_attacks_are_magical(self):
+        attacker = Creature(name="Mage", max_hit_points=10,
+                            ability_scores=AbilityScores())
+        assert attack_is_magical(
+            attacker, None, self._attack(attack_type="ranged_spell")) is True
+
+    def test_attack_from_an_equipped_magic_item_is_magical(self):
+        sword = Item(name="Flame Tongue", item_type=ItemType.WEAPON, is_magical=True)
+        attacker = Creature(name="Hero", max_hit_points=10,
+                            ability_scores=AbilityScores(), equipment=[sword])
+        action = Action(name="Flame Tongue", description="Strike with the blade.",
+                        source_item="Flame Tongue", attack=self._attack())
+        assert attack_is_magical(attacker, action, action.attack) is True
+
+    def test_magic_weapons_trait_makes_all_attacks_magical(self):
+        balor = Monster(name="Balor", max_hit_points=262,
+                        ability_scores=AbilityScores(),
+                        special_abilities=[Feature(
+                            name="Magic Weapons",
+                            description="The balor's weapon attacks are magical.")])
+        assert attack_is_magical(balor, None, self._attack()) is True
+
+    def test_tag_flows_through_the_real_attack_path(self):
+        """A magical-flagged attack's packets bypass a werewolf-style immunity
+        through resolve_attack_damage itself."""
+        attacker = Creature(name="Hero", max_hit_points=20,
+                            ability_scores=AbilityScores())
+        target = _make_creature(hp=100, immunities=WEREWOLF_IMMUNITY)
+        attack = self._attack(
+            magical=True,
+            damage=[DamageRoll(dice="1d8", damage_type=DamageType.SLASHING)])
+        hit = AttackHitResult(
+            hit=True, critical=False, natural_roll=15, modifier=4, total_roll=19,
+            target_ac=10, effective_advantage=0, events=[],
+            attacker=attacker, attacker_id="hero_1",
+            target=target, target_id="wolf_1",
+            action=None, attack=attack,
+            combatants={"hero_1": attacker, "wolf_1": target},
+        )
+        with patch("arena.combat.actions.roll_damage",
+                   side_effect=lambda *a, **k: [
+                       DamagePacket(amount=10, dtype="slashing")]):
+            resolve_attack_damage(hit)
+        assert target.current_hit_points == 90       # immunity bypassed
 
 
 # ── End-to-end through the real producer path ────────────────────────
