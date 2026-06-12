@@ -1,0 +1,20 @@
+{
+  "name": "Gust of Wind",
+  "description": "A line of strong wind 60 feet long and 10 feet wide blasts from you in a direction you choose for the spell's duration. Each creature that starts its turn in the line must succeed on a strength saving throw or be pushed 15 feet away from you in a direction following the line.",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "area_line",
+  "area_size": 60,
+  "saving_throw": {
+    "ability": "strength",
+    "dc": null
+  },
+  "forced_movement_type": "push",
+  "forced_movement_distance": 15
+}

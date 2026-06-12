@@ -1,0 +1,21 @@
+{
+  "name": "Hideous Laughter",
+  "description": "A creature of your choice that you can see within range perceives everything as hilariously funny and falls into fits of laughter if this spell affects it. The target must succeed on a wisdom saving throw or fall prone, becoming incapacitated and unable to stand up for the duration. A creature with ",
+  "action_type": "action",
+  "range": 30,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "one_creature",
+  "saving_throw": {
+    "ability": "wisdom",
+    "dc": null,
+    "conditions_on_fail": [
+      "prone",
+      "incapacitated"
+    ]
+  }
+}

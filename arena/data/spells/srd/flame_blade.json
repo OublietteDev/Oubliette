@@ -1,0 +1,29 @@
+{
+  "name": "Flame Blade",
+  "description": "You evoke a fiery blade in your free hand. The blade is similar in size and shape to a scimitar, and it lasts for the duration. If you let go of the blade, it disappears, but you can evoke the blade again as a bonus action.",
+  "action_type": "bonus_action",
+  "range": 0,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_creature",
+  "attack": {
+    "name": "Flame Blade",
+    "attack_type": "melee_spell",
+    "ability": "intelligence",
+    "reach": 5,
+    "damage": [
+      {
+        "dice": "3d6",
+        "damage_type": "fire",
+        "bonus": 0
+      }
+    ]
+  },
+  "recurring_action_type": "action",
+  "upcast_damage_dice": "1d6",
+  "upcast_damage_per_levels": 2
+}

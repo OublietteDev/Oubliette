@@ -1,0 +1,21 @@
+{
+  "name": "Beacon of Hope",
+  "description": "This spell bestows hope and vitality. Choose any number of creatures within range. For the duration, each target has advantage on wisdom saving throws and death saving throws, and regains the maximum number of hit points possible from any healing.",
+  "action_type": "action",
+  "range": 30,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 30,
+  "buff_effects": [
+    {
+      "stat": "saving_throws",
+      "modifier_type": "advantage",
+      "scope": "wisdom"
+    }
+  ]
+}

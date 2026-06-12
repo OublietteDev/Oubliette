@@ -1,0 +1,25 @@
+{
+  "name": "Holy Aura",
+  "description": "Divine light washes out from you and coalesces in a soft radiance in a 30-foot radius around you. Creatures of your choice in that radius when you cast this spell shed dim light in a 5-foot radius and have advantage on all saving throws, and other creatures have disadvantage on attack rolls against ",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 8,
+  "resource_cost": {
+    "spell_slot_8": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 30,
+  "buff_effects": [
+    {
+      "stat": "saving_throws",
+      "modifier_type": "advantage"
+    },
+    {
+      "stat": "attack_rolls",
+      "modifier_type": "disadvantage",
+      "target_grants_to_attacker": true
+    }
+  ]
+}

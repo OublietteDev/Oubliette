@@ -1,0 +1,20 @@
+{
+  "name": "Barkskin",
+  "description": "You touch a willing creature. Until the spell ends, the target's skin has a rough, bark-like appearance, and the target's AC can't be less than 16, regardless of what kind of armor it is wearing.",
+  "action_type": "action",
+  "range": 5,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_ally",
+  "buff_effects": [
+    {
+      "stat": "ac",
+      "modifier_type": "set",
+      "value": 16
+    }
+  ]
+}

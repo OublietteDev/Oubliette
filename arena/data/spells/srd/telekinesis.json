@@ -1,0 +1,23 @@
+{
+  "name": "Telekinesis",
+  "description": "You gain the ability to move or manipulate creatures or objects by thought. When you cast the spell, and as your action each round for the duration, you can exert your will on one creature or object that you can see within range, causing the appropriate effect below. You can affect the same target r",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 5,
+  "resource_cost": {
+    "spell_slot_5": 1
+  },
+  "target_type": "one_creature",
+  "area_size": 30,
+  "saving_throw": {
+    "ability": "strength",
+    "dc": null,
+    "conditions_on_fail": [
+      "restrained"
+    ]
+  },
+  "forced_movement_type": "slide",
+  "forced_movement_distance": 30
+}

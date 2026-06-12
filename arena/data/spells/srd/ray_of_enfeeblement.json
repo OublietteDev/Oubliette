@@ -1,0 +1,25 @@
+{
+  "name": "Ray of Enfeeblement",
+  "description": "A black beam of enervating energy springs from your finger toward a creature within range. Make a ranged spell attack against the target. On a hit, the target deals only half damage with weapon attacks that use Strength until the spell ends.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_creature",
+  "saving_throw": {
+    "ability": "constitution",
+    "dc": null
+  },
+  "buff_effects": [
+    {
+      "stat": "damage_rolls",
+      "modifier_type": "flat_bonus",
+      "value": -3,
+      "scope": "melee"
+    }
+  ]
+}

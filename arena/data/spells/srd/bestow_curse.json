@@ -1,0 +1,23 @@
+{
+  "name": "Bestow Curse",
+  "description": "You touch a creature, and that creature must succeed on a wisdom saving throw or become cursed for the duration of the spell. When you cast this spell, choose the nature of the curse from the following options:",
+  "action_type": "action",
+  "range": 5,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "one_creature",
+  "saving_throw": {
+    "ability": "wisdom",
+    "dc": null
+  },
+  "buff_effects": [
+    {
+      "stat": "attack_rolls",
+      "modifier_type": "disadvantage"
+    }
+  ]
+}

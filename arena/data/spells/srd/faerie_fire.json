@@ -1,0 +1,25 @@
+{
+  "name": "Faerie Fire",
+  "description": "Each object in a 20-foot cube within range is outlined in blue, green, or violet light (your choice). Any creature in the area when the spell is cast is also outlined in light if it fails a dexterity saving throw. For the duration, objects and affected creatures shed dim light in a 10-foot radius.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "area_cube",
+  "area_size": 20,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null
+  },
+  "buff_effects": [
+    {
+      "stat": "attack_rolls",
+      "modifier_type": "advantage",
+      "target_grants_to_attacker": true
+    }
+  ]
+}

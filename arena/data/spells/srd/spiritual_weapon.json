@@ -1,0 +1,31 @@
+{
+  "name": "Spiritual Weapon",
+  "description": "You create a floating, spectral weapon within range that lasts for the duration or until you cast this spell again. When you cast the spell, you can make a melee spell attack against a creature within 5 feet of the weapon. On a hit, the target takes force damage equal to 1d8 + your spellcasting abil",
+  "action_type": "bonus_action",
+  "range": 60,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_creature",
+  "attack": {
+    "name": "Spiritual Weapon",
+    "attack_type": "melee_spell",
+    "ability": "intelligence",
+    "reach": 5,
+    "damage": [
+      {
+        "dice": "1d8",
+        "damage_type": "force",
+        "bonus": 0,
+        "ability_modifier": "intelligence"
+      }
+    ]
+  },
+  "recurring_action_type": "bonus_action",
+  "recurring_move_distance": 20,
+  "upcast_damage_dice": "1d8",
+  "upcast_damage_per_levels": 2
+}

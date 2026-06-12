@@ -1,0 +1,20 @@
+{
+  "name": "Protection from Evil and Good",
+  "description": "Until the spell ends, one willing creature you touch is protected against certain types of creatures: aberrations, celestials, elementals, fey, fiends, and undead.",
+  "action_type": "action",
+  "range": 5,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "one_ally",
+  "buff_effects": [
+    {
+      "stat": "attack_rolls",
+      "modifier_type": "disadvantage",
+      "target_grants_to_attacker": true
+    }
+  ]
+}

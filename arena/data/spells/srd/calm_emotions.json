@@ -1,0 +1,18 @@
+{
+  "name": "Calm Emotions",
+  "description": "You attempt to suppress strong emotions in a group of people. Each humanoid in a 20-foot-radius sphere centered on a point you choose within range must make a charisma saving throw; a creature can choose to fail this saving throw if it wishes. If a creature fails its saving throw, choose one of the ",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 20,
+  "conditions_removed": [
+    "charmed",
+    "frightened"
+  ]
+}

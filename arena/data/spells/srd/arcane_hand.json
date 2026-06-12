@@ -1,0 +1,29 @@
+{
+  "name": "Arcane Hand",
+  "description": "You create a Large hand of shimmering, translucent force in an unoccupied space that you can see within range. The hand lasts for the spell's duration, and it moves at your command, mimicking the movements of your own hand.",
+  "action_type": "action",
+  "range": 120,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 5,
+  "resource_cost": {
+    "spell_slot_5": 1
+  },
+  "target_type": "one_creature",
+  "attack": {
+    "name": "Arcane Hand",
+    "attack_type": "melee_spell",
+    "ability": "intelligence",
+    "reach": 5,
+    "damage": [
+      {
+        "dice": "4d8",
+        "damage_type": "force",
+        "bonus": 0
+      }
+    ]
+  },
+  "recurring_action_type": "action",
+  "recurring_move_distance": 30,
+  "upcast_damage_dice": "2d8"
+}

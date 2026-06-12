@@ -1,0 +1,30 @@
+{
+  "name": "Call Lightning",
+  "description": "A storm cloud appears in the shape of a cylinder that is 10 feet tall with a 60-foot radius, centered on a point you can see 100 feet directly above you. The spell fails if you can't see a point in the air where the storm cloud could appear (for example, if you are in a room that can't accommodate t",
+  "action_type": "action",
+  "range": 120,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "one_creature",
+  "area_size": 5,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "3d10",
+        "damage_type": "lightning",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  },
+  "recurring_action_type": "action",
+  "recurring_damage_dice": "3d10",
+  "recurring_damage_type": "lightning",
+  "upcast_damage_dice": "1d10"
+}

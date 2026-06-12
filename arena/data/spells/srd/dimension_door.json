@@ -1,0 +1,15 @@
+{
+  "name": "Dimension Door",
+  "description": "You teleport yourself from your current location to any other spot within range. You arrive at exactly the spot desired. It can be a place you can see, one you can visualize, or one you can describe by stating distance and direction, such as \"200 feet straight downward\" or \"upward to the northwest a",
+  "action_type": "action",
+  "range": 500,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 4,
+  "resource_cost": {
+    "spell_slot_4": 1
+  },
+  "target_type": "self",
+  "teleport_range": 500,
+  "teleport_passenger": true
+}

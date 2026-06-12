@@ -1,0 +1,19 @@
+{
+  "name": "Lesser Restoration",
+  "description": "You touch a creature and can end either one disease or one condition afflicting it. The condition can be blinded, deafened, paralyzed, or poisoned.",
+  "action_type": "action",
+  "range": 5,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_ally",
+  "conditions_removed": [
+    "blinded",
+    "deafened",
+    "paralyzed",
+    "poisoned"
+  ]
+}

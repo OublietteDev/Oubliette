@@ -1,0 +1,25 @@
+{
+  "name": "Magic Weapon",
+  "description": "You touch a nonmagical weapon. Until the spell ends, that weapon becomes a magic weapon with a +1 bonus to attack rolls and damage rolls.",
+  "action_type": "bonus_action",
+  "range": 5,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_ally",
+  "buff_effects": [
+    {
+      "stat": "attack_rolls",
+      "modifier_type": "flat_bonus",
+      "value": 1
+    },
+    {
+      "stat": "damage_rolls",
+      "modifier_type": "flat_bonus",
+      "value": 1
+    }
+  ]
+}

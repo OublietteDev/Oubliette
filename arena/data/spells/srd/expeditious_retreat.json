@@ -1,0 +1,20 @@
+{
+  "name": "Expeditious Retreat",
+  "description": "This spell allows you to move at an incredible pace. When you cast this spell, and then as a bonus action on each of your turns until the spell ends, you can take the Dash action.",
+  "action_type": "bonus_action",
+  "range": 0,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "self",
+  "buff_effects": [
+    {
+      "stat": "speed",
+      "modifier_type": "multiply",
+      "value": 2.0
+    }
+  ]
+}

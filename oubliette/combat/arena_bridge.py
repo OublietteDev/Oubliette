@@ -230,6 +230,12 @@ def spell_actions(char: Character) -> list[Action]:
             continue
         if action.attack is not None:
             action.attack.ability = ability_long
+            # C3: damage rolls flagged with an ability_modifier placeholder
+            # ride the caster's spellcasting ability too (Spiritual Weapon's
+            # 1d8 + MOD force damage).
+            for dr in action.attack.damage:
+                if dr.ability_modifier is not None:
+                    dr.ability_modifier = ability_long
         if action.saving_throw is not None and action.saving_throw.dc is None:
             action.saving_throw.dc = dc
         if action.healing and "MOD" in action.healing:
@@ -237,6 +243,10 @@ def spell_actions(char: Character) -> list[Action]:
             # negative, and the engine's dice parser only sees plain "+N").
             action.healing = action.healing.replace(
                 "+MOD", f"+{mod}" if mod > 0 else "")
+        if action.grants_temporary_hp and "MOD" in action.grants_temporary_hp:
+            # Heroism: temp HP equal to the casting modifier (floor 1).
+            action.grants_temporary_hp = action.grants_temporary_hp.replace(
+                "MOD", str(max(1, mod)))
         out.append(action)
     return out
 

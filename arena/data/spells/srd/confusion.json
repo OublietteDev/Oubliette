@@ -1,0 +1,21 @@
+{
+  "name": "Confusion",
+  "description": "This spell assaults and twists creatures' minds, spawning delusions and provoking uncontrolled action. Each creature in a 10-foot-radius sphere centered on a point you choose within range must succeed on a Wisdom saving throw when you cast this spell or be affected by it.",
+  "action_type": "action",
+  "range": 90,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 4,
+  "resource_cost": {
+    "spell_slot_4": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 10,
+  "saving_throw": {
+    "ability": "wisdom",
+    "dc": null,
+    "conditions_on_fail": [
+      "incapacitated"
+    ]
+  }
+}

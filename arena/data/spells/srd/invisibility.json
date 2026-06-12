@@ -1,0 +1,17 @@
+{
+  "name": "Invisibility",
+  "description": "A creature you touch becomes invisible until the spell ends. Anything the target is wearing or carrying is invisible as long as it is on the target's person. The spell ends for a target that attacks or casts a spell.",
+  "action_type": "action",
+  "range": 5,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_ally",
+  "upcast_target_count": 1,
+  "conditions_applied": [
+    "invisible"
+  ]
+}

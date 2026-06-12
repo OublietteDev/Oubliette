@@ -1,0 +1,21 @@
+{
+  "name": "Blindness/Deafness",
+  "description": "You can blind or deafen a foe. Choose one creature that you can see within range to make a constitution saving throw. If it fails, the target is either blinded or deafened (your choice) for the duration. At the end of each of its turns, the target can make a constitution saving throw. On a success, ",
+  "action_type": "action",
+  "range": 30,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_creature",
+  "upcast_target_count": 1,
+  "saving_throw": {
+    "ability": "constitution",
+    "dc": null,
+    "conditions_on_fail": [
+      "blinded"
+    ]
+  }
+}

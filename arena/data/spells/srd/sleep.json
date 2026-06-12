@@ -1,0 +1,17 @@
+{
+  "name": "Sleep",
+  "description": "This spell sends creatures into a magical slumber. Roll 5d8; the total is how many hit points of creatures this spell can affect. Creatures within 20 feet of a point you choose within range are affected in ascending order of their current hit points (ignoring unconscious creatures).",
+  "action_type": "action",
+  "range": 90,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 20,
+  "hp_threshold": 22,
+  "hp_threshold_effect": "condition",
+  "hp_threshold_condition": "unconscious"
+}

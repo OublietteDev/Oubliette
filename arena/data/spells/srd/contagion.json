@@ -1,0 +1,24 @@
+{
+  "name": "Contagion",
+  "description": "Your touch inflicts disease. Make a melee spell attack against a creature within your reach. On a hit, you afflict the creature with a disease of your choice from any of the ones described below.",
+  "action_type": "action",
+  "range": 5,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 5,
+  "resource_cost": {
+    "spell_slot_5": 1
+  },
+  "target_type": "one_creature",
+  "attack": {
+    "name": "Contagion",
+    "attack_type": "melee_spell",
+    "ability": "intelligence",
+    "reach": 5,
+    "damage": []
+  },
+  "conditions_applied": [
+    "poisoned"
+  ],
+  "condition_save_to_end": "constitution"
+}

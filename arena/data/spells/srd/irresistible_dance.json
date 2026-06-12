@@ -1,0 +1,20 @@
+{
+  "name": "Irresistible Dance",
+  "description": "Choose one creature that you can see within range. The target begins a comic dance in place: shuffling, tapping its feet, and capering for the duration. Creatures that can't be charmed are immune to this spell.",
+  "action_type": "action",
+  "range": 30,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 6,
+  "resource_cost": {
+    "spell_slot_6": 1
+  },
+  "target_type": "one_creature",
+  "saving_throw": {
+    "ability": "wisdom",
+    "dc": null,
+    "conditions_on_fail": [
+      "restrained"
+    ]
+  }
+}

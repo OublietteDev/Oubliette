@@ -1,0 +1,20 @@
+{
+  "name": "Levitate",
+  "description": "One creature or object of your choice that you can see within range rises vertically, up to 20 feet, and remains suspended there for the duration. The spell can levitate a target that weighs up to 500 pounds. An unwilling creature that succeeds on a constitution saving throw is unaffected.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_creature",
+  "saving_throw": {
+    "ability": "constitution",
+    "dc": null,
+    "conditions_on_fail": [
+      "restrained"
+    ]
+  }
+}

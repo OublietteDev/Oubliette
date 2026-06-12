@@ -1,0 +1,90 @@
+{
+  "name": "Warding Bond",
+  "description": "This spell wards a willing creature you touch and creates a mystic connection between you and the target until the spell ends. While the target is within 60 feet of you, it gains a +1 bonus to AC and saving throws, and it has resistance to all damage. Also, each time it takes damage, you take the sa",
+  "action_type": "action",
+  "range": 5,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_ally",
+  "buff_effects": [
+    {
+      "stat": "ac",
+      "modifier_type": "flat_bonus",
+      "value": 1
+    },
+    {
+      "stat": "saving_throws",
+      "modifier_type": "flat_bonus",
+      "value": 1
+    },
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "acid"
+    },
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "bludgeoning"
+    },
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "cold"
+    },
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "fire"
+    },
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "force"
+    },
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "lightning"
+    },
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "necrotic"
+    },
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "piercing"
+    },
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "poison"
+    },
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "psychic"
+    },
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "radiant"
+    },
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "slashing"
+    },
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "thunder"
+    }
+  ]
+}

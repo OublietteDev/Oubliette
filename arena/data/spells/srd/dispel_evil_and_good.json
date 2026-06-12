@@ -1,0 +1,20 @@
+{
+  "name": "Dispel Evil and Good",
+  "description": "Shimmering energy surrounds and protects you from fey, undead, and creatures originating from beyond the Material Plane. For the duration, celestials, elementals, fey, fiends, and undead have disadvantage on attack rolls against you.",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 5,
+  "resource_cost": {
+    "spell_slot_5": 1
+  },
+  "target_type": "self",
+  "buff_effects": [
+    {
+      "stat": "attack_rolls",
+      "modifier_type": "disadvantage",
+      "target_grants_to_attacker": true
+    }
+  ]
+}

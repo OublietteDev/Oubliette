@@ -1,0 +1,22 @@
+{
+  "name": "Web",
+  "description": "You conjure a mass of thick, sticky webbing at a point of your choice within range. The webs fill a 20-foot cube from that point for the duration. The webs are difficult terrain and lightly obscure their area.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "area_cube",
+  "area_size": 20,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "conditions_on_fail": [
+      "restrained"
+    ]
+  },
+  "terrain_modification": "difficult"
+}

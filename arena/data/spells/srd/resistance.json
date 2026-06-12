@@ -1,0 +1,18 @@
+{
+  "name": "Resistance",
+  "description": "You touch one willing creature. Once before the spell ends, the target can roll a d4 and add the number rolled to one saving throw of its choice. It can roll the die before or after making the saving throw. The spell then ends.",
+  "action_type": "action",
+  "range": 5,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 0,
+  "cantrip_scaling": true,
+  "target_type": "one_ally",
+  "buff_effects": [
+    {
+      "stat": "saving_throws",
+      "modifier_type": "flat_bonus",
+      "value": "1d4"
+    }
+  ]
+}

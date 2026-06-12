@@ -1,0 +1,21 @@
+{
+  "name": "Fear",
+  "description": "You project a phantasmal image of a creature's worst fears. Each creature in a 30-foot cone must succeed on a wisdom saving throw or drop whatever it is holding and become frightened for the duration.",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "area_cone",
+  "area_size": 30,
+  "saving_throw": {
+    "ability": "wisdom",
+    "dc": null,
+    "conditions_on_fail": [
+      "frightened"
+    ]
+  }
+}

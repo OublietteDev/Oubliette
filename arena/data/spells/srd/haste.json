@@ -1,0 +1,30 @@
+{
+  "name": "Haste",
+  "description": "Choose a willing creature that you can see within range. Until the spell ends, the target's speed is doubled, it gains a +2 bonus to AC, it has advantage on dexterity saving throws, and it gains an additional action on each of its turns. That action can be used only to take the Attack (one weapon at",
+  "action_type": "action",
+  "range": 30,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "one_ally",
+  "buff_effects": [
+    {
+      "stat": "speed",
+      "modifier_type": "multiply",
+      "value": 2.0
+    },
+    {
+      "stat": "ac",
+      "modifier_type": "flat_bonus",
+      "value": 2
+    },
+    {
+      "stat": "saving_throws",
+      "modifier_type": "advantage",
+      "scope": "dexterity"
+    }
+  ]
+}

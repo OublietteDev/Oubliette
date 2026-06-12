@@ -167,6 +167,21 @@ class Combatant:
     max_resources: dict[str, int] | None = None  # Snapshot of class_resources at combat start
 
 
+def _is_beneficial_aoe(action: Action) -> bool:
+    """Whether an AoE action helps its targets — allies-only resolution.
+
+    Healing, buff-only, cleanse, and temp-HP actions with no saving throw
+    and no attack are beneficial by construction (you don't get a save
+    against Bless). Anything with a save or an attack is hostile — debuff
+    spells (Bane, Slow, Faerie Fire) carry their save and stay in the
+    friendly-fire branch.
+    """
+    if action.saving_throw is not None or action.attack is not None:
+        return False
+    return bool(action.healing or action.buff_effects
+                or action.conditions_removed or action.grants_temporary_hp)
+
+
 class CombatManager:
     """Manages the overall combat state, turn flow, and creature registry."""
 
@@ -2876,8 +2891,8 @@ class CombatManager:
         # EVERY team — friendly fire is real (B5): allies standing in the
         # blast take it like anyone else, 5e-style.
         caster_team = combatant.team
-        if action.healing and not action.saving_throw:
-            # Beneficial AoE (e.g., Mass Cure Wounds) — target allies
+        if _is_beneficial_aoe(action):
+            # Beneficial AoE (e.g., Mass Cure Wounds, Bless) — target allies
             target_teams = {caster_team}
         else:
             # Harmful AoE (e.g., breath weapons, Thunderwave) — everyone in it
@@ -2905,8 +2920,12 @@ class CombatManager:
             if dist_feet <= area_feet:
                 affected.append(cid)
 
-        # Ensure clicked target is first (and included) — but never the caster
-        if clicked_target_id != combatant.creature_id:
+        # Ensure clicked target is first (and included) — but never the caster,
+        # and never a creature the team filter excluded (clicking an enemy
+        # with Bless must not buff them).
+        clicked = self.combatants.get(clicked_target_id)
+        if (clicked_target_id != combatant.creature_id
+                and clicked is not None and clicked.team in target_teams):
             if clicked_target_id in affected:
                 affected.remove(clicked_target_id)
             affected.insert(0, clicked_target_id)
@@ -2936,7 +2955,7 @@ class CombatManager:
         # (friendly fire is real — and here even the caster, who may well
         # be standing in their own Fireball).
         caster_team = combatant.team
-        if action.healing and not action.saving_throw:
+        if _is_beneficial_aoe(action):
             target_teams = {caster_team}
         else:
             target_teams = {c.team for c in self.combatants.values()}
@@ -3666,14 +3685,17 @@ class CombatManager:
                 combatant.position,
             )
 
-        # Load creature from JSON
-        data_dir = Path("data")
+        # Load creature from JSON. The engine's DATA_DIR (not the CWD —
+        # launched fights run from a scratch dir) anchors relative paths like
+        # "monsters/srd/dryad.json"; absolute paths (the bridge's Wild Shape
+        # forms) win the join outright.
+        from arena.paths import DATA_DIR
         try:
             entry = CombatantEntry(
                 creature_id=action.summon_creature,
                 team=combatant.team,
             )
-            creature = self._load_creature(entry, data_dir)
+            creature = self._load_creature(entry, DATA_DIR)
         except Exception as e:
             events.append(CombatEvent(
                 event_type=CombatEventType.INFO,

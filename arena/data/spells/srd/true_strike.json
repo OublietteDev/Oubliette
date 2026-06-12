@@ -1,0 +1,18 @@
+{
+  "name": "True Strike",
+  "description": "You extend your hand and point a finger at a target in range. Your magic grants you a brief insight into the target's defenses. On your next turn, you gain advantage on your first attack roll against the target, provided that this spell hasn't ended.",
+  "action_type": "action",
+  "range": 30,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 0,
+  "cantrip_scaling": true,
+  "target_type": "self",
+  "buff_effects": [
+    {
+      "stat": "attack_rolls",
+      "modifier_type": "advantage"
+    }
+  ],
+  "buff_duration_rounds": 2
+}

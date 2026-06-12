@@ -1,0 +1,20 @@
+{
+  "name": "Eyebite",
+  "description": "For the spell's duration, your eyes become an inky void imbued with dread power. One creature of your choice within 60 feet of you that you can see must succeed on a wisdom saving throw or be affected by one of the following effects of your choice for the duration. On each of your turns until the sp",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 6,
+  "resource_cost": {
+    "spell_slot_6": 1
+  },
+  "target_type": "one_creature",
+  "saving_throw": {
+    "ability": "wisdom",
+    "dc": null,
+    "conditions_on_fail": [
+      "frightened"
+    ]
+  }
+}

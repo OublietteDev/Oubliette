@@ -1,0 +1,26 @@
+{
+  "name": "Prismatic Spray",
+  "description": "Eight multicolored rays of light flash from your hand. Each ray is a different color and has a different power and purpose. Each creature in a 60-foot cone must make a dexterity saving throw. For each target, roll a d8 to determine which color ray affects it.",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 7,
+  "resource_cost": {
+    "spell_slot_7": 1
+  },
+  "target_type": "area_cone",
+  "area_size": 60,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "10d6",
+        "damage_type": "radiant",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  }
+}

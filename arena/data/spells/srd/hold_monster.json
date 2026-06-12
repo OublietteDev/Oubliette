@@ -1,0 +1,21 @@
+{
+  "name": "Hold Monster",
+  "description": "Choose a creature you can see and reach. The target must make a saving throw of Wisdom or be paralyzed for the duration of the spell. This spell has no effect against the undead. At the end of each round, the target can make a new saving throw of Wisdom. If successful, the spell ends for the creatur",
+  "action_type": "action",
+  "range": 90,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 5,
+  "resource_cost": {
+    "spell_slot_5": 1
+  },
+  "target_type": "one_creature",
+  "upcast_target_count": 1,
+  "saving_throw": {
+    "ability": "wisdom",
+    "dc": null,
+    "conditions_on_fail": [
+      "paralyzed"
+    ]
+  }
+}

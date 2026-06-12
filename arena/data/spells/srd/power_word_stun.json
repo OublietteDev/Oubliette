@@ -1,0 +1,17 @@
+{
+  "name": "Power Word Stun",
+  "description": "You speak a word of power that can overwhelm the mind of one creature you can see within range, leaving it dumbfounded. If the target has 150 hit points or fewer, it is stunned. Otherwise, the spell has no effect.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 8,
+  "resource_cost": {
+    "spell_slot_8": 1
+  },
+  "target_type": "one_creature",
+  "hp_threshold": 150,
+  "hp_threshold_effect": "condition",
+  "hp_threshold_condition": "stunned",
+  "condition_save_to_end": "constitution"
+}

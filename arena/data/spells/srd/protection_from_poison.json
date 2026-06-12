@@ -1,0 +1,20 @@
+{
+  "name": "Protection from Poison",
+  "description": "You touch a creature. If it is poisoned, you neutralize the poison. If more than one poison afflicts the target, you neutralize one poison that you know is present, or you neutralize one at random.",
+  "action_type": "action",
+  "range": 5,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_ally",
+  "buff_effects": [
+    {
+      "stat": "damage_resistance",
+      "modifier_type": "resistance",
+      "value": "poison"
+    }
+  ]
+}

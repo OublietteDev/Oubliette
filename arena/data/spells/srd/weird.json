@@ -1,0 +1,29 @@
+{
+  "name": "Weird",
+  "description": "Drawing on the deepest fears of a group of creatures, you create illusory creatures in their minds, visible only to them. Each creature in a 30-foot-radius sphere centered on a point of your choice within range must make a wisdom saving throw. On a failed save, a creature becomes frightened for the ",
+  "action_type": "action",
+  "range": 120,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 9,
+  "resource_cost": {
+    "spell_slot_9": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 30,
+  "saving_throw": {
+    "ability": "wisdom",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "4d10",
+        "damage_type": "psychic",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "none",
+    "conditions_on_fail": [
+      "frightened"
+    ]
+  }
+}

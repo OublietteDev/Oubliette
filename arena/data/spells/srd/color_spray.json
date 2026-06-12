@@ -1,0 +1,21 @@
+{
+  "name": "Color Spray",
+  "description": "A dazzling array of flashing, colored light springs from your hand. Roll 6d10; the total is how many hit points of creatures this spell can effect. Creatures in a 15-foot cone originating from you are affected in ascending order of their current hit points (ignoring unconscious creatures and creatur",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "area_cone",
+  "area_size": 15,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "conditions_on_fail": [
+      "blinded"
+    ]
+  }
+}

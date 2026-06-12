@@ -1,0 +1,28 @@
+{
+  "name": "Spirit Guardians",
+  "description": "You call forth spirits to protect you. They flit around you to a distance of 15 feet for the duration. If you are good or neutral, their spectral form appears angelic or fey (your choice). If you are evil, they appear fiendish.",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 15,
+  "zone_follows_caster": true,
+  "saving_throw": {
+    "ability": "wisdom",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "3d8",
+        "damage_type": "radiant",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  },
+  "upcast_damage_dice": "1d8"
+}

@@ -63,12 +63,17 @@ def test_every_generated_spell_file_is_a_valid_arena_action():
 def test_manifest_accounts_for_every_srd_spell():
     manifest = json.loads((SPELL_DIR / "_manifest.json").read_text(encoding="utf-8"))
     assert len(manifest["generated"]) + len(manifest["skipped"]) == 319
-    # the inexpressible families are skipped deliberately, not silently
-    assert "hold_person" in manifest["skipped"]   # control: no structured data
+    # the genuinely freeform spells are skipped deliberately, not silently
+    assert "wish" in manifest["skipped"]
+    assert "prestidigitation" in manifest["skipped"]
     # B5 curated rescues moved out of the skip list
     assert "magic_missile" in manifest["generated"]
     assert "scorching_ray" in manifest["generated"]
     assert "mage_armor" in manifest["generated"]
+    # C3 curation wave: the control/buff/zone families are IN now
+    for spell in ("hold_person", "bless", "haste", "spirit_guardians",
+                  "misty_step", "counterspell", "web", "spiritual_weapon"):
+        assert spell in manifest["generated"], spell
 
 
 def test_fire_bolt_is_a_scaling_attack_cantrip():
@@ -101,7 +106,7 @@ def test_cure_wounds_carries_the_mod_token_and_upcast():
 
 
 def test_unknown_or_skipped_spell_loads_as_none():
-    assert arena_spell_action("hold_person") is None
+    assert arena_spell_action("mage_hand") is None   # freeform — washed
     assert arena_spell_action("no_such_spell_xyz") is None
 
 
@@ -139,8 +144,8 @@ def test_mage_armor_is_an_ac_set_self_buff():
 
 def test_caster_kit_is_baked_with_this_casters_numbers():
     actions = {a.name: a for a in spell_actions(_cleric())}
-    # bless was prepared but isn't expressible — quietly stays story-side
-    assert set(actions) == {"Sacred Flame", "Cure Wounds", "Guiding Bolt"}
+    # C3: Bless joined the library — the whole prepared list is expressible now
+    assert set(actions) == {"Sacred Flame", "Cure Wounds", "Guiding Bolt", "Bless"}
     assert actions["Sacred Flame"].saving_throw.dc == 13      # 8 + 2 + 3
     assert actions["Guiding Bolt"].attack.ability == "wisdom"
     assert actions["Cure Wounds"].healing == "1d8+3"

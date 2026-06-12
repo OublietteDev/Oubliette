@@ -1,0 +1,36 @@
+{
+  "name": "Slow",
+  "description": "You alter time around up to six creatures of your choice in a 40-foot cube within range. Each target must succeed on a wisdom saving throw or be affected by this spell for the duration.",
+  "action_type": "action",
+  "range": 120,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "area_cube",
+  "area_size": 40,
+  "saving_throw": {
+    "ability": "wisdom",
+    "dc": null
+  },
+  "buff_effects": [
+    {
+      "stat": "speed",
+      "modifier_type": "multiply",
+      "value": 0.5
+    },
+    {
+      "stat": "ac",
+      "modifier_type": "flat_bonus",
+      "value": -2
+    },
+    {
+      "stat": "saving_throws",
+      "modifier_type": "flat_bonus",
+      "value": -2,
+      "scope": "dexterity"
+    }
+  ]
+}

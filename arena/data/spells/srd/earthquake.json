@@ -1,0 +1,30 @@
+{
+  "name": "Earthquake",
+  "description": "You create a seismic disturbance at a point on the ground that you can see within range. For the duration, an intense tremor rips through the ground in a 100-foot-radius circle centered on that point and shakes creatures and structures in contact with the ground in that area.",
+  "action_type": "action",
+  "range": 500,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 8,
+  "resource_cost": {
+    "spell_slot_8": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 100,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "5d6",
+        "damage_type": "bludgeoning",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half",
+    "conditions_on_fail": [
+      "prone"
+    ]
+  },
+  "terrain_modification": "difficult"
+}

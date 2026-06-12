@@ -1,0 +1,33 @@
+{
+  "name": "Heat Metal",
+  "description": "Choose a manufactured metal object, such as a metal weapon or a suit of heavy or medium metal armor, that you can see within range. You cause the object to glow red-hot. Any creature in physical contact with the object takes 2d8 fire damage when you cast the spell. Until the spell ends, you can use ",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_creature",
+  "attack": {
+    "name": "Heat Metal",
+    "attack_type": "ranged_spell",
+    "ability": "intelligence",
+    "reach": 5,
+    "range_normal": 60,
+    "auto_hit": true,
+    "damage": [
+      {
+        "dice": "2d8",
+        "damage_type": "fire",
+        "bonus": 0
+      }
+    ]
+  },
+  "recurring_action_type": "bonus_action",
+  "recurring_damage_dice": "2d8",
+  "recurring_damage_type": "fire",
+  "recurring_auto_hit": true,
+  "upcast_damage_dice": "1d8"
+}

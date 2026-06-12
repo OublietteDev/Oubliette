@@ -1,0 +1,20 @@
+{
+  "name": "Longstrider",
+  "description": "You touch a creature. The target's speed increases by 10 feet until the spell ends.",
+  "action_type": "action",
+  "range": 5,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "one_ally",
+  "buff_effects": [
+    {
+      "stat": "speed",
+      "modifier_type": "flat_bonus",
+      "value": 10
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Conjure Woodland Beings",
+  "description": "You summon fey creatures that appear in unoccupied spaces that you can see within range. Choose one of the following options for what appears:",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 4,
+  "resource_cost": {
+    "spell_slot_4": 1
+  },
+  "target_type": "self",
+  "summon_creature": "monsters/srd/dryad.json"
+}
