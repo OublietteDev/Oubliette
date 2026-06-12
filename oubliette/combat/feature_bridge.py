@@ -43,6 +43,7 @@ from arena.models.actions import (
 )
 from arena.models.character import Feature, OnHitRider, RiderTrigger
 from arena.models.conditions import BuffEffect
+from arena.paths import DATA_DIR as ARENA_DATA_DIR
 
 from ..enums import Ability
 from ..state.models import Character
@@ -377,6 +378,33 @@ def feature_actions(
                 condition_duration_rounds=1,
                 resource_cost={"ki_points": 1},
                 ai_priority=4,
+            ))
+
+    if "wild shape" in names:
+        # SRD beast-shape gates: CR 1/4 at L2, CR 1/2 (swim) at L4, CR 1 at
+        # L8. The engine's transform machinery (summon + is_wild_shape: turn
+        # skip for the stored druid, 0-HP revert) does the rest. The path is
+        # ABSOLUTE because the fight runs from a scratch dir (the B6 lesson).
+        for label, form_id, min_level in (("Wolf", "wolf", 2),
+                                          ("Crocodile", "crocodile", 4),
+                                          ("Brown Bear", "brown_bear", 8)):
+            if level < min_level:
+                continue
+            form_path = (ARENA_DATA_DIR / "monsters" / "srd"
+                         / f"{form_id}.json").resolve()
+            if not form_path.is_file():
+                continue
+            actions.append(Action(
+                name=f"Wild Shape: {label}",
+                description=f"Transform into a {label.lower()}; you fight in "
+                            "beast form until it drops to 0 HP, then revert.",
+                action_type=ActionType.ACTION,
+                target_type=TargetType.SELF,
+                range=0,
+                summon_creature=str(form_path),
+                is_wild_shape=True,
+                resource_cost={"wild_shape": 1},
+                ai_priority=5,
             ))
 
     if "cunning action" in names:

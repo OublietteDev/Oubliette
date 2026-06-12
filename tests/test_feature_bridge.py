@@ -90,6 +90,18 @@ def _paladin(level=6) -> Character:
                            ("Extra Attack", 5), ("Aura of Protection", 6))))
 
 
+def _druid(level=2) -> Character:
+    return Character(
+        id="thorn", name="Thorn", kind="pc", level=level, hp=30, max_hp=30,
+        abilities={Ability.WIS: 16, Ability.DEX: 12, Ability.CON: 14},
+        armor_class=14, attack_bonus=4, damage="1d8+1",
+        sheet=CharacterSheet(
+            race="human", char_class="druid", background="acolyte",
+            spellcasting_ability=Ability.WIS,
+            features=_refs(("Druidic", 1), ("Spellcasting", 1),
+                           ("Wild Shape", 2))))
+
+
 def _barbarian(level=3) -> Character:
     return Character(
         id="grog", name="Grog", kind="pc", level=level, hp=40, max_hp=40,
@@ -271,6 +283,41 @@ def test_step_of_the_wind_costs_a_ki_point():
     # A second use the same turn is blocked — the bonus action is spent
     assert cm.execute_data_standard_action(sotw) is None
     assert li.class_resources["ki_points"] == 4    # and nothing was deducted
+
+
+def test_wild_shape_forms_gate_by_druid_level():
+    forms = lambda lv: [a.name for a in feature_actions(_druid(lv), "wisdom")[0]
+                        if a.name.startswith("Wild Shape")]
+    assert forms(2) == ["Wild Shape: Wolf"]
+    assert forms(4) == ["Wild Shape: Wolf", "Wild Shape: Crocodile"]
+    assert len(forms(8)) == 3
+
+
+def test_wild_shape_transforms_and_reverts_through_the_engine():
+    plan, cm, pc_cid, thorn, _, _ = _manager_for(_druid(2))
+    _activate(cm, pc_cid)
+    assert thorn.class_resources["wild_shape"] == 2
+
+    ws = next(a for a in thorn.actions if a.name == "Wild Shape: Wolf")
+    cm.select_action(ws)
+    result = cm.execute_summon(cm.combatants[pc_cid].position)
+    assert result.success
+    assert thorn.class_resources["wild_shape"] == 1
+    assert pc_cid in cm.stored_creatures                 # original safely stored
+    wolf_id = next(sid for sid, summoner in cm.summon_links.items()
+                   if summoner == pc_cid)
+    wolf = cm.combatants[wolf_id]
+    assert wolf.team == "player" and wolf.creature.name == "Wolf"
+    assert cm.combatants[pc_cid].position is None        # druid is off the grid
+
+    # The wolf drops to 0 HP — the druid reverts at the wolf's position.
+    wolf_pos = wolf.position
+    wolf.creature.current_hit_points = 0
+    cm._check_summon_death(wolf_id)
+    assert pc_cid not in cm.stored_creatures
+    assert cm.combatants[pc_cid].creature.name == "Thorn"
+    assert cm.combatants[pc_cid].position == wolf_pos
+    assert wolf_id not in cm.combatants
 
 
 def test_second_wind_heals_spends_pool_and_rounds_trip():
