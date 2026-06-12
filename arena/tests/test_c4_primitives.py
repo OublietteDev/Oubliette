@@ -720,6 +720,48 @@ class TestPlayerVolleyRouting:
         assert all(e.target_id == brute_id for e in darts)
 
 
+class TestMirrorImageGhosts:
+    """C4.x playtest polish: the duplicates must be VISIBLE — translucent
+    ghost tokens fanned behind the real one, one per remaining image."""
+
+    def _render(self, creature):
+        import pygame
+        from arena.gui.camera import Camera
+        from arena.gui.tokens import draw_token
+        from arena.combat.manager import Combatant
+
+        pygame.init()
+        pygame.display.set_mode((1, 1))
+        surface = pygame.Surface((200, 200), pygame.SRCALPHA)
+        combatant = Combatant(
+            creature_id="wiz", creature=creature, team="player",
+            position=HexCoord(1, 1),
+        )
+        camera = Camera()
+        draw_token(surface, combatant, camera, origin=(60, 60))
+        # No numpy in the venv — sample alpha on a coarse grid instead.
+        painted = 0
+        for x in range(0, 200, 2):
+            for y in range(0, 200, 2):
+                if surface.get_at((x, y)).a > 0:
+                    painted += 1
+        return painted
+
+    def test_ghosts_widen_the_painted_area(self):
+        __import__("pytest").importorskip("pygame")
+        plain = _creature("Wizard")
+        mirrored = _creature("Wizard")
+        mirrored.active_buffs.append(_decoy(charges=3))
+        assert self._render(mirrored) > self._render(plain)
+
+    def test_spent_images_draw_nothing_extra(self):
+        __import__("pytest").importorskip("pygame")
+        plain = _creature("Wizard")
+        spent = _creature("Wizard")
+        spent.active_buffs.append(_decoy(charges=0))
+        assert self._render(spent) == self._render(plain)
+
+
 class TestSanctuary:
     def test_failed_save_loses_the_attack(self):
         attacker, target = _creature("Orc"), _creature("Cleric")

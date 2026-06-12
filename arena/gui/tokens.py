@@ -442,6 +442,58 @@ def _draw_polygon_outline_alpha(
 # ---------------------------------------------------------------------------
 
 
+def _decoy_image_count(creature) -> int:
+    """Remaining Mirror Image duplicates on this creature (0 = none).
+
+    The decoy buff's trigger charges ARE the images — combat code
+    decrements them as attacks shatter duplicates, so the render count
+    tracks the fight for free.
+    """
+    for buff in getattr(creature, "active_buffs", []):
+        for mod in buff.modifiers:
+            if mod.stat == "decoy_images":
+                return max(0, buff.charges or 0)
+    return 0
+
+
+# Fanned offsets (in token radii) for up to three duplicates peeking
+# out from behind the real token.
+_GHOST_OFFSETS = [(-0.95, -0.40), (0.95, -0.40), (0.0, -1.05)]
+
+
+def _draw_decoy_ghosts(
+    surface: pygame.Surface,
+    creature,
+    center: tuple[int, int],
+    radius: int,
+    count: int,
+) -> None:
+    """Draw translucent duplicate tokens behind the real one (Mirror Image)."""
+    ghost_img = None
+    if creature.token_image:
+        img = get_token_image(creature.token_image, radius * 2)
+        if img is not None:
+            ghost_img = img.copy()
+            ghost_img.set_alpha(110)
+
+    body_color = parse_color(creature.token_color)
+    for dx, dy in _GHOST_OFFSETS[:count]:
+        gcx = int(center[0] + dx * radius)
+        gcy = int(center[1] + dy * radius)
+        if ghost_img is not None:
+            rect = ghost_img.get_rect(center=(gcx, gcy))
+            surface.blit(ghost_img, rect)
+        else:
+            ghost = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            pygame.draw.circle(
+                ghost, (*body_color[:3], 110), (radius, radius), radius,
+            )
+            pygame.draw.circle(
+                ghost, (255, 255, 255, 70), (radius, radius), radius, 2,
+            )
+            surface.blit(ghost, (gcx - radius, gcy - radius))
+
+
 def _draw_single_hex_token(
     surface: pygame.Surface,
     combatant: Combatant,
@@ -473,6 +525,13 @@ def _draw_single_hex_token(
     team_color_key = f"team_{combatant.team}"
     team_color = parse_color(COLORS.get(team_color_key, COLORS["team_neutral"]))
     body_color = parse_color(creature.token_color)
+
+    # Mirror Image duplicates (C4): translucent ghost copies fanned out
+    # behind the real token, one per remaining image — they vanish as
+    # attacks shatter them (the buff's charges count down).
+    ghost_count = _decoy_image_count(creature)
+    if ghost_count:
+        _draw_decoy_ghosts(surface, creature, center, radius, ghost_count)
 
     # Active turn glow
     if is_active_turn:
