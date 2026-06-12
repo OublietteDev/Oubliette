@@ -340,3 +340,112 @@ class TestOnHitRiderResolution:
         result = resolve_effect(caster, "atk", caster, "atk", smite, grid)
         assert result.success
         assert caster.active_buffs[0].charges == 1
+
+
+# ── C4c: Shield — the AC-reaction spell via the hit-reaction popup ───
+
+
+def _shield_action():
+    return Action(
+        name="Shield", description="+5 AC until your next turn",
+        action_type=ActionType.REACTION, target_type=TargetType.SELF,
+        range=0, spell_level=1, resource_cost={"spell_slot_1": 1},
+        buff_effects=[BuffEffect(stat="ac", modifier_type="flat_bonus",
+                                 value=5)],
+        buff_duration_rounds=1,
+    )
+
+
+def _shield_combat(slots=2):
+    """Enemy bruiser vs a player wizard who knows Shield (AC 12)."""
+    wizard = PlayerCharacter(
+        name="Wizard", character_class="Wizard",
+        max_hit_points=20, current_hit_points=20, armor_class=12,
+        ability_scores=AbilityScores(), proficiency_bonus=2,
+        is_player_controlled=True,
+        class_resources={"spell_slot_1": slots},
+        reactions=[_shield_action()],
+    )
+    brute = _creature("Brute", is_player=False,
+                      actions=[_weapon_action("Club")])
+    encounter = Encounter(
+        name="ShieldTest", grid_width=10, grid_height=10,
+        combatants=[
+            CombatantEntry(creature_id="wiz", creature_data=wizard,
+                           team="player", starting_position=(4, 4)),
+            CombatantEntry(creature_id="brute", creature_data=brute,
+                           team="enemy", starting_position=(4, 5)),
+        ],
+    )
+    cm = CombatManager()
+    cm.load_encounter(encounter, Path("."))
+    with patch("arena.combat.manager.roll_die", side_effect=[20, 1]):
+        cm.roll_initiative()
+    cm.begin_combat()
+    by_name = {c.creature.name: (cid, c) for cid, c in cm.combatants.items()}
+    return cm, by_name["Wizard"], by_name["Brute"]
+
+
+def _attack_wizard(cm, brute, wiz, roll):
+    brute_id, brute_c = brute
+    wiz_id, wiz_c = wiz
+    with patch("arena.combat.actions.roll_die", return_value=roll):
+        hit = resolve_attack_hit(
+            brute_c.creature, brute_id, wiz_c.creature, wiz_id,
+            _weapon_action("Club"), cm.grid,
+        )
+    return hit
+
+
+class TestShieldReaction:
+    def test_option_offered_and_negates_the_hit(self):
+        cm, wiz, brute = _shield_combat()
+        wiz_id, wiz_c = wiz
+        # roll 12 + 2 (str 10 + prof 2) = 14 vs AC 12: a hit by 2 — Shield's
+        # +5 turns it into a miss.
+        hit = _attack_wizard(cm, brute, wiz, roll=12)
+        assert hit.hit and not hit.critical
+        deferred = cm.complete_attack(hit)
+        assert deferred is None                     # popup pending
+        options = cm._pending_damage_reduction["options"]
+        assert any(red == cm.AC_REACTION for _, red in options)
+
+        cm.resolve_damage_reduction_choice("Shield")
+        creature = wiz_c.creature
+        assert hit.hit is False                     # retroactive miss
+        assert creature.current_hit_points == 20    # no damage
+        assert any(b.name == "Shield" for b in creature.active_buffs)
+        assert creature.class_resources["spell_slot_1"] == 1
+        assert cm.reaction_used[wiz_id] is True
+
+    def test_natural_20_cannot_be_turned(self):
+        cm, wiz, brute = _shield_combat()
+        _, wiz_c = wiz
+        hit = _attack_wizard(cm, brute, wiz, roll=20)
+        assert hit.hit and hit.critical
+        cm.complete_attack(hit)
+        cm.resolve_damage_reduction_choice("Shield")
+        creature = wiz_c.creature
+        assert hit.hit is True                      # crits land regardless
+        assert creature.current_hit_points < 20     # damage went through
+        assert any(b.name == "Shield" for b in creature.active_buffs)
+
+    def test_not_offered_without_a_slot(self):
+        cm, wiz, brute = _shield_combat(slots=0)
+        assert cm.check_ac_reaction_options(wiz[0]) == []
+
+    def test_not_offered_when_reaction_spent(self):
+        cm, wiz, brute = _shield_combat()
+        cm.reaction_used[wiz[0]] = True
+        assert cm.check_ac_reaction_options(wiz[0]) == []
+
+    def test_skipping_completes_the_attack_normally(self):
+        cm, wiz, brute = _shield_combat()
+        wiz_id, wiz_c = wiz
+        hit = _attack_wizard(cm, brute, wiz, roll=12)
+        cm.complete_attack(hit)
+        cm.resolve_damage_reduction_choice(None)    # player clicked Skip
+        creature = wiz_c.creature
+        assert creature.current_hit_points < 20
+        assert creature.class_resources["spell_slot_1"] == 2
+        assert not cm.reaction_used.get(wiz_id, False)

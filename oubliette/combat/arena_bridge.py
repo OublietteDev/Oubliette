@@ -475,6 +475,13 @@ def character_to_player(
     # (Second Wind, Rage, Flurry...). Bonus actions go in their own list: the
     # radial menu surfaces `bonus_actions` as individual slots.
     extra_actions, bonus_actions = feature_actions(char, carrier)
+    # C4: reaction spells (Shield) go to `reactions`, NOT `actions` — they
+    # are cast via the engine's hit-reaction popup, never from the radial.
+    all_spells = spell_actions(char)
+    reaction_spells = [a for a in all_spells
+                       if a.action_type == ActionType.REACTION]
+    turn_spells = [a for a in all_spells
+                   if a.action_type != ActionType.REACTION]
     return PlayerCharacter(
         name=char.name,
         size=_size(sheet.size if sheet else None),
@@ -498,11 +505,12 @@ def character_to_player(
                 "Attack", short, to_hit, char.damage,
                 DEFAULT_DAMAGE_TYPE, prof, carrier, magic_bonus=weapon_bonus,
             ),
-            *spell_actions(char),
+            *turn_spells,
             *consumable_actions(char, catalog),
             *extra_actions,
         ],
         bonus_actions=bonus_actions,
+        reactions=reaction_spells,
     )
 
 

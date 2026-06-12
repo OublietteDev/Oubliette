@@ -74,6 +74,9 @@ def test_manifest_accounts_for_every_srd_spell():
     for spell in ("hold_person", "bless", "haste", "spirit_guardians",
                   "misty_step", "counterspell", "web", "spiritual_weapon"):
         assert spell in manifest["generated"], spell
+    # C4 primitives: on-hit riders + the Shield reaction
+    for spell in ("hunters_mark", "divine_favor", "branding_smite", "shield"):
+        assert spell in manifest["generated"], spell
 
 
 def test_fire_bolt_is_a_scaling_attack_cantrip():
@@ -169,6 +172,27 @@ def test_player_mapping_carries_kit_saves_speed_and_casting_ability():
     assert creature.saving_throw_proficiencies == ["charisma", "wisdom"]
     assert creature.speed == {"walk": 30}
     assert creature.spell_slots == {1: 4, 2: 2}   # B2 staging still intact
+
+
+def test_shield_stages_as_a_reaction_not_an_action():
+    """C4: reaction spells route to creature.reactions — the engine's
+    hit-reaction popup casts them; the radial must never offer them."""
+    wiz = Character(
+        id="skid", name="Skid", kind="pc", level=1, hp=8, max_hp=8,
+        abilities={Ability.INT: 16, Ability.DEX: 12, Ability.CON: 12},
+        armor_class=12, attack_bonus=4, damage="1d4+1",
+        sheet=CharacterSheet(
+            race="gnome", char_class="wizard", background="acolyte",
+            spellcasting_ability=Ability.INT,
+            cantrips_known=["fire_bolt"],
+            spells_known=["shield", "burning_hands"],
+        ))
+    creature = character_to_player(wiz, None, RS)
+    action_names = [a.name for a in creature.actions]
+    reaction_names = [a.name for a in creature.reactions]
+    assert "Shield" in reaction_names
+    assert "Shield" not in action_names
+    assert "Burning Hands" in action_names        # turn spells stay put
 
 
 # --- 3. the real-engine cast slice (B2 lights up) --------------------------

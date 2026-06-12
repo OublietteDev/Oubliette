@@ -604,6 +604,14 @@ _CURATED: dict[str, dict] = {
         "target_type": "one_creature",
         "is_counterspell": True, "counterspell_auto_level": 3,
     },
+    # --- C4: reaction spells (engine hit-reaction popup, not the radial) ----
+    "shield": {   # cast via the popup when hit; +5 AC persists until the
+        "target_type": "self",        # start of the caster's next turn.
+        "buff_effects": [             # approx: the Magic Missile auto-block
+            {"stat": "ac", "modifier_type": "flat_bonus", "value": 5},
+        ],                            # rider is dropped (auto-hit volleys
+        "buff_duration_rounds": 1,    # never offer reactions).
+    },
     # --- C4: spell-granted on-hit riders (stat="on_hit_damage" buffs) -------
     # The rider rides the buff system: concentration cleanup, duration, and
     # save-to-end all come free. damage_type omitted = inherit the weapon's;

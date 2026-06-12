@@ -1,0 +1,21 @@
+{
+  "name": "Shield",
+  "description": "An invisible barrier of magical force appears and protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from magic missile.",
+  "action_type": "reaction",
+  "range": 0,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "self",
+  "buff_effects": [
+    {
+      "stat": "ac",
+      "modifier_type": "flat_bonus",
+      "value": 5
+    }
+  ],
+  "buff_duration_rounds": 1
+}

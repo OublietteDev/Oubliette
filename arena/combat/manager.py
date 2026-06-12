@@ -1558,9 +1558,10 @@ class CombatManager:
                         and getattr(tc.creature, "is_player_controlled", False)
                     )
                     if is_player_target:
-                        # Check for player DR -- defer to GUI popup
+                        # Check for player reactions (DR + Shield) -- defer
+                        # to GUI popup
                         attack_type = hit_result.attack.attack_type
-                        options = self.check_damage_reduction_reaction(
+                        options = self._hit_reaction_options(
                             target_id, attack_type,
                         )
                         if options:
@@ -1764,6 +1765,118 @@ class CombatManager:
 
         return results
 
+    # AC-reaction sentinel in (feature, amount) option rows: the option is a
+    # reaction SPELL that raises AC against the triggering attack (Shield),
+    # not a damage reduction. -1 already means "halve" (Uncanny Dodge).
+    AC_REACTION = -2
+
+    @staticmethod
+    def _ac_reaction_bonus(action: Action) -> int:
+        """The flat AC bonus an AC-reaction spell grants (Shield's +5)."""
+        for mod in action.buff_effects:
+            if (mod.stat == "ac" and mod.modifier_type == "flat_bonus"
+                    and isinstance(mod.value, int)):
+                return mod.value
+        return 0
+
+    def check_ac_reaction_options(self, target_id: str) -> list[tuple]:
+        """Reaction spells that raise AC against the incoming hit (C4: Shield).
+
+        Returns (action, AC_REACTION) rows, shape-compatible with the
+        damage-reduction options so one popup serves both. Approximation
+        noted: RAW Shield also auto-blocks Magic Missile; the auto-hit
+        volley path doesn't offer reactions, so that rider is dropped.
+        """
+        from arena.combat.actions import check_resource_cost
+        from arena.models.actions import ActionType
+
+        target_c = self.combatants.get(target_id)
+        if target_c is None:
+            return []
+        if self.reaction_used.get(target_id, False):
+            return []
+        creature = target_c.creature
+        if (creature.current_hit_points or 0) <= 0:
+            return []
+
+        options: list[tuple] = []
+        for act in creature.reactions:
+            if act.action_type != ActionType.REACTION:
+                continue
+            if self._ac_reaction_bonus(act) <= 0:
+                continue
+            can_use, _reason = check_resource_cost(creature, act)
+            if can_use:
+                options.append((act, self.AC_REACTION))
+        return options
+
+    def _hit_reaction_options(
+        self, target_id: str, attack_type: str,
+    ) -> list[tuple]:
+        """All reaction options a player target may use against a hit:
+        damage reductions (Parry/Uncanny Dodge/Deflect Missiles) plus
+        AC reactions (Shield)."""
+        return (
+            self.check_damage_reduction_reaction(target_id, attack_type)
+            + self.check_ac_reaction_options(target_id)
+        )
+
+    def _cast_ac_reaction(
+        self, target_id: str, action: Action, hit_result: AttackHitResult,
+    ) -> None:
+        """Cast an AC-reaction spell (Shield) against the pending hit.
+
+        Spends the slot + reaction, applies the AC buff (it persists
+        against further attacks until it expires), and retroactively
+        converts the hit to a miss when the raised AC clears the roll.
+        Natural 20s hit regardless of AC and cannot be turned.
+        """
+        from arena.combat.actions import deduct_resource_cost
+        from arena.combat.buff_effects import apply_buff
+        from arena.models.conditions import ActiveBuff
+
+        target_c = self.combatants.get(target_id)
+        if target_c is None:
+            return
+        creature = target_c.creature
+        bonus = self._ac_reaction_bonus(action)
+
+        deduct_resource_cost(creature, action)
+        self.reaction_used[target_id] = True
+
+        buff = ActiveBuff(
+            name=action.name,
+            source_id=target_id,
+            modifiers=list(action.buff_effects),
+            duration_type="rounds",
+            duration_rounds=action.buff_duration_rounds or 1,
+        )
+        self.log.add(apply_buff(creature, target_id, buff))
+        self.log.add(CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=(
+                f"{creature.name} casts {action.name} as a reaction! "
+                f"(+{bonus} AC)"
+            ),
+            source_id=target_id,
+            target_id=target_id,
+            details={"reaction_spell": action.name},
+        ))
+
+        if (not hit_result.critical
+                and hit_result.total_roll < hit_result.target_ac + bonus):
+            hit_result.hit = False
+            self.log.add(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=(
+                    f"The attack glances off {creature.name}'s "
+                    f"{action.name} — a miss!"
+                ),
+                source_id=target_id,
+                target_id=target_id,
+                details={"shield_negated_hit": True},
+            ))
+
     def _evaluate_ai_damage_reduction(
         self, target_id: str, hit_result: AttackHitResult,
     ) -> int:
@@ -1846,7 +1959,15 @@ class CombatManager:
                     reduction = red
                     break
 
-            if reduction != 0:
+            if reduction == self.AC_REACTION:
+                # Shield-style reaction spell: spends slot + reaction,
+                # raises AC, may turn the hit into a miss outright.
+                for feat, red in pending["options"]:
+                    if feat.name == feature_name and red == self.AC_REACTION:
+                        self._cast_ac_reaction(target_id, feat, hit_result)
+                        break
+                reduction = 0
+            elif reduction != 0:
                 # Consume reaction
                 self.reaction_used[target_id] = True
 
@@ -1912,12 +2033,19 @@ class CombatManager:
             self._cleanup_orphaned_recurring_actions()
             self._check_victory()
         else:
-            # Came from complete_attack() via AI executor or GUI rider flow
-            self.complete_attack(
-                hit_result,
-                rider_results=rider_results,
-                damage_reduction=reduction,
-            )
+            # Came from complete_attack() via AI executor or GUI rider flow.
+            # The reaction window is CLOSED — suppress the re-offer that
+            # complete_attack's deferral check would otherwise make when the
+            # player skipped (reaction still unspent → infinite popup).
+            self._reaction_window_closed = True
+            try:
+                self.complete_attack(
+                    hit_result,
+                    rider_results=rider_results,
+                    damage_reduction=reduction,
+                )
+            finally:
+                self._reaction_window_closed = False
 
     def complete_attack(
         self,
@@ -1940,11 +2068,13 @@ class CombatManager:
         """
         # Check if the target is player-controlled with available damage
         # reduction reactions.  If so, defer to the GUI popup instead of
-        # completing the attack right now.
+        # completing the attack right now. (Skipped when the reaction window
+        # was already offered and declined — see resolve_damage_reduction_choice.)
         if (
             hit_result.hit
             and damage_reduction == 0
             and hit_result.attack is not None
+            and not getattr(self, "_reaction_window_closed", False)
         ):
             target_c = self.combatants.get(hit_result.target_id)
             if (
@@ -1952,7 +2082,7 @@ class CombatManager:
                 and getattr(target_c.creature, "is_player_controlled", False)
             ):
                 attack_type = hit_result.attack.attack_type
-                options = self.check_damage_reduction_reaction(
+                options = self._hit_reaction_options(
                     hit_result.target_id, attack_type,
                 )
                 if options:

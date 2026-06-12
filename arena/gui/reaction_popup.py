@@ -193,6 +193,15 @@ class ReactionPopup:
 
             if reduction == -1:
                 desc = "halve damage"
+            elif reduction == -2:
+                # AC-reaction spell (Shield): show the AC bump instead
+                bonus = next(
+                    (m.value for m in getattr(feature, "buff_effects", [])
+                     if getattr(m, "stat", "") == "ac"
+                     and isinstance(m.value, int)),
+                    5,
+                )
+                desc = f"+{bonus} AC vs this attack"
             else:
                 desc = f"reduce by {reduction}"
 
