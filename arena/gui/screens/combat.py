@@ -1274,6 +1274,9 @@ class CombatScreen(Screen):
         if result == "open_items":
             self.radial_menu.open_items_popup()
             return
+        if result == "open_abilities":
+            self.radial_menu.open_abilities_popup()
+            return
         # Action Surge: execute without closing the menu, then refresh slots
         if result == "standard:action_surge":
             self._handle_combat_action(result)

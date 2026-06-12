@@ -146,3 +146,103 @@ def test_plan_flags_asi_levels():
     assert level_up_plan(_fighter(1), RS)["is_asi"] is False
     assert level_up_plan(_fighter(3), RS)["is_asi"] is True     # next level is 4
     assert level_up_plan(_fighter(20), RS)["can_level"] is False
+
+
+# --- C3.x: learning spells on level-up (the leveled-paladin bug) -------------
+def _paladin(level=1, cha=16, spells=None, **over) -> Character:
+    base = dict(
+        id="pc", name="Sera", kind="pc", level=level, hp=12, max_hp=12,
+        xp=400_000,
+        abilities={Ability.STR: 16, Ability.DEX: 10, Ability.CON: 14,
+                   Ability.INT: 10, Ability.WIS: 12, Ability.CHA: cha},
+        sheet=CharacterSheet(race="human", char_class="paladin", background="acolyte",
+                             spellcasting_ability=Ability.CHA,
+                             spells_known=spells or [], spells_prepared=spells or []),
+    )
+    base.update(over)
+    return Character(**base)
+
+
+def _bard(level=1) -> Character:
+    return Character(
+        id="pc", name="Lyre", kind="pc", level=level, hp=10, max_hp=10, xp=400_000,
+        abilities={Ability.CHA: 16, Ability.DEX: 14, Ability.CON: 12,
+                   Ability.STR: 8, Ability.INT: 10, Ability.WIS: 10},
+        sheet=CharacterSheet(race="human", char_class="bard", background="acolyte",
+                             spellcasting_ability=Ability.CHA,
+                             cantrips_known=["dancing_lights", "light"],
+                             spells_known=["bane", "charm_person",
+                                           "cure_wounds", "detect_magic"]))
+
+
+def test_paladin_gains_prepared_spells_at_level_two():
+    """The reported bug: a leveled paladin arrived in the Arena spell-less.
+    L2 is where paladin casting begins — the plan demands CHA mod + level/2
+    picks and the build writes them to BOTH spells_known and spells_prepared."""
+    plan = level_up_plan(_paladin(1), RS)
+    sc = plan["spellcasting"]
+    assert sc["spells_needed"] == 4              # CHA +3 + level 2 // 2, min 1
+    assert sc["cantrips_needed"] == 0            # paladins have no cantrips
+    assert sc["max_spell_level"] == 1
+    assert sc["is_prepared_caster"] is True
+    assert {"id": "bless", "name": "Bless", "level": 1} in sc["spell_options"]
+
+    picks = ["bless", "cure_wounds", "shield_of_faith", "command"]
+    leveled = level_up(_paladin(1), RS, LevelUpChoice(new_spells=picks))
+    assert leveled.sheet.spells_known == picks
+    assert leveled.sheet.spells_prepared == picks  # prepared casters: picks ARE the list
+
+
+def test_leveled_paladin_spells_reach_the_arena():
+    """End to end: the new prepared spells stage as Arena actions."""
+    from oubliette.combat.arena_bridge import spell_actions
+
+    leveled = level_up(_paladin(1), RS, LevelUpChoice(
+        new_spells=["bless", "cure_wounds", "shield_of_faith", "command"]))
+    names = {a.name for a in spell_actions(leveled)}
+    assert {"Bless", "Cure Wounds", "Shield of Faith", "Command"} <= names
+
+
+def test_known_caster_grows_spells_known_only():
+    plan = level_up_plan(_bard(1), RS)
+    sc = plan["spellcasting"]
+    assert sc["spells_needed"] == 1 and sc["cantrips_needed"] == 0
+    leveled = level_up(_bard(1), RS, LevelUpChoice(new_spells=["animal_friendship"]))
+    assert "animal_friendship" in leveled.sheet.spells_known
+    assert leveled.sheet.spells_prepared == []   # known casters never prepare
+
+
+def test_spell_pick_firewall():
+    # wrong count
+    assert "calls for 4" in _why(_paladin(1), LevelUpChoice())
+    # off-list / wrong class
+    bad = ["fireball", "bless", "cure_wounds", "command"]
+    assert "not a Paladin spell" in _why(_paladin(1), LevelUpChoice(new_spells=bad))
+    # already on the sheet
+    have = _paladin(2, spells=["bless", "cure_wounds", "shield_of_faith", "command"])
+    msg = _why(have, LevelUpChoice(new_spells=["bless"]))
+    assert "already on the sheet" in msg
+    # non-casters pick nothing
+    assert "not a spellcaster" in _why(
+        _fighter(1), LevelUpChoice(new_spells=["bless"]))
+
+
+def test_asi_into_the_casting_stat_owes_an_extra_prepared_pick():
+    """L3->4 paladin, CHA 16 -> 18: prepared count 5 -> 6, so the ASI level
+    demands two picks where a non-casting ASI would demand one."""
+    pal = _paladin(3, spells=["bless", "cure_wounds", "shield_of_faith", "command"])
+    msg = _why(pal, LevelUpChoice(ability_increases={Ability.CHA: 2},
+                                  new_spells=["heroism"]))
+    assert "calls for 2" in msg
+    leveled = level_up(pal, RS, LevelUpChoice(
+        ability_increases={Ability.CHA: 2},
+        new_spells=["heroism", "divine_favor"]))
+    assert len(leveled.sheet.spells_prepared) == 6
+
+
+def test_catch_up_for_sheets_shorted_by_older_builds():
+    """A paladin who leveled before spell-learning existed owes the FULL
+    difference on the next level-up, not just the delta."""
+    shorted = _paladin(2, spells=[])              # L2 with zero spells (the bug)
+    plan = level_up_plan(shorted, RS)
+    assert plan["spellcasting"]["spells_needed"] == 4   # mod 3 + 3//2 = 4 at L3

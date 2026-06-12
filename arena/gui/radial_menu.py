@@ -254,6 +254,14 @@ class RadialMenu:
 
     def open_items_popup(self) -> None:
         """Transition from OPEN to ITEMS_POPUP."""
+        self._open_utility_popup(self._get_item_actions, "Items")
+
+    def open_abilities_popup(self) -> None:
+        """Transition from OPEN to the abilities list (same popup machinery as
+        Items, fed with class-ability actions and titled accordingly)."""
+        self._open_utility_popup(self._get_ability_actions, "Abilities")
+
+    def _open_utility_popup(self, getter, title: str) -> None:
         from arena.gui.items_popup import ItemsPopup
 
         if self.combat is None or self.creature_id is None:
@@ -262,7 +270,7 @@ class RadialMenu:
         if combatant is None:
             return
 
-        items = self._get_item_actions(combatant.creature)
+        items = getter(combatant.creature)
         action_used = self.combat.has_used_action
         bonus_used = self.combat.turn_resources.has_used_bonus_action
 
@@ -272,6 +280,7 @@ class RadialMenu:
             bonus_used=bonus_used,
             screen_width=self._screen_width,
             screen_height=self._screen_height,
+            title=title,
         )
         self.items_popup.reposition(
             self._center_screen,
@@ -676,14 +685,20 @@ class RadialMenu:
             is_disabled=action_used,
         ))
 
-        # 5. Item / utility actions — uncategorized actions from creature.actions
-        item_actions = self._get_item_actions(creature)
-        if item_actions:
-            for a in item_actions:
+        # 5. Item + ability actions — uncategorized actions from
+        # creature.actions, split by origin: carried items ("Items") vs class
+        # abilities like Lay on Hands ("Abilities").
+        for group_label, icon, slot_type, group_actions in (
+            ("Items", "IT", "items", self._get_item_actions(creature)),
+            ("Abilities", "AB", "ability", self._get_ability_actions(creature)),
+        ):
+            if not group_actions:
+                continue
+            for a in group_actions:
                 categorized_actions.add(a.name)
-            if len(item_actions) == 1:
-                # Single item: show directly
-                a = item_actions[0]
+            if len(group_actions) == 1:
+                # Single action: show directly
+                a = group_actions[0]
                 tip = [a.description] if a.description else [a.name]
                 uses_disabled = (
                     a.uses_per_rest is not None
@@ -693,7 +708,7 @@ class RadialMenu:
                 res_ok, _ = check_resource_cost(creature, a)
                 slots.append(RadialSlot(
                     label=a.name,
-                    slot_type="items",
+                    slot_type=slot_type,
                     action=a,
                     icon_text=self._make_icon(a.name),
                     tooltip_lines=tip,
@@ -701,13 +716,12 @@ class RadialMenu:
                 ))
             else:
                 # Multiple: group slot
-                count = len(item_actions)
                 slots.append(RadialSlot(
-                    label="Items",
-                    slot_type="items",
+                    label=group_label,
+                    slot_type=slot_type,
                     action=None,
-                    icon_text="IT",
-                    tooltip_lines=[f"{count} item(s) available"],
+                    icon_text=icon,
+                    tooltip_lines=[f"{len(group_actions)} available"],
                     is_disabled=action_used,
                 ))
 
@@ -848,12 +862,9 @@ class RadialMenu:
         return result
 
     @staticmethod
-    def _get_item_actions(creature) -> list[Action]:
-        """Return non-attack, non-spell actions (potions, scrolls, etc.).
-
-        These are actions that don't fit into weapon attacks, cantrips,
-        or leveled spells categories — typically consumables and utility.
-        """
+    def _get_utility_actions(creature) -> list[Action]:
+        """Return non-attack, non-spell actions — consumable uses and class
+        abilities. Split by `source_item` into the Items and Abilities slots."""
         result: list[Action] = []
         for action in creature.actions:
             # Skip weapon attacks
@@ -883,6 +894,17 @@ class RadialMenu:
             # What's left: consumable uses, class features, etc.
             result.append(action)
         return result
+
+    @classmethod
+    def _get_item_actions(cls, creature) -> list[Action]:
+        """Utility actions that come from carried items (potions etc.)."""
+        return [a for a in cls._get_utility_actions(creature) if a.source_item]
+
+    @classmethod
+    def _get_ability_actions(cls, creature) -> list[Action]:
+        """Utility actions that are class abilities (Lay on Hands, Wild
+        Shape, Stillness of Mind...) — not items, so they get their own slot."""
+        return [a for a in cls._get_utility_actions(creature) if not a.source_item]
 
     @staticmethod
     def _make_icon(name: str) -> str:
@@ -1074,6 +1096,11 @@ class RadialMenu:
             else:
                 # Group slot — open items popup
                 return "open_items"
+        elif slot.slot_type == "ability":
+            if slot.action:
+                return f"action:{slot.action.name}"
+            else:
+                return "open_abilities"
         elif slot.slot_type == "bonus":
             if slot.action:
                 # Named bonus action (e.g., Second Wind)

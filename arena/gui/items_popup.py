@@ -30,7 +30,9 @@ class ItemsPopup:
         bonus_used: bool,
         screen_width: int = 1280,
         screen_height: int = 720,
+        title: str = "Items",
     ) -> None:
+        self.title = title
         self.items = list(items)
         self.action_used = action_used
         self.bonus_used = bonus_used
@@ -112,7 +114,7 @@ class ItemsPopup:
 
         # Title
         font = get_font(14)
-        title_surf = font.render("Items", True, parse_color(COLORS["text_primary"]))
+        title_surf = font.render(self.title, True, parse_color(COLORS["text_primary"]))
         surface.blit(
             title_surf,
             (self.rect.x + self.PADDING + 2, self.rect.y + self.PADDING),

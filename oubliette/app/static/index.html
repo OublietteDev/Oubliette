@@ -2564,7 +2564,8 @@ async function openLevelUp(charId) {
   try { luPlan = await (await fetch(`/api/levelup/plan?char_id=${encodeURIComponent(charId)}`)).json(); }
   catch (e) { return; }
   if (!luPlan.can_level) { addMessage("System", "Cannot level up: " + (luPlan.reason || "unknown"), "system"); return; }
-  lu = { hp_method: "average", asi_mode: "asi", increases: ["str", "dex"], feat: null, subclass: null };
+  lu = { hp_method: "average", asi_mode: "asi", increases: ["str", "dex"], feat: null, subclass: null,
+         new_cantrips: [], new_spells: [] };
   if (luPlan.needs_subclass && luPlan.subclass_options.length) lu.subclass = luPlan.subclass_options[0].id;
   $("lu-title").textContent = `Advance to Level ${luPlan.next_level}`;
   $("lu-note").textContent = luPlan.new_features && luPlan.new_features.length
@@ -2601,7 +2602,7 @@ function renderLuForm() {
       [0, 1].forEach(i => {
         row.appendChild(selectField(`Increase ${i + 1} (+1)`, lu.increases[i],
           ABIL_ORDER.map(a => ({ value: a, label: a.toUpperCase() })),
-          v => { lu.increases[i] = v; }));
+          v => { lu.increases[i] = v; renderLuForm(); }));
       });
       root.appendChild(row);
       root.appendChild(el("div", "cg-hint", "Pick the same ability twice for +2 to it."));
@@ -2624,6 +2625,56 @@ function renderLuForm() {
     sel.addEventListener("change", () => { lu.subclass = sel.value; });
     root.appendChild(sel);
   }
+  // new cantrips / spells (casters; prepared casters owe one more if the ASI
+  // raises their casting modifier — luSpellsNeeded mirrors the server math)
+  if (luPlan.spellcasting) {
+    const sc = luPlan.spellcasting;
+    const needC = sc.cantrips_needed, needS = luSpellsNeeded();
+    while (lu.new_cantrips.length > needC) lu.new_cantrips.pop();
+    while (lu.new_spells.length > needS) lu.new_spells.pop();
+    const fill = (picks, options, n) => {
+      for (let i = picks.length; i < n; i++) {
+        const next = options.find(o => !picks.includes(o.id));
+        picks.push(next ? next.id : "");
+      }
+    };
+    fill(lu.new_cantrips, sc.cantrip_options, needC);
+    fill(lu.new_spells, sc.spell_options, needS);
+    const pickRow = (label, picks, options, i) => {
+      const taken = picks.filter((_, j) => j !== i);
+      return selectField(label, picks[i],
+        options.filter(o => o.id === picks[i] || !taken.includes(o.id))
+          .map(o => ({ value: o.id, label: o.level ? `${o.name} (L${o.level})` : o.name })),
+        v => { picks[i] = v; renderLuForm(); });
+    };
+    if (needC > 0) {
+      root.appendChild(el("label", null, `New cantrip${needC > 1 ? "s" : ""}`));
+      const row = el("div", "cg-row");
+      for (let i = 0; i < needC; i++) row.appendChild(pickRow(`Cantrip ${i + 1}`, lu.new_cantrips, sc.cantrip_options, i));
+      root.appendChild(row);
+    }
+    if (needS > 0) {
+      root.appendChild(el("label", null, sc.is_prepared_caster
+        ? `Prepare ${needS} new spell${needS > 1 ? "s" : ""}`
+        : `Learn ${needS} new spell${needS > 1 ? "s" : ""}`));
+      const row = el("div", "cg-row");
+      for (let i = 0; i < needS; i++) row.appendChild(pickRow(`Spell ${i + 1}`, lu.new_spells, sc.spell_options, i));
+      root.appendChild(row);
+    }
+  }
+}
+function luSpellsNeeded() {
+  const sc = luPlan.spellcasting; if (!sc) return 0;
+  let need = sc.spells_needed;
+  if (sc.is_prepared_caster && luPlan.is_asi && lu.asi_mode === "asi") {
+    const inc = {}; lu.increases.forEach(a => inc[a] = (inc[a] || 0) + 1);
+    const bump = inc[sc.casting_ability] || 0;
+    if (bump) {
+      const mod = s => Math.floor((s - 10) / 2);
+      need += Math.max(0, mod(sc.casting_score + bump) - mod(sc.casting_score));
+    }
+  }
+  return need;
 }
 async function confirmLevelUp() {
   const body = { char_id: luCharId, hp_method: lu.hp_method };
@@ -2632,6 +2683,10 @@ async function confirmLevelUp() {
     else { const inc = {}; lu.increases.forEach(a => inc[a] = (inc[a] || 0) + 1); body.ability_increases = inc; }
   }
   if (luPlan.needs_subclass) body.subclass = lu.subclass;
+  if (luPlan.spellcasting) {
+    body.new_cantrips = lu.new_cantrips.filter(Boolean);
+    body.new_spells = lu.new_spells.filter(Boolean);
+  }
   const res = await fetch("/api/levelup", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
