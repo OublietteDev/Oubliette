@@ -76,6 +76,10 @@ class Attack(BaseModel):
     # Set on magic-weapon attacks (e.g. by the Oubliette bridge for +X gear);
     # spell attacks and "Magic Weapons" monsters are detected without this flag.
     magical: bool = False
+    # The attack hits without a roll (Magic Missile darts). Never crits;
+    # range/LOS checks still apply. Distinct from Action.recurring_auto_hit,
+    # which only covers re-uses of sustained spells (Witch Bolt).
+    auto_hit: bool = False
 
 
 class SavingThrowEffect(BaseModel):

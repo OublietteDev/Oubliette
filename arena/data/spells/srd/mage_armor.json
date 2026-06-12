@@ -1,0 +1,20 @@
+{
+  "name": "Mage Armor",
+  "description": "You touch a willing creature who isn't wearing armor, and a protective magical force surrounds it until the spell ends. The target's base AC becomes 13 + its Dexterity modifier. The spell ends if the target dons armor or if you dismiss the spell as an action.",
+  "action_type": "action",
+  "range": 5,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "self",
+  "buff_effects": [
+    {
+      "stat": "ac",
+      "modifier_type": "set",
+      "value": "13+DEX"
+    }
+  ]
+}

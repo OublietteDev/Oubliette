@@ -191,8 +191,16 @@ def _resolve_zone_damage(
             total_dmg = 0
 
     if total_dmg > 0:
+        # Zones only ever come from spells, so their damage is magical —
+        # it overcomes "B/P/S from nonmagical attacks" defenses.
+        from arena.combat.damage import DamagePacket
+
+        packet = DamagePacket(
+            amount=total_dmg, dtype=zone.damage_type,
+            source=zone.name, tags={"magical"},
+        )
         dmg_event, dp_events = apply_damage(
-            target, total_dmg, zone.damage_type, creature_id=creature_id,
+            target, [packet], creature_id=creature_id,
         )
         dmg_event.source_id = zone.caster_id
         dmg_event.target_id = creature_id

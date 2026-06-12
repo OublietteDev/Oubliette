@@ -190,11 +190,17 @@ def _potion_catalog() -> dict[str, SrdEquipment]:
         "oil_of_slipperiness": SrdEquipment(
             id="oil_of_slipperiness", name="Oil of Slipperiness", category="consumable",
             item_type="potion", rarity="uncommon", mechanics="none"),
-        # structured but non-healing (ability buff) — a B3 family, skipped in B1
+        # structured ability-SET potion — drinkable since B5 (engine "set" buff)
         "potion_of_giant_strength": SrdEquipment(
             id="potion_of_giant_strength", name="Potion of Hill Giant Strength",
             category="consumable", item_type="potion", mechanics="structured",
             consumable=ConsumableMechanics(ability_set={"str": 21}, duration="1 hour")),
+        # Belts park ability_set in the same mechanics slot but are WORN gear —
+        # they must never become drink actions.
+        "belt_of_giant_strength": SrdEquipment(
+            id="belt_of_giant_strength", name="Belt of Hill Giant Strength",
+            category="gear", item_type="wondrous", mechanics="structured",
+            consumable=ConsumableMechanics(ability_set={"str": 21})),
     }
 
 
@@ -202,13 +208,12 @@ def test_healing_potions_in_inventory_become_one_drink_action():
     pc = _pc(inventory=[
         ItemStack(item_id="potion_of_healing", qty=2),
         ItemStack(item_id="oil_of_slipperiness"),
-        ItemStack(item_id="potion_of_giant_strength"),
         ItemStack(item_id="some_pack_trinket"),          # not in the SRD catalog
     ])
     creature = character_to_player(pc, _potion_catalog())
 
     drinks = [a for a in creature.actions if a.source_item]
-    assert len(drinks) == 1                              # B1 scope: healing only
+    assert len(drinks) == 1                              # mechanics:none stays out
     drink = drinks[0]
     assert drink.name == "Potion of Healing"
     assert drink.healing == "2d4+2"
@@ -306,6 +311,48 @@ def test_drinking_a_resistance_potion_grants_resistance_in_the_real_engine():
     assert res.success
     assert "fire" in [r.lower() for r in get_effective_damage_resistances(creature)]
     assert drink.current_uses == 0                        # reported by handoff v2
+
+
+# --- B5: ability-SET potions (Giant Strength) ------------------------------
+
+def test_giant_strength_potion_becomes_a_set_buff_drink_action():
+    pc = _pc(inventory=[ItemStack(item_id="potion_of_giant_strength")])
+    (drink,) = consumable_actions(pc, _potion_catalog())
+    assert drink.healing is None
+    (buff,) = drink.buff_effects
+    assert buff.stat == "strength" and buff.modifier_type == "set"
+    assert buff.value == 21
+    assert "Strength becomes 21" in drink.description
+    assert drink.source_item_id == "potion_of_giant_strength"
+
+
+def test_belts_with_ability_set_are_never_drinkable():
+    pc = _pc(inventory=[ItemStack(item_id="belt_of_giant_strength")])
+    assert consumable_actions(pc, _potion_catalog()) == []
+
+
+def test_drinking_giant_strength_sets_str_in_the_real_engine():
+    from pathlib import Path
+
+    from arena.combat.actions import resolve_effect
+    from arena.combat.manager import CombatManager
+    from arena.combat.stat_modifiers import get_effective_ability_score
+
+    pc = _pc(inventory=[ItemStack(item_id="potion_of_giant_strength_hill")])
+    plan = build_encounter([pc], [enemy_from_template(ENEMY_TEMPLATES["bandit"])],
+                           TerrainSpec(), catalog=RS.equipment)
+    cm = CombatManager()
+    cm.load_encounter(plan.encounter, Path("."))
+    pc_cid, combatant = next((cid, c) for cid, c in cm.combatants.items()
+                             if c.team == "player")
+    creature = combatant.creature
+    assert get_effective_ability_score(creature, "strength") < 21
+    drink = next(a for a in creature.actions if a.source_item)
+
+    res = resolve_effect(creature, pc_cid, creature, pc_cid, drink, cm.grid)
+    assert res.success
+    assert get_effective_ability_score(creature, "strength") == 21
+    assert drink.current_uses == 0
 
 
 # --- B2: slot/resource state IN, spent state OUT --------------------------

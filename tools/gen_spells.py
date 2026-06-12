@@ -17,6 +17,7 @@ combat families are emitted (D-COMBAT-2 — the cap is the design, not a failure
   - spell-attack damage  (attack_type + damage)          e.g. Fire Bolt, Guiding Bolt
   - save-based damage    (dc + damage [+ area_of_effect]) e.g. Fireball, Sacred Flame
   - healing              (heal_at_slot_level)             e.g. Cure Wounds
+  - curated rescues      (_CURATED overlays, B5)          Magic Missile, Scorching Ray, Mage Armor
 
 Everything else is skipped with a reason into `_manifest.json` (control/buff
 spells carry no structured mechanics in the source; rituals/long casts have no
@@ -55,6 +56,54 @@ _AOE_TARGET = {"sphere": "area_sphere", "cube": "area_cube", "cone": "area_cone"
 _PLACEHOLDER_ABILITY = "intelligence"
 
 _DICE_RE = re.compile(r"^\s*(\d+)d(\d+)\s*(?:\+\s*(\d+|MOD))?\s*$")
+
+# Spells the pattern rules can't read but the engine CAN run (B5) — curated
+# overlays applied on top of the normal base fields. Three rescues:
+#   magic_missile — the source's damage rows are dart TOTALS ("3d4 + 3",
+#     "4d4 + 4", ... = +1 dart per slot level) with no attack_type; emitted as
+#     per-dart auto-hit attacks (Attack.auto_hit) riding the engine's
+#     multi-target volley (target_count / upcast_target_count).
+#   scorching_ray — the source is simply MISSING its attack_type field (the
+#     prose says "Make a ranged spell attack for each ray"); per-ray 2d6 fire,
+#     +1 ray per slot level above 2nd.
+#   mage_armor — "base AC becomes 13 + Dex": an AC-set buff with FLOOR
+#     semantics; the engine evaluates the "13+DEX" formula per-wearer, so
+#     nothing needs baking by the bridge.
+_CURATED: dict[str, dict] = {
+    "magic_missile": {
+        "target_type": "one_creature",
+        "target_count": 3,
+        "upcast_target_count": 1,
+        "attack": {
+            "name": "Magic Missile",
+            "attack_type": "ranged_spell",
+            "ability": _PLACEHOLDER_ABILITY,       # bridge rewrites
+            "reach": 5,
+            "range_normal": 120,
+            "auto_hit": True,
+            "damage": [{"dice": "1d4", "damage_type": "force", "bonus": 1}],
+        },
+    },
+    "scorching_ray": {
+        "target_type": "one_creature",
+        "target_count": 3,
+        "upcast_target_count": 1,
+        "attack": {
+            "name": "Scorching Ray",
+            "attack_type": "ranged_spell",
+            "ability": _PLACEHOLDER_ABILITY,       # bridge rewrites
+            "reach": 5,
+            "range_normal": 120,
+            "damage": [{"dice": "2d6", "damage_type": "fire", "bonus": 0}],
+        },
+    },
+    "mage_armor": {
+        "target_type": "self",
+        "buff_effects": [
+            {"stat": "ac", "modifier_type": "set", "value": "13+DEX"},
+        ],
+    },
+}
 
 
 def _parse_dice(expr: str) -> tuple[int, int, str | None] | None:
@@ -147,6 +196,12 @@ def map_spell(s: dict) -> tuple[dict | None, str | None]:
             return None, f"area type {aoe.get('type')!r} not expressible"
         base["target_type"] = target
         base["area_size"] = int(aoe.get("size", 5))
+
+    # --- curated rescues (B5) ------------------------------------------------
+    curated = _CURATED.get(s["index"].replace("-", "_"))
+    if curated is not None:
+        base.update(curated)
+        return base, None
 
     # --- healing -----------------------------------------------------------
     if heal_rows:

@@ -412,6 +412,37 @@ def resolve_attack_hit(
     # Determine melee vs ranged
     is_melee = attack.attack_type.startswith("melee")
 
+    # Auto-hit attacks (Magic Missile darts): no roll, no crit — range and
+    # LOS were already checked above, so the dart simply strikes.
+    if attack.auto_hit:
+        events.append(CombatEvent(
+            event_type=CombatEventType.ATTACK_ROLL,
+            message=(
+                f"{attacker.name} strikes {target.name} with {action.name} "
+                f"- automatic hit!"
+            ),
+            source_id=attacker_id,
+            target_id=target_id,
+            details={
+                "auto_hit": True,
+                "hit": True,
+                "critical": False,
+                "action_name": action.name,
+                "animation": action.animation,
+                "attack_type": attack.attack_type,
+            },
+        ))
+        return AttackHitResult(
+            hit=True, critical=False, natural_roll=0, modifier=0,
+            total_roll=0, target_ac=get_effective_armor_class(target),
+            effective_advantage=0,
+            events=events,
+            attacker=attacker, attacker_id=attacker_id,
+            target=target, target_id=target_id,
+            action=action, attack=attack, combatants=combatants,
+            cast_level=cast_level,
+        )
+
     # Advantage calculation
     condition_adv = get_attack_advantage(attacker, target, is_melee=is_melee)
     if has_condition(attacker, Condition.HELPED):
@@ -1085,6 +1116,12 @@ def resolve_effect(
                     source_id=user_id,
                     target_id=target_id,
                 ))
+
+            # Spell save damage (Fireball, breath weapons from spells, ...)
+            # overcomes "nonmagical" defenses, same as the attack path.
+            if attack_is_magical(user, action, None):
+                for p in packets:
+                    p.tags.add("magical")
 
             if save_success:
                 if save.damage_on_success == "half":

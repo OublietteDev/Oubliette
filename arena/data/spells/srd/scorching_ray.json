@@ -1,0 +1,29 @@
+{
+  "name": "Scorching Ray",
+  "description": "You create three rays of fire and hurl them at targets within range. You can hurl them at one target or several.",
+  "action_type": "action",
+  "range": 120,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_creature",
+  "target_count": 3,
+  "upcast_target_count": 1,
+  "attack": {
+    "name": "Scorching Ray",
+    "attack_type": "ranged_spell",
+    "ability": "intelligence",
+    "reach": 5,
+    "range_normal": 120,
+    "damage": [
+      {
+        "dice": "2d6",
+        "damage_type": "fire",
+        "bonus": 0
+      }
+    ]
+  }
+}

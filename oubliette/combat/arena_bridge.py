@@ -272,17 +272,29 @@ def _drink_action(item: SrdEquipment, qty: int) -> Action:
     ``consumables_used`` diff is exactly what the fight consumed. ``source_item_id``
     carries the catalog id back out so the story side debits the right stack."""
     consumable = item.consumable
-    assert consumable is not None and (consumable.healing or consumable.grants_resistance)
+    assert consumable is not None and (
+        consumable.healing or consumable.grants_resistance or consumable.ability_set
+    )
     if consumable.healing:
         effect = f"regain {consumable.healing} hit points"
         healing, buffs = consumable.healing, []
-    else:
+    elif consumable.grants_resistance:
         # The buff is indefinite engine-side: the SRD durations ("1 hour")
         # outlast any encounter, and buffs end with the combat anyway.
         effect = f"resistance to {consumable.grants_resistance} damage"
         healing = None
         buffs = [BuffEffect(stat="damage_resistance", modifier_type="resistance",
                             value=consumable.grants_resistance)]
+    else:
+        # ability_set (Giant Strength): an engine "set" buff — floor semantics,
+        # exactly the SRD's "no effect if your score is already equal or higher".
+        healing = None
+        parts, buffs = [], []
+        for short, score in consumable.ability_set.items():
+            ability = _ABILITY_LONG.get(short, short)
+            parts.append(f"{ability.capitalize()} becomes {score}")
+            buffs.append(BuffEffect(stat=ability, modifier_type="set", value=score))
+        effect = ", ".join(parts)
     bonus = "bonus" in (consumable.action or "").lower()
     return Action(
         name=item.name,
@@ -301,12 +313,17 @@ def _drink_action(item: SrdEquipment, qty: int) -> Action:
 
 
 def _drinkable(item: SrdEquipment | None) -> bool:
-    """B3 scope: structured consumables the engine can express today — healing
-    dice (B1) and resistance grants. `ability_set` potions (Giant Strength) wait
-    on an engine buff that can SET a score; poisons wait on blade-coating."""
+    """Structured consumables the engine can express: healing dice (B1),
+    resistance grants (B3), and `ability_set` potions like Giant Strength
+    (B5 — the engine's "set" buff). Poisons still wait on blade-coating."""
     if item is None or item.mechanics != "structured" or item.consumable is None:
         return False
-    return bool(item.consumable.healing or item.consumable.grants_resistance)
+    # Belts of Giant Strength carry ability_set in the same mechanics slot but
+    # are WORN gear (category "gear"), not drinkable — only true consumables.
+    if item.category != "consumable":
+        return False
+    return bool(item.consumable.healing or item.consumable.grants_resistance
+                or item.consumable.ability_set)
 
 
 def consumable_actions(

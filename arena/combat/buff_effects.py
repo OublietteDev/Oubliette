@@ -38,6 +38,26 @@ def get_buff_ac_bonus(creature: Creature) -> int:
     return total
 
 
+def get_buff_stat_set_values(creature: Creature, stat: str) -> list[int | str]:
+    """Raw "set" values from active buffs for one stat (floor semantics).
+
+    Returns the unevaluated values — ints (Giant Strength 21) or formula
+    strings ("13+DEX" for Mage Armor).  Evaluation against the creature
+    happens in stat_modifiers (which owns ability lookups); keeping this a
+    raw query avoids a circular import.
+    """
+    values: list[int | str] = []
+    stat_lower = stat.lower()
+    for buff in creature.active_buffs:
+        for mod in buff.modifiers:
+            if mod.stat.lower() == stat_lower and mod.modifier_type == "set":
+                if isinstance(mod.value, (int, float)):
+                    values.append(int(mod.value))
+                elif isinstance(mod.value, str):
+                    values.append(mod.value)
+    return values
+
+
 def get_buff_speed_bonus(creature: Creature) -> int:
     """Sum all flat speed bonuses from active buffs (e.g., Longstrider +10)."""
     total = 0

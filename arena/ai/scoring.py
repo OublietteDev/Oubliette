@@ -135,9 +135,33 @@ def score_effect_action(
     if distance_hexes > action_range_hexes:
         base -= (distance_hexes - action_range_hexes) * 10
 
-    # Bonus for area effects when multiple enemies are present
-    if action.target_type.value.startswith("area_") and len(context.enemies) > 1:
-        base *= 1.0 + 0.3 * (len(context.enemies) - 1)
+    # Area effects: real geometry (B5). Execution centers the blast on the
+    # CASTER (_resolve_effect_targets), so measure from me — enemies actually
+    # inside raise the score; allies inside are friendly fire and lower it.
+    if action.target_type.value.startswith("area_"):
+        area_feet = action.area_size or action.range
+        radius_hexes = area_feet / 5 if area_feet else 0
+        if context.me.position is not None and radius_hexes > 0:
+            enemies_hit = sum(
+                1 for e in context.enemies
+                if e.position is not None
+                and creature_distance(context.me, e) <= radius_hexes
+            )
+            allies_hit = sum(
+                1 for a in context.allies
+                if a.position is not None
+                and creature_distance(context.me, a) <= radius_hexes
+            )
+            if enemies_hit > 1:
+                base *= 1.0 + 0.3 * (enemies_hit - 1)
+            if allies_hit:
+                penalty = 25.0 * allies_hit
+                if profile.protects_allies:
+                    penalty *= 2.0
+                base -= penalty
+        elif len(context.enemies) > 1:
+            # No geometry available — fall back to the old crude group bonus
+            base *= 1.0 + 0.3 * (len(context.enemies) - 1)
 
     # Condition application bonus (e.g., frightened, restrained)
     if action.saving_throw and action.saving_throw.conditions_on_fail:

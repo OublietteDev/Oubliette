@@ -10,13 +10,23 @@ Pattern follows condition_effects.py: pure functions, no side effects.
 
 from arena.models.character import Creature
 from arena.models.items import Item, ItemType, EquipmentSlot
+import re
+
 from arena.combat.buff_effects import (
     get_buff_ac_bonus,
     get_buff_speed_bonus,
     get_buff_speed_multiplier,
     get_buff_damage_resistances,
     get_buff_damage_immunities,
+    get_buff_stat_set_values,
 )
+
+# AC "set" formula: "13+DEX" (Mage Armor), "10+WIS", a bare "16" (Barkskin), ...
+_AC_SET_FORMULA = re.compile(r"^\s*(\d+)\s*(?:\+\s*(STR|DEX|CON|INT|WIS|CHA))?\s*$")
+_ABILITY_FROM_SHORT = {
+    "STR": "strength", "DEX": "dexterity", "CON": "constitution",
+    "INT": "intelligence", "WIS": "wisdom", "CHA": "charisma",
+}
 
 
 # ── Equipment Helpers ─────────────────────────────────────────────────
@@ -116,7 +126,13 @@ def get_effective_ability_score(creature: Creature, ability: str) -> int:
         feat.bonus_ability_scores.get(ability.lower(), 0)
         for feat in _get_features(creature)
     )
-    return min(30, base + equip_bonus + feat_bonus + feature_bonus)
+    score = base + equip_bonus + feat_bonus + feature_bonus
+    # "set" buffs (Potion of Giant Strength: "your score is 21; no effect if
+    # it's already equal or higher") — a floor, per the SRD wording.
+    for set_value in get_buff_stat_set_values(creature, ability):
+        if isinstance(set_value, int):
+            score = max(score, set_value)
+    return min(30, score)
 
 
 def get_effective_ability_modifier(creature: Creature, ability: str) -> int:
@@ -173,9 +189,12 @@ def get_effective_armor_class(creature: Creature) -> int:
     Returns:
         The computed effective AC as an integer.
     """
-    # Backward compatibility: no equipment → use stored AC (+ any active buffs)
+    # Backward compatibility: no equipment → use stored AC (+ any active buffs).
+    # AC-"set" buffs (Mage Armor) floor the BASE before flat bonuses, so the
+    # Shield spell's +5 still stacks on top of the new base — as in 5e.
     if not creature.equipment:
-        return creature.armor_class + get_buff_ac_bonus(creature)
+        base_ac = max(creature.armor_class, _get_buff_ac_floor(creature))
+        return base_ac + get_buff_ac_bonus(creature)
 
     armor = get_equipped_armor(creature)
     shield = get_equipped_shield(creature)
@@ -218,10 +237,36 @@ def get_effective_armor_class(creature: Creature) -> int:
     # Add passive AC bonus from other equipped items, feats, and features
     base_ac += get_passive_ac_bonus(creature)
 
+    # AC-"set" buffs floor the computed base (before flat buff bonuses)
+    base_ac = max(base_ac, _get_buff_ac_floor(creature))
+
     # Add temporary AC bonus from active buffs (Shield, Haste, etc.)
     base_ac += get_buff_ac_bonus(creature)
 
     return base_ac
+
+
+def _get_buff_ac_floor(creature: Creature) -> int:
+    """The highest AC "set" value among active buffs, evaluated for this creature.
+
+    Values may be plain ints (Barkskin 16) or "13+DEX"-style formulas
+    (Mage Armor), resolved with the creature's effective ability modifier.
+    Returns 0 when no AC-set buff is active (max() then keeps the normal AC).
+    """
+    floor = 0
+    for set_value in get_buff_stat_set_values(creature, "ac"):
+        if isinstance(set_value, int):
+            floor = max(floor, set_value)
+            continue
+        m = _AC_SET_FORMULA.match(set_value)
+        if m is None:
+            continue
+        value = int(m.group(1))
+        if m.group(2):
+            ability = _ABILITY_FROM_SHORT[m.group(2)]
+            value += get_effective_ability_modifier(creature, ability)
+        floor = max(floor, value)
+    return floor
 
 
 # ── Speed ────────────────────────────────────────────────────────────

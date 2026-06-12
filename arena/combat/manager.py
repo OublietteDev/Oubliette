@@ -1450,37 +1450,65 @@ class CombatManager:
 
         effective_count = get_effective_target_count(action, self._cast_level)
 
-        # ── Multi-target attacks (Eldritch Blast beams, etc.) ──────────
+        # ── Multi-target attacks (Eldritch Blast beams, Magic Missile darts) ──
         if effective_count > 1:
-            all_events: list[CombatEvent] = []
-            any_success = False
-            for i in range(effective_count):
-                # Re-fetch target in case it died from a previous hit
-                tc = self.combatants.get(target_id)
-                if tc is None:
-                    break
-                single = resolve_attack(
-                    attacker=combatant.creature,
-                    attacker_id=combatant.creature_id,
-                    target=tc.creature,
-                    target_id=target_id,
-                    action=action,
-                    grid=self.grid,
-                    combatants=self.combatants,
-                    attacker_pos=combatant.position,
-                    target_pos=tc.position,
-                    cast_level=self._cast_level,
+            from arena.combat.actions import check_resource_cost
+
+            # Affordability gate BEFORE the volley: once the first dart blanks
+            # the cost (below), later darts could no longer fail it themselves.
+            can_use, reason = check_resource_cost(
+                combatant.creature, action, self._cast_level,
+            )
+            if not can_use:
+                result = ActionResult(
+                    events=[CombatEvent(
+                        event_type=CombatEventType.INFO,
+                        message=reason,
+                        source_id=combatant.creature_id,
+                    )],
+                    success=False,
                 )
-                all_events.extend(single.events)
-                if single.success:
-                    any_success = True
-                    if combatant.position is not None:
-                        fm_events = self._apply_pending_forced_movement(
-                            single.events, combatant.creature_id,
-                            combatant.position,
-                        )
-                        all_events.extend(fm_events)
-            result = ActionResult(events=all_events, success=any_success)
+            else:
+                all_events: list[CombatEvent] = []
+                any_success = False
+                # One cast = one cost: each resolve_attack deducts
+                # resource_cost, so blank it after the first beam/dart (same
+                # pattern as the multi-target effect path) and restore once
+                # the volley is done.
+                saved_cost = dict(action.resource_cost)
+                saved_uses = action.uses_per_rest
+                for i in range(effective_count):
+                    # Re-fetch target in case it died from a previous hit
+                    tc = self.combatants.get(target_id)
+                    if tc is None:
+                        break
+                    if i > 0:
+                        action.resource_cost = {}
+                        action.uses_per_rest = None
+                    single = resolve_attack(
+                        attacker=combatant.creature,
+                        attacker_id=combatant.creature_id,
+                        target=tc.creature,
+                        target_id=target_id,
+                        action=action,
+                        grid=self.grid,
+                        combatants=self.combatants,
+                        attacker_pos=combatant.position,
+                        target_pos=tc.position,
+                        cast_level=self._cast_level,
+                    )
+                    all_events.extend(single.events)
+                    if single.success:
+                        any_success = True
+                        if combatant.position is not None:
+                            fm_events = self._apply_pending_forced_movement(
+                                single.events, combatant.creature_id,
+                                combatant.position,
+                            )
+                            all_events.extend(fm_events)
+                action.resource_cost = saved_cost
+                action.uses_per_rest = saved_uses
+                result = ActionResult(events=all_events, success=any_success)
         else:
             # Two-phase: hit check, then evaluate damage reduction, then damage
             hit_result = resolve_attack_hit(
@@ -2844,18 +2872,16 @@ class CombatManager:
         from arena.grid.footprint import min_distance_between
 
         # Determine which teams are valid targets.
-        # Healing / ally-targeted effects hit allies; everything else
-        # (damage saves, conditions) hits enemies.
+        # Beneficial AoE only reaches the caster's side; harmful AoE hits
+        # EVERY team — friendly fire is real (B5): allies standing in the
+        # blast take it like anyone else, 5e-style.
         caster_team = combatant.team
         if action.healing and not action.saving_throw:
             # Beneficial AoE (e.g., Mass Cure Wounds) — target allies
             target_teams = {caster_team}
         else:
-            # Harmful AoE (e.g., Spirit Guardians, breath weapons) — target enemies
-            target_teams = {
-                t for t in {c.team for c in self.combatants.values()}
-                if t != caster_team
-            }
+            # Harmful AoE (e.g., breath weapons, Thunderwave) — everyone in it
+            target_teams = {c.team for c in self.combatants.values()}
 
         affected: list[str] = []
         for cid, c in self.combatants.items():
@@ -2905,15 +2931,15 @@ class CombatManager:
 
         from arena.grid.footprint import min_distance_between
 
-        # Team filtering — same logic as _resolve_effect_targets
+        # Team filtering — same logic as _resolve_effect_targets:
+        # beneficial AoE is allies-only, harmful AoE hits every team
+        # (friendly fire is real — and here even the caster, who may well
+        # be standing in their own Fireball).
         caster_team = combatant.team
         if action.healing and not action.saving_throw:
             target_teams = {caster_team}
         else:
-            target_teams = {
-                t for t in {c.team for c in self.combatants.values()}
-                if t != caster_team
-            }
+            target_teams = {c.team for c in self.combatants.values()}
 
         affected: list[str] = []
         for cid, c in self.combatants.items():
@@ -3958,8 +3984,13 @@ class CombatManager:
 
                 if total > 0:
                     dmg_type = action.teleport_origin_damage_type or "thunder"
+                    # Teleport-origin bursts are spell damage → magical
+                    from arena.combat.damage import DamagePacket
                     dmg_event, dp_events = apply_damage(
-                        c.creature, total, dmg_type, creature_id=cid,
+                        c.creature,
+                        [DamagePacket(amount=total, dtype=dmg_type,
+                                      source=action.name, tags={"magical"})],
+                        creature_id=cid,
                     )
                     dmg_event.source_id = combatant.creature_id
                     dmg_event.target_id = cid
@@ -4362,8 +4393,14 @@ class CombatManager:
                         f"auto-hit for {damage_dice} {damage_type} damage."
                     ),
                 ))
+                # Recurring spell damage (Witch Bolt) is magical
+                from arena.combat.damage import DamagePacket
                 dmg_event, extra_events = apply_damage(
-                    target_combatant.creature, total, damage_type, target_id,
+                    target_combatant.creature,
+                    [DamagePacket(amount=total, dtype=damage_type,
+                                  source=recurring.action_name,
+                                  tags={"magical"})],
+                    creature_id=target_id,
                 )
                 events.append(dmg_event)
                 events.extend(extra_events)
@@ -4407,8 +4444,14 @@ class CombatManager:
                     total = 0
 
                 if total > 0:
+                    # Recurring spell damage (Call Lightning, Sunbeam) is magical
+                    from arena.combat.damage import DamagePacket
                     dmg_event, extra_events = apply_damage(
-                        target_combatant.creature, total, damage_type, target_id,
+                        target_combatant.creature,
+                        [DamagePacket(amount=total, dtype=damage_type,
+                                      source=recurring.action_name,
+                                      tags={"magical"})],
+                        creature_id=target_id,
                     )
                     events.append(dmg_event)
                     events.extend(extra_events)

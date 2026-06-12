@@ -65,7 +65,10 @@ def test_manifest_accounts_for_every_srd_spell():
     assert len(manifest["generated"]) + len(manifest["skipped"]) == 319
     # the inexpressible families are skipped deliberately, not silently
     assert "hold_person" in manifest["skipped"]   # control: no structured data
-    assert "magic_missile" in manifest["skipped"]  # auto-hit: no engine route
+    # B5 curated rescues moved out of the skip list
+    assert "magic_missile" in manifest["generated"]
+    assert "scorching_ray" in manifest["generated"]
+    assert "mage_armor" in manifest["generated"]
 
 
 def test_fire_bolt_is_a_scaling_attack_cantrip():
@@ -100,6 +103,36 @@ def test_cure_wounds_carries_the_mod_token_and_upcast():
 def test_unknown_or_skipped_spell_loads_as_none():
     assert arena_spell_action("hold_person") is None
     assert arena_spell_action("no_such_spell_xyz") is None
+
+
+# --- B5 curated rescues -----------------------------------------------------
+
+def test_magic_missile_is_an_auto_hit_volley():
+    a = arena_spell_action("magic_missile")
+    assert a.attack.auto_hit is True
+    assert a.target_count == 3 and a.upcast_target_count == 1   # +1 dart/level
+    assert a.attack.damage[0].dice == "1d4" and a.attack.damage[0].bonus == 1
+    assert a.attack.damage[0].damage_type.value == "force"
+    assert a.resource_cost == {"spell_slot_1": 1}
+
+
+def test_scorching_ray_is_a_three_ray_attack_spell():
+    a = arena_spell_action("scorching_ray")
+    assert a.attack.auto_hit is False             # each ray rolls to hit
+    assert a.attack.attack_type == "ranged_spell"
+    assert a.target_count == 3 and a.upcast_target_count == 1
+    assert a.attack.damage[0].dice == "2d6"
+    assert a.resource_cost == {"spell_slot_2": 1}
+
+
+def test_mage_armor_is_an_ac_set_self_buff():
+    a = arena_spell_action("mage_armor")
+    (buff,) = a.buff_effects
+    assert buff.stat == "ac" and buff.modifier_type == "set"
+    assert buff.value == "13+DEX"                 # engine evaluates per-wearer
+    assert a.target_type.value == "self"
+    assert a.requires_concentration is False
+    assert a.resource_cost == {"spell_slot_1": 1}
 
 
 # --- 2. the bridge bake ----------------------------------------------------

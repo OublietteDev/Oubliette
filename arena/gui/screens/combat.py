@@ -2707,6 +2707,33 @@ class CombatScreen(Screen):
                         preview_color, alpha=60,
                     )
 
+        # Mark every creature actually caught in the blast (same geometry as
+        # _resolve_effect_targets_at_hex). Friendly fire is real (B5), so a
+        # caught ally glows warning-red — see the splash BEFORE you click.
+        if not self._pending_zone_move:
+            warning_color = parse_color(COLORS["hp_critical"])
+            caster_team = combatant.team
+            # Beneficial AoE (Mass Cure) never splashes — no warning there
+            harmful = not (action.healing and not action.saving_throw)
+            for c in self.combat.combatants.values():
+                if c.position is None or not c.creature.is_conscious:
+                    continue
+                caught = min_distance_between(
+                    center_hex, 1, c.position, c.creature.size,
+                ) * 5 <= area_feet
+                if not caught:
+                    continue
+                warn = harmful and c.team == caster_team
+                wx, wy = c.position.to_pixel(
+                    get_settings().display.default_hex_size
+                )
+                lx, ly = self.grid_view.camera.world_to_screen(wx, wy)
+                draw_hex_highlight(
+                    surface, (lx + ox, ly + oy), scaled_size,
+                    warning_color if warn else preview_color,
+                    alpha=150 if warn else 110,
+                )
+
     def _render_tokens(self, surface: pygame.Surface) -> None:
         """Render all creature tokens on the grid."""
         if self.grid_view is None:

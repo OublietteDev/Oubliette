@@ -51,9 +51,14 @@ class BuffEffect(BaseModel):
     inside ActiveBuff.modifiers at runtime.
     """
 
-    stat: str  # "ac", "attack_rolls", "saving_throws", "speed", "damage_resistance"
-    modifier_type: str  # "flat_bonus", "advantage", "disadvantage", "resistance", "immunity", "multiply"
-    value: str | int | float | None = None  # 5, "1d4", 2.0, None, "fire"
+    stat: str  # "ac", "attack_rolls", "saving_throws", "speed", "damage_resistance", or an ability name ("strength", ...)
+    modifier_type: str  # "flat_bonus", "advantage", "disadvantage", "resistance", "immunity", "multiply", "set"
+    # "set" uses FLOOR semantics (effective = max(normal, set value)) — that is the
+    # SRD's actual wording for both families that need it: Mage Armor ("base AC
+    # becomes 13 + Dex" — moot if you're already higher) and Giant Strength
+    # ("your score is 21; no effect if it's already equal or higher").  An AC set
+    # value may be an int or a "13+DEX" formula evaluated against the wearer.
+    value: str | int | float | None = None  # 5, "1d4", 2.0, None, "fire", "13+DEX"
     scope: str = "all"  # "all", "dexterity", "fire", "melee", etc.
     target_grants_to_attacker: bool = False  # True = debuff on TARGET grants effect to ATTACKERS
 
