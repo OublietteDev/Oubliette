@@ -31,6 +31,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from arena.models.abilities import AbilityScores
 from arena.models.actions import (
@@ -562,6 +563,45 @@ def character_to_monster(char: Character) -> Monster:
     )
 
 
+# --- Portrait token art (B6) ----------------------------------------------
+
+@dataclass
+class PortraitDirs:
+    """Where staged combatants' token art lives. The Arena already renders
+    `Creature.token_image` (circle-clipped, polygon-clipped for Large+); B6 is
+    just pointing that field at the right file. Every dir is optional — a
+    missing dir or file means the Arena draws its colored-circle fallback.
+    """
+
+    pc: Path | None = None      # <save-dir>/character-portraits (A3 uploads)
+    pack: Path | None = None    # content/packs/<pack_id>/portraits (authored)
+    srd: Path | None = None     # content/srd/portraits (<Name>.png fleet)
+
+
+def _token_image(dirs: list[Path | None], candidates: list[str | None]) -> str | None:
+    """First existing portrait file across `dirs` (in precedence order) matching
+    any candidate filename — matched CASE-INSENSITIVELY, so the SRD fleet's
+    `Awakened_Shrub.png` answers for the id `awakened_shrub` on any OS, not
+    just Windows. Returns an absolute path string (the encounter is played
+    from a scratch dir, so relative paths would dangle). Path-separator
+    candidates are rejected (same traversal guard as the app server)."""
+    names = [c for c in candidates if c and "/" not in c and "\\" not in c]
+    if not names:
+        return None
+    for directory in dirs:
+        if directory is None:
+            continue
+        try:
+            index = {p.name.lower(): p for p in directory.iterdir() if p.is_file()}
+        except OSError:
+            continue
+        for name in names:
+            hit = index.get(name.lower())
+            if hit is not None:
+                return str(hit.resolve())
+    return None
+
+
 # --- Enemy instances + encounter assembly --------------------------------
 
 @dataclass
@@ -595,11 +635,15 @@ def arena_monster_file(monster_id: str) -> Monster | None:
         return None
 
 
-def enemy_from_statblock(sb: StatBlock) -> EnemyInstance:
+def enemy_from_statblock(
+    sb: StatBlock, portraits: PortraitDirs | None = None
+) -> EnemyInstance:
     """Prefer the generated full-fidelity Arena monster when one exists for this id
     (essentially every SRD bestiary monster); otherwise fall back to the flat
     basic-attack mapping (templates, synthetic ids). Either way, Oubliette's
-    bestiary stays the source of truth for the reward (its `xp`) and loot."""
+    bestiary stays the source of truth for the reward (its `xp`) and loot.
+    Token art (B6): the statblock's `portrait` filename or `<id>.png`, pack
+    dir first then SRD — the same convention the bestiary panel serves."""
     rich = arena_monster_file(sb.id)
     if rich is not None:
         if sb.xp:
@@ -607,20 +651,33 @@ def enemy_from_statblock(sb: StatBlock) -> EnemyInstance:
         creature: Monster = rich
     else:
         creature = statblock_to_monster(sb)
+    if portraits is not None:
+        art = _token_image([portraits.pack, portraits.srd],
+                           [sb.portrait, f"{sb.id}.png"])
+        if art:
+            creature.token_image = art
     return EnemyInstance(creature=creature, xp=sb.xp, loot=_loot_to_value(sb.loot))
 
 
 def enemy_from_template(tmpl: CombatantTemplate) -> EnemyInstance:
+    # Templates are synthetic stand-ins with no portrait source — circle fallback.
     return EnemyInstance(
         creature=template_to_monster(tmpl), xp=tmpl.xp, loot=list(tmpl.loot)
     )
 
 
-def enemy_from_character(char: Character) -> EnemyInstance:
+def enemy_from_character(
+    char: Character, portraits: PortraitDirs | None = None
+) -> EnemyInstance:
     # Persistent foes are written back but (mirroring the boundary) drop no loot.
-    return EnemyInstance(
+    inst = EnemyInstance(
         creature=character_to_monster(char), xp=char.xp, loot=[], entity_id=char.id
     )
+    if portraits is not None:
+        art = _token_image([portraits.pc], [char.portrait])
+        if art:
+            inst.creature.token_image = art
+    return inst
 
 
 @dataclass
@@ -685,10 +742,13 @@ def build_encounter(
     name: str = "Encounter",
     catalog: dict[str, SrdEquipment] | None = None,
     ruleset=None,
+    portraits: PortraitDirs | None = None,
 ) -> EncounterPlan:
     """Assemble an Arena `Encounter` from the live party + resolved enemies +
     terrain. Counts are pre-expanded (one `CombatantEntry` per individual, with
-    a unique `name_override`) so the returned result is matchable by name."""
+    a unique `name_override`) so the returned result is matchable by name.
+    With `portraits`, each PC's uploaded portrait (A3) becomes its token art
+    (enemies got theirs when their instances were resolved)."""
     used: set[str] = set()
     entries: list[CombatantEntry] = []
     persistent_ids: dict[str, str] = {}
@@ -699,6 +759,10 @@ def build_encounter(
     for char, pos in zip(party, party_pos):
         display = _unique(char.name, used)
         creature = character_to_player(char, catalog, ruleset)
+        if portraits is not None:
+            art = _token_image([portraits.pc], [char.portrait])
+            if art:
+                creature.token_image = art
         staged = staged_resources(char, ruleset)
         if staged.slots_max or staged.resources_max:
             resources_by_name[display] = staged

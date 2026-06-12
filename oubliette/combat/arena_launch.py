@@ -25,6 +25,7 @@ monkeypatch it with a canned result so the whole wiring is exercised headlessly.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -36,6 +37,7 @@ from ..state.repository import Repository, StateError
 from .arena_bridge import (
     EnemyInstance,
     EncounterPlan,
+    PortraitDirs,
     build_encounter,
     enemy_from_character,
     enemy_from_statblock,
@@ -49,6 +51,23 @@ from .templates import ENEMY_TEMPLATES
 # Project root (…/Oubliette) — the cwd the Arena subprocess needs so that
 # `import arena` resolves. This file is at oubliette/combat/arena_launch.py.
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+# Shipped content root (…/oubliette/content) — SRD + pack portrait dirs.
+_CONTENT_ROOT = Path(__file__).resolve().parents[1] / "content"
+
+
+def _portrait_dirs(session) -> PortraitDirs:
+    """Where this campaign's token art lives (B6). PC uploads sit beside the
+    save DB — the same OUBLIETTE_DB contract the app server uses for its
+    character-portraits/ dir; pack portraits ship with the active pack; the
+    SRD fleet ships with the global content. All lookups degrade to None."""
+    db = Path(os.environ.get("OUBLIETTE_DB", "oubliette-save.sqlite")).resolve()
+    pack_id = getattr(session, "pack_id", None)
+    return PortraitDirs(
+        pc=db.parent / "character-portraits",
+        pack=(_CONTENT_ROOT / "packs" / pack_id / "portraits") if pack_id else None,
+        srd=_CONTENT_ROOT / "srd" / "portraits",
+    )
 
 
 @dataclass
@@ -107,7 +126,10 @@ def _statblock_for(session, ref: str):
     return best
 
 
-def _resolve_enemies(request: EncounterRequest, repo: Repository, session) -> list[EnemyInstance]:
+def _resolve_enemies(
+    request: EncounterRequest, repo: Repository, session,
+    portraits: PortraitDirs | None = None,
+) -> list[EnemyInstance]:
     """Resolve each `EnemyRef` to an `EnemyInstance`, mirroring the boundary's
     precedence but producing Arena creatures: template → stat block → persistent
     entity. Raises `CombatError` on an unknown ref."""
@@ -120,7 +142,7 @@ def _resolve_enemies(request: EncounterRequest, repo: Repository, session) -> li
             continue
         sb = _statblock_for(session, ref.ref)
         if sb is not None:
-            inst = enemy_from_statblock(sb)
+            inst = enemy_from_statblock(sb, portraits)
             out.extend(inst for _ in range(max(1, ref.count)))
             continue
         try:
@@ -129,7 +151,7 @@ def _resolve_enemies(request: EncounterRequest, repo: Repository, session) -> li
             raise CombatError(
                 f"enemy ref {ref.ref!r} is neither a template, a bestiary monster, nor an entity"
             ) from e
-        out.append(enemy_from_character(ent))
+        out.append(enemy_from_character(ent, portraits))
     return out
 
 
@@ -143,11 +165,13 @@ def stage_combat(
     assessment: TurnAssessment | None = None,
     player_text: str = "",
     scratch_root: Path | None = None,
+    portraits: PortraitDirs | None = None,
 ) -> StageOutcome:
     """Validate + stage a fight. A chosen non-combat exit resolves immediately
     (no Arena); otherwise the live party + resolved enemies are written to an
     encounter file and a `PendingCombat` is returned. `assessment`/`player_text`
-    are the triggering turn's (carried so the post-combat report can be built)."""
+    are the triggering turn's (carried so the post-combat report can be built).
+    `portraits` overrides the campaign's derived token-art dirs (tests)."""
     # Non-combat exit short-circuit (parley/flee/bribe) — same contract as the
     # boundary; no tactical board needed.
     if request.chosen_exit is not None:
@@ -161,7 +185,9 @@ def stage_combat(
     if not request.enemies:
         raise CombatError("encounter has no enemies and no chosen exit")
 
-    enemies = _resolve_enemies(request, repo, session)
+    if portraits is None:
+        portraits = _portrait_dirs(session)
+    enemies = _resolve_enemies(request, repo, session, portraits)
     party = repo.party() or [repo.pc()]
     # The ruleset rides along: the equipment catalog turns drinkable consumables
     # into Arena item actions (B1), and the class tables stage each PC's CURRENT
@@ -170,7 +196,8 @@ def stage_combat(
     plan = build_encounter(party, enemies, request.terrain,
                            name=request.kind.title() or "Encounter",
                            catalog=getattr(ruleset, "equipment", None),
-                           ruleset=ruleset)
+                           ruleset=ruleset,
+                           portraits=portraits)
 
     scratch_dir = Path(tempfile.mkdtemp(prefix="oubliette-combat-", dir=scratch_root))
     encounter_path = scratch_dir / "encounter.json"
