@@ -491,6 +491,10 @@ def build_encounter(
 
 _OUTCOME_MAP: dict[str, Outcome] = {"victory": "victory", "defeat": "defeat"}
 
+# Highest handoff result schema this reader understands (arena.handoff.RESULT_SCHEMA).
+# v1 results (and version-less dicts) stay readable — v2 only ADDS per-PC blocks.
+_MAX_RESULT_SCHEMA = 2
+
 
 def result_to_combat_result(handoff: dict, plan: EncounterPlan) -> CombatResult:
     """Map an Arena handoff result dict (`arena.handoff.build_result`) back into
@@ -504,6 +508,13 @@ def result_to_combat_result(handoff: dict, plan: EncounterPlan) -> CombatResult:
       the partial HP/conditions are still written back (you took your hits then
       broke away).
     """
+    schema = int(handoff.get("schema", 1) or 1)
+    if schema > _MAX_RESULT_SCHEMA:
+        raise ValueError(
+            f"Arena handoff result schema {schema} is newer than this bridge "
+            f"understands (max {_MAX_RESULT_SCHEMA}) — refusing to guess at its meaning"
+        )
+
     raw_outcome = handoff.get("outcome", "unresolved")
     outcome: Outcome = _OUTCOME_MAP.get(raw_outcome, "flee")
 

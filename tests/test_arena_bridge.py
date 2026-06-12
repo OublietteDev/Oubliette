@@ -227,6 +227,19 @@ def test_defeat_writes_partial_hp_but_no_xp():
     assert "Goblin" in result.ephemeral_survivors
 
 
+def test_future_result_schema_is_refused():
+    """A result newer than the bridge understands must fail loudly, not silently
+    misread — the subprocess boundary is where version drift would bite."""
+    plan = _plan_for_backmap()
+    handoff = {"schema": 3, "winner": "player", "outcome": "victory", "combatants": []}
+    try:
+        result_to_combat_result(handoff, plan)
+    except ValueError as e:
+        assert "schema 3" in str(e)
+    else:
+        raise AssertionError("schema 3 should have been refused")
+
+
 def test_unresolved_window_close_maps_to_flee_with_partial_writeback():
     plan = _plan_for_backmap()
     handoff = {
