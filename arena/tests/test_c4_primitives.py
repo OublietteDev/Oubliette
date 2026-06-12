@@ -600,6 +600,91 @@ class TestTurnUndeadFilter:
         assert turned[0].save_to_end == "wisdom"   # re-save each turn
 
 
+# ── C4.x playtest fix: player-cast volleys fire ALL their darts ──────
+# OublietteDev's live find (2026-06-12): Magic Missile hit once. The GUI's
+# player-attack flow (execute_attack_hit_check → rider popups →
+# complete_attack) had no target_count handling — the B5 volley loop
+# lives in execute_attack, which only AI/reactions used. The GUI now
+# routes multi-dart actions through execute_attack.
+
+
+def _magic_missile():
+    return Action(
+        name="Magic Missile", description="Three darts",
+        action_type=ActionType.ACTION, target_type=TargetType.ONE_CREATURE,
+        range=120, spell_level=1, target_count=3,
+        resource_cost={"spell_slot_1": 1},
+        attack=Attack(
+            name="Magic Missile", attack_type="ranged_spell",
+            ability="intelligence", reach=5, range_normal=120,
+            auto_hit=True,
+            damage=[DamageRoll(dice="1d4", damage_type=DamageType.FORCE,
+                               bonus=1)],
+        ),
+    )
+
+
+class TestPlayerVolleyRouting:
+    def _combat(self):
+        caster = PlayerCharacter(
+            name="Wizard", character_class="Wizard",
+            max_hit_points=20, current_hit_points=20, armor_class=12,
+            ability_scores=AbilityScores(), proficiency_bonus=2,
+            is_player_controlled=True,
+            class_resources={"spell_slot_1": 1},
+            actions=[_magic_missile()],
+        )
+        brute = _creature("Brute", hp=60, is_player=False)
+        encounter = Encounter(
+            name="Volley", grid_width=10, grid_height=10,
+            combatants=[
+                CombatantEntry(creature_id="wiz", creature_data=caster,
+                               team="player", starting_position=(4, 4)),
+                CombatantEntry(creature_id="brute", creature_data=brute,
+                               team="enemy", starting_position=(4, 5)),
+            ],
+        )
+        cm = CombatManager()
+        cm.load_encounter(encounter, Path("."))
+        with patch("arena.combat.manager.roll_die", side_effect=[20, 1]):
+            cm.roll_initiative()
+        cm.begin_combat()
+        by_name = {c.creature.name: (cid, c)
+                   for cid, c in cm.combatants.items()}
+        return cm, by_name
+
+    def test_gui_attack_flow_fires_all_three_darts(self):
+        pygame = __import__("pytest").importorskip("pygame")  # noqa: F841
+        from arena.gui.screens.combat import CombatScreen
+
+        cm, by_name = self._combat()
+        wiz_id, wiz_c = by_name["Wizard"]
+        brute_id, brute_c = by_name["Brute"]
+        assert cm.initiative.current_entry.creature_id == wiz_id
+        cm.selected_action = wiz_c.creature.actions[0]
+
+        class _Stub:                       # only .combat is touched on the
+            combat = cm                    # volley branch of the method
+
+        CombatScreen._execute_player_attack(_Stub(), brute_id)
+
+        darts = [e for e in cm.log.events
+                 if e.details.get("auto_hit") and e.details.get("hit")]
+        assert len(darts) == 3                       # all three landed
+        assert brute_c.creature.current_hit_points < 60
+        assert wiz_c.creature.class_resources["spell_slot_1"] == 0  # one slot
+
+    def test_engine_volley_path_unchanged(self):
+        cm, by_name = self._combat()
+        wiz_id, wiz_c = by_name["Wizard"]
+        brute_id, _ = by_name["Brute"]
+        cm.selected_action = wiz_c.creature.actions[0]
+        result = cm.execute_attack(brute_id)
+        assert result is not None and result.success
+        darts = [e for e in result.events if e.details.get("auto_hit")]
+        assert len(darts) == 3
+
+
 class TestSanctuary:
     def test_failed_save_loses_the_attack(self):
         attacker, target = _creature("Orc"), _creature("Cleric")

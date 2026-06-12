@@ -899,7 +899,20 @@ class CombatScreen(Screen):
         If the hit lands and the creature has applicable on-hit riders,
         resolve AUTOMATIC riders silently, then show RiderPopup for
         each POST_HIT rider sequentially. Otherwise, complete immediately.
+
+        Multi-dart volleys (Magic Missile, Scorching Ray) take the
+        single-call execute_attack path instead — it owns the
+        per-volley loop and slot accounting, and on-hit rider popups
+        don't apply to spell volleys (smites require weapon attacks).
         """
+        from arena.combat.actions import get_effective_target_count
+
+        action = self.combat.selected_action
+        if action is not None and get_effective_target_count(
+                action, self.combat._cast_level) > 1:
+            self.combat.execute_attack(target_id)
+            return
+
         hit_result = self.combat.execute_attack_hit_check(target_id)
         if hit_result is None:
             return
