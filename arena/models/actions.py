@@ -148,6 +148,11 @@ class Action(BaseModel):
 
     # Source tracking (for auto-generated actions from equipment)
     source_item: str | None = None  # Item name that generated this action
+    # The originating catalog id in the launching app (Oubliette), stamped by its
+    # bridge when it generates item actions. Rides through untouched to the handoff
+    # result's "consumables_used" so the story side can decrement the exact
+    # inventory stack without name-matching. None for native Arena content.
+    source_item_id: str | None = None
 
     # Buff/Debuff effects applied to target (temporary stat modifications)
     buff_effects: list[BuffEffect] = Field(default_factory=list)

@@ -11,7 +11,8 @@ from pathlib import Path
 from arena.combat.manager import CombatManager
 from arena.handoff import build_result, write_result, RESULT_SCHEMA
 from arena.models.abilities import AbilityScores
-from arena.models.character import Creature
+from arena.models.actions import Action, ActionType, TargetType
+from arena.models.character import Creature, PlayerCharacter
 from arena.models.conditions import AppliedCondition, Condition
 from arena.models.encounter import Encounter, CombatantEntry
 
@@ -81,6 +82,103 @@ def test_conditions_captured():
     )
     r = build_result(cm)
     assert "prone" in _by_team(r, "enemy")["conditions"]
+
+
+# --- schema v2: per-PC resources / consumables / death saves -------------
+
+def _potion_action(name: str, item_id: str | None, per: int, cur: int) -> Action:
+    return Action(
+        name=name, description=f"Drink a {name}.",
+        action_type=ActionType.BONUS_ACTION, target_type=TargetType.SELF,
+        healing="2d4+2", uses_per_rest=per, current_uses=cur,
+        source_item=name, source_item_id=item_id,
+    )
+
+
+def _pc(**overrides) -> PlayerCharacter:
+    fields: dict = dict(
+        name="Mira", character_class="Cleric", level=5,
+        max_hit_points=33, armor_class=16, ability_scores=AbilityScores(),
+        is_player_controlled=True,
+        spell_slots={1: 4, 2: 3},
+        class_resources={"channel_divinity": 1},
+    )
+    fields.update(overrides)
+    return PlayerCharacter(**fields)
+
+
+def _manager_with(pc: PlayerCharacter) -> CombatManager:
+    enc = Encounter(
+        name="Handoff v2 Test", grid_width=10, grid_height=10,
+        combatants=[
+            CombatantEntry(creature_id="pc", creature_data=pc,
+                           team="player", starting_position=(2, 2)),
+            CombatantEntry(creature_id="gob", creature_data=_creature("Goblin", 7, False),
+                           team="enemy", starting_position=(4, 2)),
+        ],
+    )
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("data"))
+    return cm
+
+
+def _result_pc(cm: CombatManager) -> dict:
+    return _by_team(build_result(cm), "player")
+
+
+def test_v2_blocks_on_pc_only():
+    r = build_result(_manager_with(_pc()))
+    pc, enemy = _by_team(r, "player"), _by_team(r, "enemy")
+    assert r["schema"] == 2
+    assert {"resources", "consumables_used", "death_saves"} <= set(pc)
+    assert not {"resources", "consumables_used", "death_saves"} & set(enemy)
+
+
+def test_spell_slots_folded_out_of_class_resources():
+    cm = _manager_with(_pc())
+    pc_creature = next(c.creature for c in cm.combatants.values() if c.team == "player")
+    # The model validator seeded spell_slot_N from spell_slots; spend 2 first-level
+    # slots and the channel divinity, the way the engine does (deduct_resource_cost).
+    pc_creature.class_resources["spell_slot_1"] -= 2
+    pc_creature.class_resources["channel_divinity"] -= 1
+
+    res = _result_pc(cm)["resources"]
+    assert res["spell_slots"] == {
+        "1": {"remaining": 2, "max": 4},
+        "2": {"remaining": 3, "max": 3},
+    }
+    # The folded slot keys must NOT leak; what's left is the real class resource.
+    assert res["class_resources"] == {"channel_divinity": 0}
+
+
+def test_consumables_used_diff_and_item_id():
+    spent = _potion_action("Potion of Healing", "potion_healing", per=2, cur=1)
+    untouched = _potion_action("Potion of Greater Healing", "potion_greater_healing",
+                               per=1, cur=1)
+    cm = _manager_with(_pc(bonus_actions=[spent, untouched]))
+    used = _result_pc(cm)["consumables_used"]
+    assert used == [{"item_id": "potion_healing", "name": "Potion of Healing", "used": 1}]
+
+
+def test_consumable_without_catalog_id_still_reports_name():
+    cm = _manager_with(_pc(bonus_actions=[_potion_action("Elixir", None, per=3, cur=0)]))
+    used = _result_pc(cm)["consumables_used"]
+    assert used == [{"item_id": None, "name": "Elixir", "used": 3}]
+
+
+def test_death_saves_captured():
+    pc = _pc(death_save_successes=1, death_save_failures=2, is_stabilized=True)
+    pc.current_hit_points = 0
+    saves = _result_pc(_manager_with(pc))["death_saves"]
+    assert saves == {"successes": 1, "failures": 2, "stabilized": True}
+
+
+def test_plain_creature_pc_gets_empty_v2_blocks():
+    """A v1-era plain Creature on the player team must not crash the v2 builder."""
+    pc = _by_team(build_result(_loaded_manager()), "player")
+    assert pc["resources"] == {"spell_slots": {}, "class_resources": {}}
+    assert pc["consumables_used"] == []
+    assert pc["death_saves"] == {"successes": 0, "failures": 0, "stabilized": False}
 
 
 def test_write_result_roundtrip(tmp_path):

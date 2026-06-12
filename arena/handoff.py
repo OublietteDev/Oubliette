@@ -13,12 +13,38 @@ outcome back into the story. This module is that contract:
 
 The result schema is deliberately a faithful dump of the engine's final truth; mapping
 it onto Oubliette's ``CombatResult`` (absolute HP/XP/loot) is the bridge's job (Stage 2).
+
+RESULT SCHEMA v2 (the Phase-B contract — the Arena-side twin of Oubliette's Phase-A
+item-schema freeze; designed once, here). All v1 fields are unchanged; each combatant
+with ``is_pc`` true ADDITIONALLY carries:
+
+  "resources": {
+      "spell_slots":     {"<level>": {"remaining": int, "max": int|null}, ...},
+      "class_resources": {"<name>": remaining, ...}     # ki_points, rage_uses, ...
+  },
+  "consumables_used": [{"item_id": str|null, "name": str, "used": int}, ...],
+  "death_saves":      {"successes": int, "failures": int, "stabilized": bool}
+
+Derivation notes (all read from the FINAL engine state — nothing new is tracked):
+
+  - The engine spends spell slots as ``class_resources["spell_slot_<N>"]``; we fold
+    those keys into the ``spell_slots`` block (max from ``PlayerCharacter.spell_slots``,
+    which the engine never mutates) so the reader never learns that key convention.
+    What remains of ``class_resources`` is reported as-is.
+  - ``consumables_used`` is ``uses_per_rest - current_uses`` summed over the creature's
+    item actions (those with ``source_item`` set). INVARIANT for generators that feed
+    this contract: an item action must ENTER combat with ``current_uses`` equal to
+    ``uses_per_rest`` (= the inventory stack quantity), so the difference is exactly
+    what this fight consumed. ``item_id`` echoes ``Action.source_item_id`` (the
+    launching app's catalog id; null for native Arena content — the name still lands).
+  - Non-PC combatants never carry the v2 blocks (monsters hold none of this state).
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -26,7 +52,9 @@ from typing import Any
 from arena.paths import ARENA_ROOT
 
 # Result-schema version, so the bridge on the Oubliette side can guard against drift.
-RESULT_SCHEMA = 1
+RESULT_SCHEMA = 2
+
+_SLOT_KEY = re.compile(r"^spell_slot_(\d+)$")
 
 
 def _condition_names(creature: Any) -> list[str]:
@@ -38,6 +66,51 @@ def _condition_names(creature: Any) -> list[str]:
     return out
 
 
+def _pc_resources(creature: Any) -> dict:
+    """Spell slots + class resources remaining (see the v2 contract above).
+
+    The engine's spend ledger is ``class_resources`` (``spell_slot_<N>`` keys for
+    slots); ``spell_slots`` holds the untouched maxima. Slots authored only in
+    ``class_resources`` (no maxima entry) report ``max: None``."""
+    class_res = dict(getattr(creature, "class_resources", {}) or {})
+    slots_max = {int(k): v for k, v in (getattr(creature, "spell_slots", {}) or {}).items()}
+    levels = set(slots_max)
+    for key in class_res:
+        m = _SLOT_KEY.match(key)
+        if m:
+            levels.add(int(m.group(1)))
+    slots: dict[str, dict] = {}
+    for lvl in sorted(levels):
+        remaining = class_res.pop(f"spell_slot_{lvl}", slots_max.get(lvl, 0))
+        slots[str(lvl)] = {"remaining": remaining, "max": slots_max.get(lvl)}
+    return {"spell_slots": slots, "class_resources": class_res}
+
+
+def _consumables_used(creature: Any) -> list[dict]:
+    """Items spent this fight: ``uses_per_rest - current_uses`` over item actions,
+    aggregated per item. Relies on the entry invariant (current == per at load)."""
+    used: dict[tuple, dict] = {}
+    for attr in ("actions", "bonus_actions", "reactions"):
+        for a in getattr(creature, attr, []) or []:
+            name = getattr(a, "source_item", None)
+            per = getattr(a, "uses_per_rest", None)
+            cur = getattr(a, "current_uses", None)
+            if not name or per is None or cur is None or cur >= per:
+                continue
+            key = (getattr(a, "source_item_id", None), name)
+            entry = used.setdefault(key, {"item_id": key[0], "name": name, "used": 0})
+            entry["used"] += per - cur
+    return list(used.values())
+
+
+def _death_saves(creature: Any) -> dict:
+    return {
+        "successes": int(getattr(creature, "death_save_successes", 0) or 0),
+        "failures": int(getattr(creature, "death_save_failures", 0) or 0),
+        "stabilized": bool(getattr(creature, "is_stabilized", False)),
+    }
+
+
 def build_result(cm: Any) -> dict:
     """Build the handoff result dict from a (typically finished) ``CombatManager``.
 
@@ -47,11 +120,12 @@ def build_result(cm: Any) -> dict:
     combatants: list[dict] = []
     for cid, c in cm.combatants.items():
         cr = c.creature
-        combatants.append({
+        is_pc = bool(getattr(cr, "is_player_controlled", c.team == "player"))
+        entry = {
             "id": cid,
             "name": cr.name,
             "team": c.team,
-            "is_pc": bool(getattr(cr, "is_player_controlled", c.team == "player")),
+            "is_pc": is_pc,
             "hp": cr.current_hit_points if cr.current_hit_points is not None else cr.max_hit_points,
             "max_hp": cr.max_hit_points,
             "temp_hp": getattr(cr, "temporary_hit_points", 0),
@@ -59,7 +133,12 @@ def build_result(cm: Any) -> dict:
             "is_conscious": bool(cr.is_conscious),
             # Monsters carry XP for the victor; PCs default 0. Present for the bridge.
             "xp": int(getattr(cr, "experience_points", 0) or 0),
-        })
+        }
+        if is_pc:  # the v2 blocks — PCs only (see the contract in the module docstring)
+            entry["resources"] = _pc_resources(cr)
+            entry["consumables_used"] = _consumables_used(cr)
+            entry["death_saves"] = _death_saves(cr)
+        combatants.append(entry)
 
     winner = getattr(cm, "winner", None)
     outcome = {"player": "victory", "enemy": "defeat"}.get(winner, "unresolved")
