@@ -22,7 +22,7 @@ from oubliette.combat.boundary import CombatError
 from oubliette.combat.schemas import EncounterRequest, EnemyRef, ExitKind, TerrainSpec
 from oubliette.dm.brain import Brain
 from oubliette.llm.scripted import ScriptedLLMClient
-from oubliette.record.events import EventKind
+from oubliette.record.events import EventKind, StateOp
 from oubliette.record.rng import Rng
 from oubliette.record.store import InMemoryEventStore
 from oubliette.runtime.loop import TurnLoop
@@ -338,6 +338,98 @@ def test_defeat_resolves_and_writes_the_pc_down(monkeypatch):
     assert s.pending_combat is None        # lock clears even on a loss
     assert pc.hp == 0                       # PC written back as downed
     assert len(s.store.of_kind(EventKind.COMBAT_RESULT)) == 1
+
+
+def test_potion_drunk_in_the_arena_is_gone_from_inventory(monkeypatch):
+    """The B1 vertical slice, headless: a Potion of Healing in story inventory is
+    staged into the Arena as a drink action (uses = stack qty, catalog id stamped);
+    the canned v2 result reports one drunk; the story-side stack decrements; and
+    the debit — an ordinary item op inside the COMBAT_RESULT event — replays."""
+    s = _session()
+    loop = _loop(s)
+    pc = s.repo.pc()
+    # Grant through the event log (as the DM's `give` does) so the replay holds.
+    s.emit_state(EventKind.TOOL_APPLIED, [StateOp.item(pc.id, "potion_of_healing", 2)],
+                 tool="give", reason="test grant")
+
+    def canned_with_potion(pending) -> dict:
+        result = _canned_victory(pending)
+        result["schema"] = 2
+        for c in result["combatants"]:
+            if c["is_pc"]:
+                c["consumables_used"] = [
+                    {"item_id": "potion_of_healing", "name": "Potion of Healing", "used": 1}]
+        return result
+
+    monkeypatch.setattr(arena_launch, "run_arena", canned_with_potion)
+    asyncio.run(loop.take_turn("I draw my knife and attack the bandit."))
+
+    # OUT: the staged PC carries the drink action under the entry invariant
+    staged_pc = next(c.creature_data for c in s.pending_combat.plan.encounter.combatants
+                     if c.team == "player")
+    drink = next(a for a in staged_pc.actions if a.source_item)
+    assert drink.healing == "2d4+2"
+    assert drink.uses_per_rest == 2 and drink.current_uses == 2
+    assert drink.source_item_id == "potion_of_healing"
+
+    # BACK: consumption lands in the result and the inventory stack decrements
+    report = asyncio.run(loop.enter_combat())
+    assert [(i.char, i.item_id, i.qty) for i in report.combat_result.items_consumed] \
+        == [(pc.id, "potion_of_healing", 1)]
+    assert pc.item_qty("potion_of_healing") == 1
+
+    # and the debit replays: a fresh session over the same store agrees
+    s2 = Session.open(s.store)
+    assert s2.repo.pc().item_qty("potion_of_healing") == 1
+
+
+def test_real_engine_drink_heals_and_flows_back_to_inventory(monkeypatch):
+    """The strongest headless slice: no canned consumption dict anywhere. Stage →
+    load into a REAL CombatManager → the PC drinks through the engine's own
+    `resolve_effect` (heals + decrements uses) → the GENUINE `build_result` v2
+    reports it → the live loop debits the story inventory."""
+    from pathlib import Path
+
+    from arena.combat.actions import resolve_effect
+    from arena.combat.manager import CombatManager
+    from arena.handoff import build_result
+
+    s = _session()
+    loop = _loop(s)
+    pc = s.repo.pc()
+    s.emit_state(EventKind.TOOL_APPLIED, [StateOp.item(pc.id, "potion_of_healing", 2)],
+                 tool="give", reason="test grant")
+
+    asyncio.run(loop.take_turn("I draw my knife and attack the bandit."))
+    pending = s.pending_combat
+    enc = Encounter.model_validate(json.loads(pending.encounter_path.read_text("utf-8")))
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("."))
+
+    pc_cid, pc_combatant = next((cid, c) for cid, c in cm.combatants.items()
+                                if c.team == "player")
+    creature = pc_combatant.creature
+    creature.current_hit_points = max(1, creature.max_hit_points - 6)   # wounded
+    drink = next(a for a in creature.actions if a.source_item)
+
+    res = resolve_effect(creature, pc_cid, creature, pc_cid, drink, cm.grid)
+    assert res.success
+    # 2d4+2 heals at least 4 of the 6 missing HP
+    assert creature.current_hit_points >= creature.max_hit_points - 2
+    assert drink.current_uses == 1                                       # one drunk
+
+    for c in cm.combatants.values():                                     # win the fight
+        if c.team == "enemy":
+            c.creature.current_hit_points = 0
+    cm.winner = "player"
+
+    monkeypatch.setattr(arena_launch, "run_arena", lambda _pending: build_result(cm))
+    report = asyncio.run(loop.enter_combat())
+
+    assert [(i.item_id, i.qty) for i in report.combat_result.items_consumed] \
+        == [("potion_of_healing", 1)]
+    assert pc.item_qty("potion_of_healing") == 1
+    assert pc.hp == creature.current_hit_points                          # heal stuck
 
 
 def test_enter_combat_survives_an_arena_failure(monkeypatch):

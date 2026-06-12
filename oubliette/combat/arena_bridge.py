@@ -47,9 +47,10 @@ from arena.models.monster import Monster
 from arena.paths import DATA_DIR
 
 from ..content.schemas import StatBlock
+from ..content.srd_schemas import SrdEquipment
 from ..state.models import Character
 from ..tools.schemas import ValueEntry
-from .schemas import CombatResult, Outcome, TerrainSpec
+from .schemas import CombatResult, ConsumedItem, Outcome, TerrainSpec
 from .templates import CombatantTemplate
 
 # --- Defaults ------------------------------------------------------------
@@ -171,6 +172,55 @@ def _basic_attack(
     )
 
 
+def _drink_action(item: SrdEquipment, qty: int) -> Action:
+    """One self-targeted "drink it" Action for a healing consumable. The entry
+    invariant of the handoff-v2 contract is set HERE: the action enters combat with
+    ``current_uses == uses_per_rest == the inventory stack quantity``, so the result's
+    ``consumables_used`` diff is exactly what the fight consumed. ``source_item_id``
+    carries the catalog id back out so the story side debits the right stack."""
+    consumable = item.consumable
+    assert consumable is not None and consumable.healing
+    bonus = "bonus" in (consumable.action or "").lower()
+    return Action(
+        name=item.name,
+        description=f"Drink the {item.name}: regain {consumable.healing} hit points.",
+        action_type=ActionType.BONUS_ACTION if bonus else ActionType.ACTION,
+        target_type=TargetType.SELF,
+        range=0,
+        healing=consumable.healing,
+        uses_per_rest=qty,
+        current_uses=qty,
+        source_item=item.name,
+        source_item_id=item.id,
+        ai_priority=3,
+    )
+
+
+def consumable_actions(
+    char: Character, catalog: dict[str, SrdEquipment] | None
+) -> list[Action]:
+    """The Arena actions for the drinkable consumables in a character's inventory.
+
+    B1 scope — healing potions only: catalog items with structured mechanics whose
+    ``consumable.healing`` is set. Scroll variant stacks (a `spell` rider) and items
+    with ``mechanics == "none"`` stay story-side; other structured families
+    (ability_set / grants_resistance) are B3. Stacks of the same item aggregate
+    into ONE action carrying the total quantity as its uses."""
+    if not catalog:
+        return []
+    qty_by_id: dict[str, int] = {}
+    for stack in char.inventory:
+        if stack.spell is not None:
+            continue
+        item = catalog.get(stack.item_id)
+        if item is None or item.mechanics != "structured":
+            continue
+        if item.consumable is None or not item.consumable.healing:
+            continue
+        qty_by_id[stack.item_id] = qty_by_id.get(stack.item_id, 0) + stack.qty
+    return [_drink_action(catalog[item_id], qty) for item_id, qty in qty_by_id.items()]
+
+
 def _size(value: str | None) -> CreatureSize:
     try:
         return CreatureSize((value or "medium").strip().lower())
@@ -201,8 +251,12 @@ def _loot_to_value(entries) -> list[ValueEntry]:
 
 # --- OUT: Oubliette → Arena creatures ------------------------------------
 
-def character_to_player(char: Character) -> PlayerCharacter:
-    """Map a party member (`Character`, kind=pc) → an Arena `PlayerCharacter`."""
+def character_to_player(
+    char: Character, catalog: dict[str, SrdEquipment] | None = None
+) -> PlayerCharacter:
+    """Map a party member (`Character`, kind=pc) → an Arena `PlayerCharacter`.
+    With a `catalog` (the SRD equipment dict), the inventory's drinkable
+    consumables ride along as item actions (B1)."""
     short = _norm_abilities(char.abilities)
     carrier, prof = _solve_to_hit(short, char.attack_bonus)
     char_class = char.sheet.char_class if char.sheet else "Adventurer"
@@ -223,7 +277,8 @@ def character_to_player(char: Character) -> PlayerCharacter:
             _basic_attack(
                 "Attack", short, char.attack_bonus, char.damage,
                 DEFAULT_DAMAGE_TYPE, prof, carrier,
-            )
+            ),
+            *consumable_actions(char, catalog),
         ],
     )
 
@@ -427,6 +482,7 @@ def build_encounter(
     terrain: TerrainSpec,
     *,
     name: str = "Encounter",
+    catalog: dict[str, SrdEquipment] | None = None,
 ) -> EncounterPlan:
     """Assemble an Arena `Encounter` from the live party + resolved enemies +
     terrain. Counts are pre-expanded (one `CombatantEntry` per individual, with
@@ -439,7 +495,7 @@ def build_encounter(
     party_pos = _column_positions(len(party), _PLAYER_COL)
     for char, pos in zip(party, party_pos):
         display = _unique(char.name, used)
-        creature = character_to_player(char)
+        creature = character_to_player(char, catalog)
         creature.name = display
         entries.append(
             CombatantEntry(
@@ -524,6 +580,7 @@ def result_to_combat_result(handoff: dict, plan: EncounterPlan) -> CombatResult:
     loot: list[ValueEntry] = []
     xp_award = 0
     survivors: list[str] = []
+    items_consumed: list[ConsumedItem] = []
 
     for c in combatants:
         cname = c.get("name", "")
@@ -531,6 +588,16 @@ def result_to_combat_result(handoff: dict, plan: EncounterPlan) -> CombatResult:
         if entity_id is not None:
             hp_final[entity_id] = int(c.get("hp", 0))
             conditions_final[entity_id] = list(c.get("conditions", []))
+            # v2: consumables spent in the fight → inventory debits, every outcome
+            # (a potion drunk before fleeing is still gone). Entries without a
+            # catalog id (native Arena content) have no story-side stack to debit.
+            for used in c.get("consumables_used", []) or []:
+                item_id = used.get("item_id")
+                qty = int(used.get("used", 0) or 0)
+                if item_id and qty > 0:
+                    items_consumed.append(
+                        ConsumedItem(char=entity_id, item_id=item_id, qty=qty)
+                    )
 
         if c.get("team") == "enemy":
             fallen = not c.get("is_conscious", True)
@@ -549,6 +616,7 @@ def result_to_combat_result(handoff: dict, plan: EncounterPlan) -> CombatResult:
         xp_award=xp_award,
         narrative_digest=digest,
         ephemeral_survivors=survivors,
+        items_consumed=items_consumed,
     )
 
 

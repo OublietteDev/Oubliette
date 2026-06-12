@@ -22,6 +22,7 @@ from oubliette.combat.arena_bridge import (
     EnemyInstance,
     build_encounter,
     character_to_player,
+    consumable_actions,
     enemy_from_character,
     enemy_from_statblock,
     enemy_from_template,
@@ -29,11 +30,12 @@ from oubliette.combat.arena_bridge import (
     statblock_to_monster,
     template_to_monster,
 )
-from oubliette.combat.schemas import TerrainSpec
+from oubliette.combat.schemas import ConsumedItem, TerrainSpec
 from oubliette.combat.templates import ENEMY_TEMPLATES
 from oubliette.content.schemas import Action as ContentAction
 from oubliette.content.schemas import LootEntry, StatBlock
-from oubliette.state.models import Character, CharacterSheet
+from oubliette.content.srd_schemas import ConsumableMechanics, SrdEquipment
+from oubliette.state.models import Character, CharacterSheet, ItemStack
 
 
 # --- fixtures ------------------------------------------------------------
@@ -172,6 +174,72 @@ def test_terrain_kind_keys_a_default_layout():
     assert all(t.terrain_type.value == "wall" for t in choke_plan.encounter.terrain)
 
 
+# --- OUT: inventory consumables → drink actions (B1) ---------------------
+
+def _potion_catalog() -> dict[str, SrdEquipment]:
+    return {
+        "potion_of_healing": SrdEquipment(
+            id="potion_of_healing", name="Potion of Healing", category="consumable",
+            item_type="potion", rarity="common", mechanics="structured",
+            consumable=ConsumableMechanics(healing="2d4+2", action="action")),
+        # mechanics "none": grantable flavor, NOT drinkable in the Arena
+        "oil_of_slipperiness": SrdEquipment(
+            id="oil_of_slipperiness", name="Oil of Slipperiness", category="consumable",
+            item_type="potion", rarity="uncommon", mechanics="none"),
+        # structured but non-healing (ability buff) — a B3 family, skipped in B1
+        "potion_of_giant_strength": SrdEquipment(
+            id="potion_of_giant_strength", name="Potion of Hill Giant Strength",
+            category="consumable", item_type="potion", mechanics="structured",
+            consumable=ConsumableMechanics(ability_set={"str": 21}, duration="1 hour")),
+    }
+
+
+def test_healing_potions_in_inventory_become_one_drink_action():
+    pc = _pc(inventory=[
+        ItemStack(item_id="potion_of_healing", qty=2),
+        ItemStack(item_id="oil_of_slipperiness"),
+        ItemStack(item_id="potion_of_giant_strength"),
+        ItemStack(item_id="some_pack_trinket"),          # not in the SRD catalog
+    ])
+    creature = character_to_player(pc, _potion_catalog())
+
+    drinks = [a for a in creature.actions if a.source_item]
+    assert len(drinks) == 1                              # B1 scope: healing only
+    drink = drinks[0]
+    assert drink.name == "Potion of Healing"
+    assert drink.healing == "2d4+2"
+    assert drink.target_type.value == "self" and drink.action_type.value == "action"
+    # the handoff-v2 entry invariant: uses enter equal to the stack quantity
+    assert drink.uses_per_rest == 2 and drink.current_uses == 2
+    assert drink.source_item == "Potion of Healing"
+    assert drink.source_item_id == "potion_of_healing"
+    # the basic attack is untouched alongside
+    assert creature.actions[0].attack is not None
+
+
+def test_no_catalog_or_empty_inventory_means_no_drink_actions():
+    assert consumable_actions(_pc(), _potion_catalog()) == []
+    pc = _pc(inventory=[ItemStack(item_id="potion_of_healing")])
+    assert consumable_actions(pc, None) == []
+    assert len(character_to_player(pc).actions) == 1     # default: basic attack only
+
+
+def test_scroll_variant_stacks_stay_story_side():
+    """A stack carrying a spell rider (an inscribed scroll) is never mapped to a
+    drink action, even if its catalog item had structured healing (F3 deferral)."""
+    pc = _pc(inventory=[ItemStack(item_id="potion_of_healing", spell="cure_wounds")])
+    assert consumable_actions(pc, _potion_catalog()) == []
+
+
+def test_same_item_split_across_stacks_aggregates_uses():
+    pc = _pc(inventory=[
+        ItemStack(item_id="potion_of_healing", qty=1),
+        ItemStack(item_id="potion_of_healing", qty=2),
+    ])
+    (drink,) = consumable_actions(pc, _potion_catalog())
+    assert drink.uses_per_rest == 3 and drink.current_uses == 3
+
+
 # --- BACK: result dict → CombatResult ------------------------------------
 
 def _plan_for_backmap() -> "tuple":
@@ -225,6 +293,39 @@ def test_defeat_writes_partial_hp_but_no_xp():
     assert result.xp_award == 0 and result.loot == []
     # surviving ephemeral enemy surfaced as a promotion candidate
     assert "Goblin" in result.ephemeral_survivors
+
+
+def test_consumables_used_map_to_inventory_debits():
+    """v2 results: per-PC consumption becomes `items_consumed` keyed by entity id.
+    Entries without a catalog id (native Arena content) are unmappable → skipped;
+    consumption applies on EVERY outcome (drunk before fleeing = still gone)."""
+    plan = _plan_for_backmap()
+    handoff = {
+        "schema": 2, "winner": None, "outcome": "unresolved",
+        "combatants": [
+            {"name": "Elara", "team": "player", "is_pc": True, "hp": 12,
+             "conditions": [], "is_conscious": True, "xp": 0,
+             "consumables_used": [
+                 {"item_id": "potion_of_healing", "name": "Potion of Healing", "used": 2},
+                 {"item_id": None, "name": "Mystery Elixir", "used": 1},
+             ]},
+            {"name": "Goblin", "team": "enemy", "is_pc": False, "hp": 7,
+             "conditions": [], "is_conscious": True, "xp": 50},
+        ],
+    }
+    result = result_to_combat_result(handoff, plan)
+    assert result.outcome == "flee"
+    assert result.items_consumed == [
+        ConsumedItem(char="hero", item_id="potion_of_healing", qty=2)
+    ]
+
+
+def test_v1_results_yield_no_items_consumed():
+    plan = _plan_for_backmap()
+    handoff = {"schema": 1, "winner": "player", "outcome": "victory",
+               "combatants": [{"name": "Elara", "team": "player", "hp": 20,
+                               "conditions": [], "is_conscious": True, "xp": 0}]}
+    assert result_to_combat_result(handoff, plan).items_consumed == []
 
 
 def test_future_result_schema_is_refused():

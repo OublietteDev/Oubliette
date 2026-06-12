@@ -64,6 +64,17 @@ class Combatant(BaseModel):
     loot: list[ValueEntry] = Field(default_factory=list)
 
 
+class ConsumedItem(BaseModel):
+    """One inventory debit reported by the Arena (handoff-v2 `consumables_used`):
+    `char` — a persistent entity id — used up `qty` of catalog item `item_id`
+    during the fight. Applied regardless of outcome: a potion drunk before
+    fleeing is still gone."""
+
+    char: str
+    item_id: str
+    qty: int = 1
+
+
 class CombatResult(BaseModel):
     """The truth object the subsystem returns (§8). Absolute values, not deltas
     (D7). hp_final/conditions_final key ONLY persistent entities — ephemeral
@@ -78,3 +89,5 @@ class CombatResult(BaseModel):
     # Phase-1 transparency: which ephemeral combatants survived (promotion
     # candidates per D5). Not applied to state; surfaced for the boundary's hook.
     ephemeral_survivors: list[str] = Field(default_factory=list)
+    # Consumables spent in the Arena (B1) — decremented from inventory on apply.
+    items_consumed: list[ConsumedItem] = Field(default_factory=list)

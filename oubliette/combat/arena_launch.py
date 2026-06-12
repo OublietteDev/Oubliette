@@ -163,7 +163,11 @@ def stage_combat(
 
     enemies = _resolve_enemies(request, repo, session)
     party = repo.party() or [repo.pc()]
-    plan = build_encounter(party, enemies, request.terrain, name=request.kind.title() or "Encounter")
+    # The SRD equipment catalog rides along so the party's drinkable consumables
+    # become Arena item actions (B1). Pack-authored items carry no mechanics yet.
+    catalog = getattr(getattr(session, "ruleset", None), "equipment", None)
+    plan = build_encounter(party, enemies, request.terrain,
+                           name=request.kind.title() or "Encounter", catalog=catalog)
 
     scratch_dir = Path(tempfile.mkdtemp(prefix="oubliette-combat-", dir=scratch_root))
     encounter_path = scratch_dir / "encounter.json"
