@@ -390,6 +390,11 @@ class CombatScreen(Screen):
         self._pending_teleport: bool = False  # True when selecting teleport destination
         self._pending_shove: bool = False  # True when selecting enemy for Shove
 
+        # Multi-dart volley aiming (RAW Magic Missile: one click per dart,
+        # repeats allowed; fires once every dart has a target)
+        self._volley_targets: list[str] = []
+        self._volley_action_name: str | None = None
+
         # Passenger selection popup state (Dimension Door)
         self._passenger_popup: PassengerPopup | None = None
         self._pending_passenger_id: str | None = None
@@ -848,6 +853,8 @@ class CombatScreen(Screen):
             self._pending_teleport = False
             self._pending_passenger_id = None
             self._passenger_popup = None
+            self._volley_targets = []          # forfeit half-aimed darts
+            self._volley_action_name = None
             self.combat.cancel_action()
             return
 
@@ -900,18 +907,43 @@ class CombatScreen(Screen):
         resolve AUTOMATIC riders silently, then show RiderPopup for
         each POST_HIT rider sequentially. Otherwise, complete immediately.
 
-        Multi-dart volleys (Magic Missile, Scorching Ray) take the
-        single-call execute_attack path instead — it owns the
-        per-volley loop and slot accounting, and on-hit rider popups
-        don't apply to spell volleys (smites require weapon attacks).
+        Multi-dart volleys (Magic Missile, Scorching Ray) aim one dart
+        per click — RAW splitting, repeats allowed — then fire the whole
+        volley through execute_attack, which owns the per-volley loop
+        and slot accounting. On-hit rider popups don't apply to spell
+        volleys (smites require weapon attacks).
         """
         from arena.combat.actions import get_effective_target_count
+        from arena.combat.events import CombatEvent, CombatEventType
 
         action = self.combat.selected_action
-        if action is not None and get_effective_target_count(
-                action, self.combat._cast_level) > 1:
-            self.combat.execute_attack(target_id)
-            return
+        if action is not None:
+            count = get_effective_target_count(action, self.combat._cast_level)
+            if count > 1:
+                if self._volley_action_name != action.name:
+                    # New volley (or a different spell) — start fresh
+                    self._volley_targets = []
+                    self._volley_action_name = action.name
+                self._volley_targets.append(target_id)
+                aimed = len(self._volley_targets)
+                if aimed < count:
+                    tc = self.combat.combatants.get(target_id)
+                    tname = tc.creature.name if tc else target_id
+                    self.combat.log.add(CombatEvent(
+                        event_type=CombatEventType.INFO,
+                        message=(
+                            f"{action.name}: dart {aimed} of {count} aimed "
+                            f"at {tname} — choose the next target."
+                        ),
+                        source_id=self.combat.active_combatant.creature_id
+                        if self.combat.active_combatant else None,
+                    ))
+                    return  # stay in targeting — more darts to aim
+                targets = list(self._volley_targets)
+                self._volley_targets = []
+                self._volley_action_name = None
+                self.combat.execute_attack(target_id, volley_targets=targets)
+                return
 
         hit_result = self.combat.execute_attack_hit_check(target_id)
         if hit_result is None:
@@ -1161,7 +1193,13 @@ class CombatScreen(Screen):
         method = pending["method"]
         if method == "attack":
             target_id = pending["target_id"]
-            self._execute_player_attack(target_id)
+            volley = pending.get("volley_targets")
+            if volley:
+                # The volley was fully aimed before the counterspell check —
+                # resume it directly, don't re-enter dart aiming.
+                self.combat.execute_attack(target_id, volley_targets=volley)
+            else:
+                self._execute_player_attack(target_id)
         elif method == "effect":
             target_id = pending["target_id"]
             self.combat.execute_effect(target_id)

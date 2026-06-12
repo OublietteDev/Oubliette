@@ -1400,14 +1400,21 @@ class CombatManager:
             self.log.add(evt)
         return success, events
 
-    def execute_attack(self, target_id: str) -> ActionResult | None:
+    def execute_attack(
+        self, target_id: str, volley_targets: list[str] | None = None,
+    ) -> ActionResult | None:
         """Execute the selected attack action against a target.
 
         Convenience method that performs both hit and damage in one call.
-        Used by AI, reactions, and opportunity attacks.
+        Used by AI, reactions, and opportunity attacks — and by the GUI
+        for multi-dart volleys.
 
         Args:
             target_id: creature_id of the target.
+            volley_targets: per-dart target list for multi-dart actions
+                (RAW Magic Missile splitting — the player aims each dart;
+                repeats allowed). When None, every dart strikes target_id
+                (the AI's choice).
 
         Returns:
             ActionResult with events, or None if invalid.
@@ -1458,6 +1465,7 @@ class CombatManager:
                     "action": action,
                     "cast_level": self._cast_level,
                     "target_id": target_id,
+                    "volley_targets": volley_targets,
                     "counterspellers": player_cs,
                     "method": "attack",
                 }
@@ -1486,25 +1494,33 @@ class CombatManager:
             else:
                 all_events: list[CombatEvent] = []
                 any_success = False
+                # Per-dart targets (player aims each one) or every dart at
+                # the clicked target (AI / no list given).
+                dart_targets = (
+                    list(volley_targets) if volley_targets
+                    else [target_id] * effective_count
+                )[:effective_count]
                 # One cast = one cost: each resolve_attack deducts
                 # resource_cost, so blank it after the first beam/dart (same
                 # pattern as the multi-target effect path) and restore once
                 # the volley is done.
                 saved_cost = dict(action.resource_cost)
                 saved_uses = action.uses_per_rest
-                for i in range(effective_count):
+                cost_charged = False
+                for dart_tid in dart_targets:
                     # Re-fetch target in case it died from a previous hit
-                    tc = self.combatants.get(target_id)
+                    tc = self.combatants.get(dart_tid)
                     if tc is None:
-                        break
-                    if i > 0:
+                        continue
+                    if cost_charged:
                         action.resource_cost = {}
                         action.uses_per_rest = None
+                    cost_charged = True
                     single = resolve_attack(
                         attacker=combatant.creature,
                         attacker_id=combatant.creature_id,
                         target=tc.creature,
-                        target_id=target_id,
+                        target_id=dart_tid,
                         action=action,
                         grid=self.grid,
                         combatants=self.combatants,

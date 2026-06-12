@@ -605,7 +605,8 @@ class TestTurnUndeadFilter:
 # player-attack flow (execute_attack_hit_check → rider popups →
 # complete_attack) had no target_count handling — the B5 volley loop
 # lives in execute_attack, which only AI/reactions used. The GUI now
-# routes multi-dart actions through execute_attack.
+# aims one dart per click (RAW splitting, repeats allowed) and fires
+# the whole volley through execute_attack.
 
 
 def _magic_missile():
@@ -635,6 +636,7 @@ class TestPlayerVolleyRouting:
             actions=[_magic_missile()],
         )
         brute = _creature("Brute", hp=60, is_player=False)
+        gob = _creature("Gob", hp=30, is_player=False)
         encounter = Encounter(
             name="Volley", grid_width=10, grid_height=10,
             combatants=[
@@ -642,47 +644,80 @@ class TestPlayerVolleyRouting:
                                team="player", starting_position=(4, 4)),
                 CombatantEntry(creature_id="brute", creature_data=brute,
                                team="enemy", starting_position=(4, 5)),
+                CombatantEntry(creature_id="gob", creature_data=gob,
+                               team="enemy", starting_position=(5, 4)),
             ],
         )
         cm = CombatManager()
         cm.load_encounter(encounter, Path("."))
-        with patch("arena.combat.manager.roll_die", side_effect=[20, 1]):
+        with patch("arena.combat.manager.roll_die", side_effect=[20, 10, 1]):
             cm.roll_initiative()
         cm.begin_combat()
         by_name = {c.creature.name: (cid, c)
                    for cid, c in cm.combatants.items()}
         return cm, by_name
 
-    def test_gui_attack_flow_fires_all_three_darts(self):
-        pygame = __import__("pytest").importorskip("pygame")  # noqa: F841
+    def _stub(self, cm):
+        class _Stub:                    # the fields the volley branch touches
+            combat = cm
+            _volley_targets: list = []
+            _volley_action_name = None
+        s = _Stub()
+        s._volley_targets = []
+        return s
+
+    def test_gui_aims_each_dart_then_fires_split_volley(self):
+        __import__("pytest").importorskip("pygame")
         from arena.gui.screens.combat import CombatScreen
 
         cm, by_name = self._combat()
         wiz_id, wiz_c = by_name["Wizard"]
         brute_id, brute_c = by_name["Brute"]
+        gob_id, gob_c = by_name["Gob"]
         assert cm.initiative.current_entry.creature_id == wiz_id
         cm.selected_action = wiz_c.creature.actions[0]
+        stub = self._stub(cm)
 
-        class _Stub:                       # only .combat is touched on the
-            combat = cm                    # volley branch of the method
-
-        CombatScreen._execute_player_attack(_Stub(), brute_id)
+        # RAW splitting: two darts at the brute, one at the goblin
+        CombatScreen._execute_player_attack(stub, brute_id)
+        assert stub._volley_targets == [brute_id]   # aiming, not fired yet
+        assert brute_c.creature.current_hit_points == 60
+        CombatScreen._execute_player_attack(stub, brute_id)
+        CombatScreen._execute_player_attack(stub, gob_id)
 
         darts = [e for e in cm.log.events
                  if e.details.get("auto_hit") and e.details.get("hit")]
-        assert len(darts) == 3                       # all three landed
+        assert len(darts) == 3
         assert brute_c.creature.current_hit_points < 60
+        assert gob_c.creature.current_hit_points < 30   # split worked
         assert wiz_c.creature.class_resources["spell_slot_1"] == 0  # one slot
+        assert stub._volley_targets == []           # aiming state reset
+        assert stub._volley_action_name is None
 
-    def test_engine_volley_path_unchanged(self):
+    def test_engine_volley_accepts_per_dart_targets(self):
         cm, by_name = self._combat()
         wiz_id, wiz_c = by_name["Wizard"]
-        brute_id, _ = by_name["Brute"]
+        brute_id, brute_c = by_name["Brute"]
+        gob_id, gob_c = by_name["Gob"]
         cm.selected_action = wiz_c.creature.actions[0]
-        result = cm.execute_attack(brute_id)
+        result = cm.execute_attack(
+            brute_id, volley_targets=[brute_id, gob_id, brute_id],
+        )
         assert result is not None and result.success
         darts = [e for e in result.events if e.details.get("auto_hit")]
         assert len(darts) == 3
+        assert brute_c.creature.current_hit_points < 60
+        assert gob_c.creature.current_hit_points < 30
+
+    def test_engine_default_still_focuses_one_target(self):
+        cm, by_name = self._combat()
+        _, wiz_c = by_name["Wizard"]
+        brute_id, _ = by_name["Brute"]
+        cm.selected_action = wiz_c.creature.actions[0]
+        result = cm.execute_attack(brute_id)        # AI path: no list
+        darts = [e for e in result.events if e.details.get("auto_hit")]
+        assert len(darts) == 3
+        assert all(e.target_id == brute_id for e in darts)
 
 
 class TestSanctuary:
