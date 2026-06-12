@@ -131,6 +131,86 @@ def get_buff_damage_bonus(creature: Creature, attack_type: str | None = None) ->
     return total
 
 
+def get_buff_on_hit_riders(
+    attacker: Creature,
+    attacker_id: str,
+    target: Creature,
+    attack_type: str | None,
+) -> list[tuple[Creature, ActiveBuff, BuffEffect]]:
+    """Spell-granted on-hit damage riders that fire for this attack.
+
+    Two placements (C4 — Divine Favor / Hunter's Mark / Branding Smite):
+      1. Buffs on the ATTACKER (target_grants_to_attacker=False): every
+         qualifying hit by the attacker carries the rider (Divine Favor,
+         Branding Smite).
+      2. Buffs on the TARGET (target_grants_to_attacker=True): the rider
+         fires only when the buff's CASTER hits the marked target
+         (Hunter's Mark — the mark benefits its caster, not everyone,
+         unlike Faerie Fire's anyone-gains-advantage semantics).
+
+    Scope matches by substring against the attack type: "weapon" matches
+    "melee_weapon"/"ranged_weapon", "melee" matches "melee_*", "all"
+    matches everything.
+
+    Returns (buff_owner, buff, modifier) triples — the owner is who the
+    buff lives on, needed for charge consumption.
+    """
+    riders: list[tuple[Creature, ActiveBuff, BuffEffect]] = []
+
+    def _scope_ok(scope: str) -> bool:
+        s = (scope or "all").lower()
+        if s == "all":
+            return True
+        return attack_type is not None and s in attack_type
+
+    for buff in attacker.active_buffs:
+        for mod in buff.modifiers:
+            if mod.stat != "on_hit_damage" or mod.target_grants_to_attacker:
+                continue
+            if not isinstance(mod.value, str) or not _scope_ok(mod.scope):
+                continue
+            riders.append((attacker, buff, mod))
+
+    if target is not attacker:
+        for buff in target.active_buffs:
+            for mod in buff.modifiers:
+                if mod.stat != "on_hit_damage" or not mod.target_grants_to_attacker:
+                    continue
+                if buff.source_id != attacker_id:
+                    continue  # someone else's mark
+                if not isinstance(mod.value, str) or not _scope_ok(mod.scope):
+                    continue
+                riders.append((target, buff, mod))
+
+    return riders
+
+
+def consume_buff_charge(
+    owner: Creature,
+    owner_id: str,
+    buff: ActiveBuff,
+) -> CombatEvent | None:
+    """Spend one trigger charge on a buff; remove it when spent.
+
+    No-op (returns None) for charge-less buffs. Returns the expiry event
+    when the last charge is consumed (Branding Smite after its hit).
+    """
+    if buff.charges is None:
+        return None
+    buff.charges -= 1
+    if buff.charges > 0:
+        return None
+    if buff in owner.active_buffs:
+        owner.active_buffs.remove(buff)
+    return CombatEvent(
+        event_type=CombatEventType.INFO,
+        message=f"{owner.name}'s {buff.name} is spent.",
+        source_id=owner_id,
+        target_id=owner_id,
+        details={"buff_expired": buff.name},
+    )
+
+
 def get_buff_save_modifiers(creature: Creature, ability: str) -> tuple[int, list[str]]:
     """Get saving throw bonuses from active buffs.
 

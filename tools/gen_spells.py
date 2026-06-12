@@ -604,6 +604,34 @@ _CURATED: dict[str, dict] = {
         "target_type": "one_creature",
         "is_counterspell": True, "counterspell_auto_level": 3,
     },
+    # --- C4: spell-granted on-hit riders (stat="on_hit_damage" buffs) -------
+    # The rider rides the buff system: concentration cleanup, duration, and
+    # save-to-end all come free. damage_type omitted = inherit the weapon's;
+    # target_grants_to_attacker=True = the buff lives ON the marked target
+    # and fires only for the buff's caster (Hunter's Mark pattern).
+    "hunters_mark": {   # approx: bonus-action re-mark on kill dropped
+        "target_type": "one_creature",
+        "buff_effects": [
+            {"stat": "on_hit_damage", "modifier_type": "flat_bonus",
+             "value": "1d6", "scope": "weapon",
+             "target_grants_to_attacker": True},
+        ],
+    },
+    "divine_favor": {
+        "target_type": "self",
+        "buff_effects": [
+            {"stat": "on_hit_damage", "modifier_type": "flat_bonus",
+             "value": "1d4", "damage_type": "radiant", "scope": "weapon"},
+        ],
+    },
+    "branding_smite": {  # next-hit only (buff_charges=1); approx: the
+        "target_type": "self",       # invisibility-reveal rider is dropped
+        "buff_effects": [            # and upcast (+1d6/level) not modeled
+            {"stat": "on_hit_damage", "modifier_type": "flat_bonus",
+             "value": "2d6", "damage_type": "radiant", "scope": "weapon"},
+        ],
+        "buff_charges": 1,
+    },
 }
 
 

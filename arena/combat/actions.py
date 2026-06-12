@@ -46,8 +46,10 @@ from arena.combat.stat_modifiers import (
     has_evasion as has_evasion_feature,
 )
 from arena.combat.buff_effects import (
+    consume_buff_charge,
     get_buff_attack_modifiers,
     get_buff_damage_bonus,
+    get_buff_on_hit_riders,
     get_buff_save_modifiers,
     apply_buff,
 )
@@ -665,6 +667,47 @@ def resolve_attack_damage(
                     target_id=hit_result.target_id,
                 ))
 
+        # Spell-granted on-hit riders from active buffs (C4: Divine Favor,
+        # Hunter's Mark, Branding Smite). Dice double on crit like any
+        # rolled damage; packets are tagged magical (the rider IS a spell
+        # effect, whatever weapon delivered it). Charged buffs (Branding
+        # Smite's next-hit) are spent as they fire.
+        for owner, buff, mod in get_buff_on_hit_riders(
+            hit_result.attacker, hit_result.attacker_id,
+            hit_result.target, hit_result.attack.attack_type,
+        ):
+            r_total, r_rolls = roll_expression(mod.value)
+            if is_crit:
+                r_crit, r_crit_rolls = roll_expression(mod.value)
+                r_total += r_crit
+                r_rolls = r_rolls + r_crit_rolls
+            r_type = mod.damage_type or (
+                hit_result.attack.damage[0].damage_type.value
+                if hit_result.attack.damage else "untyped"
+            )
+            packets.append(DamagePacket(
+                amount=max(0, r_total),
+                dtype=r_type,
+                source=buff.name,
+                tags={"magical"},
+                breakdown={"dice": mod.value, "rolls": r_rolls},
+            ))
+            events.append(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=(
+                    f"{buff.name} adds {r_total} {r_type} damage!"
+                ),
+                source_id=hit_result.attacker_id,
+                target_id=hit_result.target_id,
+            ))
+            owner_id = (
+                hit_result.attacker_id if owner is hit_result.attacker
+                else hit_result.target_id
+            )
+            spent_event = consume_buff_charge(owner, owner_id, buff)
+            if spent_event:
+                events.append(spent_event)
+
         # Magic weapons / spell attacks overcome "nonmagical" defenses: tag every
         # packet of this attack so the per-packet defense check sees it.
         if attack_is_magical(hit_result.attacker, hit_result.action, hit_result.attack):
@@ -1270,6 +1313,7 @@ def resolve_effect(
                 modifiers=list(action.buff_effects),
                 duration_type=dur_type,
                 duration_rounds=dur_rounds,
+                charges=action.buff_charges,
             )
             # For save-based debuffs with save-to-end (Bane, Slow)
             if action.saving_throw and not save_success:

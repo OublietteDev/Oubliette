@@ -1,0 +1,22 @@
+{
+  "name": "Hunter's Mark",
+  "description": "You choose a creature you can see within range and mystically mark it as your quarry. Until the spell ends, you deal an extra 1d6 damage to the target whenever you hit it with a weapon attack, and you have advantage on any Wisdom (Perception) or Wisdom (Survival) check you make to find it. If the ta",
+  "action_type": "bonus_action",
+  "range": 90,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "one_creature",
+  "buff_effects": [
+    {
+      "stat": "on_hit_damage",
+      "modifier_type": "flat_bonus",
+      "value": "1d6",
+      "scope": "weapon",
+      "target_grants_to_attacker": true
+    }
+  ]
+}

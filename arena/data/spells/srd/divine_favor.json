@@ -1,0 +1,22 @@
+{
+  "name": "Divine Favor",
+  "description": "Your prayer empowers you with divine radiance. Until the spell ends, your weapon attacks deal an extra 1d4 radiant damage on a hit.",
+  "action_type": "bonus_action",
+  "range": 0,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "self",
+  "buff_effects": [
+    {
+      "stat": "on_hit_damage",
+      "modifier_type": "flat_bonus",
+      "value": "1d4",
+      "damage_type": "radiant",
+      "scope": "weapon"
+    }
+  ]
+}

@@ -12,19 +12,31 @@ from unittest.mock import patch
 from arena.ai.behavior import AIProfile
 from arena.ai.context import CombatContext, CreatureView
 from arena.ai.scoring import score_effect_action
+from arena.combat.actions import (
+    resolve_attack_damage,
+    resolve_attack_hit,
+    resolve_effect,
+)
+from arena.combat.buff_effects import (
+    consume_buff_charge,
+    get_buff_on_hit_riders,
+)
 from arena.combat.manager import CombatManager
 from arena.combat.stat_modifiers import has_sculpt_spells
 from arena.grid.coordinates import HexCoord
+from arena.grid.hexgrid import HexGrid
 from arena.models.abilities import AbilityScores
 from arena.models.actions import (
     Action,
     ActionType,
+    Attack,
     DamageRoll,
     DamageType,
     SavingThrowEffect,
     TargetType,
 )
 from arena.models.character import Creature, Feature, PlayerCharacter
+from arena.models.conditions import ActiveBuff, BuffEffect
 from arena.models.encounter import CombatantEntry, Encounter
 
 SCULPT = Feature(name="Sculpt Spells", description="Spare allies from blasts.",
@@ -178,3 +190,153 @@ class TestSculptSpellsAiScoring:
             burst, profile, _context(sculpted, [ally_in], [target]), target, 1,
         )
         assert s_sculpt > s_plain           # no friendly-fire penalty
+
+
+# ── C4b: spell-granted on-hit riders (on_hit_damage buffs) ───────────
+
+
+def _weapon_action(name="Sword"):
+    return Action(
+        name=name, description="A sword swing",
+        action_type=ActionType.ACTION, target_type=TargetType.ONE_CREATURE,
+        range=5,
+        attack=Attack(
+            name=name, attack_type="melee_weapon", ability="strength",
+            reach=5,
+            damage=[DamageRoll(dice="1d8", damage_type=DamageType.SLASHING)],
+        ),
+    )
+
+
+def _grid_pair(attacker_id="atk", target_id="tgt"):
+    grid = HexGrid(width=10, height=10)
+    grid.place_creature(HexCoord(2, 2), attacker_id)
+    grid.place_creature(HexCoord(2, 3), target_id)
+    return grid
+
+
+def _favor_buff(source_id="atk", charges=None):
+    return ActiveBuff(
+        name="Divine Favor", source_id=source_id, charges=charges,
+        modifiers=[BuffEffect(stat="on_hit_damage", modifier_type="flat_bonus",
+                              value="1d4", damage_type="radiant",
+                              scope="weapon")],
+    )
+
+
+def _mark_buff(source_id="atk"):
+    return ActiveBuff(
+        name="Hunter's Mark", source_id=source_id,
+        modifiers=[BuffEffect(stat="on_hit_damage", modifier_type="flat_bonus",
+                              value="1d6", scope="weapon",
+                              target_grants_to_attacker=True)],
+    )
+
+
+class TestOnHitRiderQuery:
+    def test_attacker_self_buff_fires_on_weapon_attack(self):
+        attacker, target = _creature("A"), _creature("B")
+        attacker.active_buffs.append(_favor_buff())
+        riders = get_buff_on_hit_riders(attacker, "atk", target, "melee_weapon")
+        assert len(riders) == 1
+        owner, buff, mod = riders[0]
+        assert owner is attacker and buff.name == "Divine Favor"
+
+    def test_weapon_scope_skips_spell_attacks(self):
+        attacker, target = _creature("A"), _creature("B")
+        attacker.active_buffs.append(_favor_buff())
+        assert get_buff_on_hit_riders(attacker, "atk", target, "ranged_spell") == []
+
+    def test_mark_fires_only_for_its_caster(self):
+        attacker, target = _creature("A"), _creature("B")
+        target.active_buffs.append(_mark_buff(source_id="atk"))
+        mine = get_buff_on_hit_riders(attacker, "atk", target, "melee_weapon")
+        theirs = get_buff_on_hit_riders(attacker, "someone_else", target,
+                                        "melee_weapon")
+        assert len(mine) == 1 and mine[0][0] is target
+        assert theirs == []
+
+    def test_marked_creature_does_not_benefit_from_its_own_mark(self):
+        # The mark lives ON the marked creature; its own attacks must not
+        # pick it up via the attacker-side path.
+        marked, victim = _creature("Marked"), _creature("Victim")
+        marked.active_buffs.append(_mark_buff(source_id="hunter"))
+        assert get_buff_on_hit_riders(marked, "marked", victim,
+                                      "melee_weapon") == []
+
+    def test_charge_consumption_removes_the_buff(self):
+        c = _creature("A")
+        buff = _favor_buff(charges=1)
+        c.active_buffs.append(buff)
+        event = consume_buff_charge(c, "atk", buff)
+        assert event is not None and c.active_buffs == []
+
+    def test_chargeless_buffs_never_consume(self):
+        c = _creature("A")
+        buff = _favor_buff()
+        c.active_buffs.append(buff)
+        assert consume_buff_charge(c, "atk", buff) is None
+        assert c.active_buffs == [buff]
+
+
+class TestOnHitRiderResolution:
+    def _hit(self, attacker, target, roll=20):
+        grid = _grid_pair()
+        with patch("arena.combat.actions.roll_die", return_value=roll):
+            hit = resolve_attack_hit(
+                attacker, "atk", target, "tgt", _weapon_action(), grid,
+            )
+        assert hit.hit
+        return resolve_attack_damage(hit)
+
+    def test_divine_favor_adds_radiant_rider(self):
+        attacker = _creature("Paladin")
+        target = _creature("Wight", hp=60)
+        attacker.active_buffs.append(_favor_buff())
+        result = self._hit(attacker, target)
+        rider_events = [e for e in result.events
+                        if "Divine Favor adds" in e.message]
+        assert len(rider_events) == 1
+        assert "radiant" in rider_events[0].message
+
+    def test_branding_smite_spends_after_one_hit(self):
+        attacker = _creature("Paladin")
+        target = _creature("Wight", hp=60)
+        attacker.active_buffs.append(ActiveBuff(
+            name="Branding Smite", source_id="atk", charges=1,
+            modifiers=[BuffEffect(stat="on_hit_damage",
+                                  modifier_type="flat_bonus", value="2d6",
+                                  damage_type="radiant", scope="weapon")],
+        ))
+        first = self._hit(attacker, target)
+        assert any("Branding Smite adds" in e.message for e in first.events)
+        assert any("Branding Smite is spent" in e.message for e in first.events)
+        assert attacker.active_buffs == []
+        second = self._hit(attacker, target)
+        assert not any("Branding Smite adds" in e.message
+                       for e in second.events)
+
+    def test_hunters_mark_inherits_weapon_damage_type(self):
+        attacker = _creature("Ranger")
+        target = _creature("Orc", hp=60)
+        target.active_buffs.append(_mark_buff(source_id="atk"))
+        result = self._hit(attacker, target)
+        rider_events = [e for e in result.events
+                        if "Hunter's Mark adds" in e.message]
+        assert len(rider_events) == 1
+        assert "slashing" in rider_events[0].message   # weapon's type
+
+    def test_cast_threads_charges_onto_the_buff(self):
+        caster = _creature("Paladin")
+        grid = _grid_pair()
+        smite = Action(
+            name="Branding Smite", description="Next hit glows",
+            action_type=ActionType.BONUS_ACTION, target_type=TargetType.SELF,
+            range=0, buff_charges=1,
+            buff_effects=[BuffEffect(stat="on_hit_damage",
+                                     modifier_type="flat_bonus", value="2d6",
+                                     damage_type="radiant", scope="weapon")],
+        )
+        result = resolve_effect(caster, "atk", caster, "atk", smite, grid)
+        assert result.success
+        assert caster.active_buffs[0].charges == 1

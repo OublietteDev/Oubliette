@@ -165,6 +165,7 @@ class Action(BaseModel):
     # Buff/Debuff effects applied to target (temporary stat modifications)
     buff_effects: list[BuffEffect] = Field(default_factory=list)
     buff_duration_rounds: int | None = None  # None = concentration-linked or indefinite
+    buff_charges: int | None = None  # buff spent after firing N times (Branding Smite = 1)
 
     # Upcast scaling (spell slot level mechanics)
     spell_level: int | None = None  # Base spell level (3 for Fireball). None = not a spell.

@@ -51,7 +51,7 @@ class BuffEffect(BaseModel):
     inside ActiveBuff.modifiers at runtime.
     """
 
-    stat: str  # "ac", "attack_rolls", "saving_throws", "speed", "damage_resistance", or an ability name ("strength", ...)
+    stat: str  # "ac", "attack_rolls", "saving_throws", "speed", "damage_resistance", "on_hit_damage", or an ability name ("strength", ...)
     modifier_type: str  # "flat_bonus", "advantage", "disadvantage", "resistance", "immunity", "multiply", "set"
     # "set" uses FLOOR semantics (effective = max(normal, set value)) — that is the
     # SRD's actual wording for both families that need it: Mage Armor ("base AC
@@ -61,6 +61,10 @@ class BuffEffect(BaseModel):
     value: str | int | float | None = None  # 5, "1d4", 2.0, None, "fire", "13+DEX"
     scope: str = "all"  # "all", "dexterity", "fire", "melee", etc.
     target_grants_to_attacker: bool = False  # True = debuff on TARGET grants effect to ATTACKERS
+    # For stat="on_hit_damage" (spell-granted weapon riders — Divine Favor,
+    # Hunter's Mark, Branding Smite): the damage type of the rider dice.
+    # None = inherit the triggering attack's first damage type.
+    damage_type: str | None = None
 
 
 class ActiveBuff(BaseModel):
@@ -78,3 +82,7 @@ class ActiveBuff(BaseModel):
     duration_rounds: int | None = None
     save_to_end: str | None = None  # Ability to save, e.g., "wisdom"
     save_dc: int | None = None
+    # Trigger charges: the buff is spent after firing this many times
+    # (Branding Smite's next-hit = 1; Mirror Image's duplicates = 3).
+    # None = unlimited (normal duration-bound buff).
+    charges: int | None = None
