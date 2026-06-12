@@ -154,6 +154,19 @@ def test_monk_kit_stages_flurry_stunning_strike_and_speed():
     assert by_name["Patient Defense"].conditions_applied == ["dodging"]
 
 
+def test_sculpt_spells_stages_the_exemption_flag():
+    wiz = Character(
+        id="elara", name="Elara", kind="pc", level=2, hp=14, max_hp=14,
+        abilities={Ability.INT: 16, Ability.DEX: 12, Ability.CON: 12},
+        armor_class=12, attack_bonus=4, damage="1d4+1",
+        sheet=CharacterSheet(
+            race="elf", char_class="wizard", background="acolyte",
+            spellcasting_ability=Ability.INT,
+            features=_refs(("Spellcasting", 1), ("Sculpt Spells", 2))))
+    features = {f.name: f for f in features_for(wiz)}
+    assert features["Sculpt Spells"].sculpt_spells is True
+
+
 def test_unarmored_defense_and_fighting_style_are_not_staged():
     # Story-side AC already includes Unarmored Defense; staging it would
     # double-count. Fighting Style has no stored choice to bake.

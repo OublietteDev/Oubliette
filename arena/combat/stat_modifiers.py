@@ -462,6 +462,21 @@ def has_evasion(creature: Creature) -> bool:
     return False
 
 
+# ── Sculpt Spells ────────────────────────────────────────────────────
+
+
+def has_sculpt_spells(creature: Creature) -> bool:
+    """Check if creature has Sculpt Spells (Evocation wizard).
+
+    Sculpt Spells exempts the caster's allies from their harmful AoE
+    spells (approximation of RAW's chosen-creatures auto-succeed).
+    """
+    for f in _get_features(creature):
+        if f.sculpt_spells:
+            return True
+    return False
+
+
 # ── Extra Attack ────────────────────────────────────────────────────
 
 

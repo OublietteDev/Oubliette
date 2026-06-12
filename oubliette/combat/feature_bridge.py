@@ -20,9 +20,9 @@ bonus, aura ranges), the engine just executes. Two deliberate exclusions:
 Cunning Action, Step of the Wind, and Vanish ride the engine's
 ``Action.standard_effect`` hook (C1): a data Action that routes to the
 built-in Dash/Disengage/Hide logic under its own bonus-action economy and
-resource cost. Deferred to Phase C4 primitives: Turn Undead (type-filtered
-AoE + flee), Bardic Inspiration / Cutting Words (reaction-modify-roll),
-Cleansing Touch (P-DISPEL), Sculpt Spells (AoE ally exemption).
+resource cost. Sculpt Spells (AoE ally exemption) landed in C4. Still
+deferred: Turn Undead (type-filtered AoE + flee), Bardic Inspiration /
+Cutting Words (reaction-modify-roll), Cleansing Touch (P-DISPEL).
 
 Resource keys: the story side tracks pools under display names ("Ki",
 "Lay on Hands"); engine presets and standard actions key snake_case names
@@ -221,6 +221,10 @@ def features_for(char: Character) -> list[Feature]:
                         death_prevention_save_ability="constitution",
                         death_prevention_save_dc=10,
                         death_prevention_dc_increment=5)
+        elif name == "sculpt spells":
+            # C4: the caster's harmful AoE spares allies entirely
+            # (approximation of RAW's chosen-creatures auto-succeed).
+            f = Feature(name=ref.name, description=desc, sculpt_spells=True)
 
         if f is not None:
             out.append(f)

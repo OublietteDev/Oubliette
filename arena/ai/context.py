@@ -10,7 +10,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from arena.combat.stat_modifiers import get_effective_armor_class, get_effective_speed
+from arena.combat.stat_modifiers import (
+    get_effective_armor_class,
+    get_effective_speed,
+    has_sculpt_spells,
+)
 from arena.grid.coordinates import HexCoord
 from arena.models.character import CreatureSize
 from arena.models.conditions import Condition
@@ -37,6 +41,7 @@ class CreatureView:
     speed: int  # walking speed in feet
     actions_count: int  # number of available actions (for threat heuristic)
     size: CreatureSize = CreatureSize.MEDIUM
+    has_sculpt_spells: bool = False  # Evocation wizard: own AoE spares allies
 
 
 @dataclass(frozen=True)
@@ -173,4 +178,5 @@ def _make_creature_view(combatant: Combatant) -> CreatureView:
         speed=get_effective_speed(creature),
         actions_count=len(creature.actions),
         size=creature.size,
+        has_sculpt_spells=has_sculpt_spells(creature),
     )

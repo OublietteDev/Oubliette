@@ -2897,6 +2897,11 @@ class CombatManager:
         else:
             # Harmful AoE (e.g., breath weapons, Thunderwave) — everyone in it
             target_teams = {c.team for c in self.combatants.values()}
+            # Sculpt Spells (Evocation wizard): the caster's blasts spare
+            # their own side entirely.
+            from arena.combat.stat_modifiers import has_sculpt_spells
+            if has_sculpt_spells(combatant.creature):
+                target_teams.discard(caster_team)
 
         affected: list[str] = []
         for cid, c in self.combatants.items():
@@ -2959,6 +2964,11 @@ class CombatManager:
             target_teams = {caster_team}
         else:
             target_teams = {c.team for c in self.combatants.values()}
+            # Sculpt Spells: spare the caster's side (including the caster
+            # standing in their own Fireball — sculpting around yourself).
+            from arena.combat.stat_modifiers import has_sculpt_spells
+            if has_sculpt_spells(combatant.creature):
+                target_teams.discard(caster_team)
 
         affected: list[str] = []
         for cid, c in self.combatants.items():

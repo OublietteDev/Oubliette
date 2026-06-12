@@ -2722,6 +2722,10 @@ class CombatScreen(Screen):
             caster_team = combatant.team
             # Beneficial AoE (Mass Cure) never splashes — no warning there
             harmful = not (action.healing and not action.saving_throw)
+            # Sculpt Spells: this caster's blasts spare allies entirely —
+            # no red warning (and no hit) for the caster's own side.
+            from arena.combat.stat_modifiers import has_sculpt_spells
+            sculpted = harmful and has_sculpt_spells(combatant.creature)
             for c in self.combat.combatants.values():
                 if c.position is None or not c.creature.is_conscious:
                     continue
@@ -2730,6 +2734,8 @@ class CombatScreen(Screen):
                 ) * 5 <= area_feet
                 if not caught:
                     continue
+                if sculpted and c.team == caster_team:
+                    continue  # exempt: not caught at all, draw nothing
                 warn = harmful and c.team == caster_team
                 wx, wy = c.position.to_pixel(
                     get_settings().display.default_hex_size

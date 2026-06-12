@@ -112,6 +112,11 @@ class Feature(BaseModel):
     # Evasion (Rogue/Monk: DEX saves — no damage on success, half on fail)
     has_evasion: bool = False
 
+    # Sculpt Spells (Evocation wizard): the caster's harmful AoE spells spare
+    # allies entirely. Approximation of RAW (choose 1+level creatures to
+    # auto-succeed and take no damage): ALL allies are exempted.
+    sculpt_spells: bool = False
+
     # Extra Attack (number of TOTAL attacks when taking Attack action; 0 = use default 1)
     extra_attack_count: int = 0  # 2 for most martials, 3 for Fighter 11, 4 for Fighter 20
 

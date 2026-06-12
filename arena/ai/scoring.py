@@ -154,7 +154,9 @@ def score_effect_action(
             )
             if enemies_hit > 1:
                 base *= 1.0 + 0.3 * (enemies_hit - 1)
-            if allies_hit:
+            if allies_hit and not context.me.has_sculpt_spells:
+                # Sculpt Spells casters skip the friendly-fire penalty —
+                # their blasts spare allies (mirrors _resolve_effect_targets).
                 penalty = 25.0 * allies_hit
                 if profile.protects_allies:
                     penalty *= 2.0
