@@ -182,6 +182,42 @@ class TestScaleAndClipCircle:
         assert result.get_size() == (1, 1)
 
 
+class TestBlackBacking:
+    """B6 polish: portraits sit on an opaque black backing inside the token
+    shape, so letterbox margins and transparent art read as solid tokens."""
+
+    def test_circle_letterbox_margin_is_opaque_black(self):
+        # A wide source leaves top/bottom margins inside the circle —
+        # those must be black backing, not see-through.
+        source = pygame.Surface((200, 100), pygame.SRCALPHA)
+        source.fill((0, 255, 0, 255))
+        result = _scale_and_clip_circle(source, 40)
+        margin = result.get_at((20, 5))     # inside circle, above the image
+        assert (margin.r, margin.g, margin.b, margin.a) == (0, 0, 0, 255)
+        center = result.get_at((20, 20))    # the art itself (smoothscale bleeds a little)
+        assert center.g > 200 and center.a == 255
+
+    def test_polygon_art_is_contained_centered_on_black(self, tmp_path):
+        from arena.gui.tokens import _get_polygon_token_image
+
+        source = pygame.Surface((200, 100), pygame.SRCALPHA)
+        source.fill((255, 0, 0, 255))
+        img = tmp_path / "wide.png"
+        pygame.image.save(source, str(img))
+
+        # Polygon = the full 60x60 bounding box, so only contain/centering
+        # and the backing are under test (no mask edge effects).
+        poly = [(0, 0), (59, 0), (59, 59), (0, 59)]
+        result = _get_polygon_token_image(str(img), 60, 60, poly, 0, 0)
+        assert result is not None and result.get_size() == (60, 60)
+        margin = result.get_at((30, 5))     # letterbox above the contained art
+        assert (margin.r, margin.g, margin.b, margin.a) == (0, 0, 0, 255)
+        center = result.get_at((30, 30))    # the art, whole and centered
+        assert center.r > 200 and center.a == 255
+        left_edge = result.get_at((1, 30))  # contain: full width visible
+        assert left_edge.r > 200
+
+
 # ------------------------------------------------------------------
 # Condition display metadata
 # ------------------------------------------------------------------

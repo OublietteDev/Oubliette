@@ -90,9 +90,10 @@ def _scale_and_clip_circle(
     """Scale an image to fit within a circle of *diameter* pixels.
 
     The image is first scaled (maintaining aspect ratio) so its largest
-    dimension equals the diameter.  It is then centered on a transparent
-    ``SRCALPHA`` surface, and a circular mask is applied so only pixels
-    inside the circle are visible.
+    dimension equals the diameter.  It is then centered on an opaque BLACK
+    backing (so letterbox margins and any transparency in the art read as a
+    solid token, not a floating cutout), and a circular mask is applied so
+    only pixels inside the circle are visible.
 
     Args:
         raw_surface: The raw loaded image.
@@ -115,8 +116,9 @@ def _scale_and_clip_circle(
     new_h = max(1, int(orig_h * scale_factor))
     scaled = pygame.transform.smoothscale(raw_surface, (new_w, new_h))
 
-    # Create result surface with per-pixel alpha
+    # Create result surface with per-pixel alpha, backed opaque black
     result = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
+    result.fill((0, 0, 0, 255))
 
     # Center the scaled image on the result surface
     offset_x = (diameter - new_w) // 2

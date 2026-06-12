@@ -564,9 +564,11 @@ def _get_polygon_token_image(
 ) -> pygame.Surface | None:
     """Load, scale, and clip a token image to a polygon boundary.
 
-    The image is scaled to cover the polygon's bounding box (maintaining
-    aspect ratio, cropping to fill) and then clipped to the polygon shape
-    using an alpha mask.
+    The image is fit WITHIN the polygon's bounding box (contain — the whole
+    creature stays visible, centered) over an opaque black backing, then
+    clipped to the polygon shape using an alpha mask. The black backing
+    fills the letterbox margins and shows through any transparency in the
+    art, so portraits read as solid tokens instead of floating cutouts.
 
     Args:
         image_path: Path to the image file.
@@ -605,26 +607,26 @@ def _get_polygon_token_image(
         _polygon_token_cache[cache_key] = None
         return None
 
-    # Scale to cover the bounding box (crop to fill, not letterbox)
+    # Fit the whole image inside the bounding box (contain), centered on an
+    # opaque black backing — no cropping, so the art stays centered and whole.
     orig_w, orig_h = raw.get_size()
     if orig_w == 0 or orig_h == 0:
         _polygon_token_cache[cache_key] = None
         return None
 
-    scale = max(width / orig_w, height / orig_h)
+    scale = min(width / orig_w, height / orig_h)
     new_w = max(1, int(orig_w * scale))
     new_h = max(1, int(orig_h * scale))
     scaled = pygame.transform.smoothscale(raw, (new_w, new_h))
 
-    # Center-crop to bounding box size
-    crop_x = (new_w - width) // 2
-    crop_y = (new_h - height) // 2
-    cropped = scaled.subsurface((crop_x, crop_y, width, height)).copy()
+    composed = pygame.Surface((width, height), pygame.SRCALPHA)
+    composed.fill((0, 0, 0, 255))
+    composed.blit(scaled, ((width - new_w) // 2, (height - new_h) // 2))
 
-    # Cache the cropped (but unclipped) image
-    _polygon_token_cache[cache_key] = cropped
+    # Cache the composed (but unclipped) image
+    _polygon_token_cache[cache_key] = composed
 
-    return _clip_surface_to_polygon(cropped, width, height, polygon, offset_x, offset_y)
+    return _clip_surface_to_polygon(composed, width, height, polygon, offset_x, offset_y)
 
 
 def _clip_surface_to_polygon(
