@@ -52,7 +52,14 @@
             "bonus": 0
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "poisoned"
+      ],
+      "condition_save_to_end": "constitution",
+      "condition_save_to_end_dc": 11,
+      "condition_duration_type": "rounds",
+      "condition_duration_rounds": 10
     },
     {
       "name": "Claws",
@@ -75,6 +82,8 @@
       }
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [
     {
       "name": "Multiattack",

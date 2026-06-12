@@ -15,18 +15,32 @@ What it maps onto the Arena `Monster` model, with full combat fidelity:
   - save-based actions (breath weapons etc.) → `SavingThrowEffect` (DC, ability,
     damage, half/none on success). The Arena has no recharge timer, so a recharge
     action is capped at `uses_per_rest=2` (a balance approximation);
+  - CONDITION RIDERS (C2): a save action's failure conditions parse from the
+    effect phrasing ("or become frightened", "and be knocked prone") into
+    `conditions_on_fail` — the engine applies them with a built-in re-save.
+    Progressive effects (Gorgon: restrained → petrified on a second fail) emit
+    only the FIRST stage (the deliberate approximation — re-save ends it).
+    Save-gated riders on weapon attacks (Ghoul claws: "DC 10 CON save or be
+    paralyzed") emit `conditions_applied` + `condition_save_to_end`; the engine
+    applies the condition on hit and the target saves at end of turn to shake
+    it (the initial save is skipped — a known, mild strengthening). Grappled is
+    deliberately NOT emitted: the engine has no grapple-escape check yet, so an
+    automatic on-hit grapple would be permanent.
+  - LEGENDARY ACTIONS (C2): mechanizable entries map like actions (action_type
+    "legendary", cost parsed from "(Costs N Actions)"); reference entries ("The
+    dragon makes a tail attack.") resolve against the action list by name.
+    Non-mechanizable ones (Detect, Move) are skipped. `legendary_action_count`
+    = 3 whenever any are present (the 5e standard pool).
   - core stats: abilities, AC, HP, hit dice, speed, proficiency, CR, XP,
     resistances/immunities/vulnerabilities, condition immunities, senses;
   - MULTIATTACK as a `special_abilities` Feature carrying `extra_attack_count`
-    (= total attacks per Attack action). NOTE: monster multiattack is currently DORMANT — the
-    engine's get_extra_attack_count only reads PlayerCharacter.features, not a
-    monster's special_abilities. The data is forward-compatible: a ~4-line engine
-    change ("turn on" monster multiattack) activates it across the whole set.
+    (= total attacks per Attack action) — LIVE: the engine's
+    get_extra_attack_count reads monster special_abilities.
 
-DEFERRED (Phase 2 / not mechanized): spellcasting (spells are listed by name, not
-as mechanical effects), legendary/lair actions, on-hit rider conditions. Passive
-abilities (Pack Tactics etc.) are stored for display but stay inert (no engine
-support). Generated monsters get the default AI profile.
+DEFERRED (not mechanized): spellcasting (spells are listed by name, not as
+mechanical effects), lair actions (the 5e-db base set carries none), regeneration
+and other passive traits (Pack Tactics etc. are stored for display but stay
+inert). Generated monsters get the default AI profile.
 
 Every output is validated against the Arena `Monster` model before writing.
 """
@@ -138,7 +152,62 @@ def _aoe_shape(desc: str) -> tuple[str, int | None]:
         return "area_line", size
     if "radius" in d or "sphere" in d:
         return "area_sphere", size
+    # Self-centered bursts: "Each creature within 120 ft. of the dragon ..."
+    # (Frightful Presence, Wing Attack). The engine resolves any area_* as a
+    # burst around the user, which is exactly this shape.
+    m2 = re.search(r"each creature (?:of[^.]*? )?(?:that is )?within (\d+) ?f", d)
+    if m2:
+        return "area_sphere", int(m2.group(1))
     return "one_creature", None
+
+
+# Conditions the engine models (Condition enum values), parseable from effect
+# phrasing. Grappled is deliberately absent (no escape check engine-side yet).
+_CONDS = ("blinded|charmed|deafened|frightened|paralyzed|petrified|poisoned"
+          "|restrained|stunned|unconscious")
+_COND_RE = re.compile(
+    rf"(?:(?:be(?:come)?s?|is|are) (?:also )?(?:magically )?({_CONDS})\b"
+    rf"|(knocked|falls?) prone)")
+_NEGATED = re.compile(r"(?:can(?:no|')t (?:be|become)|is(?:n't| not)|are not"
+                      r"|no longer|immune to|except)[^.]{0,40}$")
+
+
+def _conditions_in(desc: str) -> list[str]:
+    """The FIRST condition the effect phrasing imposes, with negation guards
+    (the CS4 poison-parser lesson: harvest only effect wording, never flavor).
+    First-match-only is deliberate: progressive effects (restrained → petrified
+    on later fails) emit their first stage; the re-save handles the rest."""
+    d = desc.lower()
+    for m in _COND_RE.finditer(d):
+        if _NEGATED.search(d[:m.start()]):
+            continue
+        return ["prone" if m.group(1) is None else m.group(1)]
+    return []
+
+
+_RIDER_RE = re.compile(
+    r"dc (\d+) (strength|dexterity|constitution|intelligence|wisdom|charisma)"
+    r" saving throw or", re.IGNORECASE)
+
+
+def _attack_rider(desc: str) -> dict | None:
+    """A save-gated condition rider on a weapon attack (Ghoul claws: "DC 10
+    Constitution saving throw or be paralyzed"). Returns the Action-level
+    fields, or None. The engine applies conditions_applied on every hit and
+    re-saves to end — the initial save is skipped (mild strengthening)."""
+    m = _RIDER_RE.search(desc)
+    if not m:
+        return None
+    conds = _conditions_in(desc[m.end():])
+    if not conds:
+        return None
+    return {
+        "conditions_applied": conds,
+        "condition_save_to_end": m.group(2).lower(),
+        "condition_save_to_end_dc": int(m.group(1)),
+        "condition_duration_type": "rounds",
+        "condition_duration_rounds": 10,
+    }
 
 
 def _action(a: dict, abils: dict, prof: int) -> dict | None:
@@ -151,7 +220,7 @@ def _action(a: dict, abils: dict, prof: int) -> dict | None:
             return None
         ranged = "ranged" in desc.lower()
         reach = _first_int(re.search(r"reach (\d+)", desc.lower()) and re.search(r"reach (\d+)", desc.lower()).group(1)) or 5
-        return {
+        out = {
             "name": name, "description": desc, "action_type": "action",
             "target_type": "one_creature", "range": reach,
             "attack": {
@@ -162,18 +231,27 @@ def _action(a: dict, abils: dict, prof: int) -> dict | None:
                 "damage": rolls,
             },
         }
+        rider = _attack_rider(desc)
+        if rider:
+            out.update(rider)
+        return out
     if a.get("dc"):
         dc = a["dc"]
         success = dc.get("success_type")
         shape, size = _aoe_shape(desc)
+        damage_on_fail = _damage_rolls(a.get("damage"))
+        conditions = _conditions_in(desc)
+        if not damage_on_fail and not conditions:
+            return None   # nothing mechanizable — don't ship an inert action
         out = {
             "name": name, "description": desc, "action_type": "action",
             "target_type": shape,
             "saving_throw": {
                 "ability": _ABIL_FROM_INDEX.get((dc.get("dc_type") or {}).get("index"), "dexterity"),
                 "dc": dc.get("dc_value"),
-                "damage_on_fail": _damage_rolls(a.get("damage")),
+                "damage_on_fail": damage_on_fail,
                 "damage_on_success": success if success in ("none", "half", "full") else "none",
+                "conditions_on_fail": conditions,
             },
         }
         if size:
@@ -186,6 +264,41 @@ def _action(a: dict, abils: dict, prof: int) -> dict | None:
             out["current_uses"] = 2
         return out
     return None
+
+
+_LEG_COST_RE = re.compile(r"\(costs (\d+) actions?\)", re.IGNORECASE)
+_LEG_REF_RE = re.compile(r"makes (?:a|an|one|two) ([\w\s]+?) attacks?")
+
+
+def _legendary_actions(m: dict, abils: dict, prof: int,
+                       actions: list[dict]) -> list[dict]:
+    """Map 5e-db legendary_actions → Arena legendary Actions. Entries with
+    their own mechanics (Wing Attack's save+damage) map directly; reference
+    entries ("The dragon makes a tail attack.") resolve against the already-
+    mapped action list by name; the rest (Detect, Move) are skipped."""
+    out = []
+    for la in m.get("legendary_actions", []):
+        name, desc = la["name"], la.get("desc", "")
+        cost_m = _LEG_COST_RE.search(name)
+        cost = int(cost_m.group(1)) if cost_m else 1
+
+        act = _action(la, abils, prof)
+        if act is None:
+            ref = _LEG_REF_RE.search(desc.lower())
+            if ref:
+                needle = ref.group(1).strip()
+                for cand in actions:
+                    cn = cand["name"].lower()
+                    if cn in needle or needle in cn:
+                        act = json.loads(json.dumps(cand))   # deep copy
+                        act["name"], act["description"] = name, desc
+                        break
+        if act is None:
+            continue
+        act["action_type"] = "legendary"
+        act["legendary_action_cost"] = cost
+        out.append(act)
+    return out
 
 
 def _multiattack(actions: list) -> dict | None:
@@ -230,6 +343,8 @@ def build_monster(m: dict) -> dict:
         if act:
             actions.append(act)
 
+    legendary = _legendary_actions(m, abils, prof, actions)
+
     special = []
     ma = _multiattack(m.get("actions", []))
     if ma:
@@ -258,6 +373,8 @@ def build_monster(m: dict) -> dict:
         "senses": senses,
         "passive_perception": passive,
         "actions": actions,
+        "legendary_actions": legendary,
+        "legendary_action_count": 3 if legendary else 0,
         "special_abilities": special,
         "challenge_rating": float(m.get("challenge_rating", 0)),
         "experience_points": int(m.get("xp", 0)),

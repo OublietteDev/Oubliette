@@ -55,7 +55,14 @@
             "bonus": 3
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "poisoned"
+      ],
+      "condition_save_to_end": "constitution",
+      "condition_save_to_end_dc": 10,
+      "condition_duration_type": "rounds",
+      "condition_duration_rounds": 10
     },
     {
       "name": "Scare",
@@ -66,10 +73,15 @@
         "ability": "wisdom",
         "dc": 10,
         "damage_on_fail": [],
-        "damage_on_success": "none"
+        "damage_on_success": "none",
+        "conditions_on_fail": [
+          "frightened"
+        ]
       }
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [
     {
       "name": "Shapechanger",

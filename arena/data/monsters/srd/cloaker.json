@@ -73,15 +73,21 @@
       "name": "Moan",
       "description": "Each creature within 60 feet of the cloaker that can hear its moan and that isn't an aberration must succeed on a DC 13 Wisdom saving throw or become frightened until the end of the cloaker's next turn. If a creature's saving throw is successful, the creature is immune to the cloaker's moan for the next 24 hours.",
       "action_type": "action",
-      "target_type": "one_creature",
+      "target_type": "area_sphere",
       "saving_throw": {
         "ability": "wisdom",
         "dc": 13,
         "damage_on_fail": [],
-        "damage_on_success": "none"
-      }
+        "damage_on_success": "none",
+        "conditions_on_fail": [
+          "frightened"
+        ]
+      },
+      "area_size": 60
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [
     {
       "name": "Multiattack",

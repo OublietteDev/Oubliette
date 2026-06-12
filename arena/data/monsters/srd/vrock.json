@@ -91,7 +91,10 @@
         "ability": "constitution",
         "dc": 14,
         "damage_on_fail": [],
-        "damage_on_success": "none"
+        "damage_on_success": "none",
+        "conditions_on_fail": [
+          "poisoned"
+        ]
       },
       "area_size": 15,
       "uses_per_rest": 2,
@@ -102,15 +105,21 @@
       "name": "Stunning Screech",
       "description": "The vrock emits a horrific screech. Each creature within 20 feet of it that can hear it and that isn't a demon must succeed on a DC 14 Constitution saving throw or be stunned until the end of the vrock's next turn .",
       "action_type": "action",
-      "target_type": "one_creature",
+      "target_type": "area_sphere",
       "saving_throw": {
         "ability": "constitution",
         "dc": 14,
         "damage_on_fail": [],
-        "damage_on_success": "none"
-      }
+        "damage_on_success": "none",
+        "conditions_on_fail": [
+          "stunned"
+        ]
+      },
+      "area_size": 20
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [
     {
       "name": "Multiattack",

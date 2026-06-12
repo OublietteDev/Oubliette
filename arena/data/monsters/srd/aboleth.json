@@ -87,10 +87,37 @@
         "ability": "wisdom",
         "dc": 14,
         "damage_on_fail": [],
-        "damage_on_success": "none"
+        "damage_on_success": "none",
+        "conditions_on_fail": [
+          "charmed"
+        ]
       }
     }
   ],
+  "legendary_actions": [
+    {
+      "name": "Tail Swipe",
+      "description": "The aboleth makes one tail attack.",
+      "action_type": "legendary",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Tail",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "3d6",
+            "damage_type": "bludgeoning",
+            "bonus": 5
+          }
+        ]
+      },
+      "legendary_action_cost": 1
+    }
+  ],
+  "legendary_action_count": 3,
   "special_abilities": [
     {
       "name": "Multiattack",

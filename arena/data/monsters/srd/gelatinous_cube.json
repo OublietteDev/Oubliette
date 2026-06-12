@@ -70,10 +70,15 @@
             "bonus": 0
           }
         ],
-        "damage_on_success": "none"
+        "damage_on_success": "none",
+        "conditions_on_fail": [
+          "restrained"
+        ]
       }
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [
     {
       "name": "Ooze Cube",

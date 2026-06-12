@@ -87,18 +87,24 @@
       "name": "Horror Nimbus",
       "description": "The nalfeshnee magically emits scintillating, multicolored light. Each creature within 15 feet of the nalfeshnee that can see the light must succeed on a DC 15 Wisdom saving throw or be frightened for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. If a creature's saving throw is successful or the effect ends for it, the creature is immune to the nalfeshnee's Horror Nimbus for the next 24 hours.",
       "action_type": "action",
-      "target_type": "one_creature",
+      "target_type": "area_sphere",
       "saving_throw": {
         "ability": "wisdom",
         "dc": 15,
         "damage_on_fail": [],
-        "damage_on_success": "none"
+        "damage_on_success": "none",
+        "conditions_on_fail": [
+          "frightened"
+        ]
       },
+      "area_size": 15,
       "uses_per_rest": 2,
       "rest_type": "short",
       "current_uses": 2
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [
     {
       "name": "Multiattack",

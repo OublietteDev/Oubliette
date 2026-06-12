@@ -46,7 +46,14 @@
             "bonus": 4
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "prone"
+      ],
+      "condition_save_to_end": "strength",
+      "condition_save_to_end_dc": 14,
+      "condition_duration_type": "rounds",
+      "condition_duration_rounds": 10
     },
     {
       "name": "Cold Breath",
@@ -63,7 +70,8 @@
             "bonus": 0
           }
         ],
-        "damage_on_success": "none"
+        "damage_on_success": "none",
+        "conditions_on_fail": []
       },
       "area_size": 15,
       "uses_per_rest": 2,
@@ -71,6 +79,8 @@
       "current_uses": 2
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [
     {
       "name": "Keen Hearing and Smell",

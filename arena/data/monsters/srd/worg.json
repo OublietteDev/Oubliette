@@ -46,9 +46,18 @@
             "bonus": 3
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "prone"
+      ],
+      "condition_save_to_end": "strength",
+      "condition_save_to_end_dc": 13,
+      "condition_duration_type": "rounds",
+      "condition_duration_rounds": 10
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [
     {
       "name": "Keen Hearing and Smell",

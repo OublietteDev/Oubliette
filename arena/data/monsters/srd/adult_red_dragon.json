@@ -107,13 +107,17 @@
       "name": "Frightful Presence",
       "description": "Each creature of the dragon's choice that is within 120 ft. of the dragon and aware of it must succeed on a DC 19 Wisdom saving throw or become frightened for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. If a creature's saving throw is successful or the effect ends for it, the creature is immune to the dragon's Frightful Presence for the next 24 hours.",
       "action_type": "action",
-      "target_type": "one_creature",
+      "target_type": "area_sphere",
       "saving_throw": {
         "ability": "wisdom",
         "dc": 19,
         "damage_on_fail": [],
-        "damage_on_success": "none"
-      }
+        "damage_on_success": "none",
+        "conditions_on_fail": [
+          "frightened"
+        ]
+      },
+      "area_size": 120
     },
     {
       "name": "Fire Breath",
@@ -130,7 +134,8 @@
             "bonus": 0
           }
         ],
-        "damage_on_success": "none"
+        "damage_on_success": "none",
+        "conditions_on_fail": []
       },
       "area_size": 60,
       "uses_per_rest": 2,
@@ -138,6 +143,53 @@
       "current_uses": 2
     }
   ],
+  "legendary_actions": [
+    {
+      "name": "Tail Attack",
+      "description": "The dragon makes a tail attack.",
+      "action_type": "legendary",
+      "target_type": "one_creature",
+      "range": 15,
+      "attack": {
+        "name": "Tail",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 15,
+        "damage": [
+          {
+            "dice": "2d8",
+            "damage_type": "bludgeoning",
+            "bonus": 8
+          }
+        ]
+      },
+      "legendary_action_cost": 1
+    },
+    {
+      "name": "Wing Attack (Costs 2 Actions)",
+      "description": "The dragon beats its wings. Each creature within 10 ft. of the dragon must succeed on a DC 22 Dexterity saving throw or take 15 (2d6 + 8) bludgeoning damage and be knocked prone. The dragon can then fly up to half its flying speed.",
+      "action_type": "legendary",
+      "target_type": "area_sphere",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 22,
+        "damage_on_fail": [
+          {
+            "dice": "2d6",
+            "damage_type": "bludgeoning",
+            "bonus": 8
+          }
+        ],
+        "damage_on_success": "none",
+        "conditions_on_fail": [
+          "prone"
+        ]
+      },
+      "area_size": 10,
+      "legendary_action_cost": 2
+    }
+  ],
+  "legendary_action_count": 3,
   "special_abilities": [
     {
       "name": "Multiattack",

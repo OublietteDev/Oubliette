@@ -56,6 +56,8 @@
       }
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [],
   "challenge_rating": 0.5,
   "experience_points": 100,

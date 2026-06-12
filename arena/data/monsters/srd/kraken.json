@@ -96,10 +96,56 @@
             "bonus": 0
           }
         ],
-        "damage_on_success": "half"
+        "damage_on_success": "half",
+        "conditions_on_fail": []
       }
     }
   ],
+  "legendary_actions": [
+    {
+      "name": "Tentacle Attack or Fling",
+      "description": "The kraken makes one tentacle attack or uses its Fling.",
+      "action_type": "legendary",
+      "target_type": "one_creature",
+      "range": 30,
+      "attack": {
+        "name": "Tentacle",
+        "attack_type": "melee_weapon",
+        "ability": "dexterity",
+        "reach": 30,
+        "damage": [
+          {
+            "dice": "3d6",
+            "damage_type": "bludgeoning",
+            "bonus": 10
+          }
+        ]
+      },
+      "legendary_action_cost": 1
+    },
+    {
+      "name": "Ink Cloud (Costs 3 Actions)",
+      "description": "While underwater, the kraken expels an ink cloud in a 60-foot radius. The cloud spreads around corners, and that area is heavily obscured to creatures other than the kraken. Each creature other than the kraken that ends its turn there must succeed on a DC 23 Constitution saving throw, taking 16 (3d10) poison damage on a failed save, or half as much damage on a successful one. A strong current disperses the cloud, which otherwise disappears at the end of the kraken's next turn.",
+      "action_type": "legendary",
+      "target_type": "area_sphere",
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 23,
+        "damage_on_fail": [
+          {
+            "dice": "3d10",
+            "damage_type": "poison",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half",
+        "conditions_on_fail": []
+      },
+      "area_size": 60,
+      "legendary_action_cost": 3
+    }
+  ],
+  "legendary_action_count": 3,
   "special_abilities": [
     {
       "name": "Multiattack",

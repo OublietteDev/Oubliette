@@ -89,10 +89,42 @@
         "ability": "wisdom",
         "dc": 17,
         "damage_on_fail": [],
-        "damage_on_success": "none"
+        "damage_on_success": "none",
+        "conditions_on_fail": [
+          "charmed"
+        ]
       }
     }
   ],
+  "legendary_actions": [
+    {
+      "name": "Bite (Costs 2 Actions)",
+      "description": "The vampire makes one bite attack.",
+      "action_type": "legendary",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "piercing",
+            "bonus": 4
+          },
+          {
+            "dice": "3d6",
+            "damage_type": "necrotic",
+            "bonus": 0
+          }
+        ]
+      },
+      "legendary_action_cost": 2
+    }
+  ],
+  "legendary_action_count": 3,
   "special_abilities": [
     {
       "name": "Multiattack",

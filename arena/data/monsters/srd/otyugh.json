@@ -84,10 +84,15 @@
         "ability": "constitution",
         "dc": 14,
         "damage_on_fail": [],
-        "damage_on_success": "half"
+        "damage_on_success": "half",
+        "conditions_on_fail": [
+          "stunned"
+        ]
       }
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [
     {
       "name": "Multiattack",

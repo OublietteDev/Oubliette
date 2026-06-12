@@ -51,7 +51,14 @@
             "bonus": 9
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "blinded"
+      ],
+      "condition_save_to_end": "dexterity",
+      "condition_save_to_end_dc": 19,
+      "condition_duration_type": "rounds",
+      "condition_duration_rounds": 10
     },
     {
       "name": "Tail Stinger",
@@ -74,6 +81,8 @@
       }
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [
     {
       "name": "Multiattack",

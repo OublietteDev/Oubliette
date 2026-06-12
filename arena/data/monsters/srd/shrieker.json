@@ -32,6 +32,8 @@
   },
   "passive_perception": 6,
   "actions": [],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [
     {
       "name": "False Appearance",

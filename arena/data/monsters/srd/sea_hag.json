@@ -48,20 +48,10 @@
           }
         ]
       }
-    },
-    {
-      "name": "Death Glare",
-      "description": "The hag targets one frightened creature she can see within 30 ft. of her. If the target can see the hag, it must succeed on a DC 11 Wisdom saving throw against this magic or drop to 0 hit points.",
-      "action_type": "action",
-      "target_type": "one_creature",
-      "saving_throw": {
-        "ability": "wisdom",
-        "dc": 11,
-        "damage_on_fail": [],
-        "damage_on_success": "none"
-      }
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [
     {
       "name": "Amphibious",

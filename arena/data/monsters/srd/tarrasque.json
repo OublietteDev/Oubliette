@@ -119,7 +119,14 @@
             "bonus": 10
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "prone"
+      ],
+      "condition_save_to_end": "strength",
+      "condition_save_to_end_dc": 20,
+      "condition_duration_type": "rounds",
+      "condition_duration_rounds": 10
     },
     {
       "name": "Frightful Presence",
@@ -130,10 +137,58 @@
         "ability": "wisdom",
         "dc": 17,
         "damage_on_fail": [],
-        "damage_on_success": "none"
+        "damage_on_success": "none",
+        "conditions_on_fail": [
+          "frightened"
+        ]
       }
     }
   ],
+  "legendary_actions": [
+    {
+      "name": "Attack",
+      "description": "The tarrasque makes one claw attack or tail attack.",
+      "action_type": "legendary",
+      "target_type": "one_creature",
+      "range": 15,
+      "attack": {
+        "name": "Claw",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 15,
+        "damage": [
+          {
+            "dice": "4d8",
+            "damage_type": "slashing",
+            "bonus": 10
+          }
+        ]
+      },
+      "legendary_action_cost": 1
+    },
+    {
+      "name": "Chomp (Costs 2 Actions)",
+      "description": "The tarrasque makes one bite attack or uses its Swallow.",
+      "action_type": "legendary",
+      "target_type": "one_creature",
+      "range": 10,
+      "attack": {
+        "name": "Bite",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 10,
+        "damage": [
+          {
+            "dice": "4d12",
+            "damage_type": "piercing",
+            "bonus": 10
+          }
+        ]
+      },
+      "legendary_action_cost": 2
+    }
+  ],
+  "legendary_action_count": 3,
   "special_abilities": [
     {
       "name": "Multiattack",

@@ -61,6 +61,30 @@
       }
     }
   ],
+  "legendary_actions": [
+    {
+      "name": "Claw Attack",
+      "description": "The sphinx makes one claw attack.",
+      "action_type": "legendary",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Claw",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "2d10",
+            "damage_type": "slashing",
+            "bonus": 6
+          }
+        ]
+      },
+      "legendary_action_cost": 1
+    }
+  ],
+  "legendary_action_count": 3,
   "special_abilities": [
     {
       "name": "Multiattack",

@@ -79,7 +79,8 @@
             "bonus": 0
           }
         ],
-        "damage_on_success": "half"
+        "damage_on_success": "half",
+        "conditions_on_fail": []
       },
       "area_size": 15,
       "uses_per_rest": 2,
@@ -87,6 +88,8 @@
       "current_uses": 2
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [],
   "challenge_rating": 2.0,
   "experience_points": 450,

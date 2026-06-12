@@ -57,10 +57,15 @@
         "ability": "wisdom",
         "dc": 14,
         "damage_on_fail": [],
-        "damage_on_success": "none"
+        "damage_on_success": "none",
+        "conditions_on_fail": [
+          "charmed"
+        ]
       }
     }
   ],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
   "special_abilities": [
     {
       "name": "Innate Spellcasting",

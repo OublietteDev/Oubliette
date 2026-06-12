@@ -229,6 +229,80 @@ def test_monster_multiattack_is_live():
     assert get_extra_attack_count(arena_monster_file("goblin")) == 1            # no multiattack
 
 
+def test_legendary_actions_are_generated_and_survive_staging():
+    """C2: legendary entries with their own mechanics map directly (Wing Attack:
+    save + damage + prone, costs 2); reference entries ("makes a tail attack")
+    resolve against the action list; non-mechanizable ones (Detect) are skipped."""
+    from oubliette.combat.arena_bridge import arena_monster_file
+
+    dragon = arena_monster_file("adult_red_dragon")
+    assert dragon.legendary_action_count == 3
+    names = {a.name: a for a in dragon.legendary_actions}
+    assert "Detect" not in names
+    tail = names["Tail Attack"]
+    assert tail.attack is not None and tail.legendary_action_cost == 1
+    assert tail.action_type.value == "legendary"
+    wing = names["Wing Attack (Costs 2 Actions)"]
+    assert wing.legendary_action_cost == 2
+    assert wing.saving_throw.dc == 22
+    assert wing.saving_throw.conditions_on_fail == ["prone"]
+    assert wing.target_type.value == "area_sphere" and wing.area_size == 10
+
+
+def test_condition_riders_un_inert_the_signature_abilities():
+    """C2: Gorgon petrifying breath restrains (deliberate first-stage approx),
+    Frightful Presence frightens in a 120-ft burst, Ghoul claws carry a
+    save-gated paralysis rider, Aboleth's "magically charmed" parses."""
+    from oubliette.combat.arena_bridge import arena_monster_file
+
+    gorgon = arena_monster_file("gorgon")
+    breath = next(a for a in gorgon.actions if "Breath" in a.name)
+    assert breath.saving_throw.conditions_on_fail == ["restrained"]
+    assert breath.uses_per_rest == 2                    # recharge approximation
+
+    dragon = arena_monster_file("adult_red_dragon")
+    fp = next(a for a in dragon.actions if "Frightful" in a.name)
+    assert fp.saving_throw.conditions_on_fail == ["frightened"]
+    assert fp.target_type.value == "area_sphere" and fp.area_size == 120
+
+    ghoul = arena_monster_file("ghoul")
+    claws = next(a for a in ghoul.actions if a.name == "Claws")
+    assert claws.conditions_applied == ["paralyzed"]
+    assert claws.condition_save_to_end == "constitution"
+    assert claws.condition_save_to_end_dc == 10
+
+    enslave = next(a for a in arena_monster_file("aboleth").actions
+                   if a.name == "Enslave")
+    assert enslave.saving_throw.conditions_on_fail == ["charmed"]
+
+
+def test_ghoul_paralysis_flows_through_attack_resolution():
+    """C2 engine slice: the generated rider data drives the real attack path —
+    a claw hit applies paralyzed with the CON 10 save-to-end."""
+    from arena.combat.actions import resolve_attack
+    from arena.grid.coordinates import HexCoord
+    from arena.grid.hexgrid import HexGrid
+    from arena.models.character import PlayerCharacter
+
+    from oubliette.combat.arena_bridge import arena_monster_file
+
+    ghoul = arena_monster_file("ghoul")
+    claws = next(a for a in ghoul.actions if a.name == "Claws")
+    target = PlayerCharacter(name="Dummy", character_class="Fighter",
+                             max_hit_points=30, armor_class=1)
+    grid = HexGrid(5, 5)
+    grid.place_creature(HexCoord(1, 1), "ghoul")
+    grid.place_creature(HexCoord(2, 1), "dummy")
+    for _ in range(30):                                # AC 1: only nat 1 misses
+        resolve_attack(ghoul, "ghoul", target, "dummy", claws, grid)
+        if target.active_conditions:
+            break
+    conds = {c.condition.value: c for c in target.active_conditions}
+    assert "paralyzed" in conds
+    assert conds["paralyzed"].save_to_end == "constitution"
+    assert conds["paralyzed"].save_dc == 10
+
+
 def test_unknown_enemy_ref_is_a_combat_error():
     s = _session()
     req = EncounterRequest(enemies=[EnemyRef(ref="nonesuch_beast")])
