@@ -1,0 +1,21 @@
+{
+  "name": "Sanctuary",
+  "description": "You ward a creature within range against attack. Until the spell ends, any creature who targets the warded creature with an attack or a harmful spell must first make a wisdom saving throw. On a failed save, the creature must choose a new target or lose the attack or spell. This spell doesn't protect",
+  "action_type": "bonus_action",
+  "range": 30,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "one_ally",
+  "buff_effects": [
+    {
+      "stat": "sanctuary_ward",
+      "modifier_type": "flat_bonus",
+      "value": "DC"
+    }
+  ],
+  "buff_duration_rounds": 10
+}

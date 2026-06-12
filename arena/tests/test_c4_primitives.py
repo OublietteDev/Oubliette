@@ -449,3 +449,93 @@ class TestShieldReaction:
         assert creature.current_hit_points < 20
         assert creature.class_resources["spell_slot_1"] == 2
         assert not cm.reaction_used.get(wiz_id, False)
+
+
+# ── C4d: decoys — Mirror Image and Sanctuary ─────────────────────────
+
+
+def _decoy(charges=3):
+    return ActiveBuff(
+        name="Mirror Image", source_id="self", charges=charges,
+        modifiers=[BuffEffect(stat="decoy_images",
+                              modifier_type="flat_bonus", value=3)],
+    )
+
+
+def _ward(dc=13):
+    return ActiveBuff(
+        name="Sanctuary", source_id="cleric",
+        modifiers=[BuffEffect(stat="sanctuary_ward",
+                              modifier_type="flat_bonus", value=dc)],
+    )
+
+
+def _swing(attacker, target, roll, dex=10):
+    target.ability_scores.dexterity = dex
+    grid = _grid_pair()
+    with patch("arena.combat.actions.roll_die", return_value=roll):
+        return resolve_attack_hit(
+            attacker, "atk", target, "tgt", _weapon_action(), grid,
+        )
+
+
+class TestMirrorImage:
+    def test_redirected_hit_shatters_a_duplicate(self):
+        attacker, target = _creature("Orc"), _creature("Wizard")
+        buff = _decoy(charges=3)
+        target.active_buffs.append(buff)
+        # roll 15: redirect (15 >= 6 at 3 images), 15+2=17 vs image AC 10
+        hit = _swing(attacker, target, roll=15)
+        assert hit.hit is False                     # real wizard untouched
+        assert buff.charges == 2                    # one image gone
+        assert any("duplicate" in e.message for e in hit.events)
+
+    def test_redirected_miss_spares_the_duplicate(self):
+        attacker, target = _creature("Orc"), _creature("Wizard")
+        buff = _decoy(charges=3)
+        target.active_buffs.append(buff)
+        # dex 18 → image AC 14; roll 8: redirect (8 >= 6), 8+2=10 < 14
+        hit = _swing(attacker, target, roll=8, dex=18)
+        assert hit.hit is False
+        assert buff.charges == 3                    # image evaded too
+
+    def test_low_redirect_roll_attacks_the_real_target(self):
+        attacker, target = _creature("Orc"), _creature("Wizard")
+        buff = _decoy(charges=1)                    # 1 image: needs 11+
+        target.active_buffs.append(buff)
+        # roll 10: redirect fails (10 < 11), real attack 10+2=12 vs AC 12
+        hit = _swing(attacker, target, roll=10)
+        assert hit.hit is True
+        assert buff.charges == 1
+
+    def test_last_image_removal_ends_the_spell(self):
+        attacker, target = _creature("Orc"), _creature("Wizard")
+        buff = _decoy(charges=1)
+        target.active_buffs.append(buff)
+        # roll 15: redirect (15 >= 11), 17 vs AC 10 shatters the last image
+        hit = _swing(attacker, target, roll=15)
+        assert hit.hit is False
+        assert target.active_buffs == []            # spell spent
+        assert any("spent" in e.message for e in hit.events)
+
+
+class TestSanctuary:
+    def test_failed_save_loses_the_attack(self):
+        attacker, target = _creature("Orc"), _creature("Cleric")
+        target.active_buffs.append(_ward(dc=13))
+        hit = _swing(attacker, target, roll=5)      # save 5+0 < 13
+        assert hit.hit is False
+        assert any("the attack is lost" in e.message for e in hit.events)
+        assert target.current_hit_points == 40
+
+    def test_passed_save_attacks_normally(self):
+        attacker, target = _creature("Orc"), _creature("Cleric")
+        target.active_buffs.append(_ward(dc=13))
+        hit = _swing(attacker, target, roll=15)     # save 15 >= 13, then 17 vs 12
+        assert hit.hit is True
+
+    def test_attacking_breaks_your_own_ward(self):
+        attacker, target = _creature("Cleric"), _creature("Orc")
+        attacker.active_buffs.append(_ward(dc=13))
+        _swing(attacker, target, roll=15)
+        assert attacker.active_buffs == []          # ward ended by attacking

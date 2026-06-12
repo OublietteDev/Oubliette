@@ -247,6 +247,12 @@ def spell_actions(char: Character) -> list[Action]:
             # Heroism: temp HP equal to the casting modifier (floor 1).
             action.grants_temporary_hp = action.grants_temporary_hp.replace(
                 "MOD", str(max(1, mod)))
+        for be in action.buff_effects:
+            # C4: a buff value of the literal "DC" token carries THIS
+            # caster's spell save DC into the buff (Sanctuary's ward DC —
+            # checked at attack time, long after the cast).
+            if be.value == "DC":
+                be.value = dc
         out.append(action)
     return out
 

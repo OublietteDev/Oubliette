@@ -612,6 +612,24 @@ _CURATED: dict[str, dict] = {
         ],                            # rider is dropped (auto-hit volleys
         "buff_duration_rounds": 1,    # never offer reactions).
     },
+    # --- C4: decoys (engine hooks in resolve_attack_hit) ---------------------
+    "mirror_image": {  # the buff's trigger charges ARE the duplicates;
+        "target_type": "self",        # redirect d20 + image AC 10+DEX live
+        "buff_effects": [             # engine-side. approx: a nat 20 only
+            {"stat": "decoy_images", "modifier_type": "flat_bonus",
+             "value": 3},             # pops an image; blindsight not modeled
+        ],
+        "buff_charges": 3,
+        "buff_duration_rounds": 10,   # 1 minute, no concentration
+    },
+    "sanctuary": {     # attacker WIS save vs the ward DC or the attack is
+        "target_type": "one_ally",    # lost (approx of choose-new-target);
+        "buff_effects": [             # ward breaks when the warded creature
+            {"stat": "sanctuary_ward", "modifier_type": "flat_bonus",
+             "value": "DC"},          # attacks. "DC" baked by the bridge.
+        ],
+        "buff_duration_rounds": 10,
+    },
     # --- C4: spell-granted on-hit riders (stat="on_hit_damage" buffs) -------
     # The rider rides the buff system: concentration cleanup, duration, and
     # save-to-end all come free. damage_type omitted = inherit the weapon's;

@@ -74,8 +74,9 @@ def test_manifest_accounts_for_every_srd_spell():
     for spell in ("hold_person", "bless", "haste", "spirit_guardians",
                   "misty_step", "counterspell", "web", "spiritual_weapon"):
         assert spell in manifest["generated"], spell
-    # C4 primitives: on-hit riders + the Shield reaction
-    for spell in ("hunters_mark", "divine_favor", "branding_smite", "shield"):
+    # C4 primitives: on-hit riders, the Shield reaction, decoys
+    for spell in ("hunters_mark", "divine_favor", "branding_smite", "shield",
+                  "mirror_image", "sanctuary"):
         assert spell in manifest["generated"], spell
 
 
@@ -172,6 +173,17 @@ def test_player_mapping_carries_kit_saves_speed_and_casting_ability():
     assert creature.saving_throw_proficiencies == ["charisma", "wisdom"]
     assert creature.speed == {"walk": 30}
     assert creature.spell_slots == {1: 4, 2: 2}   # B2 staging still intact
+
+
+def test_sanctuary_ward_dc_bakes_to_the_caster():
+    """C4: the "DC" token in buff values becomes this caster's spell DC
+    (Sanctuary's ward is checked at attack time, long after the cast)."""
+    cleric = _cleric()
+    cleric.sheet.spells_prepared = ["sanctuary"]
+    actions = {a.name: a for a in spell_actions(cleric)}
+    ward = actions["Sanctuary"].buff_effects[0]
+    assert ward.stat == "sanctuary_ward"
+    assert ward.value == 13                       # 8 + 2 prof + 3 WIS
 
 
 def test_shield_stages_as_a_reaction_not_an_action():

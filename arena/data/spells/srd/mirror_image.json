@@ -1,0 +1,22 @@
+{
+  "name": "Mirror Image",
+  "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it's impossible to track which image is real. You can use your action to dismiss the illusory duplicates.",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "self",
+  "buff_effects": [
+    {
+      "stat": "decoy_images",
+      "modifier_type": "flat_bonus",
+      "value": 3
+    }
+  ],
+  "buff_charges": 3,
+  "buff_duration_rounds": 10
+}

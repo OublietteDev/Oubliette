@@ -329,6 +329,28 @@ def is_in_range(
     return distance_feet <= action.range
 
 
+def _sanctuary_dc(creature: Creature) -> int | None:
+    """The save DC of a Sanctuary-style ward on this creature, or None.
+
+    The DC rides the buff modifier's value (the bridge bakes the caster's
+    spell DC over the generator's "DC" token); non-numeric values fall
+    back to 13 (a mid-tier caster) so native content still works.
+    """
+    for buff in creature.active_buffs:
+        for mod in buff.modifiers:
+            if mod.stat == "sanctuary_ward":
+                return mod.value if isinstance(mod.value, int) else 13
+    return None
+
+
+def _decoy_buff(creature: Creature):
+    """The creature's Mirror Image-style decoy buff, if any remain."""
+    for buff in creature.active_buffs:
+        if any(m.stat == "decoy_images" for m in buff.modifiers):
+            return buff
+    return None
+
+
 def resolve_attack_hit(
     attacker: Creature,
     attacker_id: str,
@@ -415,6 +437,51 @@ def resolve_attack_hit(
     # Determine melee vs ranged
     is_melee = attack.attack_type.startswith("melee")
 
+    # ── Sanctuary (C4 decoy tier) ────────────────────────────────────
+    # Attacking breaks the attacker's OWN ward (RAW: the spell ends if
+    # the warded creature attacks).
+    own_wards = [b for b in attacker.active_buffs
+                 if any(m.stat == "sanctuary_ward" for m in b.modifiers)]
+    for ward in own_wards:
+        attacker.active_buffs.remove(ward)
+        events.append(CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=f"{attacker.name}'s {ward.name} ends — they attacked!",
+            source_id=attacker_id,
+            details={"buff_removed": ward.name},
+        ))
+    # A ward on the TARGET: WIS save before the attack can be made; on a
+    # failure the attack is lost (approx of RAW's choose-a-new-target —
+    # the engine resolves one declared attack, so the swing simply fails).
+    ward_dc = _sanctuary_dc(target)
+    if ward_dc is not None:
+        saved, save_event = resolve_saving_throw(
+            attacker, attacker_id, "wisdom", ward_dc,
+        )
+        save_event.message = f"Sanctuary: {save_event.message}"
+        events.append(save_event)
+        if not saved:
+            events.append(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=(
+                    f"{attacker.name} cannot bring themselves to strike "
+                    f"{target.name} — the attack is lost!"
+                ),
+                source_id=attacker_id,
+                target_id=target_id,
+                details={"sanctuary_blocked": True},
+            ))
+            return AttackHitResult(
+                hit=False, critical=False, natural_roll=1, modifier=0,
+                total_roll=0, target_ac=get_effective_armor_class(target),
+                effective_advantage=0,
+                events=events,
+                attacker=attacker, attacker_id=attacker_id,
+                target=target, target_id=target_id,
+                action=action, attack=attack, combatants=combatants,
+                cast_level=cast_level,
+            )
+
     # Auto-hit attacks (Magic Missile darts): no roll, no crit — range and
     # LOS were already checked above, so the dart simply strikes.
     if attack.auto_hit:
@@ -488,6 +555,68 @@ def resolve_attack_hit(
         attacker_pos, attacker.size, target_pos, target.size, grid
     )
     target_ac = get_effective_armor_class(target) + cover_bonus
+
+    # ── Mirror Image (C4 decoy tier) ─────────────────────────────────
+    # A d20 decides whether the swing finds a duplicate instead of the
+    # caster (3 images: 6+, 2: 8+, 1: 11+). A redirected attack resolves
+    # vs the duplicate's AC (10 + DEX): clearing it shatters one image
+    # (the buff's trigger charges ARE the duplicates); either way the
+    # real target is untouched. Approx: even a natural 20 only pops an
+    # image; blindsight/truesight exemptions not modeled.
+    decoy = _decoy_buff(target)
+    if decoy is not None and (decoy.charges or 0) > 0:
+        threshold = 6 if decoy.charges >= 3 else (8 if decoy.charges == 2 else 11)
+        redirect_roll = roll_die(20)
+        if redirect_roll >= threshold:
+            decoy_ac = 10 + target.ability_scores.get_modifier("dexterity")
+            shattered = total_roll >= decoy_ac
+            events.append(CombatEvent(
+                event_type=CombatEventType.ATTACK_ROLL,
+                message=(
+                    f"{attacker.name}'s {action.name} strikes at a duplicate "
+                    f"({redirect_roll} vs {threshold}+): {total_roll} "
+                    f"({natural_roll}+{modifier}) vs AC {decoy_ac} - "
+                    + ("the image SHATTERS!" if shattered
+                       else "even the image evades!")
+                ),
+                source_id=attacker_id,
+                target_id=target_id,
+                details={
+                    "roll": total_roll, "natural": natural_roll,
+                    "modifier": modifier, "target_ac": decoy_ac,
+                    "hit": False, "critical": False,
+                    "advantage": effective_advantage,
+                    "action_name": action.name,
+                    "animation": action.animation,
+                    "attack_type": attack.attack_type,
+                    "mirror_image_redirect": True,
+                },
+            ))
+            if shattered:
+                spent = consume_buff_charge(target, target_id, decoy)
+                if spent:
+                    events.append(spent)
+                elif decoy.charges:
+                    events.append(CombatEvent(
+                        event_type=CombatEventType.INFO,
+                        message=(
+                            f"{decoy.charges} duplicate"
+                            f"{'s' if decoy.charges != 1 else ''} of "
+                            f"{target.name} remain{'s' if decoy.charges == 1 else ''}."
+                        ),
+                        source_id=target_id,
+                        target_id=target_id,
+                    ))
+            return AttackHitResult(
+                hit=False, critical=False, natural_roll=natural_roll,
+                modifier=modifier, total_roll=total_roll,
+                target_ac=decoy_ac, effective_advantage=effective_advantage,
+                events=events,
+                attacker=attacker, attacker_id=attacker_id,
+                target=target, target_id=target_id,
+                action=action, attack=attack, combatants=combatants,
+                cast_level=cast_level,
+            )
 
     # Determine result (crit range may be expanded by features/feats)
     crit_threshold = get_effective_crit_range(attacker)
