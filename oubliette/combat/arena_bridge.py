@@ -48,6 +48,7 @@ from arena.paths import DATA_DIR
 
 from ..content.schemas import StatBlock
 from ..content.srd_schemas import SrdEquipment
+from ..rules import derive
 from ..state.models import Character
 from ..tools.schemas import ValueEntry
 from .schemas import CombatResult, ConsumedItem, Outcome, TerrainSpec
@@ -221,6 +222,52 @@ def consumable_actions(
     return [_drink_action(catalog[item_id], qty) for item_id, qty in qty_by_id.items()]
 
 
+@dataclass
+class StagedResources:
+    """What a PC's resource trackers looked like when the encounter was staged —
+    the reference the back-map needs to turn the handoff's *remaining* counts into
+    Oubliette's absolute *used* mappings (the CS5 op shape). `resources_used_full`
+    keeps even un-carried entries (unlimited pools) so the absolute write-back
+    never wipes them."""
+
+    slots_max: dict[int, int] = field(default_factory=dict)
+    slots_used: dict[int, int] = field(default_factory=dict)
+    resources_max: dict[str, int] = field(default_factory=dict)
+    resources_used_full: dict[str, int] = field(default_factory=dict)
+
+
+def staged_resources(char: Character, ruleset) -> StagedResources:
+    """Snapshot a PC's CURRENT slot/resource state (CS5 trackers vs derived
+    maxima). Empty for sheet-less characters — nothing to stage or write back."""
+    if ruleset is None or char.sheet is None:
+        return StagedResources()
+    slots_max = derive.spell_slots(char, ruleset)
+    resources_max = {
+        name: info["max"]
+        for name, info in derive.class_resources(char, ruleset).items()
+        if not info["unlimited"]      # an unlimited pool isn't a depletable counter
+    }
+    return StagedResources(
+        slots_max=slots_max,
+        slots_used={k: v for k, v in char.spell_slots_used.items() if k in slots_max},
+        resources_max=resources_max,
+        resources_used_full=dict(char.resources_used),
+    )
+
+
+def _resources_in(staged: StagedResources) -> tuple[dict[int, int], dict[str, int]]:
+    """The Arena-side seed for a PC: (spell-slot maxima, class_resources holding
+    the REMAINING counts — `spell_slot_<N>` keys for slots, plain names for class
+    pools). The engine spends from class_resources; the maxima stay untouched, so
+    the handoff-v2 derivation reads both ends cleanly (B2 in; B0 out)."""
+    class_res: dict[str, int] = {}
+    for lvl, mx in staged.slots_max.items():
+        class_res[f"spell_slot_{lvl}"] = max(0, mx - staged.slots_used.get(lvl, 0))
+    for name, mx in staged.resources_max.items():
+        class_res[name] = max(0, mx - staged.resources_used_full.get(name, 0))
+    return dict(staged.slots_max), class_res
+
+
 def _size(value: str | None) -> CreatureSize:
     try:
         return CreatureSize((value or "medium").strip().lower())
@@ -252,15 +299,20 @@ def _loot_to_value(entries) -> list[ValueEntry]:
 # --- OUT: Oubliette → Arena creatures ------------------------------------
 
 def character_to_player(
-    char: Character, catalog: dict[str, SrdEquipment] | None = None
+    char: Character,
+    catalog: dict[str, SrdEquipment] | None = None,
+    ruleset=None,
 ) -> PlayerCharacter:
     """Map a party member (`Character`, kind=pc) → an Arena `PlayerCharacter`.
     With a `catalog` (the SRD equipment dict), the inventory's drinkable
-    consumables ride along as item actions (B1)."""
+    consumables ride along as item actions (B1). With a `ruleset`, the CURRENT
+    spell-slot/class-resource state is staged in (B2) — a wizard who already
+    spent slots in the story does not arrive recharged."""
     short = _norm_abilities(char.abilities)
     carrier, prof = _solve_to_hit(short, char.attack_bonus)
     char_class = char.sheet.char_class if char.sheet else "Adventurer"
     race = char.sheet.race if char.sheet else "Human"
+    slots_max, class_res = _resources_in(staged_resources(char, ruleset))
     return PlayerCharacter(
         name=char.name,
         size=_size(char.sheet.size if char.sheet else None),
@@ -273,6 +325,8 @@ def character_to_player(
         level=char.level,
         race=race,
         is_player_controlled=True,
+        spell_slots=slots_max,
+        class_resources=class_res,
         actions=[
             _basic_attack(
                 "Attack", short, char.attack_bonus, char.damage,
@@ -434,6 +488,9 @@ class EncounterPlan:
     encounter: Encounter
     persistent_ids: dict[str, str] = field(default_factory=dict)  # name -> entity_id
     loot_by_name: dict[str, list[ValueEntry]] = field(default_factory=dict)
+    # B2: each PC's slot/resource state as staged (name -> snapshot), the
+    # reference for turning the result's remaining counts into absolute used.
+    resources_by_name: dict[str, StagedResources] = field(default_factory=dict)
 
 
 # Default terrain palettes, keyed to `TerrainSpec.kind`. A starting point —
@@ -483,6 +540,7 @@ def build_encounter(
     *,
     name: str = "Encounter",
     catalog: dict[str, SrdEquipment] | None = None,
+    ruleset=None,
 ) -> EncounterPlan:
     """Assemble an Arena `Encounter` from the live party + resolved enemies +
     terrain. Counts are pre-expanded (one `CombatantEntry` per individual, with
@@ -491,11 +549,15 @@ def build_encounter(
     entries: list[CombatantEntry] = []
     persistent_ids: dict[str, str] = {}
     loot_by_name: dict[str, list[ValueEntry]] = {}
+    resources_by_name: dict[str, StagedResources] = {}
 
     party_pos = _column_positions(len(party), _PLAYER_COL)
     for char, pos in zip(party, party_pos):
         display = _unique(char.name, used)
-        creature = character_to_player(char, catalog)
+        creature = character_to_player(char, catalog, ruleset)
+        staged = staged_resources(char, ruleset)
+        if staged.slots_max or staged.resources_max:
+            resources_by_name[display] = staged
         creature.name = display
         entries.append(
             CombatantEntry(
@@ -540,6 +602,7 @@ def build_encounter(
         encounter=encounter,
         persistent_ids=persistent_ids,
         loot_by_name=loot_by_name,
+        resources_by_name=resources_by_name,
     )
 
 
@@ -550,6 +613,30 @@ _OUTCOME_MAP: dict[str, Outcome] = {"victory": "victory", "defeat": "defeat"}
 # Highest handoff result schema this reader understands (arena.handoff.RESULT_SCHEMA).
 # v1 results (and version-less dicts) stay readable — v2 only ADDS per-PC blocks.
 _MAX_RESULT_SCHEMA = 2
+
+
+def _spent_resources(
+    staged: StagedResources, reported: dict
+) -> tuple[dict[int, int], dict[str, int]]:
+    """Turn the v2 result's REMAINING counts into Oubliette's absolute USED
+    mappings (the CS5 op shape), against the staged snapshot. Anything the result
+    doesn't report keeps its staged used value — unreported means untouched."""
+    slots_rem = reported.get("spell_slots") or {}
+    new_slots_used: dict[int, int] = {}
+    for lvl, mx in staged.slots_max.items():
+        remaining = (slots_rem.get(str(lvl)) or {}).get("remaining")
+        if remaining is None:
+            new_slots_used[lvl] = staged.slots_used.get(lvl, 0)
+        else:
+            new_slots_used[lvl] = min(mx, max(0, mx - int(remaining)))
+
+    res_rem = reported.get("class_resources") or {}
+    new_res_used = dict(staged.resources_used_full)
+    for name, mx in staged.resources_max.items():
+        remaining = res_rem.get(name)
+        if remaining is not None:
+            new_res_used[name] = min(mx, max(0, mx - int(remaining)))
+    return new_slots_used, new_res_used
 
 
 def result_to_combat_result(handoff: dict, plan: EncounterPlan) -> CombatResult:
@@ -581,6 +668,8 @@ def result_to_combat_result(handoff: dict, plan: EncounterPlan) -> CombatResult:
     xp_award = 0
     survivors: list[str] = []
     items_consumed: list[ConsumedItem] = []
+    slots_used_final: dict[str, dict[int, int]] = {}
+    resources_used_final: dict[str, dict[str, int]] = {}
 
     for c in combatants:
         cname = c.get("name", "")
@@ -588,6 +677,16 @@ def result_to_combat_result(handoff: dict, plan: EncounterPlan) -> CombatResult:
         if entity_id is not None:
             hp_final[entity_id] = int(c.get("hp", 0))
             conditions_final[entity_id] = list(c.get("conditions", []))
+            # v2: spent slots/resources (B2). Like consumption, applies on every
+            # outcome — a slot burned before fleeing is still spent.
+            staged = plan.resources_by_name.get(cname)
+            reported = c.get("resources")
+            if staged is not None and reported is not None:
+                slots_used, res_used = _spent_resources(staged, reported)
+                if staged.slots_max:
+                    slots_used_final[entity_id] = slots_used
+                if staged.resources_max:
+                    resources_used_final[entity_id] = res_used
             # v2: consumables spent in the fight → inventory debits, every outcome
             # (a potion drunk before fleeing is still gone). Entries without a
             # catalog id (native Arena content) have no story-side stack to debit.
@@ -617,6 +716,8 @@ def result_to_combat_result(handoff: dict, plan: EncounterPlan) -> CombatResult:
         narrative_digest=digest,
         ephemeral_survivors=survivors,
         items_consumed=items_consumed,
+        slots_used_final=slots_used_final,
+        resources_used_final=resources_used_final,
     )
 
 

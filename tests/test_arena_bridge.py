@@ -32,10 +32,14 @@ from oubliette.combat.arena_bridge import (
 )
 from oubliette.combat.schemas import ConsumedItem, TerrainSpec
 from oubliette.combat.templates import ENEMY_TEMPLATES
+from oubliette.content.ruleset import load_ruleset
 from oubliette.content.schemas import Action as ContentAction
 from oubliette.content.schemas import LootEntry, StatBlock
 from oubliette.content.srd_schemas import ConsumableMechanics, SrdEquipment
+from oubliette.enums import Ability
 from oubliette.state.models import Character, CharacterSheet, ItemStack
+
+RS = load_ruleset()
 
 
 # --- fixtures ------------------------------------------------------------
@@ -238,6 +242,135 @@ def test_same_item_split_across_stacks_aggregates_uses():
     ])
     (drink,) = consumable_actions(pc, _potion_catalog())
     assert drink.uses_per_rest == 3 and drink.current_uses == 3
+
+
+# --- B2: slot/resource state IN, spent state OUT --------------------------
+
+def _warlock(slots_used=None) -> Character:
+    """L3 warlock: pact magic pool {2: 2}."""
+    return Character(
+        id="vex", name="Vex", kind="pc", level=3, hp=20, max_hp=24,
+        abilities={Ability.CHA: 16, Ability.DEX: 14, Ability.CON: 14, Ability.WIS: 10},
+        armor_class=13, attack_bonus=5, damage="1d10",
+        spell_slots_used=slots_used or {},
+        sheet=CharacterSheet(race="human", char_class="warlock", background="acolyte",
+                             spellcasting_ability=Ability.CHA))
+
+
+def _barbarian(rage_used=0) -> Character:
+    """L3 barbarian: Rage pool of 3, no spell slots."""
+    return Character(
+        id="grog", name="Grog", kind="pc", level=3, hp=30, max_hp=30,
+        abilities={Ability.STR: 16, Ability.DEX: 14, Ability.CON: 16},
+        armor_class=14, attack_bonus=5, damage="1d12+3",
+        resources_used={"Rage": rage_used},
+        sheet=CharacterSheet(race="human", char_class="barbarian", background="acolyte"))
+
+
+def test_caster_arrives_with_current_slots_not_recharged():
+    creature = character_to_player(_warlock(slots_used={2: 1}), None, RS)
+    assert creature.spell_slots == {2: 2}                      # maxima
+    assert creature.class_resources["spell_slot_2"] == 1       # 1 of 2 already spent
+
+
+def test_class_resources_arrive_with_remaining_pool():
+    creature = character_to_player(_barbarian(rage_used=1), None, RS)
+    assert creature.class_resources["Rage"] == 2               # 3-pool, 1 spent
+    assert creature.spell_slots == {}
+
+
+def test_without_ruleset_or_sheet_nothing_is_staged():
+    assert character_to_player(_warlock(slots_used={2: 1})).class_resources == {}
+    sheetless = Character(id="x", name="Nix", kind="pc", hp=9, max_hp=9,
+                          armor_class=11, attack_bonus=2, damage="1d6")
+    assert character_to_player(sheetless, None, RS).class_resources == {}
+
+
+def _plan_with(pc: Character):
+    enemies = [enemy_from_template(ENEMY_TEMPLATES["bandit"])]
+    return build_encounter([pc], enemies, TerrainSpec(), ruleset=RS)
+
+
+def _v2_pc_entry(name: str, resources: dict) -> dict:
+    return {"name": name, "team": "player", "is_pc": True, "hp": 20, "max_hp": 24,
+            "conditions": [], "is_conscious": True, "xp": 0, "resources": resources}
+
+
+def test_spent_slots_map_back_as_absolute_used():
+    plan = _plan_with(_warlock(slots_used={2: 1}))
+    handoff = {"schema": 2, "winner": None, "outcome": "unresolved", "combatants": [
+        _v2_pc_entry("Vex", {"spell_slots": {"2": {"remaining": 0, "max": 2}},
+                             "class_resources": {}})]}
+    result = result_to_combat_result(handoff, plan)
+    assert result.slots_used_final == {"vex": {2: 2}}          # both gone now
+    assert result.resources_used_final == {}                   # warlock has no pools
+
+
+def test_spent_class_resources_map_back_preserving_untracked_entries():
+    pc = _barbarian(rage_used=1)
+    pc.resources_used["Lucky"] = 2          # an un-carried tracker must survive
+    plan = _plan_with(pc)
+    handoff = {"schema": 2, "winner": "player", "outcome": "victory", "combatants": [
+        _v2_pc_entry("Grog", {"spell_slots": {}, "class_resources": {"Rage": 0}})]}
+    result = result_to_combat_result(handoff, plan)
+    assert result.resources_used_final == {"grog": {"Rage": 3, "Lucky": 2}}
+    assert result.slots_used_final == {}                       # no slots staged
+
+
+def test_unreported_resources_keep_their_staged_state():
+    plan = _plan_with(_warlock(slots_used={2: 1}))
+    handoff = {"schema": 2, "winner": "player", "outcome": "victory", "combatants": [
+        _v2_pc_entry("Vex", {"spell_slots": {}, "class_resources": {}})]}
+    result = result_to_combat_result(handoff, plan)
+    assert result.slots_used_final == {"vex": {2: 1}}          # unchanged, not reset
+
+
+def test_overdrawn_remaining_clamps_into_the_pool():
+    plan = _plan_with(_warlock())
+    handoff = {"schema": 2, "winner": "player", "outcome": "victory", "combatants": [
+        _v2_pc_entry("Vex", {"spell_slots": {"2": {"remaining": 9, "max": 2}},
+                             "class_resources": {}})]}
+    result = result_to_combat_result(handoff, plan)
+    assert result.slots_used_final == {"vex": {2: 0}}          # never negative used
+
+
+def test_v1_results_touch_no_resource_state():
+    plan = _plan_with(_warlock(slots_used={2: 1}))
+    handoff = {"schema": 1, "winner": "player", "outcome": "victory", "combatants": [
+        {"name": "Vex", "team": "player", "hp": 20, "conditions": [],
+         "is_conscious": True, "xp": 0}]}
+    result = result_to_combat_result(handoff, plan)
+    assert result.slots_used_final == {} and result.resources_used_final == {}
+
+
+def test_resource_ops_round_trip_through_a_real_combat_manager():
+    """The headless B2 slice: a warlock with one slot already spent is staged into
+    a REAL CombatManager; the engine's spend ledger drops the other slot; the
+    GENUINE build_result + bridge + ops write `spell_slots_used` = fully spent."""
+    from pathlib import Path
+
+    from arena.combat.manager import CombatManager
+    from arena.handoff import build_result
+
+    from oubliette.combat.boundary import result_to_ops
+    from oubliette.record.events import apply_ops
+    from oubliette.state.repository import InMemoryRepository
+
+    pc = _warlock(slots_used={2: 1})
+    plan = _plan_with(pc)
+    cm = CombatManager()
+    cm.load_encounter(plan.encounter, Path("."))
+
+    creature = next(c.creature for c in cm.combatants.values() if c.team == "player")
+    assert creature.class_resources["spell_slot_2"] == 1       # staged, not recharged
+    creature.class_resources["spell_slot_2"] -= 1              # the engine's spend path
+
+    # break off the fight unresolved: a slot burned before fleeing is still spent
+    result = result_to_combat_result(build_result(cm), plan)
+    assert result.outcome == "flee"
+    repo = InMemoryRepository(characters=[pc], items=[], pc_id="vex")
+    apply_ops(result_to_ops(result), repo)
+    assert repo.pc().spell_slots_used == {2: 2}                # both slots now spent
 
 
 # --- BACK: result dict → CombatResult ------------------------------------

@@ -136,6 +136,12 @@ def result_to_ops(result: CombatResult) -> list[StateOp]:
     # quantity that was staged in from this same inventory.
     for used in result.items_consumed:
         ops.append(StateOp.item(used.char, used.item_id, -used.qty))
+    # Slots/resources spent in the Arena (B2): absolute used mappings onto the
+    # CS5 trackers — the same ops rests write, from the other direction.
+    for char_id, mapping in result.slots_used_final.items():
+        ops.append(StateOp.slots_used(char_id, mapping))
+    for char_id, mapping in result.resources_used_final.items():
+        ops.append(StateOp.resources_used(char_id, mapping))
     return ops
 
 

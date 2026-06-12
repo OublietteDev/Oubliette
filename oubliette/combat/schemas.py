@@ -91,3 +91,8 @@ class CombatResult(BaseModel):
     ephemeral_survivors: list[str] = Field(default_factory=list)
     # Consumables spent in the Arena (B1) — decremented from inventory on apply.
     items_consumed: list[ConsumedItem] = Field(default_factory=list)
+    # Slot/resource state after the fight (B2): absolute USED mappings per
+    # persistent entity, the CS5 op shape (`slots_used` / `resources_used`).
+    # Keyed only for PCs whose resources were staged in; empty dicts never appear.
+    slots_used_final: dict[str, dict[int, int]] = Field(default_factory=dict)
+    resources_used_final: dict[str, dict[str, int]] = Field(default_factory=dict)
