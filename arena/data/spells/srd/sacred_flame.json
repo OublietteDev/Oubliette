@@ -1,0 +1,23 @@
+{
+  "name": "Sacred Flame",
+  "description": "Flame-like radiance descends on a creature that you can see within range. The target must succeed on a dexterity saving throw or take 1d8 radiant damage. The target gains no benefit from cover for this saving throw.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 0,
+  "cantrip_scaling": true,
+  "target_type": "one_creature",
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "1d8",
+        "damage_type": "radiant",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "none"
+  }
+}

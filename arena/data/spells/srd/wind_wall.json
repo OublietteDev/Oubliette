@@ -1,0 +1,26 @@
+{
+  "name": "Wind Wall",
+  "description": "A wall of strong wind rises from the ground at a point you choose within range. You can make the wall up to 50 feet long, 15 feet high, and 1 foot thick. You can shape the wall in any way you choose so long as it makes one continuous path along the ground. The wall lasts for the duration.",
+  "action_type": "action",
+  "range": 120,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "area_line",
+  "area_size": 50,
+  "saving_throw": {
+    "ability": "strength",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "3d8",
+        "damage_type": "bludgeoning",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  }
+}

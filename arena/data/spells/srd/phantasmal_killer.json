@@ -1,0 +1,25 @@
+{
+  "name": "Phantasmal Killer",
+  "description": "You tap into the nightmares of a creature you can see within range and create an illusory manifestation of its deepest fears, visible only to that creature. The target must make a wisdom saving throw. On a failed save, the target becomes frightened for the duration. At the start of each of the targe",
+  "action_type": "action",
+  "range": 120,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 4,
+  "resource_cost": {
+    "spell_slot_4": 1
+  },
+  "target_type": "one_creature",
+  "saving_throw": {
+    "ability": "wisdom",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "4d10",
+        "damage_type": "psychic",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "none"
+  }
+}

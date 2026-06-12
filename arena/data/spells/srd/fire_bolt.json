@@ -1,0 +1,25 @@
+{
+  "name": "Fire Bolt",
+  "description": "You hurl a mote of fire at a creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 fire damage. A flammable object hit by this spell ignites if it isn't being worn or carried.",
+  "action_type": "action",
+  "range": 120,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 0,
+  "cantrip_scaling": true,
+  "target_type": "one_creature",
+  "attack": {
+    "name": "Fire Bolt",
+    "attack_type": "ranged_spell",
+    "ability": "intelligence",
+    "reach": 5,
+    "range_normal": 120,
+    "damage": [
+      {
+        "dice": "1d10",
+        "damage_type": "fire",
+        "bonus": 0
+      }
+    ]
+  }
+}

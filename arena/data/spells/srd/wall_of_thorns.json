@@ -1,0 +1,27 @@
+{
+  "name": "Wall of Thorns",
+  "description": "You create a wall of tough, pliable, tangled brush bristling with needle-sharp thorns. The wall appears within range on a solid surface and lasts for the duration. You choose to make the wall up to 60 feet long, 10 feet high, and 5 feet thick or a circle that has a 20-foot diameter and is up to 20 f",
+  "action_type": "action",
+  "range": 120,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 6,
+  "resource_cost": {
+    "spell_slot_6": 1
+  },
+  "target_type": "area_line",
+  "area_size": 60,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "7d8",
+        "damage_type": "piercing",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  },
+  "upcast_damage_dice": "1d8"
+}

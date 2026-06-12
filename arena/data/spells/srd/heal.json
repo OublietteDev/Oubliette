@@ -1,0 +1,14 @@
+{
+  "name": "Heal",
+  "description": "Choose a creature that you can see within range. A surge of positive energy washes through the creature, causing it to regain 70 hit points. This spell also ends blindness, deafness, and any diseases affecting the target. This spell has no effect on constructs or undead.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": false,
+  "ai_priority": 7,
+  "spell_level": 6,
+  "resource_cost": {
+    "spell_slot_6": 1
+  },
+  "healing": "70",
+  "target_type": "one_ally"
+}

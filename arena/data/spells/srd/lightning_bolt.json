@@ -1,0 +1,27 @@
+{
+  "name": "Lightning Bolt",
+  "description": "A stroke of lightning forming a line 100 feet long and 5 feet wide blasts out from you in a direction you choose. Each creature in the line must make a dexterity saving throw. A creature takes 8d6 lightning damage on a failed save, or half as much damage on a successful one.",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "area_line",
+  "area_size": 100,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "8d6",
+        "damage_type": "lightning",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  },
+  "upcast_damage_dice": "1d6"
+}

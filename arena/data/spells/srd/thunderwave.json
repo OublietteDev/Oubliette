@@ -1,0 +1,27 @@
+{
+  "name": "Thunderwave",
+  "description": "A wave of thunderous force sweeps out from you. Each creature in a 15-foot cube originating from you must make a constitution saving throw. On a failed save, a creature takes 2d8 thunder damage and is pushed 10 feet away from you. On a successful save, the creature takes half as much damage and isn'",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "area_cube",
+  "area_size": 15,
+  "saving_throw": {
+    "ability": "constitution",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "2d8",
+        "damage_type": "thunder",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  },
+  "upcast_damage_dice": "1d8"
+}

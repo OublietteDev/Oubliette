@@ -1,0 +1,27 @@
+{
+  "name": "Circle of Death",
+  "description": "A sphere of negative energy ripples out in a 60-foot radius sphere from a point within range. Each creature in that area must make a constitution saving throw. A target takes 8d6 necrotic damage on a failed save, or half as much damage on a successful one.",
+  "action_type": "action",
+  "range": 150,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 6,
+  "resource_cost": {
+    "spell_slot_6": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 60,
+  "saving_throw": {
+    "ability": "constitution",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "8d6",
+        "damage_type": "necrotic",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  },
+  "upcast_damage_dice": "2d6"
+}

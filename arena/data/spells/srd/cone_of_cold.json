@@ -1,0 +1,27 @@
+{
+  "name": "Cone of Cold",
+  "description": "A blast of cold air erupts from your hands. Each creature in a 60-foot cone must make a constitution saving throw. A creature takes 8d8 cold damage on a failed save, or half as much damage on a successful one.",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 5,
+  "resource_cost": {
+    "spell_slot_5": 1
+  },
+  "target_type": "area_cone",
+  "area_size": 60,
+  "saving_throw": {
+    "ability": "constitution",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "8d8",
+        "damage_type": "cold",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  },
+  "upcast_damage_dice": "1d8"
+}

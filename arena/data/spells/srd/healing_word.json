@@ -1,0 +1,15 @@
+{
+  "name": "Healing Word",
+  "description": "A creature of your choice that you can see within range regains hit points equal to 1d4 + your spellcasting ability modifier. This spell has no effect on undead or constructs.",
+  "action_type": "bonus_action",
+  "range": 60,
+  "requires_concentration": false,
+  "ai_priority": 7,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "healing": "1d4+MOD",
+  "target_type": "one_ally",
+  "upcast_healing_dice": "1d4"
+}

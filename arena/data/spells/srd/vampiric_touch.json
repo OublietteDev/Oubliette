@@ -1,0 +1,28 @@
+{
+  "name": "Vampiric Touch",
+  "description": "The touch of your shadow-wreathed hand can siphon life force from others to heal your wounds. Make a melee spell attack against a creature within your reach. On a hit, the target takes 3d6 necrotic damage, and you regain hit points equal to half the amount of necrotic damage dealt. Until the spell e",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "one_creature",
+  "attack": {
+    "name": "Vampiric Touch",
+    "attack_type": "melee_spell",
+    "ability": "intelligence",
+    "reach": 0,
+    "range_normal": null,
+    "damage": [
+      {
+        "dice": "3d6",
+        "damage_type": "necrotic",
+        "bonus": 0
+      }
+    ]
+  },
+  "upcast_damage_dice": "1d6"
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Storm of Vengeance",
+  "description": "A churning storm cloud forms, centered on a point you can see and spreading to a radius of 360 feet. Lightning flashes in the area, thunder booms, and strong winds roar. Each creature under the cloud (no more than 5,000 feet beneath the cloud) when it appears must make a constitution saving throw. O",
+  "action_type": "action",
+  "range": 30,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 9,
+  "resource_cost": {
+    "spell_slot_9": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 360,
+  "saving_throw": {
+    "ability": "constitution",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "2d6",
+        "damage_type": "thunder",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "none"
+  }
+}

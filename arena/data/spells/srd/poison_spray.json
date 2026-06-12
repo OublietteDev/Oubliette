@@ -1,0 +1,23 @@
+{
+  "name": "Poison Spray",
+  "description": "You extend your hand toward a creature you can see within range and project a puff of noxious gas from your palm. The creature must succeed on a constitution saving throw or take 1d12 poison damage.",
+  "action_type": "action",
+  "range": 10,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 0,
+  "cantrip_scaling": true,
+  "target_type": "one_creature",
+  "saving_throw": {
+    "ability": "constitution",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "1d12",
+        "damage_type": "poison",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "none"
+  }
+}

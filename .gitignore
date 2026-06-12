@@ -35,3 +35,4 @@ srd-rule-sections-raw.json
 # Secrets — never commit
 APIKey.txt
 *.key
+srd-spells-raw.json

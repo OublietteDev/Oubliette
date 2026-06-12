@@ -1,0 +1,26 @@
+{
+  "name": "Disintegrate",
+  "description": "A thin green ray springs from your pointing finger to a target that you can see within range. The target can be a creature, an object, or a creation of magical force, such as the wall created by wall of force.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 6,
+  "resource_cost": {
+    "spell_slot_6": 1
+  },
+  "target_type": "area_cube",
+  "area_size": 10,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "10d6",
+        "damage_type": "force",
+        "bonus": 40
+      }
+    ],
+    "damage_on_success": "none"
+  }
+}

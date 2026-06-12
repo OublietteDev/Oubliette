@@ -1,0 +1,26 @@
+{
+  "name": "Freezing Sphere",
+  "description": "A frigid globe of cold energy streaks from your fingertips to a point of your choice within range, where it explodes in a 60-foot-radius sphere. Each creature within the area must make a constitution saving throw. On a failed save, a creature takes 10d6 cold damage. On a successful save, it takes ha",
+  "action_type": "action",
+  "range": 300,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 6,
+  "resource_cost": {
+    "spell_slot_6": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 60,
+  "saving_throw": {
+    "ability": "constitution",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "10d6",
+        "damage_type": "cold",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  }
+}

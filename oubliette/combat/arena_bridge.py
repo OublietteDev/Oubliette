@@ -182,6 +182,63 @@ def _basic_attack(
     )
 
 
+def arena_spell_action(spell_id: str) -> Action | None:
+    """The generated Arena Action for a spell id (`arena/data/spells/srd/`,
+    produced by tools/gen_spells.py — deterministic parse of the same
+    5e-database the spells chapter came from). None when the spell wasn't
+    expressible (control/utility families) or the id is unknown — the bridge
+    skips it gracefully per the D-COMBAT-2 cap."""
+    path = DATA_DIR / "spells" / "srd" / f"{spell_id}.json"
+    if not path.is_file():
+        return None
+    try:
+        return Action.model_validate(json.loads(path.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return None
+
+
+def spell_actions(char: Character) -> list[Action]:
+    """The caster kit (B4): the sheet's cantrips + spells (prepared list when the
+    class prepares, else known), each loaded from the generated library and BAKED
+    with this caster's numbers — the same philosophy as the +X gear bake:
+
+      - `Attack.ability` ← the spellcasting ability (the generator emits a
+        placeholder). To-hit = its mod + the creature's proficiency_bonus; for
+        chargen PCs the weapon solve lands on the real proficiency bonus (the
+        chargen invariant attack_bonus = prof + best physical mod), so spell
+        attacks come out exact.
+      - `SavingThrowEffect.dc` ← 8 + prof + mod (the engine's data fallback is
+        a flat 10; it never computes caster DCs from data-driven actions).
+      - the literal `MOD` token in healing dice ← the spellcasting modifier.
+
+    Spells the generator skipped simply don't appear — they stay story-side."""
+    sheet = char.sheet
+    if sheet is None or sheet.spellcasting_ability is None:
+        return []
+    sa = sheet.spellcasting_ability
+    mod = char.ability_mod(sa)
+    dc = 8 + char.proficiency_bonus + mod
+    ability_long = _ABILITY_LONG[sa.value]
+
+    leveled = sheet.spells_prepared or sheet.spells_known
+    out: list[Action] = []
+    for spell_id in dict.fromkeys([*sheet.cantrips_known, *leveled]):
+        action = arena_spell_action(spell_id)
+        if action is None:
+            continue
+        if action.attack is not None:
+            action.attack.ability = ability_long
+        if action.saving_throw is not None and action.saving_throw.dc is None:
+            action.saving_throw.dc = dc
+        if action.healing and "MOD" in action.healing:
+            # A non-positive modifier just drops the term (a heal never rolls
+            # negative, and the engine's dice parser only sees plain "+N").
+            action.healing = action.healing.replace(
+                "+MOD", f"+{mod}" if mod > 0 else "")
+        out.append(action)
+    return out
+
+
 def equipped_magic(
     char: Character, catalog: dict[str, SrdEquipment] | None
 ) -> tuple[int, int]:
@@ -366,12 +423,22 @@ def character_to_player(
     weapon_bonus, ac_bonus = equipped_magic(char, catalog)
     to_hit = char.attack_bonus + weapon_bonus
     carrier, prof = _solve_to_hit(short, to_hit)
-    char_class = char.sheet.char_class if char.sheet else "Adventurer"
-    race = char.sheet.race if char.sheet else "Human"
+    sheet = char.sheet
+    char_class = sheet.char_class if sheet else "Adventurer"
+    race = sheet.race if sheet else "Human"
     slots_max, class_res = _resources_in(staged_resources(char, ruleset))
+    casting_ability = (
+        _ABILITY_LONG[sheet.spellcasting_ability.value]
+        if sheet and sheet.spellcasting_ability else None
+    )
+    save_profs = (
+        [_ABILITY_LONG[a.value] for a in sorted(sheet.saving_throw_proficiencies,
+                                                key=lambda a: a.value)]
+        if sheet else []
+    )
     return PlayerCharacter(
         name=char.name,
-        size=_size(char.sheet.size if char.sheet else None),
+        size=_size(sheet.size if sheet else None),
         ability_scores=_ability_scores(short),
         armor_class=max(1, char.armor_class + ac_bonus),
         max_hit_points=max(1, char.max_hp),
@@ -381,6 +448,9 @@ def character_to_player(
         level=char.level,
         race=race,
         is_player_controlled=True,
+        speed={"walk": sheet.speed if sheet else 30},
+        saving_throw_proficiencies=save_profs,
+        spellcasting_ability=casting_ability,
         spell_slots=slots_max,
         class_resources=class_res,
         actions=[
@@ -388,6 +458,7 @@ def character_to_player(
                 "Attack", short, to_hit, char.damage,
                 DEFAULT_DAMAGE_TYPE, prof, carrier, magic_bonus=weapon_bonus,
             ),
+            *spell_actions(char),
             *consumable_actions(char, catalog),
         ],
     )

@@ -1,0 +1,14 @@
+{
+  "name": "Aid",
+  "description": "Your spell bolsters your allies with toughness and resolve. Choose up to three creatures within range. Each target's hit point maximum and current hit points increase by 5 for the duration.",
+  "action_type": "action",
+  "range": 30,
+  "requires_concentration": false,
+  "ai_priority": 7,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "healing": "5",
+  "target_type": "one_ally"
+}

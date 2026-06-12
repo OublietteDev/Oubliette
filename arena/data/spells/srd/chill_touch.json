@@ -1,0 +1,25 @@
+{
+  "name": "Chill Touch",
+  "description": "You create a ghostly, skeletal hand in the space of a creature within range. Make a ranged spell attack against the creature to assail it with the chill of the grave. On a hit, the target takes 1d8 necrotic damage, and it can't regain hit points until the start of your next turn. Until then, the han",
+  "action_type": "action",
+  "range": 120,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 0,
+  "cantrip_scaling": true,
+  "target_type": "one_creature",
+  "attack": {
+    "name": "Chill Touch",
+    "attack_type": "ranged_spell",
+    "ability": "intelligence",
+    "reach": 5,
+    "range_normal": 120,
+    "damage": [
+      {
+        "dice": "1d8",
+        "damage_type": "necrotic",
+        "bonus": 0
+      }
+    ]
+  }
+}

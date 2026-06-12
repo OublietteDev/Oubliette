@@ -1,0 +1,27 @@
+{
+  "name": "Insect Plague",
+  "description": "Swarming, biting locusts fill a 20-foot-radius sphere centered on a point you choose within range. The sphere spreads around corners. The sphere remains for the duration, and its area is lightly obscured. The sphere's area is difficult terrain.",
+  "action_type": "action",
+  "range": 300,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 5,
+  "resource_cost": {
+    "spell_slot_5": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 20,
+  "saving_throw": {
+    "ability": "constitution",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "4d10",
+        "damage_type": "piercing",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  },
+  "upcast_damage_dice": "1d10"
+}

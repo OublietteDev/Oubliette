@@ -1,0 +1,27 @@
+{
+  "name": "Shatter",
+  "description": "A sudden loud ringing noise, painfully intense, erupts from a point of your choice within range. Each creature in a 10-foot-radius sphere centered on that point must make a Constitution saving throw. A creature takes 3d8 thunder damage on a failed save, or half as much damage on a successful one. A ",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 10,
+  "saving_throw": {
+    "ability": "constitution",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "3d8",
+        "damage_type": "thunder",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  },
+  "upcast_damage_dice": "1d8"
+}

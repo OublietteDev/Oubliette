@@ -1,0 +1,14 @@
+{
+  "name": "False Life",
+  "description": "Bolstering yourself with a necromantic facsimile of life, you gain 1d4 + 4 temporary hit points for the duration.",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": false,
+  "ai_priority": 7,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "healing": "1d4+4",
+  "target_type": "one_ally"
+}

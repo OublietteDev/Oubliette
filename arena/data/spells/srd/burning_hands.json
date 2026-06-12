@@ -1,0 +1,27 @@
+{
+  "name": "Burning Hands",
+  "description": "As you hold your hands with thumbs touching and fingers spread, a thin sheet of flames shoots forth from your outstretched fingertips. Each creature in a 15-foot cone must make a dexterity saving throw. A creature takes 3d6 fire damage on a failed save, or half as much damage on a successful one.",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 1,
+  "resource_cost": {
+    "spell_slot_1": 1
+  },
+  "target_type": "area_cone",
+  "area_size": 15,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "3d6",
+        "damage_type": "fire",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  },
+  "upcast_damage_dice": "1d6"
+}

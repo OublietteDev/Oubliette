@@ -1,0 +1,26 @@
+{
+  "name": "Black Tentacles",
+  "description": "Squirming, ebony tentacles fill a 20-foot square on ground that you can see within range. For the duration, these tentacles turn the ground in the area into difficult terrain.",
+  "action_type": "action",
+  "range": 90,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 4,
+  "resource_cost": {
+    "spell_slot_4": 1
+  },
+  "target_type": "area_cube",
+  "area_size": 20,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "3d6",
+        "damage_type": "bludgeoning",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "none"
+  }
+}

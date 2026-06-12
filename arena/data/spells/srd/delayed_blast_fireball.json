@@ -1,0 +1,27 @@
+{
+  "name": "Delayed Blast Fireball",
+  "description": "A beam of yellow light flashes from your pointing finger, then condenses to linger at a chosen point within range as a glowing bead for the duration. When the spell ends, either because your concentration is broken or because you decide to end it, the bead blossoms with a low roar into an explosion ",
+  "action_type": "action",
+  "range": 150,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 7,
+  "resource_cost": {
+    "spell_slot_7": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 20,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "12d6",
+        "damage_type": "fire",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  },
+  "upcast_damage_dice": "1d6"
+}

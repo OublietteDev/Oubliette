@@ -1,0 +1,26 @@
+{
+  "name": "Fire Storm",
+  "description": "A storm made up of sheets of roaring flame appears in a location you choose within range. The area of the storm consists of up to ten 10-foot cubes, which you can arrange as you wish. Each cube must have at least one face adjacent to the face of another cube. Each creature in the area must make a de",
+  "action_type": "action",
+  "range": 150,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 7,
+  "resource_cost": {
+    "spell_slot_7": 1
+  },
+  "target_type": "area_cube",
+  "area_size": 100,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "7d10",
+        "damage_type": "fire",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  }
+}

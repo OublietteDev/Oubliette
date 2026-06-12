@@ -1,0 +1,25 @@
+{
+  "name": "Chain Lightning",
+  "description": "You create a bolt of lightning that arcs toward a target of your choice that you can see within range. Three bolts then leap from that target to as many as three other targets, each of which must be within 30 feet of the first target. A target can be a creature or an object and can be targeted by on",
+  "action_type": "action",
+  "range": 150,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 6,
+  "resource_cost": {
+    "spell_slot_6": 1
+  },
+  "target_type": "one_creature",
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "10d8",
+        "damage_type": "lightning",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  }
+}

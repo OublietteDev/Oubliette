@@ -1,0 +1,26 @@
+{
+  "name": "Sunbeam",
+  "description": "A beam of brilliant light flashes out from your hand in a 5-foot-wide, 60-foot-long line. Each creature in the line must make a constitution saving throw. On a failed save, a creature takes 6d8 radiant damage and is blinded until your next turn. On a successful save, it takes half as much damage and",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 6,
+  "resource_cost": {
+    "spell_slot_6": 1
+  },
+  "target_type": "area_line",
+  "area_size": 60,
+  "saving_throw": {
+    "ability": "constitution",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "6d8",
+        "damage_type": "radiant",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Blade Barrier",
+  "description": "You create a vertical wall of whirling, razor-sharp blades made of magical energy. The wall appears within range and lasts for the duration. You can make a straight wall up to 100 feet long, 20 feet high, and 5 feet thick, or a ringed wall up to 60 feet in diameter, 20 feet high, and 5 feet thick. T",
+  "action_type": "action",
+  "range": 90,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 6,
+  "resource_cost": {
+    "spell_slot_6": 1
+  },
+  "target_type": "area_line",
+  "area_size": 100,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "6d10",
+        "damage_type": "slashing",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  }
+}

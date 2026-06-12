@@ -1,0 +1,27 @@
+{
+  "name": "Arcane Sword",
+  "description": "You create a sword-shaped plane of force that hovers within range. It lasts for the duration.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 7,
+  "resource_cost": {
+    "spell_slot_7": 1
+  },
+  "target_type": "one_creature",
+  "attack": {
+    "name": "Arcane Sword",
+    "attack_type": "melee_spell",
+    "ability": "intelligence",
+    "reach": 60,
+    "range_normal": null,
+    "damage": [
+      {
+        "dice": "3d10",
+        "damage_type": "force",
+        "bonus": 0
+      }
+    ]
+  }
+}

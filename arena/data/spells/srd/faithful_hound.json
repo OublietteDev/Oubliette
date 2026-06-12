@@ -1,0 +1,27 @@
+{
+  "name": "Faithful Hound",
+  "description": "You conjure a phantom watchdog in an unoccupied space that you can see within range, where it remains for the duration, until you dismiss it as an action, or until you move more than 100 feet away from it.",
+  "action_type": "action",
+  "range": 30,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 4,
+  "resource_cost": {
+    "spell_slot_4": 1
+  },
+  "target_type": "one_creature",
+  "attack": {
+    "name": "Faithful Hound",
+    "attack_type": "melee_spell",
+    "ability": "intelligence",
+    "reach": 30,
+    "range_normal": null,
+    "damage": [
+      {
+        "dice": "4d8",
+        "damage_type": "piercing",
+        "bonus": 0
+      }
+    ]
+  }
+}

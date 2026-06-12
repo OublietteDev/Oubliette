@@ -1,0 +1,26 @@
+{
+  "name": "Incendiary Cloud",
+  "description": "A swirling cloud of smoke shot through with white-hot embers appears in a 20-foot-radius sphere centered on a point within range. The cloud spreads around corners and is heavily obscured. It lasts for the duration or until a wind of moderate or greater speed (at least 10 miles per hour) disperses it",
+  "action_type": "action",
+  "range": 150,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 8,
+  "resource_cost": {
+    "spell_slot_8": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 20,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "10d8",
+        "damage_type": "fire",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  }
+}

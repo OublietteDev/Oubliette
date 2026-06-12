@@ -1,0 +1,26 @@
+{
+  "name": "Control Water",
+  "description": "Until the spell ends, you control any freestanding water inside an area you choose that is a cube up to 100 feet on a side. You can choose from any of the following effects when you cast this spell. As an action on your turn, you can repeat the same effect or choose a different one.",
+  "action_type": "action",
+  "range": 300,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 4,
+  "resource_cost": {
+    "spell_slot_4": 1
+  },
+  "target_type": "area_cube",
+  "area_size": 100,
+  "saving_throw": {
+    "ability": "strength",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "2d8",
+        "damage_type": "bludgeoning",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "half"
+  }
+}

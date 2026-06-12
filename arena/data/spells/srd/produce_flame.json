@@ -1,0 +1,25 @@
+{
+  "name": "Produce Flame",
+  "description": "A flickering flame appears in your hand. The flame remains there for the duration and harms neither you nor your equipment. The flame sheds bright light in a 10-foot radius and dim light for an additional 10 feet. The spell ends if you dismiss it as an action or if you cast it again.",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 0,
+  "cantrip_scaling": true,
+  "target_type": "one_creature",
+  "attack": {
+    "name": "Produce Flame",
+    "attack_type": "ranged_spell",
+    "ability": "intelligence",
+    "reach": 5,
+    "range_normal": 0,
+    "damage": [
+      {
+        "dice": "1d8",
+        "damage_type": "fire",
+        "bonus": 0
+      }
+    ]
+  }
+}

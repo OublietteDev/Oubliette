@@ -1,0 +1,23 @@
+{
+  "name": "Acid Splash",
+  "description": "You hurl a bubble of acid. Choose one creature within range, or choose two creatures within range that are within 5 feet of each other. A target must succeed on a dexterity saving throw or take 1d6 acid damage.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 0,
+  "cantrip_scaling": true,
+  "target_type": "one_creature",
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "damage_on_fail": [
+      {
+        "dice": "1d6",
+        "damage_type": "acid",
+        "bonus": 0
+      }
+    ],
+    "damage_on_success": "none"
+  }
+}

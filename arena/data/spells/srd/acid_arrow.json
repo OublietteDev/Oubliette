@@ -1,0 +1,28 @@
+{
+  "name": "Acid Arrow",
+  "description": "A shimmering green arrow streaks toward a target within range and bursts in a spray of acid. Make a ranged spell attack against the target. On a hit, the target takes 4d4 acid damage immediately and 2d4 acid damage at the end of its next turn. On a miss, the arrow splashes the target with acid for h",
+  "action_type": "action",
+  "range": 90,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "one_creature",
+  "attack": {
+    "name": "Acid Arrow",
+    "attack_type": "ranged_spell",
+    "ability": "intelligence",
+    "reach": 5,
+    "range_normal": 90,
+    "damage": [
+      {
+        "dice": "4d4",
+        "damage_type": "acid",
+        "bonus": 0
+      }
+    ]
+  },
+  "upcast_damage_dice": "1d4"
+}

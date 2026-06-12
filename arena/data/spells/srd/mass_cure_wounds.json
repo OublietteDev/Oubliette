@@ -1,0 +1,16 @@
+{
+  "name": "Mass Cure Wounds",
+  "description": "A wave of healing energy washes out from a point of your choice within range. Choose up to six creatures in a 30-foot-radius sphere centered on that point. Each target regains hit points equal to 3d8 + your spellcasting ability modifier. This spell has no effect on undead or constructs.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": false,
+  "ai_priority": 7,
+  "spell_level": 5,
+  "resource_cost": {
+    "spell_slot_5": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 30,
+  "healing": "3d8+MOD",
+  "upcast_healing_dice": "1d8"
+}
