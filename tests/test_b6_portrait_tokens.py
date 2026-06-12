@@ -157,3 +157,37 @@ def test_token_art_survives_the_externalized_encounter_round_trip(tmp_path):
     assert all(a and a.endswith("hero.png") for a in arts["player"])
     assert all(a and a.endswith("Goblin.png") for a in arts["enemy"])
     arena_launch.cleanup(pending)
+
+
+# --- spawn placement respects footprints ----------------------------------------
+
+def test_big_monsters_all_spawn_on_grid_without_overlap():
+    """Regression: naive one-hex column spacing collided Large+ footprints —
+    the engine's place_creature refused the overlap and the combatant spawned
+    OFF-GRID (position=None). A mixed menagerie must land cleanly."""
+    from pathlib import Path as P
+
+    from arena.combat.manager import CombatManager
+    from arena.grid.footprint import get_occupied_hexes
+
+    s = _session()
+    req = EncounterRequest(
+        kind="brawl",
+        enemies=[EnemyRef(ref="ogre", count=2),
+                 EnemyRef(ref="adult red dragon"),    # huge: 7 hexes
+                 EnemyRef(ref="frog")],               # tiny: 1 hex
+        terrain=TerrainSpec(),
+    )
+    pending = stage_combat(req, s.repo, s).pending
+    enc = Encounter.model_validate(
+        json.loads(pending.encounter_path.read_text("utf-8")))
+    cm = CombatManager()
+    cm.load_encounter(enc, P("."))
+
+    claimed: set[tuple[int, int]] = set()
+    for cid, c in cm.combatants.items():
+        assert c.position is not None, f"{cid} was never placed on the grid"
+        hexes = {(h.q, h.r) for h in get_occupied_hexes(c.position, c.creature.size)}
+        assert not (hexes & claimed), f"{cid} spawned overlapping another footprint"
+        claimed |= hexes
+    arena_launch.cleanup(pending)

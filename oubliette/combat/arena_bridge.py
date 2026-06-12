@@ -712,13 +712,35 @@ def _terrain_for(kind: str) -> list[TerrainHex]:
     return []
 
 
-def _column_positions(count: int, q: int) -> list[tuple[int, int]]:
-    """Evenly distribute `count` tokens down column `q`, vertically centred."""
-    if count <= 0:
-        return []
-    span = min(count, GRID_HEIGHT)
-    start = max(0, (GRID_HEIGHT - span) // 2)
-    return [(q, min(GRID_HEIGHT - 1, start + i)) for i in range(count)]
+def _spawn_anchor(
+    size: CreatureSize, col: int, taken: set[tuple[int, int]]
+) -> tuple[int, int]:
+    """First anchor hex at (or near) column `col` whose whole FOOTPRINT fits the
+    grid and doesn't overlap already-claimed hexes, scanning rows centre-out and
+    spilling to neighbouring columns when the preferred one is full.
+
+    Naive one-hex spacing broke the moment real sizes arrived: a Large ogre's
+    3-hex footprint overlaps the next row's anchor, the engine's
+    `place_creature` refuses the collision, and the combatant silently spawns
+    OFF-GRID (position=None). Claims footprint hexes in `taken` as it places.
+    (Terrain isn't consulted — the default palettes keep walls away from the
+    spawn columns.)"""
+    from arena.grid.coordinates import HexCoord
+    from arena.grid.footprint import get_occupied_hexes
+
+    rows = sorted(range(GRID_HEIGHT), key=lambda r: (abs(r - GRID_HEIGHT // 2), r))
+    cols = sorted(range(GRID_WIDTH), key=lambda q: (abs(q - col), q))
+    for q in cols:
+        for r in rows:
+            hexes = {(h.q, h.r) for h in get_occupied_hexes(HexCoord(q, r), size)}
+            if any(not (0 <= hq < GRID_WIDTH and 0 <= hr < GRID_HEIGHT)
+                   for hq, hr in hexes):
+                continue
+            if hexes & taken:
+                continue
+            taken |= hexes
+            return (q, r)
+    return (col, GRID_HEIGHT // 2)  # grid effectively full — engine sorts it out
 
 
 def _unique(name: str, used: set[str]) -> str:
@@ -754,11 +776,12 @@ def build_encounter(
     persistent_ids: dict[str, str] = {}
     loot_by_name: dict[str, list[ValueEntry]] = {}
     resources_by_name: dict[str, StagedResources] = {}
+    taken: set[tuple[int, int]] = set()   # footprint hexes claimed by spawns
 
-    party_pos = _column_positions(len(party), _PLAYER_COL)
-    for char, pos in zip(party, party_pos):
+    for char in party:
         display = _unique(char.name, used)
         creature = character_to_player(char, catalog, ruleset)
+        pos = _spawn_anchor(creature.size, _PLAYER_COL, taken)
         if portraits is not None:
             art = _token_image([portraits.pc], [char.portrait])
             if art:
@@ -778,11 +801,11 @@ def build_encounter(
         )
         persistent_ids[display] = char.id  # PCs are always written back
 
-    enemy_pos = _column_positions(len(enemies), _ENEMY_COL)
-    for inst, pos in zip(enemies, enemy_pos):
+    for inst in enemies:
         display = _unique(inst.creature.name, used)
         creature = inst.creature.model_copy(deep=True)
         creature.name = display
+        pos = _spawn_anchor(creature.size, _ENEMY_COL, taken)
         entries.append(
             CombatantEntry(
                 creature_id=f"enemy/{display}",
