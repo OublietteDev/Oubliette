@@ -107,6 +107,30 @@ def get_buff_attack_modifiers(creature: Creature) -> tuple[int, list[str]]:
     return flat, dice
 
 
+def get_buff_damage_bonus(creature: Creature, attack_type: str | None = None) -> int:
+    """Sum flat damage-roll bonuses from active buffs (Rage +2 melee, etc.).
+
+    Only self-buffs with stat="damage_rolls" + modifier_type="flat_bonus" count.
+    A scope of "all" applies to every attack; "melee"/"ranged" match against the
+    attack_type prefix ("melee_weapon", "ranged_spell", ...). Applied once per
+    attack — flat bonuses never double on crits.
+    """
+    total = 0
+    for buff in creature.active_buffs:
+        for mod in buff.modifiers:
+            if mod.stat != "damage_rolls" or mod.modifier_type != "flat_bonus":
+                continue
+            if mod.target_grants_to_attacker:
+                continue
+            scope = (mod.scope or "all").lower()
+            if scope != "all":
+                if attack_type is None or not attack_type.startswith(scope):
+                    continue
+            if isinstance(mod.value, (int, float)):
+                total += int(mod.value)
+    return total
+
+
 def get_buff_save_modifiers(creature: Creature, ability: str) -> tuple[int, list[str]]:
     """Get saving throw bonuses from active buffs.
 

@@ -386,7 +386,9 @@ def test_caster_arrives_with_current_slots_not_recharged():
 
 def test_class_resources_arrive_with_remaining_pool():
     creature = character_to_player(_barbarian(rage_used=1), None, RS)
-    assert creature.class_resources["Rage"] == 2               # 3-pool, 1 spent
+    # C1: pools stage under ENGINE keys ("rage", "ki_points"), the names the
+    # engine's presets and standard actions hard-code; story side keeps "Rage".
+    assert creature.class_resources["rage"] == 2               # 3-pool, 1 spent
     assert creature.spell_slots == {}
 
 

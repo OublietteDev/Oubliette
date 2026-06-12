@@ -47,6 +47,7 @@ from arena.combat.stat_modifiers import (
 )
 from arena.combat.buff_effects import (
     get_buff_attack_modifiers,
+    get_buff_damage_bonus,
     get_buff_save_modifiers,
     apply_buff,
 )
@@ -583,6 +584,15 @@ def resolve_attack_damage(
         packets = roll_damage(
             damage_rolls, hit_result.attacker, is_critical=is_crit
         )
+
+        # Flat damage-roll bonuses from active buffs (Rage +2 melee, etc.) —
+        # folded into the first packet so the bonus shares the weapon's damage
+        # type and magical tag; flat bonuses don't double on crits.
+        buff_dmg = get_buff_damage_bonus(
+            hit_result.attacker, hit_result.attack.attack_type
+        )
+        if buff_dmg and packets:
+            packets[0].amount += buff_dmg
 
         # Apply bonus crit dice (Brutal Critical) — extra weapon dice on crit
         if is_crit and damage_rolls:

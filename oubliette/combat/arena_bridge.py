@@ -53,6 +53,7 @@ from ..content.srd_schemas import SrdEquipment
 from ..rules import derive
 from ..state.models import Character
 from ..tools.schemas import ValueEntry
+from .feature_bridge import engine_resource_key, feature_actions, features_for
 from .schemas import CombatResult, ConsumedItem, Outcome, TerrainSpec
 from .templates import CombatantTemplate
 
@@ -390,7 +391,12 @@ def _resources_in(staged: StagedResources) -> tuple[dict[int, int], dict[str, in
     for lvl, mx in staged.slots_max.items():
         class_res[f"spell_slot_{lvl}"] = max(0, mx - staged.slots_used.get(lvl, 0))
     for name, mx in staged.resources_max.items():
-        class_res[name] = max(0, mx - staged.resources_used_full.get(name, 0))
+        # Engine keys ("ki_points", "action_surge") — the engine's rider
+        # presets and standard actions hard-code these; the story side keeps
+        # its display names ("Ki") and the back-map reverses through the same
+        # function (C1).
+        class_res[engine_resource_key(name)] = max(
+            0, mx - staged.resources_used_full.get(name, 0))
     return dict(staged.slots_max), class_res
 
 
@@ -454,6 +460,11 @@ def character_to_player(
                                                 key=lambda a: a.value)]
         if sheet else []
     )
+    # C1: class features ride in two ways — engine Feature objects (extra
+    # attacks, smite/sneak/stun riders, auras, evasion...) and curated Actions
+    # (Second Wind, Rage, Flurry...). Bonus actions go in their own list: the
+    # radial menu surfaces `bonus_actions` as individual slots.
+    extra_actions, bonus_actions = feature_actions(char, carrier)
     return PlayerCharacter(
         name=char.name,
         size=_size(sheet.size if sheet else None),
@@ -471,6 +482,7 @@ def character_to_player(
         spellcasting_ability=casting_ability,
         spell_slots=slots_max,
         class_resources=class_res,
+        features=features_for(char),
         actions=[
             _basic_attack(
                 "Attack", short, to_hit, char.damage,
@@ -478,7 +490,9 @@ def character_to_player(
             ),
             *spell_actions(char),
             *consumable_actions(char, catalog),
+            *extra_actions,
         ],
+        bonus_actions=bonus_actions,
     )
 
 
@@ -864,7 +878,9 @@ def _spent_resources(
     res_rem = reported.get("class_resources") or {}
     new_res_used = dict(staged.resources_used_full)
     for name, mx in staged.resources_max.items():
-        remaining = res_rem.get(name)
+        # The Arena reports pools under engine keys ("ki_points"); the staged
+        # snapshot and the write-back ops keep story display names ("Ki").
+        remaining = res_rem.get(engine_resource_key(name), res_rem.get(name))
         if remaining is not None:
             new_res_used[name] = min(mx, max(0, mx - int(remaining)))
     return new_slots_used, new_res_used

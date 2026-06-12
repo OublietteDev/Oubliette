@@ -136,6 +136,35 @@
         "level": 9,
         "text": "Reroll a failed saving throw; once per long rest."
       }
+    ],
+    "resources": [
+      {
+        "name": "Second Wind",
+        "recharge": "short",
+        "by_level": {
+          "1": 1
+        },
+        "text": "Uses of Second Wind (bonus action, regain 1d10 + fighter level HP); regained on a short or long rest."
+      },
+      {
+        "name": "Action Surge",
+        "recharge": "short",
+        "by_level": {
+          "2": 1,
+          "17": 2
+        },
+        "text": "Uses of Action Surge (one additional action on your turn); regained on a short or long rest."
+      },
+      {
+        "name": "Indomitable",
+        "recharge": "long",
+        "by_level": {
+          "9": 1,
+          "13": 2,
+          "17": 3
+        },
+        "text": "Uses of Indomitable (reroll a failed saving throw); regained on a long rest."
+      }
     ]
   },
   {
