@@ -1379,7 +1379,11 @@ class CombatScreen(Screen):
             if active:
                 for action in active.creature.bonus_actions:
                     if action.name == action_name:
-                        if action.teleport_range is not None:
+                        if action.standard_effect is not None:
+                            # Cunning Action family: executes immediately —
+                            # no target to select for a self Dash/Disengage/Hide
+                            self.combat.execute_data_standard_action(action)
+                        elif action.teleport_range is not None:
                             self.combat.select_action(action)
                             if action.teleport_passenger:
                                 self._try_show_passenger_popup(action)

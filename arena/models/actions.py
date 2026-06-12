@@ -235,3 +235,9 @@ class Action(BaseModel):
 
     # Animation (visual effect played during combat)
     animation: str | None = None  # Folder name in assets/animations/
+
+    # Route to built-in standard-action logic ("dash", "disengage", "dodge",
+    # "hide") under THIS action's economy slot and resource cost — the shape of
+    # Cunning Action / Step of the Wind (bonus-action Dash etc.). The manager's
+    # execute_data_standard_action handles these instead of normal resolution.
+    standard_effect: str | None = None

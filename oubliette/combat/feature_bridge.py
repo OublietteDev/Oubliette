@@ -17,12 +17,12 @@ bonus, aura ranges), the engine just executes. Two deliberate exclusions:
     feature is prose-only in the ruleset data); a style picker is story-side
     work, not bridge work.
 
-Deferred to the Cunning Action slice (needs a small engine hook so data
-Actions can invoke the standard Dash/Disengage/Hide logic as a bonus
-action): Cunning Action, Step of the Wind, Vanish. Deferred to Phase C4
-primitives: Turn Undead (type-filtered AoE + flee), Bardic Inspiration /
-Cutting Words (reaction-modify-roll), Cleansing Touch (P-DISPEL), Sculpt
-Spells (AoE ally exemption).
+Cunning Action, Step of the Wind, and Vanish ride the engine's
+``Action.standard_effect`` hook (C1): a data Action that routes to the
+built-in Dash/Disengage/Hide logic under its own bonus-action economy and
+resource cost. Deferred to Phase C4 primitives: Turn Undead (type-filtered
+AoE + flee), Bardic Inspiration / Cutting Words (reaction-modify-roll),
+Cleansing Touch (P-DISPEL), Sculpt Spells (AoE ally exemption).
 
 Resource keys: the story side tracks pools under display names ("Ki",
 "Lay on Hands"); engine presets and standard actions key snake_case names
@@ -226,6 +226,22 @@ def features_for(char: Character) -> list[Feature]:
     return out
 
 
+def _standard_bonus(name: str, desc: str, effect: str,
+                    resource_cost: dict[str, int] | None = None) -> Action:
+    """A bonus action routing to built-in standard-action logic (the
+    Cunning Action shape — see Action.standard_effect)."""
+    return Action(
+        name=name,
+        description=desc,
+        action_type=ActionType.BONUS_ACTION,
+        target_type=TargetType.SELF,
+        range=0,
+        standard_effect=effect,
+        resource_cost=resource_cost or {},
+        ai_priority=4,
+    )
+
+
 # --- Curated feature Actions (active abilities) ----------------------------
 
 def _unarmed_strike(name: str, desc: str, carrier_long: str, level: int,
@@ -362,6 +378,31 @@ def feature_actions(
                 resource_cost={"ki_points": 1},
                 ai_priority=4,
             ))
+
+    if "cunning action" in names:
+        bonus.extend([
+            _standard_bonus("Cunning Action: Dash",
+                            "Dash as a bonus action.", "dash"),
+            _standard_bonus("Cunning Action: Disengage",
+                            "Disengage as a bonus action.", "disengage"),
+            _standard_bonus("Cunning Action: Hide",
+                            "Hide as a bonus action (Stealth check rolls).",
+                            "hide"),
+        ])
+
+    if "martial arts" in names and level >= 2:
+        bonus.extend([
+            _standard_bonus("Step of the Wind: Dash",
+                            "Dash as a bonus action (1 ki).", "dash",
+                            {"ki_points": 1}),
+            _standard_bonus("Step of the Wind: Disengage",
+                            "Disengage as a bonus action (1 ki).", "disengage",
+                            {"ki_points": 1}),
+        ])
+
+    if "vanish" in names:
+        bonus.append(_standard_bonus(
+            "Vanish", "Hide as a bonus action (Stealth check rolls).", "hide"))
 
     if "stillness of mind" in names:
         actions.append(Action(

@@ -233,6 +233,46 @@ def test_rage_buffs_apply_and_boost_melee_damage_through_the_engine():
     assert dealt >= 3                              # 1d1 + rage 2
 
 
+def _activate(cm, pc_cid):
+    """Advance the loaded encounter until it's the PC's turn."""
+    cm.roll_initiative()
+    cm.begin_combat()
+    for _ in range(10):
+        active = cm.active_combatant
+        if active is not None and active.creature_id == pc_cid:
+            return
+        cm.end_turn()
+    raise AssertionError("PC never became active")
+
+
+def test_cunning_action_dash_works_with_the_action_slot_already_spent():
+    plan, cm, pc_cid, scree, _, _ = _manager_for(_rogue(5))
+    _activate(cm, pc_cid)
+    cm.turn_resources.has_used_action = True      # the whole point: action is gone
+    before = cm.movement.remaining_movement
+    dash = next(a for a in scree.bonus_actions if a.name == "Cunning Action: Dash")
+    event = cm.execute_data_standard_action(dash)
+    assert event is not None
+    assert cm.movement.remaining_movement > before
+    assert cm.turn_resources.has_used_bonus_action is True
+    assert cm.turn_resources.has_used_action is True   # untouched by the dash
+
+
+def test_step_of_the_wind_costs_a_ki_point():
+    plan, cm, pc_cid, li, _, _ = _manager_for(_monk(5))
+    _activate(cm, pc_cid)
+    assert li.class_resources["ki_points"] == 5
+    sotw = next(a for a in li.bonus_actions
+                if a.name == "Step of the Wind: Disengage")
+    event = cm.execute_data_standard_action(sotw)
+    assert event is not None
+    assert cm.turn_resources.is_disengaging is True
+    assert li.class_resources["ki_points"] == 4
+    # A second use the same turn is blocked — the bonus action is spent
+    assert cm.execute_data_standard_action(sotw) is None
+    assert li.class_resources["ki_points"] == 4    # and nothing was deducted
+
+
 def test_second_wind_heals_spends_pool_and_rounds_trip():
     from arena.combat.actions import resolve_effect
     from arena.handoff import build_result

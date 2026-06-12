@@ -22,11 +22,14 @@ if TYPE_CHECKING:
     from arena.combat.manager import CombatManager
 
 
-def execute_dash(manager: CombatManager) -> CombatEvent | None:
+def execute_dash(
+    manager: CombatManager, *, consume_action: bool = True
+) -> CombatEvent | None:
     """Use the Dash action to double remaining movement this turn.
 
     Adds the creature's base speed to their remaining movement.
-    Uses the action slot.
+    Uses the action slot, unless ``consume_action`` is False — then the
+    caller owns the economy (Cunning Action's bonus-action Dash).
 
     Returns:
         A combat event describing the dash, or None if invalid.
@@ -34,12 +37,13 @@ def execute_dash(manager: CombatManager) -> CombatEvent | None:
     combatant = manager.active_combatant
     if combatant is None:
         return None
-    if manager.turn_resources.has_used_action:
+    if consume_action and manager.turn_resources.has_used_action:
         return None
 
     base_speed = get_effective_speed(combatant.creature)
     manager.movement.remaining_movement += base_speed
-    manager.turn_resources.has_used_action = True
+    if consume_action:
+        manager.turn_resources.has_used_action = True
 
     return CombatEvent(
         event_type=CombatEventType.INFO,
@@ -52,11 +56,13 @@ def execute_dash(manager: CombatManager) -> CombatEvent | None:
     )
 
 
-def execute_disengage(manager: CombatManager) -> CombatEvent | None:
+def execute_disengage(
+    manager: CombatManager, *, consume_action: bool = True
+) -> CombatEvent | None:
     """Use the Disengage action to avoid opportunity attacks this turn.
 
     Sets the is_disengaging flag on turn resources.
-    Uses the action slot.
+    Uses the action slot, unless ``consume_action`` is False (Cunning Action).
 
     Returns:
         A combat event, or None if invalid.
@@ -64,10 +70,11 @@ def execute_disengage(manager: CombatManager) -> CombatEvent | None:
     combatant = manager.active_combatant
     if combatant is None:
         return None
-    if manager.turn_resources.has_used_action:
+    if consume_action and manager.turn_resources.has_used_action:
         return None
 
-    manager.turn_resources.has_used_action = True
+    if consume_action:
+        manager.turn_resources.has_used_action = True
     manager.turn_resources.is_disengaging = True
 
     return CombatEvent(
@@ -81,13 +88,15 @@ def execute_disengage(manager: CombatManager) -> CombatEvent | None:
     )
 
 
-def execute_dodge(manager: CombatManager) -> CombatEvent | None:
+def execute_dodge(
+    manager: CombatManager, *, consume_action: bool = True
+) -> CombatEvent | None:
     """Use the Dodge action.
 
     Applies the DODGING pseudo-condition, which gives attackers
     disadvantage and grants advantage on DEX saves.
     The condition lasts until the start of the creature's next turn.
-    Uses the action slot.
+    Uses the action slot, unless ``consume_action`` is False.
 
     Returns:
         A combat event, or None if invalid.
@@ -95,10 +104,11 @@ def execute_dodge(manager: CombatManager) -> CombatEvent | None:
     combatant = manager.active_combatant
     if combatant is None:
         return None
-    if manager.turn_resources.has_used_action:
+    if consume_action and manager.turn_resources.has_used_action:
         return None
 
-    manager.turn_resources.has_used_action = True
+    if consume_action:
+        manager.turn_resources.has_used_action = True
     apply_condition(
         combatant.creature,
         combatant.creature_id,
@@ -219,12 +229,15 @@ def execute_action_surge(manager: CombatManager) -> CombatEvent | None:
     )
 
 
-def execute_hide(manager: CombatManager) -> CombatEvent | None:
+def execute_hide(
+    manager: CombatManager, *, consume_action: bool = True
+) -> CombatEvent | None:
     """Use the Hide action to attempt to become hidden.
 
     Makes a Dexterity (Stealth) check vs the highest passive Perception
     among hostile creatures that can see the hiding creature.
-    Uses the action slot.
+    Uses the action slot, unless ``consume_action`` is False (Cunning
+    Action / Vanish hide as a bonus action — the check still rolls).
 
     Returns:
         A combat event describing the result, or None if invalid.
@@ -232,10 +245,11 @@ def execute_hide(manager: CombatManager) -> CombatEvent | None:
     combatant = manager.active_combatant
     if combatant is None:
         return None
-    if manager.turn_resources.has_used_action:
+    if consume_action and manager.turn_resources.has_used_action:
         return None
 
-    manager.turn_resources.has_used_action = True
+    if consume_action:
+        manager.turn_resources.has_used_action = True
 
     # Roll stealth check: d20 + DEX modifier
     # Armor with stealth_disadvantage imposes disadvantage on Stealth checks

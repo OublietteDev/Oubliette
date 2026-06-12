@@ -3378,6 +3378,55 @@ class CombatManager:
 
         return event
 
+    def execute_data_standard_action(self, action: Action) -> CombatEvent | None:
+        """Execute a data Action that routes to built-in standard-action logic
+        via ``Action.standard_effect`` — Cunning Action's bonus-action Dash/
+        Disengage/Hide, Step of the Wind, Vanish.
+
+        The action's OWN economy slot and resource cost govern: the standard
+        logic runs with ``consume_action=False`` and this method marks the
+        bonus/action slot and deducts the cost (1 ki for Step of the Wind).
+
+        Returns:
+            The combat event, or None if invalid/unaffordable.
+        """
+        from arena.combat.actions import check_resource_cost, deduct_resource_cost
+
+        combatant = self.active_combatant
+        if combatant is None or action.standard_effect is None:
+            return None
+        if not can_take_actions(combatant.creature):
+            return None
+        if not self.can_use_action_type(action.action_type):
+            return None
+        can_use, reason = check_resource_cost(combatant.creature, action)
+        if not can_use:
+            event = CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=reason,
+                source_id=combatant.creature_id,
+            )
+            self.log.add(event)
+            return None
+
+        effect = action.standard_effect.lower()
+        if effect == "dash":
+            event = execute_dash(self, consume_action=False)
+        elif effect == "disengage":
+            event = execute_disengage(self, consume_action=False)
+        elif effect == "dodge":
+            event = execute_dodge(self, consume_action=False)
+        elif effect == "hide":
+            event = execute_hide(self, consume_action=False)
+        else:
+            return None
+
+        if event is not None:
+            deduct_resource_cost(combatant.creature, action)
+            self._mark_action_type_used(action)
+            self.log.add(event)
+        return event
+
     def execute_shove(
         self,
         target_id: str,
