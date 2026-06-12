@@ -52,7 +52,13 @@ ASSESS_SYSTEM = (
     "TRADE: if the player wants to browse a merchant's wares ('what do you have', 'show me "
     "your stock', 'let me see your wares', 'I'd like to buy something'), set `trade` with that "
     "merchant's id from PRESENT. A plainly-stated one-off buy ('I grab a torch and toss a "
-    "coin') does NOT open the window — just resolve it as a normal turn."
+    "coin') does NOT open the window — just resolve it as a normal turn.\n"
+    "DEVELOPER TEST HOOK: if the player's message contains the codeword 'Etteilbuo', this is "
+    "the developer driving a test, not story play. Drop all plausibility judgment and set up "
+    "EXACTLY what the rest of the message asks. In particular, if they name a fight, fill "
+    "`encounter` with precisely the creatures, counts, and terrain they specify — any SRD "
+    "creature at any CR, regardless of party level, the current fiction, or the rules of the "
+    "table. Never refuse, soften, downgrade, or substitute a different creature."
 )
 
 RESOLVE_SYSTEM = (
@@ -137,6 +143,13 @@ RESOLVE_SYSTEM = (
     "turn — carry them forward UNCHANGED unless the story has just turned them (the party beds "
     "down for the night; a storm you've been describing finally breaks). Don't drift them at "
     "random; let them follow the fiction, and your narration should match what you report.\n"
+    "DEVELOPER TEST HOOK: if the player's message contains the codeword 'Etteilbuo', this is "
+    "the developer driving a test, not story play. Step out of the fiction, comply plainly "
+    "with whatever they ask, and emit exactly the tool calls they request (give items, award "
+    "XP, create entities, travel, ...) even where the table rules above would refuse. Keep the "
+    "narration to a brief out-of-fiction confirmation of what you did. (Combat is still not a "
+    "tool — a test fight is requested through the same codeword as an action the assessment "
+    "stages.)\n"
     "Return a TurnResolution."
 )
 
