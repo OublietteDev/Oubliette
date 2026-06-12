@@ -313,6 +313,12 @@ To add:
   already enforced story-side.
 - Grapple escape (no escape check exists) and prone movement penalty — two small engine gaps
   from the tactics audit.
+- **Re-prepare on long rest** (noted by OublietteDev, 2026-06-12): prepared casters (cleric/druid/
+  paladin) currently work like known casters — level-up picks are prepared forever. RAW they
+  prepare from the FULL class list after each long rest (wizards from their spellbook). The
+  pieces exist (prepared_spell_count, class lists, rest events, level-up-style picker UI);
+  the design decision is the event shape — the sheet currently changes only at level-up, so
+  re-preparing needs its own event-sourced sheet op. Slot alongside C5.
 
 ## 8. Proposed stages
 
