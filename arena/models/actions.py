@@ -170,6 +170,17 @@ class Action(BaseModel):
     # result's "consumables_used" so the story side can decrement the exact
     # inventory stack without name-matching. None for native Arena content.
     source_item_id: str | None = None
+    # Scroll stack identity riders (C5): which spell (and inscribed level) the
+    # consumed stack carries — scroll stacks are keyed (item, spell, level) in
+    # the launching app, so the debit must name the exact variant. Ride through
+    # to consumables_used like source_item_id. None for non-scroll content.
+    source_item_spell: str | None = None
+    source_item_spell_level: int | None = None
+    # Scroll casting (C5): the action fires AT this slot level without the
+    # player picking one — select_action adopts it as the cast level, so the
+    # whole upcast machinery (bonus dice, dart counts, target scaling) applies
+    # exactly. The scroll IS the cost: resource_cost stays empty.
+    fixed_cast_level: int | None = None
 
     # Buff/Debuff effects applied to target (temporary stat modifications)
     buff_effects: list[BuffEffect] = Field(default_factory=list)

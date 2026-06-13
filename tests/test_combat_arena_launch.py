@@ -506,6 +506,65 @@ def test_real_engine_drink_heals_and_flows_back_to_inventory(monkeypatch):
     assert pc.hp == creature.current_hit_points                          # heal stuck
 
 
+def test_scroll_cast_in_the_arena_consumes_the_exact_variant(monkeypatch):
+    """The C5 scroll slice, headless with the REAL engine: a 2nd-level Cure
+    Wounds scroll in story inventory stages as a no-slot cast action carrying
+    the variant riders; the PC reads it through the engine's own resolve_effect
+    at the inscribed level (upcast dice, use decremented); the genuine v2
+    result names the variant; and the boundary debits the exact
+    (item, spell, level) stack — with the replay agreeing."""
+    from pathlib import Path
+
+    from arena.combat.actions import resolve_effect
+    from arena.combat.manager import CombatManager
+    from arena.handoff import build_result
+
+    s = _session()
+    loop = _loop(s)
+    pc = s.repo.pc()
+    s.emit_state(EventKind.TOOL_APPLIED,
+                 [StateOp.item(pc.id, "spell_scroll", 1, spell="cure_wounds",
+                               spell_level=2)],
+                 tool="give", reason="test grant")
+
+    asyncio.run(loop.take_turn("I draw my knife and attack the bandit."))
+    pending = s.pending_combat
+    enc = Encounter.model_validate(json.loads(pending.encounter_path.read_text("utf-8")))
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("."))
+
+    pc_cid, pc_combatant = next((cid, c) for cid, c in cm.combatants.items()
+                                if c.team == "player")
+    creature = pc_combatant.creature
+    creature.current_hit_points = 1                                   # badly hurt
+    scroll = next(a for a in creature.actions
+                  if getattr(a, "source_item_spell", None) == "cure_wounds")
+    assert scroll.resource_cost == {}             # the scroll, not a slot
+    assert scroll.fixed_cast_level == 2           # inscribed level rides in
+
+    res = resolve_effect(creature, pc_cid, creature, pc_cid, scroll, cm.grid,
+                         cast_level=scroll.fixed_cast_level)
+    assert res.success
+    assert creature.current_hit_points >= 3       # 2d8 (1d8 base + upcast 1d8)
+    assert scroll.current_uses == 0               # the scroll is spent
+
+    for c in cm.combatants.values():                                  # win
+        if c.team == "enemy":
+            c.creature.current_hit_points = 0
+    cm.winner = "player"
+
+    monkeypatch.setattr(arena_launch, "run_arena", lambda _p: build_result(cm))
+    report = asyncio.run(loop.enter_combat())
+
+    assert [(i.item_id, i.spell, i.spell_level, i.qty)
+            for i in report.combat_result.items_consumed] \
+        == [("spell_scroll", "cure_wounds", 2, 1)]
+    assert pc.item_qty("spell_scroll") == 0       # the exact variant debited
+
+    s2 = Session.open(s.store)                    # and the debit replays
+    assert s2.repo.pc().item_qty("spell_scroll") == 0
+
+
 def test_enter_combat_survives_an_arena_failure(monkeypatch):
     """If the Arena crashes or writes no result, the turn still resolves so the
     browser lock always clears — never a stuck, unenterable combat."""

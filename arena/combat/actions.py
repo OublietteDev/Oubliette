@@ -390,6 +390,15 @@ def resolve_attack_hit(
         )
     deduct_resource_cost(attacker, action, cast_level)
 
+    # Use tracking (mirrors resolve_effect) — attack-shaped limited actions
+    # (a Scorching Ray scroll) spend a use per cast; multi-dart volleys blank
+    # uses_per_rest after the first dart, so one cast = one use.
+    if action.uses_per_rest is not None:
+        if action.current_uses is None:
+            action.current_uses = action.uses_per_rest
+        if action.current_uses > 0:
+            action.current_uses -= 1
+
     attack = action.attack
     if attack is None:
         return AttackHitResult(

@@ -228,33 +228,42 @@ def spell_actions(char: Character) -> list[Action]:
         action = arena_spell_action(spell_id)
         if action is None:
             continue
-        if action.attack is not None:
-            action.attack.ability = ability_long
-            # C3: damage rolls flagged with an ability_modifier placeholder
-            # ride the caster's spellcasting ability too (Spiritual Weapon's
-            # 1d8 + MOD force damage).
-            for dr in action.attack.damage:
-                if dr.ability_modifier is not None:
-                    dr.ability_modifier = ability_long
-        if action.saving_throw is not None and action.saving_throw.dc is None:
-            action.saving_throw.dc = dc
-        if action.healing and "MOD" in action.healing:
-            # A non-positive modifier just drops the term (a heal never rolls
-            # negative, and the engine's dice parser only sees plain "+N").
-            action.healing = action.healing.replace(
-                "+MOD", f"+{mod}" if mod > 0 else "")
-        if action.grants_temporary_hp and "MOD" in action.grants_temporary_hp:
-            # Heroism: temp HP equal to the casting modifier (floor 1).
-            action.grants_temporary_hp = action.grants_temporary_hp.replace(
-                "MOD", str(max(1, mod)))
-        for be in action.buff_effects:
-            # C4: a buff value of the literal "DC" token carries THIS
-            # caster's spell save DC into the buff (Sanctuary's ward DC —
-            # checked at attack time, long after the cast).
-            if be.value == "DC":
-                be.value = dc
+        _bake_spell_action(action, ability_long, dc, mod)
         out.append(action)
     return out
+
+
+def _bake_spell_action(
+    action: Action, ability_long: str, dc: int, mod: int,
+) -> None:
+    """Resolve the generator's caster placeholders against real numbers, in
+    place: attack ability, save DC, the MOD healing/temp-HP tokens, and the
+    DC buff-value token. Shared by the caster kit (B4) and scrolls (C5)."""
+    if action.attack is not None:
+        action.attack.ability = ability_long
+        # C3: damage rolls flagged with an ability_modifier placeholder
+        # ride the caster's spellcasting ability too (Spiritual Weapon's
+        # 1d8 + MOD force damage).
+        for dr in action.attack.damage:
+            if dr.ability_modifier is not None:
+                dr.ability_modifier = ability_long
+    if action.saving_throw is not None and action.saving_throw.dc is None:
+        action.saving_throw.dc = dc
+    if action.healing and "MOD" in action.healing:
+        # A non-positive modifier just drops the term (a heal never rolls
+        # negative, and the engine's dice parser only sees plain "+N").
+        action.healing = action.healing.replace(
+            "+MOD", f"+{mod}" if mod > 0 else "")
+    if action.grants_temporary_hp and "MOD" in action.grants_temporary_hp:
+        # Heroism: temp HP equal to the casting modifier (floor 1).
+        action.grants_temporary_hp = action.grants_temporary_hp.replace(
+            "MOD", str(max(1, mod)))
+    for be in action.buff_effects:
+        # C4: a buff value of the literal "DC" token carries THIS
+        # caster's spell save DC into the buff (Sanctuary's ward DC —
+        # checked at attack time, long after the cast).
+        if be.value == "DC":
+            be.value = dc
 
 
 def equipped_magic(
@@ -350,9 +359,10 @@ def consumable_actions(
     """The Arena actions for the drinkable consumables in a character's inventory.
 
     Catalog items with structured, engine-expressible mechanics (see `_drinkable`)
-    become drink actions. Scroll variant stacks (a `spell` rider) and items with
-    ``mechanics == "none"`` stay story-side. Stacks of the same item aggregate
-    into ONE action carrying the total quantity as its uses."""
+    become drink actions. Scroll variant stacks (a `spell` rider) are handled by
+    `scroll_actions` (C5); items with ``mechanics == "none"`` stay story-side.
+    Stacks of the same item aggregate into ONE action carrying the total
+    quantity as its uses."""
     if not catalog:
         return []
     qty_by_id: dict[str, int] = {}
@@ -363,6 +373,74 @@ def consumable_actions(
             continue
         qty_by_id[stack.item_id] = qty_by_id.get(stack.item_id, 0) + stack.qty
     return [_drink_action(catalog[item_id], qty) for item_id, qty in qty_by_id.items()]
+
+
+# RAW spell-scroll save DCs by the inscribed spell's level. The scroll's fixed
+# attack bonus is NOT modeled — spell-attack to-hit comes out as the reader's
+# casting mod + proficiency instead (exact for full casters, close otherwise).
+_SCROLL_DC = {0: 13, 1: 13, 2: 15, 3: 15, 4: 17, 5: 17, 6: 18, 7: 18, 8: 19, 9: 19}
+
+_ORDINAL = {1: "1st", 2: "2nd", 3: "3rd"}
+
+
+def scroll_actions(
+    char: Character, catalog: dict[str, SrdEquipment] | None
+) -> list[Action]:
+    """Castable actions for the scroll stacks in a character's inventory (C5).
+
+    A scroll stack (the A5 `spell` rider) becomes the inscribed spell, cast AT
+    the inscribed level, costing NO slot — the scroll is the cost. The action
+    enters with the B1 entry invariant (uses == stack qty) and carries the
+    variant riders (`source_item_spell`/`source_item_spell_level`) so the
+    handoff debits the exact (item, spell, level) stack, not just "a scroll".
+    `fixed_cast_level` makes the engine apply the full upcast machinery (a
+    5th-level Magic Missile scroll fires 7 darts) with no slot picker.
+
+    Deliberate approximations: anyone HOLDING a scroll can read it (no
+    class-list gate — the DM decides who gets scrolls); save DCs come from the
+    RAW scroll table, not the reader; reaction spells (Shield) are skipped
+    (no popup route for item-cast reactions yet); spells the generator can't
+    express stay story-side, like everywhere else."""
+    if not catalog:
+        return []
+    sheet = char.sheet
+    sa = sheet.spellcasting_ability if sheet else None
+    mod = char.ability_mod(sa) if sa else 0
+    ability_long = _ABILITY_LONG[sa.value] if sa else "intelligence"
+
+    qty_by_variant: dict[tuple[str, str, int | None], int] = {}
+    for stack in char.inventory:
+        if stack.spell is None or stack.item_id not in catalog:
+            continue
+        key = (stack.item_id, stack.spell, stack.spell_level)
+        qty_by_variant[key] = qty_by_variant.get(key, 0) + stack.qty
+
+    out: list[Action] = []
+    for (item_id, spell_id, rider_level), qty in qty_by_variant.items():
+        action = arena_spell_action(spell_id)
+        if action is None or action.action_type == ActionType.REACTION:
+            continue
+        base_level = action.spell_level or 0
+        level = max(rider_level or base_level, base_level)
+        _bake_spell_action(
+            action, ability_long, _SCROLL_DC.get(level, 13), mod,
+        )
+        suffix = ""
+        if base_level:  # leveled spells show the inscribed level
+            suffix = f" ({_ORDINAL.get(level, f'{level}th')}-level)"
+            action.fixed_cast_level = level
+        action.name = f"Scroll: {action.name}{suffix}"
+        action.resource_cost = {}        # the scroll is the cost, not a slot
+        action.uses_per_rest = qty
+        action.current_uses = qty
+        action.rest_type = None
+        action.source_item = catalog[item_id].name
+        action.source_item_id = item_id
+        action.source_item_spell = spell_id
+        action.source_item_spell_level = rider_level
+        action.ai_priority = 3
+        out.append(action)
+    return out
 
 
 @dataclass
@@ -513,6 +591,7 @@ def character_to_player(
             ),
             *turn_spells,
             *consumable_actions(char, catalog),
+            *scroll_actions(char, catalog),
             *extra_actions,
         ],
         bonus_actions=bonus_actions,
@@ -966,7 +1045,11 @@ def result_to_combat_result(handoff: dict, plan: EncounterPlan) -> CombatResult:
                 qty = int(used.get("used", 0) or 0)
                 if item_id and qty > 0:
                     items_consumed.append(
-                        ConsumedItem(char=entity_id, item_id=item_id, qty=qty)
+                        ConsumedItem(
+                            char=entity_id, item_id=item_id, qty=qty,
+                            spell=used.get("spell"),
+                            spell_level=used.get("spell_level"),
+                        )
                     )
 
         if c.get("team") == "enemy":

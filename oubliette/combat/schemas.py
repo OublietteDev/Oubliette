@@ -68,11 +68,14 @@ class ConsumedItem(BaseModel):
     """One inventory debit reported by the Arena (handoff-v2 `consumables_used`):
     `char` — a persistent entity id — used up `qty` of catalog item `item_id`
     during the fight. Applied regardless of outcome: a potion drunk before
-    fleeing is still gone."""
+    fleeing is still gone. Scroll stacks are keyed (item, spell, level) in
+    inventory, so the variant riders name the exact stack to debit (C5)."""
 
     char: str
     item_id: str
     qty: int = 1
+    spell: str | None = None
+    spell_level: int | None = None
 
 
 class CombatResult(BaseModel):

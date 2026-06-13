@@ -22,13 +22,14 @@ from oubliette.combat.arena_bridge import (
     character_to_player,
     enemy_from_template,
     result_to_combat_result,
+    scroll_actions,
     spell_actions,
 )
 from oubliette.combat.schemas import TerrainSpec
 from oubliette.combat.templates import ENEMY_TEMPLATES
 from oubliette.content.ruleset import load_ruleset
 from oubliette.enums import Ability
-from oubliette.state.models import Character, CharacterSheet
+from oubliette.state.models import Character, CharacterSheet, ItemStack
 
 RS = load_ruleset()
 SPELL_DIR = Path(__file__).resolve().parents[1] / "arena" / "data" / "spells" / "srd"
@@ -212,6 +213,76 @@ def test_shield_stages_as_a_reaction_not_an_action():
     assert "Shield" in reaction_names
     assert "Shield" not in action_names
     assert "Burning Hands" in action_names        # turn spells stay put
+
+
+# --- C5: scrolls in the Arena ----------------------------------------------
+
+CATALOG = RS.equipment                            # dict[str, SrdEquipment]
+
+
+def _with_scroll(char, spell, level=None, qty=1):
+    char.inventory.append(ItemStack(
+        item_id="spell_scroll", qty=qty, spell=spell, spell_level=level,
+    ))
+    return char
+
+
+def test_scroll_stack_becomes_a_castable_no_slot_action():
+    char = _with_scroll(_cleric(), "cure_wounds", qty=2)
+    (a,) = scroll_actions(char, CATALOG)
+    assert a.name == "Scroll: Cure Wounds (1st-level)"
+    assert a.resource_cost == {}                  # the scroll IS the cost
+    assert a.uses_per_rest == 2 and a.current_uses == 2   # entry invariant
+    assert a.fixed_cast_level == 1
+    assert a.source_item_id == "spell_scroll"
+    assert a.source_item_spell == "cure_wounds"
+    assert a.source_item_spell_level is None
+    assert a.healing == "1d8+3"                   # reader's WIS mod baked
+
+
+def test_upcast_inscription_fixes_cast_level_and_uses_the_scroll_dc():
+    char = _with_scroll(_cleric(), "fireball", level=5)
+    (a,) = scroll_actions(char, CATALOG)
+    assert a.fixed_cast_level == 5                # 10d6 via upcast machinery
+    assert "(5th-level)" in a.name
+    assert a.saving_throw.dc == 17                # RAW scroll table, not the reader
+
+
+def test_non_caster_can_read_a_scroll():
+    char = _cleric()
+    char.sheet = None
+    _with_scroll(char, "fireball")
+    (a,) = scroll_actions(char, CATALOG)
+    assert a.saving_throw.dc == 15                # 3rd-level scroll DC
+
+
+def test_reaction_and_inexpressible_scrolls_stay_story_side():
+    char = _with_scroll(_with_scroll(_cleric(), "shield"), "wish")
+    assert scroll_actions(char, CATALOG) == []
+
+
+def test_differently_inscribed_scrolls_stay_distinct_actions():
+    char = _with_scroll(_with_scroll(_cleric(), "fireball", level=3),
+                        "fireball", level=5)
+    names = sorted(a.name for a in scroll_actions(char, CATALOG))
+    assert names == ["Scroll: Fireball (3rd-level)",
+                     "Scroll: Fireball (5th-level)"]
+
+
+def test_select_action_adopts_the_inscribed_level():
+    from arena.combat.manager import CombatManager
+    char = _with_scroll(_cleric(), "magic_missile", level=5)
+    (a,) = scroll_actions(char, CATALOG)
+    cm = CombatManager()
+    cm.select_action(a)                           # no picker involved
+    assert cm._cast_level == 5                    # 7 darts, the RAW way
+
+
+def test_scroll_actions_ride_into_the_staged_player():
+    char = _with_scroll(_cleric(), "misty_step")
+    creature = character_to_player(char, CATALOG, RS)
+    assert any(a.name.startswith("Scroll: Misty Step")
+               for a in creature.actions)
 
 
 # --- 3. the real-engine cast slice (B2 lights up) --------------------------

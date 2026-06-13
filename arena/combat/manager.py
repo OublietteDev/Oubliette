@@ -1232,6 +1232,10 @@ class CombatManager:
     ) -> None:
         """Player selects an action to use. Transitions to target selection."""
         self.selected_action = action
+        if cast_level is None:
+            # Scrolls (C5): the item casts at its inscribed level — no slot
+            # picker involved; the upcast machinery keys off this.
+            cast_level = action.fixed_cast_level
         self._cast_level = cast_level
         self.turn_phase = TurnPhase.SELECTING_TARGET
 

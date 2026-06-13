@@ -133,9 +133,13 @@ def result_to_ops(result: CombatResult) -> list[StateOp]:
             ops.append(StateOp.item("pc", entry.item_id, entry.qty))
     # Consumables spent in the Arena (B1): debit each drinker's own stack. Safe by
     # the handoff entry invariant — the Arena can never report more used than the
-    # quantity that was staged in from this same inventory.
+    # quantity that was staged in from this same inventory. Scroll variants (C5)
+    # carry their spell/level riders so the exact stack is debited.
     for used in result.items_consumed:
-        ops.append(StateOp.item(used.char, used.item_id, -used.qty))
+        ops.append(StateOp.item(
+            used.char, used.item_id, -used.qty,
+            spell=used.spell, spell_level=used.spell_level,
+        ))
     # Slots/resources spent in the Arena (B2): absolute used mappings onto the
     # CS5 trackers — the same ops rests write, from the other direction.
     for char_id, mapping in result.slots_used_final.items():

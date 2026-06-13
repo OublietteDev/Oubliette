@@ -22,7 +22,11 @@ with ``is_pc`` true ADDITIONALLY carries:
       "spell_slots":     {"<level>": {"remaining": int, "max": int|null}, ...},
       "class_resources": {"<name>": remaining, ...}     # ki_points, rage_uses, ...
   },
-  "consumables_used": [{"item_id": str|null, "name": str, "used": int}, ...],
+  "consumables_used": [{"item_id": str|null, "name": str, "used": int,
+                        "spell": str|null, "spell_level": int|null}, ...],
+                       # spell/spell_level (additive, C5): scroll variant
+                       # riders — the launching app keys scroll stacks by
+                       # (item, spell, level), so the debit names the variant
   "death_saves":      {"successes": int, "failures": int, "stabilized": bool}
 
 Derivation notes (all read from the FINAL engine state — nothing new is tracked):
@@ -88,7 +92,10 @@ def _pc_resources(creature: Any) -> dict:
 
 def _consumables_used(creature: Any) -> list[dict]:
     """Items spent this fight: ``uses_per_rest - current_uses`` over item actions,
-    aggregated per item. Relies on the entry invariant (current == per at load)."""
+    aggregated per item VARIANT. Relies on the entry invariant (current == per at
+    load). Scroll actions (C5) carry spell/spell_level riders — two differently
+    inscribed scrolls share an item_id but are distinct inventory stacks, so the
+    riders join the aggregation key and the reported entry (additive v2 keys)."""
     used: dict[tuple, dict] = {}
     for attr in ("actions", "bonus_actions", "reactions"):
         for a in getattr(creature, attr, []) or []:
@@ -97,8 +104,13 @@ def _consumables_used(creature: Any) -> list[dict]:
             cur = getattr(a, "current_uses", None)
             if not name or per is None or cur is None or cur >= per:
                 continue
-            key = (getattr(a, "source_item_id", None), name)
-            entry = used.setdefault(key, {"item_id": key[0], "name": name, "used": 0})
+            spell = getattr(a, "source_item_spell", None)
+            spell_level = getattr(a, "source_item_spell_level", None)
+            key = (getattr(a, "source_item_id", None), name, spell, spell_level)
+            entry = used.setdefault(key, {
+                "item_id": key[0], "name": name, "used": 0,
+                "spell": spell, "spell_level": spell_level,
+            })
             entry["used"] += per - cur
     return list(used.values())
 

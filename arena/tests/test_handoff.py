@@ -157,13 +157,15 @@ def test_consumables_used_diff_and_item_id():
                                per=1, cur=1)
     cm = _manager_with(_pc(bonus_actions=[spent, untouched]))
     used = _result_pc(cm)["consumables_used"]
-    assert used == [{"item_id": "potion_healing", "name": "Potion of Healing", "used": 1}]
+    assert used == [{"item_id": "potion_healing", "name": "Potion of Healing",
+                     "used": 1, "spell": None, "spell_level": None}]
 
 
 def test_consumable_without_catalog_id_still_reports_name():
     cm = _manager_with(_pc(bonus_actions=[_potion_action("Elixir", None, per=3, cur=0)]))
     used = _result_pc(cm)["consumables_used"]
-    assert used == [{"item_id": None, "name": "Elixir", "used": 3}]
+    assert used == [{"item_id": None, "name": "Elixir", "used": 3,
+                     "spell": None, "spell_level": None}]
 
 
 def test_death_saves_captured():
