@@ -108,6 +108,10 @@
   .card .cline { font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
   .card .cactions { display: flex; gap: 6px; flex-shrink: 0; }
   .card.card-child { border-left: 3px solid var(--accent); }   /* a child place, indented under its parent */
+  .pc-fold { flex: none; width: 22px; align-self: center; background: none; border: none; color: var(--gold); cursor: pointer; font-size: 13px; padding: 2px 4px; border-radius: 6px; }
+  .pc-fold:hover { background: var(--panel); }
+  .pc-fold-spacer { flex: none; width: 22px; }
+  .pc-fold-count { font-size: 11.5px; color: var(--faint); font-family: var(--sans); font-style: italic; }
   .nothing { color: var(--faint); font-style: italic; font-size: 13px; }
   .readonly-note { font-size: 11px; color: var(--faint); font-style: italic; }
   .sec-warn { font-size: 10px; color: var(--bad); border: 1px solid #4d2c25;
@@ -142,6 +146,12 @@
     color: var(--faint); margin-bottom: 10px; }
   .exit-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
   .cue { border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; margin-bottom: 9px; background: rgba(0,0,0,.12); }
+  /* sound grouping headers + inherited (read-only) cues */
+  .cue-group { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); opacity: .85; margin: 4px 0 6px; }
+  .cue.inherited { opacity: .6; pointer-events: none; border-style: dashed; background: rgba(0,0,0,.05); }
+  .cue.inherited .cue-inh-file { flex: 1; font-size: 13px; color: var(--ink); }
+  .cue.inherited .cue-inh-from { font-size: 11px; color: var(--faint); font-style: italic; }
+  .cue.inherited .cue-inh-meta { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
   .cue-row { display: flex; gap: 8px; align-items: center; margin-bottom: 7px; }
   .cue-row:last-child { margin-bottom: 0; }
   .cue-row select { flex: 1; min-width: 0; font-size: 13px; }
@@ -268,6 +278,7 @@ const ARMOR_TYPES = ["light", "medium", "heavy", "shield"];
 
 let state = { id: null, contents: null, validation: null, dirty: false };
 const collapsed = new Set();   // folded sections, remembered across re-renders
+const placesCollapsed = new Set();  // place ids whose child-locations are folded in the list
 let secCounts = {};            // per-section issue counts from the last validation
 
 // --- helpers ---------------------------------------------------------------
@@ -437,13 +448,21 @@ function wireWorldSettings() {
 // One card. `i` is the entry's index in listOf(kind) — edit/delete key off it, so it
 // must stay the ORIGINAL index even when places are reordered into a hierarchy. `depth`
 // indents children under their parent (places only; 0 everywhere else).
-function cardHtml(kind, e, i, depth) {
+function cardHtml(kind, e, i, depth, node) {
   const editable = EDITABLE.has(kind);
   const indent = depth ? ` style="margin-left:${depth * 20}px"` : "";
+  // A fold chevron on parent locations (places with children) — collapses the subtree
+  // so you don't scroll past one area's children to reach another's.
+  const fold = (node && node.hasChildren)
+    ? `<button class="pc-fold" data-fold="${esc(e.id)}" title="${node.collapsed ? "Show child locations" : "Hide child locations"}">${node.collapsed ? "▸" : "▾"}</button>`
+    : (kind === "places" ? `<span class="pc-fold-spacer"></span>` : "");
+  const foldNote = (node && node.hasChildren && node.collapsed)
+    ? ` <span class="pc-fold-count">(${node.childCount} inside)</span>` : "";
   return `
     <div class="card${depth ? " card-child" : ""}"${indent}>
+      ${fold}
       <div class="cbody">
-        <div class="cname">${esc(e.name || e.title || e.id || "(unnamed)")}</div>
+        <div class="cname">${esc(e.name || e.title || e.id || "(unnamed)")}${foldNote}</div>
         <div class="cline">${esc(describe(kind, e))}</div>
       </div>
       ${editable ? `<div class="cactions">
@@ -453,19 +472,31 @@ function cardHtml(kind, e, i, depth) {
 }
 
 // Places ordered as a tree: each top-level location followed by its children (and
-// their children) indented beneath it. Returns {e, i, depth} keeping the original
-// index. Cycle-safe; places whose parent is missing fall back to the top level.
+// their children) indented beneath it. Returns {e, i, depth, hasChildren, childCount,
+// collapsed} keeping the original index. A collapsed parent's descendants are omitted.
+// Cycle-safe; places whose parent is missing fall back to the top level.
 function placesHierarchy(entries) {
   const byParent = {};
   entries.forEach((e, i) => { const p = e.parent || ""; (byParent[p] = byParent[p] || []).push({ e, i }); });
   const order = [], seen = new Set();
+  // Mark a collapsed parent's whole subtree as seen WITHOUT rendering it, so the
+  // hidden children aren't mistaken for orphans and re-shown at the bottom.
+  const hideSubtree = (key) => (byParent[key] || []).forEach(({ e, i }) => {
+    if (seen.has(i)) return;
+    seen.add(i); hideSubtree(e.id);
+  });
   const walk = (key, depth) => (byParent[key] || []).forEach(({ e, i }) => {
     if (seen.has(i)) return;
-    seen.add(i); order.push({ e, i, depth });
-    walk(e.id, depth + 1);
+    seen.add(i);
+    const kids = byParent[e.id] || [];
+    const collapsed = placesCollapsed.has(e.id);
+    order.push({ e, i, depth, hasChildren: kids.length > 0, childCount: kids.length, collapsed });
+    if (kids.length) (collapsed ? hideSubtree(e.id) : walk(e.id, depth + 1));
   });
   walk("", 0);
-  entries.forEach((e, i) => { if (!seen.has(i)) order.push({ e, i, depth: 0 }); });  // orphan parent ref
+  entries.forEach((e, i) => {
+    if (!seen.has(i)) order.push({ e, i, depth: 0, hasChildren: false, childCount: 0, collapsed: false });
+  });  // orphan parent ref
   return order;
 }
 
@@ -475,7 +506,7 @@ function renderGroup(kind) {
   let cards;
   if (!entries.length) cards = '<div class="nothing">None yet.</div>';
   else if (kind === "places")
-    cards = placesHierarchy(entries).map(({ e, i, depth }) => cardHtml(kind, e, i, depth)).join("");
+    cards = placesHierarchy(entries).map(n => cardHtml(kind, n.e, n.i, n.depth, n)).join("");
   else
     cards = entries.map((e, i) => cardHtml(kind, e, i, 0)).join("");
   const warn = secCounts[kind] ? `<span class="sec-warn">⚠ ${secCounts[kind]}</span>` : "";
@@ -506,6 +537,12 @@ function render() {
     b.addEventListener("click", () => openEditor(b.dataset.edit, +b.dataset.i)));
   d.querySelectorAll("[data-del]").forEach(b =>
     b.addEventListener("click", () => deleteEntry(b.dataset.del, +b.dataset.i)));
+  d.querySelectorAll("[data-fold]").forEach(b =>
+    b.addEventListener("click", () => {
+      const id = b.dataset.fold;
+      placesCollapsed.has(id) ? placesCollapsed.delete(id) : placesCollapsed.add(id);
+      render();
+    }));
   d.querySelectorAll("[data-add]").forEach(b =>
     b.addEventListener("click", () => openEditor(b.dataset.add, null)));
   d.querySelectorAll("[data-toggle]").forEach(t =>
@@ -762,11 +799,47 @@ function audioOptions(selected) {
     opts = `<option value="${esc(selected)}" selected>⚠ ${esc(selected)} (missing)</option>` + opts;
   return `<option value="">(choose a sound)</option>${opts}<option value="__upload__">＋ Upload a sound file…</option>`;
 }
+const _TIME_ORDER = { any: 0, day: 1, night: 2 };
+const _WEATHER_ORDER = { any: 0, clear: 1, rain: 2, storm: 3, wind: 4 };
+const _TIME_LABEL = { any: "Any time", day: "Day", night: "Night" };
+const _weatherLabel = (w) => (!w || w === "any") ? "any weather" : w;
+
+// Cues this place inherits: a parent (or grandparent…) marked "plays in sub-locations".
+// Read from the CURRENTLY selected parent up the chain (so it updates as you change it).
+function inheritedSounds() {
+  const sel = document.getElementById("f_parent");
+  let pid = sel ? sel.value : "";
+  const byId = {};
+  listOf("places").forEach(p => { byId[p.id] = p; });
+  const out = [], seen = new Set();
+  while (pid && byId[pid] && !seen.has(pid)) {
+    seen.add(pid);
+    (byId[pid].sounds || []).forEach(c => { if (c.scope === "passed_down") out.push({ c, from: byId[pid].name || pid }); });
+    pid = byId[pid].parent || "";
+  }
+  return out;
+}
+
 function renderSounds() {
   const box = document.getElementById("soundList");
-  box.innerHTML = editorCtx.sounds.map((c, i) => {
+  // Inherited cues (read-only) — what flows down from parent locations, shown grayed.
+  const inh = inheritedSounds();
+  const inhHtml = inh.length ? `<div class="cue-group">Inherited from parent (plays here too — edit it where it's set)</div>` +
+    inh.map(({ c, from }) => `<div class="cue inherited" title="Set on “${esc(from)}”">
+      <div class="cue-row"><span class="cue-inh-file">♪ ${esc(c.file)}</span><span class="cue-inh-from">from ${esc(from)}</span></div>
+      <div class="cue-inh-meta">${c.kind === "oneshot" ? "occasional" : "bed"} · ${c.category || "sfx"} · ${_TIME_LABEL[c.time || "any"]} · ${_weatherLabel(c.weather)}</div>
+    </div>`).join("") : "";
+
+  // This place's own cues, grouped/sorted by time then weather (tidy, not creation order).
+  const ordered = editorCtx.sounds.map((c, i) => ({ c, i })).sort((a, b) =>
+    (_TIME_ORDER[a.c.time || "any"] - _TIME_ORDER[b.c.time || "any"]) ||
+    (_WEATHER_ORDER[a.c.weather || "any"] - _WEATHER_ORDER[b.c.weather || "any"]));
+  let lastTime = null;
+  const ownHtml = ordered.map(({ c, i }) => {
     const shot = c.kind === "oneshot", miss = audioMissing(c.file);
-    return `<div class="cue${miss ? " missing" : ""}">
+    const t = c.time || "any";
+    const header = (t !== lastTime) ? (lastTime = t, `<div class="cue-group">${_TIME_LABEL[t]}</div>`) : "";
+    return header + `<div class="cue${miss ? " missing" : ""}">
       ${miss ? `<div class="cue-warn">⚠ “${esc(c.file)}” isn’t in the pack — this will be silent. Re-point it or upload the file.</div>` : ""}
       <div class="cue-row">
         <select data-cue-file="${i}" style="flex:1">${audioOptions(c.file)}</select>
@@ -788,7 +861,8 @@ function renderSounds() {
         <select data-cue-weather="${i}">${["any", "clear", "rain", "storm", "wind"].map(w => `<option value="${w}"${(c.weather || "any") === w ? " selected" : ""}>${w === "any" ? "any weather" : w}</option>`).join("")}</select>
       </div>
     </div>`;
-  }).join("") || '<div class="nothing" style="margin-bottom:8px">No sounds yet.</div>';
+  }).join("");
+  box.innerHTML = inhHtml + (ownHtml || '<div class="nothing" style="margin:8px 0">No sounds of its own yet.</div>');
   const on = (sel, ev, fn) => box.querySelectorAll(sel).forEach(el => el.addEventListener(ev, fn));
   on("[data-cue-file]", "change", e => {
     const i = +e.target.dataset.cueFile;
@@ -799,8 +873,8 @@ function renderSounds() {
   on("[data-cue-kind]", "change", e => { editorCtx.sounds[+e.target.dataset.cueKind].kind = e.target.value; renderSounds(); });
   on("[data-cue-cat]", "change", e => { editorCtx.sounds[+e.target.dataset.cueCat].category = e.target.value; });
   on("[data-cue-scope]", "change", e => { editorCtx.sounds[+e.target.dataset.cueScope].scope = e.target.value; });
-  on("[data-cue-time]", "change", e => { editorCtx.sounds[+e.target.dataset.cueTime].time = e.target.value; });
-  on("[data-cue-weather]", "change", e => { editorCtx.sounds[+e.target.dataset.cueWeather].weather = e.target.value; });
+  on("[data-cue-time]", "change", e => { editorCtx.sounds[+e.target.dataset.cueTime].time = e.target.value; renderSounds(); });
+  on("[data-cue-weather]", "change", e => { editorCtx.sounds[+e.target.dataset.cueWeather].weather = e.target.value; renderSounds(); });
   on("[data-cue-gain]", "input", e => { editorCtx.sounds[+e.target.dataset.cueGain].gain = +e.target.value / 100; });
   on("[data-cue-min]", "input", e => { editorCtx.sounds[+e.target.dataset.cueMin].min_gap = +e.target.value; });
   on("[data-cue-max]", "input", e => { editorCtx.sounds[+e.target.dataset.cueMax].max_gap = +e.target.value; });
@@ -863,6 +937,9 @@ function wirePlaceForm() {
   document.getElementById("illusChoose").addEventListener("click", () => document.getElementById("illusFile").click());
   document.getElementById("illusFile").addEventListener("change", e => { if (e.target.files[0]) onChooseIllus(e.target.files[0]); });
   document.getElementById("illusRemove").addEventListener("click", () => { editorCtx.image = null; renderIllus(); });
+  // Changing the parent changes what this place inherits — refresh the (read-only) inherited cues.
+  const fp = document.getElementById("f_parent");
+  if (fp) fp.addEventListener("change", renderSounds);
 }
 function confirmPlace(original) {
   const name = document.getElementById("f_name").value.trim();
