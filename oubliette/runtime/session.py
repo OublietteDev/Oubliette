@@ -226,6 +226,12 @@ class Session:
             char, granted = build_character(build, self.ruleset, "pc" if i == 0 else f"pc{i + 1}")
             chars.append(char)
             items.extend(granted)
+        # Party gold is a shared purse (one shop, one driver). Pool every hero's chargen
+        # starting gold onto the lead so none is stranded on a member the shop can't spend.
+        if len(chars) > 1:
+            chars[0].gold = sum(c.gold for c in chars)
+            for c in chars[1:]:
+                c.gold = 0
         payload = {
             "characters": [c.model_dump(mode="json") for c in chars],
             "items": [it.model_dump(mode="json") for it in items],

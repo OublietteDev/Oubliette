@@ -191,6 +191,17 @@ def test_dm_context_lists_the_whole_party_by_id():
     assert "Bron (id: pc)" in ctx and "Sera (id: pc2)" in ctx
 
 
+def test_party_gold_pools_onto_the_lead():
+    # a single fighter's solo starting gold (the baseline)
+    g = _session().emit_party_created([_fighter("Solo")])[0].gold
+    # three identical fighters: all starting gold pools onto the lead (shared purse)
+    party = _session().emit_party_created([_fighter("A"), _fighter("B"), _fighter("C")])
+    by = {c.name: c.gold for c in party}
+    assert by["A"] == 3 * g                     # lead holds the pooled purse
+    assert by["B"] == 0 and by["C"] == 0        # nothing stranded on the others
+    assert sum(by.values()) == 3 * g            # no gold lost
+
+
 def test_state_snapshot_includes_the_whole_party():
     builds = [_fighter("Bron").model_dump(mode="json"),
               _fighter("Sera", _HIGH_CHA).model_dump(mode="json")]

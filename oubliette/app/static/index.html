@@ -148,6 +148,11 @@
   .stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
   .stats b { color: var(--ink); font-weight: 600; }
   .gold b { color: var(--gold); }
+  /* dedicated party-gold section (sidebar HUD) */
+  .party-gold { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 8px 11px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); }
+  .party-gold .pg-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .party-gold .pg-val { font-family: var(--serif); font-size: 17px; color: var(--gold); }
   /* party roster (sidebar HUD when >1 hero) */
   .pc-row { padding: 9px 0; border-top: 1px solid var(--line); }
   .pc-row:first-child { border-top: none; }
@@ -598,6 +603,7 @@
       </div>
       <div class="card">
         <h2 id="pc-card-title">Character</h2>
+        <div id="party-gold" class="party-gold hidden"></div>
         <div id="pc-single">
           <div class="sheet-name" id="pc-name">—</div>
           <div class="hpbar"><div class="hpfill" id="hpfill"></div></div>
@@ -1097,7 +1103,12 @@ function renderState(s) {
   $("pc-card-title").textContent = isParty ? `Party (${party.length})` : "Character";
   $("pc-single").classList.toggle("hidden", isParty);
   $("party-roster").classList.toggle("hidden", !isParty);
+  $("party-gold").classList.toggle("hidden", !isParty);
   if (isParty) {
+    const partyGold = party.reduce((t, p) => t + (p.gold || 0), 0);
+    $("party-gold").innerHTML = "";
+    $("party-gold").appendChild(el("span", "pg-label", "Party Gold"));
+    $("party-gold").appendChild(el("b", "pg-val", partyGold + "g"));
     renderPartyRoster(party);
   } else {
     const pc = s.pc;
@@ -1164,8 +1175,7 @@ function renderPartyRoster(party) {
     bar.appendChild(fill); row.appendChild(bar);
     const stats = el("div", "pc-row-stats");
     stats.appendChild(el("span", null, `HP ${pc.hp}/${pc.max_hp}`));
-    stats.appendChild(el("span", null, `AC ${pc.armor_class}`));
-    stats.appendChild(el("span", "gold", `${pc.gold}g`));
+    stats.appendChild(el("span", null, `AC ${pc.armor_class}`));   // gold is the party purse, shown above the roster
     row.appendChild(stats);
     if (pc.conditions && pc.conditions.length)
       row.appendChild(el("div", "pc-row-cond", pc.conditions.join(", ")));
@@ -2586,6 +2596,9 @@ function renderSheetMember(m) {
   top.appendChild(shCell("Speed", m.has_sheet ? m.identity.speed : 30));
   top.appendChild(shCell("Prof", shSigned(d.proficiency_bonus)));
   top.appendChild(shCell("Hit Dice", m.hit_dice ? `${m.hit_dice.total - m.hit_dice.used}d${m.hit_dice.die}` : "—"));
+  // Gold is a shared party purse — every sheet shows the same pooled total.
+  const partyGold = (sheetParty || []).reduce((t, x) => t + (x.gold || 0), 0);
+  top.appendChild(shCell(sheetParty.length > 1 ? "Party Gold" : "Gold", partyGold + "g"));
   root.appendChild(top);
 
   root.appendChild(renderRestBar(m));
