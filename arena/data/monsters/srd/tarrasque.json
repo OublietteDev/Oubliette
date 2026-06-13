@@ -59,7 +59,11 @@
             "bonus": 10
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "grappled"
+      ],
+      "grapple_escape_dc": 20
     },
     {
       "name": "Claw",
@@ -185,6 +189,10 @@
           }
         ]
       },
+      "conditions_applied": [
+        "grappled"
+      ],
+      "grapple_escape_dc": 20,
       "legendary_action_cost": 2
     }
   ],

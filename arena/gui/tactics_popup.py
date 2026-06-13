@@ -23,9 +23,12 @@ _TACTICS = [
     ("Shove", "Push a creature 5ft or knock it prone"),
 ]
 
+# Shown only while grappled (C5): the escape check is its own action.
+_ESCAPE_ENTRY = ("Escape", "Athletics/Acrobatics check to escape the grapple")
+
 
 class TacticsPopup:
-    """Rectangular popup listing the four standard tactical actions."""
+    """Rectangular popup listing the standard tactical actions."""
 
     ENTRY_HEIGHT = 28
     WIDTH = 210
@@ -37,15 +40,20 @@ class TacticsPopup:
         action_used: bool,
         screen_width: int = 1280,
         screen_height: int = 720,
+        grappled: bool = False,
     ) -> None:
         self.action_used = action_used
         self._screen_width = screen_width
         self._screen_height = screen_height
+        self._entries = list(_TACTICS)
+        if grappled:
+            self._entries.append(_ESCAPE_ENTRY)
 
         self.hovered_index: int | None = None
         self._hovered_tooltip_lines: list[str] | None = None
 
-        total_h = self.TITLE_HEIGHT + len(_TACTICS) * self.ENTRY_HEIGHT + self.PADDING * 2
+        total_h = (self.TITLE_HEIGHT + len(self._entries) * self.ENTRY_HEIGHT
+                   + self.PADDING * 2)
         self.rect = pygame.Rect(0, 0, self.WIDTH, total_h)
 
     # ── Positioning ──────────────────────────────────────────────────
@@ -88,7 +96,7 @@ class TacticsPopup:
             if idx is not None and not self.action_used:
                 from arena.audio.manager import get_sound_manager
                 get_sound_manager().play_sfx("button_click")
-                name = _TACTICS[idx][0].lower()
+                name = self._entries[idx][0].lower()
                 # Shove needs target selection, not immediate execution
                 if name == "shove":
                     return "shove"
@@ -125,7 +133,7 @@ class TacticsPopup:
         # Entries
         entry_font = get_font(13)
         y = self.rect.y + self.TITLE_HEIGHT
-        for i, (name, _desc) in enumerate(_TACTICS):
+        for i, (name, _desc) in enumerate(self._entries):
             entry_rect = pygame.Rect(
                 self.rect.x + 2,
                 y,
@@ -213,7 +221,7 @@ class TacticsPopup:
         idx = self._entry_at(pos)
         self.hovered_index = idx
         if idx is not None:
-            self._hovered_tooltip_lines = [_TACTICS[idx][1]]
+            self._hovered_tooltip_lines = [self._entries[idx][1]]
         else:
             self._hovered_tooltip_lines = None
 
@@ -225,6 +233,6 @@ class TacticsPopup:
         if rel_y < 0:
             return None
         idx = int(rel_y // self.ENTRY_HEIGHT)
-        if 0 <= idx < len(_TACTICS):
+        if 0 <= idx < len(self._entries):
             return idx
         return None

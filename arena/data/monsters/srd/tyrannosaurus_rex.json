@@ -44,7 +44,11 @@
             "bonus": 7
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "grappled"
+      ],
+      "grapple_escape_dc": 17
     },
     {
       "name": "Tail",

@@ -74,7 +74,11 @@
             "bonus": 6
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "grappled"
+      ],
+      "grapple_escape_dc": 16
     },
     {
       "name": "Lightning Breath",

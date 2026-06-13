@@ -23,9 +23,10 @@ What it maps onto the Arena `Monster` model, with full combat fidelity:
     Save-gated riders on weapon attacks (Ghoul claws: "DC 10 CON save or be
     paralyzed") emit `conditions_applied` + `condition_save_to_end`; the engine
     applies the condition on hit and the target saves at end of turn to shake
-    it (the initial save is skipped — a known, mild strengthening). Grappled is
-    deliberately NOT emitted: the engine has no grapple-escape check yet, so an
-    automatic on-hit grapple would be permanent.
+    it (the initial save is skipped — a known, mild strengthening). On-hit
+    grapples ("grappled (escape DC 13)") emit `conditions_applied` +
+    `grapple_escape_dc` (C5): no re-save — escaping is its own action
+    (manager.execute_escape_grapple), and a downed grappler releases.
   - LEGENDARY ACTIONS (C2): mechanizable entries map like actions (action_type
     "legendary", cost parsed from "(Costs N Actions)"); reference entries ("The
     dragon makes a tail attack.") resolve against the action list by name.
@@ -162,7 +163,8 @@ def _aoe_shape(desc: str) -> tuple[str, int | None]:
 
 
 # Conditions the engine models (Condition enum values), parseable from effect
-# phrasing. Grappled is deliberately absent (no escape check engine-side yet).
+# phrasing. Grappled is deliberately absent HERE — on-hit grapples go through
+# _grapple_rider (their own escape-DC shape, not the save-to-end shape).
 _CONDS = ("blinded|charmed|deafened|frightened|paralyzed|petrified|poisoned"
           "|restrained|stunned|unconscious")
 _COND_RE = re.compile(
@@ -188,6 +190,18 @@ def _conditions_in(desc: str) -> list[str]:
 _RIDER_RE = re.compile(
     r"dc (\d+) (strength|dexterity|constitution|intelligence|wisdom|charisma)"
     r" saving throw or", re.IGNORECASE)
+
+_GRAPPLE_RE = re.compile(r"grappled \(escape dc (\d+)\)", re.IGNORECASE)
+
+
+def _grapple_rider(desc: str) -> dict | None:
+    """An on-hit grapple ("the target is grappled (escape DC 13)") → the
+    grappled condition + the stat block's escape DC on the action (C5)."""
+    m = _GRAPPLE_RE.search(desc)
+    if not m:
+        return None
+    return {"conditions_applied": ["grappled"],
+            "grapple_escape_dc": int(m.group(1))}
 
 
 def _attack_rider(desc: str) -> dict | None:
@@ -234,6 +248,15 @@ def _action(a: dict, abils: dict, prof: int) -> dict | None:
         rider = _attack_rider(desc)
         if rider:
             out.update(rider)
+        grapple = _grapple_rider(desc)
+        if grapple:
+            # May coexist with a save rider (tentacles that grapple AND
+            # poison): the engine applies grappled with the escape DC and
+            # the other conditions with the save params.
+            out["conditions_applied"] = (
+                out.get("conditions_applied", []) +
+                grapple["conditions_applied"])
+            out["grapple_escape_dc"] = grapple["grapple_escape_dc"]
         return out
     if a.get("dc"):
         dc = a["dc"]

@@ -53,7 +53,11 @@
             "bonus": 0
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "grappled"
+      ],
+      "grapple_escape_dc": 13
     },
     {
       "name": "Acid Spray",

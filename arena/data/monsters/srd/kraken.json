@@ -79,7 +79,11 @@
             "bonus": 10
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "grappled"
+      ],
+      "grapple_escape_dc": 18
     },
     {
       "name": "Lightning Storm",
@@ -121,6 +125,10 @@
           }
         ]
       },
+      "conditions_applied": [
+        "grappled"
+      ],
+      "grapple_escape_dc": 18,
       "legendary_action_cost": 1
     },
     {

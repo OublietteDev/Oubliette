@@ -51,7 +51,11 @@
             "bonus": 4
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "grappled"
+      ],
+      "grapple_escape_dc": 14
     },
     {
       "name": "Tentacles",

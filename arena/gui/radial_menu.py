@@ -215,10 +215,19 @@ class RadialMenu:
 
         action_used = self.combat.has_used_action
 
+        # Escape entry appears only while the active creature is grappled (C5)
+        grappled = False
+        active = self.combat.active_combatant
+        if active is not None:
+            from arena.combat.conditions import has_condition
+            from arena.models.conditions import Condition
+            grappled = has_condition(active.creature, Condition.GRAPPLED)
+
         self.tactics_popup = TacticsPopup(
             action_used=action_used,
             screen_width=self._screen_width,
             screen_height=self._screen_height,
+            grappled=grappled,
         )
         self.tactics_popup.reposition(
             self._center_screen,

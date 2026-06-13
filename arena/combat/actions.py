@@ -900,14 +900,27 @@ def resolve_attack_damage(
                     cond = Condition(cond_name)
                 except ValueError:
                     continue
-                cond_event = apply_condition(
-                    hit_result.target, hit_result.target_id, cond,
-                    source=hit_result.attacker.name,
-                    duration_type=cond_dur_type,
-                    duration_rounds=cond_dur_rounds,
-                    save_to_end=cond_save_to_end,
-                    save_dc=cond_save_dc,
-                )
+                if cond == Condition.GRAPPLED:
+                    # Grapples have no re-save: they last until escaped
+                    # (execute_escape_grapple, vs the stored escape DC) or
+                    # the grappler goes down (_reconcile_grapples).
+                    cond_event = apply_condition(
+                        hit_result.target, hit_result.target_id, cond,
+                        source=hit_result.attacker.name,
+                        extra_data=(
+                            {"escape_dc": act.grapple_escape_dc}
+                            if act.grapple_escape_dc is not None else None
+                        ),
+                    )
+                else:
+                    cond_event = apply_condition(
+                        hit_result.target, hit_result.target_id, cond,
+                        source=hit_result.attacker.name,
+                        duration_type=cond_dur_type,
+                        duration_rounds=cond_dur_rounds,
+                        save_to_end=cond_save_to_end,
+                        save_dc=cond_save_dc,
+                    )
                 if cond_event:
                     events.append(cond_event)
 

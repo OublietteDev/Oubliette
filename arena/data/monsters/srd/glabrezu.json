@@ -60,7 +60,11 @@
             "bonus": 5
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "grappled"
+      ],
+      "grapple_escape_dc": 15
     },
     {
       "name": "Fist",

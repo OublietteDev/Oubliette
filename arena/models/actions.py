@@ -223,6 +223,11 @@ class Action(BaseModel):
     condition_save_to_end_dc: int | None = None  # DC for the save. None = use spell save DC from caster
     condition_duration_type: str = "indefinite"  # "indefinite", "rounds", "end_of_turn", "start_of_turn"
     condition_duration_rounds: int | None = None  # Number of rounds if type is "rounds"
+    # Grapple rider (C5): a "grappled" in conditions_applied stores this as the
+    # escape-check DC ("escape DC 13" in monster stat blocks). The grapple has
+    # no re-save — escaping is its own action (manager.execute_escape_grapple),
+    # and a downed grappler releases automatically.
+    grapple_escape_dc: int | None = None
 
     # Recurring action (Sunbeam, Witch Bolt, Spiritual Weapon: re-use on subsequent turns)
     recurring_action_type: str | None = None  # "action" or "bonus_action" to repeat on later turns

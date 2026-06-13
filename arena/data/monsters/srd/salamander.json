@@ -77,7 +77,11 @@
             "bonus": 0
           }
         ]
-      }
+      },
+      "conditions_applied": [
+        "grappled"
+      ],
+      "grapple_escape_dc": 14
     }
   ],
   "legendary_actions": [],

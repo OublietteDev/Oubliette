@@ -20,6 +20,7 @@ from arena.combat.chain_effects import has_chain_effect, get_chain_targets
 from arena.models.actions import DamageRoll
 from arena.combat.conditions import (
     process_start_of_turn, process_end_of_turn, has_condition,
+    remove_condition,
 )
 from arena.models.conditions import Condition
 from arena.combat.buff_effects import process_buff_start_of_turn, process_buff_end_of_turn
@@ -3589,6 +3590,10 @@ class CombatManager:
             event = execute_help(self, target_id)
         elif action_name_lower == "hide":
             event = execute_hide(self)
+        elif action_name_lower == "escape":
+            # Escape a grapple (C5) — logs its own events
+            result = self.execute_escape_grapple()
+            return result.events[0] if result and result.events else None
         elif action_name_lower == "action_surge":
             event = execute_action_surge(self)
         elif action_name_lower == "ready":
@@ -3758,6 +3763,89 @@ class CombatManager:
 
         self._check_victory()
 
+        return ActionResult(events=events, success=success)
+
+    def execute_escape_grapple(self) -> ActionResult | None:
+        """Use the action to escape a grapple (C5).
+
+        d20 + the better of Athletics/Acrobatics vs the grapple's escape DC
+        (monster grapples carry "escape DC N" in their stat block; the rider
+        stores it in extra_data). A grapple with no stored DC is contested
+        against the grappler's Athletics, Shove-style. Success removes
+        GRAPPLED; either way the action is spent.
+        """
+        from arena.combat.actions import ActionResult
+        from arena.combat.forced_movement import _get_skill_modifier
+
+        combatant = self.active_combatant
+        if combatant is None:
+            return None
+        if not can_take_actions(combatant.creature):
+            return None
+        if self.turn_resources.has_used_action:
+            return None
+        creature = combatant.creature
+        grapples = [ac for ac in creature.active_conditions
+                    if ac.condition == Condition.GRAPPLED]
+        if not grapples:
+            return None
+
+        athletics = _get_skill_modifier(creature, "athletics")
+        acrobatics = _get_skill_modifier(creature, "acrobatics")
+        if athletics >= acrobatics:
+            mod, skill = athletics, "Athletics"
+        else:
+            mod, skill = acrobatics, "Acrobatics"
+        roll = roll_die(20)
+        total = roll + mod
+
+        # One escape check frees the creature entirely (approx: multiple
+        # simultaneous grapplers are rare; RAW would be one check each).
+        grapple = grapples[0]
+        escape_dc = grapple.extra_data.get("escape_dc")
+        if escape_dc is not None:
+            success = total >= int(escape_dc)
+            vs_text = f"vs escape DC {escape_dc}"
+        else:
+            grappler = next(
+                (c for c in self.combatants.values()
+                 if c.creature.name == grapple.source
+                 and c.creature.is_conscious),
+                None,
+            )
+            if grappler is None:
+                success, vs_text = True, "(the grappler is gone)"
+            else:
+                g_mod = _get_skill_modifier(grappler.creature, "athletics")
+                g_roll = roll_die(20)
+                g_total = g_roll + g_mod
+                # The escaper initiates the contest — ties go to them
+                # (the Shove convention, from the other side).
+                success = total >= g_total
+                vs_text = (f"vs {grapple.source}'s Athletics "
+                           f"{g_total} ({g_roll}+{g_mod})")
+
+        events: list[CombatEvent] = [CombatEvent(
+            event_type=CombatEventType.SAVING_THROW,
+            message=(
+                f"{creature.name} tries to escape the grapple: "
+                f"{skill} {total} ({roll}+{mod}) {vs_text} - "
+                f"{'SUCCESS' if success else 'FAILURE'}"
+            ),
+            source_id=combatant.creature_id,
+            details={"escape_grapple": True, "roll": total,
+                     "success": success},
+        )]
+        if success:
+            rm = remove_condition(
+                creature, combatant.creature_id, Condition.GRAPPLED,
+            )
+            if rm:
+                events.append(rm)
+
+        self.turn_resources.has_used_action = True
+        for e in events:
+            self.log.add(e)
         return ActionResult(events=events, success=success)
 
     def execute_ready_action(
@@ -4945,6 +5033,31 @@ class CombatManager:
                     queue.append(nb)
         return None
 
+    def _reconcile_grapples(self) -> None:
+        """RAW: a grapple ends when the grappler is incapacitated or gone.
+
+        Sources are recorded by creature NAME (what apply_condition stores),
+        so the grapple holds while ANY action-capable, on-grid creature of
+        that name remains — conservative when names repeat ("Wolf" ×2).
+        """
+        for cid, c in self.combatants.items():
+            for ac in list(c.creature.active_conditions):
+                if ac.condition != Condition.GRAPPLED:
+                    continue
+                holder_active = any(
+                    o.creature.name == ac.source
+                    and o.creature.is_conscious
+                    and can_take_actions(o.creature)
+                    and o.position is not None
+                    for o in self.combatants.values()
+                )
+                if not holder_active:
+                    rm = remove_condition(
+                        c.creature, cid, Condition.GRAPPLED, source=ac.source,
+                    )
+                    if rm:
+                        self.log.add(rm)
+
     def _banished_for_good(self, creature_id: str, combatant) -> bool:
         """True if this creature is banished with no path back to the fight.
 
@@ -4986,6 +5099,9 @@ class CombatManager:
         # Banishment state may have changed by whatever triggered this check
         # (saves, concentration breaks, condition expiry) — sync the grid.
         self._reconcile_banishment()
+
+        # A downed/incapacitated grappler releases its hold (RAW).
+        self._reconcile_grapples()
 
         # Clean up downed summons before checking victory
         downed_summons = [
