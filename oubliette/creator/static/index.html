@@ -392,6 +392,47 @@ function statusBanner() {
       <ul>${w.map(x => `<li>${esc(x.message)}</li>`).join("")}</ul></div>`;
   return html;
 }
+// --- world settings (manifest-level: the bestiary knowledge gate) ----------
+function worldSettingsPanel(m) {
+  const g = (m && m.bestiary_gate) || { enabled: false, max_known_cr: 0 };
+  const cr = (g.max_known_cr == null ? 0 : g.max_known_cr);
+  return `<div class="group">
+    <div class="ghead"><span class="gtoggle" style="cursor:default"><h3>World settings</h3></span></div>
+    <div class="gcards" style="display:block; padding:10px 14px">
+      <div class="field">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+          <input type="checkbox" id="ws-gate-enabled" ${g.enabled ? "checked" : ""}
+                 style="width:auto; flex:none; margin:0">
+          <span>Bestiary knowledge gate</span>
+        </label>
+        <div class="help">When on, creatures above the challenge rating below stay hidden ("????") in the player's bestiary until the party encounters them in a fight. Off = the whole bestiary (including SRD) is open.</div>
+      </div>
+      <div class="field" style="${g.enabled ? "" : "opacity:.45"}">
+        <label>Always-known up to CR</label>
+        <input type="number" id="ws-gate-cr" step="0.125" min="-1" value="${cr}" ${g.enabled ? "" : "disabled"}>
+        <div class="help">Creatures at or below this CR are always shown — e.g. <b>0</b> means everyone has seen a rat. Set <b>below 0</b> to gate <i>everything</i> until encountered.</div>
+      </div>
+    </div>
+  </div>`;
+}
+function wireWorldSettings() {
+  const cb = document.getElementById("ws-gate-enabled");
+  if (!cb) return;
+  const ensureGate = () => {
+    state.contents.pack = state.contents.pack || {};
+    if (!state.contents.pack.bestiary_gate)
+      state.contents.pack.bestiary_gate = { enabled: false, max_known_cr: 0 };
+    return state.contents.pack.bestiary_gate;
+  };
+  cb.addEventListener("change", () => { ensureGate().enabled = cb.checked; markDirty(); });
+  const cr = document.getElementById("ws-gate-cr");
+  if (cr) cr.addEventListener("change", () => {
+    let v = parseFloat(cr.value);
+    if (isNaN(v)) v = 0;
+    ensureGate().max_known_cr = v; markDirty();
+  });
+}
+
 function renderGroup(kind) {
   const entries = listOf(kind);
   const editable = EDITABLE.has(kind);
@@ -427,7 +468,8 @@ function render() {
   const m = state.contents.pack || {};
   d.innerHTML = `<h2>${esc(m.name || state.id)}</h2>
     <div class="sub">${esc(m.description || "")}${m.author ? ` · by ${esc(m.author)}` : ""} · v${esc(m.version || "?")}</div>
-    ${statusBanner()}${ORDER.map(renderGroup).join("")}`;
+    ${statusBanner()}${worldSettingsPanel(m)}${ORDER.map(renderGroup).join("")}`;
+  wireWorldSettings();
   d.querySelectorAll("[data-edit]").forEach(b =>
     b.addEventListener("click", () => openEditor(b.dataset.edit, +b.dataset.i)));
   d.querySelectorAll("[data-del]").forEach(b =>

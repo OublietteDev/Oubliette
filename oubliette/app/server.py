@@ -872,11 +872,51 @@ def _statblock_view(sb, source: str, scope: str) -> dict:
     }
 
 
+def _encountered_creature_keys() -> set:
+    """Bestiary keys (`scope:id`) the party has faced in a resolved encounter, recorded
+    on COMBAT_RESULT events. The basis for the bestiary knowledge gate — mirrors
+    `_visited_place_ids()` for the map."""
+    keys: set = set()
+    for ev in GAME.session.store.read_all():
+        if ev.kind == EventKind.COMBAT_RESULT.value:
+            for k in ev.payload.get("encountered", []) or []:
+                keys.add(k)
+    return keys
+
+
+def _bestiary_gate():
+    """The active per-world bestiary knowledge cutoff, or None when this world doesn't
+    gate (no manifest setting, or `enabled: false`)."""
+    g = getattr(GAME.session, "bestiary_gate", None)
+    return g if (g is not None and getattr(g, "enabled", False)) else None
+
+
+def _cr_value(cr) -> float:
+    """CR for threshold comparison; an unrated creature (None) sorts as -1, so it stays
+    on the always-known side of any non-negative threshold."""
+    return cr if cr is not None else -1.0
+
+
+def _creature_known(scope: str, mid: str, cr, gate, encountered) -> bool:
+    """Whether a bestiary entry is revealed. With no gate, everything is known.
+    Otherwise creatures at/below the CR threshold are always known; above it, only
+    once the party has encountered them in play."""
+    if gate is None:
+        return True
+    if _cr_value(cr) <= gate.max_known_cr:
+        return True
+    return f"{scope}:{mid}" in encountered
+
+
 @app.get("/api/bestiary")
 async def get_bestiary() -> JSONResponse:
     """The bestiary the panel renders: the loaded world's own monsters PLUS the global
     SRD library, merged into one list ordered by challenge rating then name. Each entry
-    is tagged with its source so the panel can badge pack vs SRD."""
+    is tagged with its source so the panel can badge pack vs SRD.
+
+    If the world sets a knowledge gate, above-threshold creatures the party hasn't
+    encountered are withheld entirely and reported only as a `hidden_count` — the panel
+    shows them as a locked "Undiscovered" tally. They come online once faced in combat."""
     rs = _ruleset()
     session = GAME.session
     pack_label = session.pack_name or "This World"
@@ -884,7 +924,13 @@ async def get_bestiary() -> JSONResponse:
     views += [_statblock_view(sb, "SRD", "srd") for sb in rs.bestiary.values()]
     # stable: challenge rating, then name (the panel groups by CR tier).
     views.sort(key=lambda v: (v["cr"] if v["cr"] is not None else -1.0, v["name"]))
-    return JSONResponse({"monsters": views})
+    gate = _bestiary_gate()
+    if gate is None:
+        return JSONResponse({"monsters": views, "gated": False, "hidden_count": 0})
+    encountered = _encountered_creature_keys()
+    known = [v for v in views if _creature_known(v["scope"], v["id"], v["cr"], gate, encountered)]
+    return JSONResponse({"monsters": known, "gated": True,
+                         "hidden_count": len(views) - len(known)})
 
 
 def _monster_portrait_path(scope: str, mid: str) -> Path | None:
@@ -910,7 +956,17 @@ def _monster_portrait_path(scope: str, mid: str) -> Path | None:
 @app.get("/api/monster-portrait/{scope}/{mid}")
 async def monster_portrait(scope: str, mid: str) -> FileResponse:
     """A monster's portrait (combat-board token art + the bestiary detail). Serves the
-    authored image if present, else a neutral silhouette so every monster has one."""
+    authored image if present, else a neutral silhouette so every monster has one.
+
+    Under a knowledge gate, a creature the party hasn't encountered serves the
+    silhouette regardless — so its art can't be peeked by guessing the URL."""
+    gate = _bestiary_gate()
+    if gate is not None:
+        sb = (_ruleset().bestiary.get(mid) if scope == "srd"
+              else next((s for s in GAME.session.statblocks if s.id == mid), None))
+        if sb is not None and not _creature_known(scope, mid, sb.cr, gate, _encountered_creature_keys()):
+            return FileResponse(STATIC / "img" / "monster-fallback.svg",
+                                headers={"Cache-Control": "no-cache"})
     path = _monster_portrait_path(scope, mid)
     if path is not None:
         return FileResponse(path, headers={"Cache-Control": "no-cache"})

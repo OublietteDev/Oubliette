@@ -281,6 +281,27 @@ class TurnLoop:
             combat_pending=True,
         )
 
+    def _encountered_keys(self, assessment: TurnAssessment) -> list[str]:
+        """The bestiary keys (`scope:id`) of the statblock-backed creatures the party
+        just faced — recorded on the COMBAT_RESULT event so the bestiary knowledge
+        gate can bring those entries online. Templates (ephemeral) and persistent
+        NPCs aren't bestiary entries, so they're skipped. Read-only: resolves refs
+        with the same matcher the staging path uses, without touching the export."""
+        request = getattr(assessment, "encounter", None)
+        if request is None:
+            return []
+        pack = getattr(self.session, "statblocks", ()) or ()
+        keys: list[str] = []
+        for ref in getattr(request, "enemies", ()) or ():
+            sb = arena_launch._statblock_for(self.session, ref.ref)
+            if sb is None:
+                continue
+            scope = "pack" if any(s is sb for s in pack) else "srd"
+            key = f"{scope}:{sb.id}"
+            if key not in keys:
+                keys.append(key)
+        return keys
+
     def _emit_combat_result(
         self, result: CombatResult, player_text: str, assessment: TurnAssessment
     ) -> TurnReport:
@@ -291,6 +312,7 @@ class TurnLoop:
             EventKind.COMBAT_RESULT, ops, outcome=result.outcome,
             hp_final=result.hp_final, xp_award=result.xp_award,
             digest=result.narrative_digest,
+            encountered=self._encountered_keys(assessment),
         )
         # D5 promotion hook: surviving ephemerals flagged significant would be
         # promoted via the canonization path (Phase 3). For now we only surface them.

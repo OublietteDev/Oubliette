@@ -102,6 +102,25 @@ def test_save_writes_changes_and_backs_up(tmp_path, monkeypatch):
     assert not any(it["id"] == "lantern" for it in prior)
 
 
+def test_save_persists_the_bestiary_gate_and_the_loader_reads_it(tmp_path, monkeypatch):
+    """The world-settings panel writes the knowledge gate into pack.json; the game's
+    own loader must read it back — so The Forge and the game agree by construction."""
+    packs = _temp_brightvale(tmp_path, monkeypatch)
+
+    contents = client.get("/api/pack/brightvale").json()["contents"]
+    contents["pack"]["bestiary_gate"] = {"enabled": True, "max_known_cr": 0.25}
+    r = client.post("/api/pack/brightvale/save", json={"contents": contents})
+    assert r.status_code == 200 and r.json()["validation"]["ok"] is True
+
+    written = json.loads((packs / "brightvale" / "pack.json").read_text(encoding="utf-8"))
+    assert written["bestiary_gate"] == {"enabled": True, "max_known_cr": 0.25}
+
+    from oubliette.content.loader import load_pack
+    world = load_pack("brightvale", packs_root=packs)
+    assert world.bestiary_gate.enabled is True
+    assert world.bestiary_gate.max_known_cr == 0.25
+
+
 def test_save_allows_work_in_progress_with_issues(tmp_path, monkeypatch):
     _temp_brightvale(tmp_path, monkeypatch)
     contents = client.get("/api/pack/brightvale").json()["contents"]

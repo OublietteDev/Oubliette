@@ -26,7 +26,8 @@ from ..enums import Ability
 from ..state.models import Character, Item as StateItem, ItemStack
 from ..state.repository import InMemoryRepository
 from .ruleset import Ruleset, load_ruleset
-from .schemas import NPC, Item, Lore, Place, PackManifest, Scenario, StatBlock
+from .schemas import (NPC, BestiaryGate, Item, Lore, Place, PackManifest,
+                      Scenario, StatBlock)
 
 DEFAULT_PACK = "brightvale"
 _PACKS_ROOT = Path(__file__).parent / "packs"
@@ -79,6 +80,7 @@ class LoadedWorld:
     ruleset: Ruleset | None = None  # the global SRD ruleset (chargen/sheet/derivation)
     pack_name: str = ""            # the pack's display name (manifest.name; bestiary source label)
     statblocks: tuple = ()         # the pack's authored StatBlocks (this-world bestiary section)
+    bestiary_gate: "BestiaryGate | None" = None   # per-world bestiary knowledge cutoff (manifest)
 
 
 # --- file reading ------------------------------------------------------------
@@ -357,4 +359,5 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
         pack_id=manifest.id, pack_version=manifest.version, world_map=manifest.world_map,
         ruleset=load_ruleset(),   # the global SRD layer (shared by every world)
         pack_name=manifest.name, statblocks=tuple(statblocks),
+        bestiary_gate=manifest.bestiary_gate,
     )

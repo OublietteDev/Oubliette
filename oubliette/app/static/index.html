@@ -162,6 +162,11 @@
 
   /* trade window (modal) */
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.62); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 50; }
+  /* portrait lightbox — click any view-only portrait to enlarge */
+  #lightbox-overlay { z-index: 80; background: rgba(0,0,0,.82); cursor: zoom-out; padding: 4vmin; }
+  #lightbox-img { max-width: 92vw; max-height: 92vh; border-radius: 12px; border: 1px solid var(--line);
+    box-shadow: var(--shadow); object-fit: contain; }
+  .clickable-portrait { cursor: zoom-in; }
   .overlay.hidden { display: none; }
   .newgame-modal { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; width: min(440px, 92vw); max-height: 84vh; overflow-y: auto; box-shadow: var(--shadow); }
   .newgame-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
@@ -237,6 +242,9 @@
   .cg-errs { list-style: none; margin: 6px 0 0; padding: 0; }
   .cg-errs li { font-size: 12px; color: #d98b6a; padding: 2px 0 2px 14px; text-indent: -10px; }
   .cg-plist { margin: 4px 0 0; padding-left: 16px; color: var(--muted); font-size: 12px; }
+  .cg-portrait-note { margin-top: 12px; padding: 8px 10px; border: 1px dashed var(--line); border-radius: 8px;
+    background: var(--bg); font-size: 11.5px; line-height: 1.45; color: var(--muted); }
+  .cg-portrait-note b { color: var(--gold); font-weight: 600; }
   .trade-modal { width: min(740px, 92vw); max-height: 86vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
   .trade-head { display: flex; align-items: center; gap: 14px; padding: 15px 18px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(0,0,0,.25), transparent); }
   .trade-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 18px; }
@@ -402,6 +410,8 @@
   .best-item:hover { background: var(--panel-2); }
   .best-item.on { background: #2a231d; border-color: var(--accent); }
   .best-item .bm-nm { flex: 1; font-size: 13.5px; }
+  .best-undiscovered { margin-top: 12px; padding: 11px 9px; border-top: 1px dashed var(--line); color: var(--faint); font-size: 12.5px; }
+  .best-undiscovered .best-undiscovered-sub { font-size: 10.5px; font-style: italic; margin-top: 3px; opacity: .8; }
   .best-cr { font-size: 10.5px; color: var(--gold); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .best-src { font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; white-space: nowrap; max-width: 96px; overflow: hidden; text-overflow: ellipsis; flex: none; }
   .best-src.pack { color: var(--accent-2); border-color: #41613f; }
@@ -694,6 +704,10 @@
     </div>
     <div class="inv-body" id="sheet-body"></div>
   </div>
+</div>
+
+<div id="lightbox-overlay" class="overlay hidden" title="Click anywhere to close">
+  <img id="lightbox-img" alt="">
 </div>
 
 <div id="bestiary-overlay" class="overlay hidden">
@@ -1423,8 +1437,10 @@ function renderCgForm() {
   root.appendChild(renderSkills());
   const raceSk = renderRaceSkills(); if (raceSk) root.appendChild(raceSk);
 
-  // Spells (casters only)
+  // Spells (casters only). The racial bonus cantrip (High Elf) sits right under
+  // the class cantrips so it reads as an extra pick, not a duplicate of the list above.
   if (cgClass().is_caster) root.appendChild(renderSpells());
+  const raceCan = renderRaceCantrips(); if (raceCan) root.appendChild(raceCan);
 
   // Equipment
   root.appendChild(renderEquipment());
@@ -1432,7 +1448,6 @@ function renderCgForm() {
   // Languages
   if (cgBg().languages > 0) root.appendChild(renderLanguages());
   const raceLang = renderRaceLanguages(); if (raceLang) root.appendChild(raceLang);
-  const raceCan = renderRaceCantrips(); if (raceCan) root.appendChild(raceCan);
 }
 
 // Race-granted choices the fixed fields can't hold (Half-Elf flexible ASI + skills,
@@ -1500,7 +1515,9 @@ function renderRaceCantrips() {
   const sr = cgSubrace(), bc = sr && sr.bonus_cantrips;
   if (!bc || !bc.choose) return null;
   const list = (cgOpt.spells_by_class[bc.spell_list] || { cantrips: [] }).cantrips;
-  const sec = secEl(`${sr.name} cantrip — choose ${bc.choose} (${bc.spell_list} list)`);
+  const sec = secEl(`${sr.name} bonus cantrip — choose ${bc.choose} (${bc.spell_list} list)`);
+  sec.appendChild(el("div", "cg-hint",
+    `This is in addition to your class cantrips above — pick ${bc.choose} more.`));
   const checks = el("div", "cg-checks");
   list.forEach(sp => {
     const lab = el("label", "cg-check");
@@ -1766,6 +1783,12 @@ function renderPreview(data) {
   const gl = el("ul", "cg-plist");
   p.inventory.forEach(it => gl.appendChild(el("li", null, `${it.name}${it.qty > 1 ? " ×" + it.qty : ""}${p.equipped.includes(it.name) ? " (equipped)" : ""}`)));
   root.appendChild(gl);
+
+  const note = el("div", "cg-portrait-note");
+  note.appendChild(el("b", null, "📷 Add a portrait"));
+  note.appendChild(el("span", null,
+    " — once you begin, open the ☰ menu, find your hero on the character sheet, and click the photo to upload one. Optional, but it brings them to the table (and the Arena)."));
+  root.appendChild(note);
 }
 
 $("new-btn").addEventListener("click", () => { if (!busy) openNewGame(); });
@@ -1817,13 +1840,36 @@ $("reload-btn").addEventListener("click", async () => {
 $("newgame-cancel").addEventListener("click", closeNewGame);
 $("newgame-overlay").addEventListener("click", (e) => { if (e.target.id === "newgame-overlay") closeNewGame(); });
 
+// --- portrait lightbox (click any view-only portrait to enlarge) -----------
+function openLightbox(src, alt) {
+  const img = $("lightbox-img"); img.src = src; img.alt = alt || "";
+  $("lightbox-overlay").classList.remove("hidden");
+}
+function closeLightbox() {
+  $("lightbox-overlay").classList.add("hidden");
+  $("lightbox-img").src = "";   // drop the bytes so a reused box never flashes the old image
+}
+// Make a display-only <img> open in the lightbox on click.
+function makePortraitZoomable(img) {
+  img.classList.add("clickable-portrait");
+  img.addEventListener("click", () => openLightbox(img.src, img.alt));
+}
+$("lightbox-overlay").addEventListener("click", closeLightbox);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("lightbox-overlay").classList.contains("hidden")) closeLightbox();
+});
+
 // --- player menu (extensible registry) ------------------------------------
 // --- bestiary (SRD monster reference; global, read-only) -------------------
 let bestiaryData = [];      // monsters, server-sorted by challenge rating then name
+let bestHidden = 0;         // creatures withheld by this world's knowledge gate (count only)
 let bestSelected = null;    // key (scope:id) of the stat block currently shown
 async function openBestiary() {
-  try { bestiaryData = (await (await fetch("/api/bestiary")).json()).monsters || []; }
-  catch (e) { bestiaryData = []; }
+  try {
+    const data = await (await fetch("/api/bestiary")).json();
+    bestiaryData = data.monsters || [];
+    bestHidden = data.hidden_count || 0;
+  } catch (e) { bestiaryData = []; bestHidden = 0; }
   $("best-search").value = "";
   bestSelected = bestiaryData.length ? bestiaryData[0].key : null;
   renderBestiaryList("");
@@ -1842,7 +1888,6 @@ function renderBestiaryList(filter) {
   const q = (filter || "").trim().toLowerCase();
   const shown = bestiaryData.filter(m =>
     !q || m.name.toLowerCase().includes(q) || (m.type || "").toLowerCase().includes(q));
-  if (!shown.length) { list.appendChild(el("div", "best-empty", "no match")); return; }
   let tier = null;
   shown.forEach(m => {
     const t = "Challenge " + m.cr_label;
@@ -1859,6 +1904,15 @@ function renderBestiaryList(filter) {
     });
     list.appendChild(row);
   });
+  // Knowledge gate: a locked tally of creatures not yet encountered (no filter — it's
+  // a count, not a searchable entry). Comes online as the party faces them in play.
+  if (!q && bestHidden > 0) {
+    const foot = el("div", "best-undiscovered");
+    foot.appendChild(el("div", null, `🔒 ${bestHidden} undiscovered ${bestHidden === 1 ? "creature" : "creatures"}`));
+    foot.appendChild(el("div", "best-undiscovered-sub", "Encounter them in play to reveal their stats."));
+    list.appendChild(foot);
+  }
+  if (!list.children.length) list.appendChild(el("div", "best-empty", q ? "no match" : "no creatures"));
 }
 
 function sbKV(parent, key, val) {
@@ -1887,6 +1941,7 @@ function renderStatBlock(id) {
   const sub = [[m.size, m.type].filter(Boolean).join(" "), m.alignment].filter(Boolean).join(", ");
   const head = el("div", "sb-head");
   const img = el("img", "sb-portrait"); img.src = m.portrait_url; img.alt = m.name; img.loading = "lazy";
+  makePortraitZoomable(img);
   head.appendChild(img);
   const htext = el("div", "sb-headtext");
   htext.appendChild(el("div", "sb-name", m.name));

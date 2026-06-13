@@ -49,6 +49,7 @@ class Session:
         self.pack_name: str = ""            # the pack's display name (bestiary source label)
         self.statblocks: tuple = ()         # the pack's authored StatBlocks (this-world bestiary)
         self.world_map: str | None = None   # top-level map background image filename (pack)
+        self.bestiary_gate = None           # per-world bestiary knowledge cutoff (manifest)
         self.ended: bool = False            # the DM closed this session (end_session tool)
         # A staged-but-unresolved tactical fight awaiting "⚔ Enter the Arena"
         # (combat Stage 3). Transient runtime state — set while a fight is pending,
@@ -87,6 +88,7 @@ class Session:
             ruleset = world.ruleset
             pack_name = world.pack_name
             statblocks = world.statblocks
+            bestiary_gate = world.bestiary_gate
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
         else:
             repo = seed()
@@ -98,6 +100,7 @@ class Session:
             ruleset = None
             pack_name = ""
             statblocks = ()
+            bestiary_gate = None
             marker = {}
         canon = CanonStore()
         quests = QuestStore()
@@ -145,6 +148,7 @@ class Session:
         session.pack_name = pack_name
         session.statblocks = statblocks
         session.world_map = world_map
+        session.bestiary_gate = bestiary_gate
         session.ended = ended
         session.table = table
         session.ruleset = ruleset

@@ -22,6 +22,16 @@ class _Strict(BaseModel):
 
 
 # --- pack manifest -----------------------------------------------------------
+class BestiaryGate(_Strict):
+    """Per-world knowledge cutoff for the bestiary. When `enabled`, a creature whose
+    challenge rating is ABOVE `max_known_cr` stays redacted ("????") until the party
+    encounters it in combat; creatures at or below the threshold are always known
+    (the rats everyone has seen). Set `max_known_cr` below 0 to gate *everything*
+    unencountered. Applies to both the world's own creatures and the SRD library."""
+    enabled: bool = False
+    max_known_cr: float = 0.0        # CR ≤ this is always known; above it is gated
+
+
 class PackManifest(_Strict):
     id: str
     schema_version: int              # this doc defines version 1
@@ -32,6 +42,7 @@ class PackManifest(_Strict):
     entry_scenario: str              # which Scenario a new campaign starts in
     world_map: str | None = None     # background image (in images/) for the top-level
                                      # map — the whole world, e.g. Atria; pins sit on it
+    bestiary_gate: BestiaryGate = Field(default_factory=BestiaryGate)
 
 
 # --- items -------------------------------------------------------------------
