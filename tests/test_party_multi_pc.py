@@ -15,11 +15,11 @@ os.environ.pop("ANTHROPIC_API_KEY", None)  # force the scripted client
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from oubliette.app.server import app  # noqa: E402
+from oubliette.app.server import GAME, app  # noqa: E402
 from oubliette.dm.brain import Brain  # noqa: E402
 from oubliette.enums import Ability, Skill  # noqa: E402
 from oubliette.llm.scripted import ScriptedLLMClient  # noqa: E402
-from oubliette.record.events import install_character, relevel_character  # noqa: E402
+from oubliette.record.events import StateOp, install_character, relevel_character  # noqa: E402
 from oubliette.record.rng import Rng  # noqa: E402
 from oubliette.record.store import InMemoryEventStore  # noqa: E402
 from oubliette.rules.chargen import CharacterBuild  # noqa: E402
@@ -120,3 +120,60 @@ def test_api_new_with_builds_creates_a_full_party():
     assert r.status_code == 200 and r.json()["ok"] is True
     party = client.get("/api/sheet").json()["party"]
     assert sorted(m["name"] for m in party) == ["Bron", "Sera"]
+
+
+def _start_party():
+    client.post("/api/new", json={"builds": [
+        _fighter("Bron").model_dump(mode="json"),
+        _fighter("Sera", _HIGH_CHA).model_dump(mode="json")]})
+    for c in GAME.session.repo.party():   # wound everyone so recovery is observable
+        c.hp = 1
+
+
+def test_long_rest_restores_the_whole_party():
+    _start_party()
+    r = client.post("/api/rest", json={"kind": "long", "char_id": "pc"}).json()
+    assert r["ok"] is True
+    assert all(m["hp"] == m["max_hp"] for m in r["party"])   # every member healed, not just the lead
+
+
+def test_short_rest_spends_hit_dice_only_for_the_named_member():
+    _start_party()
+    # spend a hit die as pc2 (Sera); the rest of the party still rests but heals no HP
+    r = client.post("/api/rest", json={"kind": "short", "char_id": "pc2", "hit_dice": 1}).json()
+    party = {m["name"]: m for m in r["party"]}
+    assert party["Sera"]["hp"] > 1            # Sera spent a hit die and healed
+    assert party["Bron"]["hp"] == 1           # Bron took the short rest but spent no dice
+
+
+def test_short_rest_hit_dice_by_member_map():
+    _start_party()                            # Bron=pc, Sera=pc2, both at hp 1
+    # the party popup sends a per-member spend: Bron spends 1, Sera spends 0
+    r = client.post("/api/rest", json={"kind": "short", "hit_dice_by": {"pc": 1, "pc2": 0}}).json()
+    party = {m["name"]: m for m in r["party"]}
+    assert party["Bron"]["hp"] > 1
+    assert party["Sera"]["hp"] == 1
+
+
+# --- combat XP is shared across the party (RAW) -----------------------------
+
+def _party_loop(*names):
+    s = _session()
+    s.emit_party_created([_fighter(n) for n in names])
+    return TurnLoop(s, Rng(seed=1, record=s.emit_log), Brain(ScriptedLLMClient()))
+
+
+def test_combat_xp_splits_evenly_across_the_party():
+    loop = _party_loop("A", "B", "C")
+    ops = loop._split_combat_xp([StateOp.xp("pc", 100)], 100)
+    xp = {op.char: op.delta for op in ops if op.op == "xp"}
+    assert sum(xp.values()) == 100                 # no XP lost
+    assert set(xp) == {"pc", "pc2", "pc3"}         # every member shares
+    assert sorted(xp.values()) == [33, 33, 34]     # remainder spread one per member
+
+
+def test_combat_xp_solo_party_keeps_the_full_award():
+    loop = _party_loop("Solo")
+    ops = loop._split_combat_xp([StateOp.xp("pc", 100)], 100)
+    xp = {op.char: op.delta for op in ops if op.op == "xp"}
+    assert xp == {"pc": 100}                       # solo: the lead keeps it all

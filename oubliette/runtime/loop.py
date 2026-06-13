@@ -19,7 +19,7 @@ from ..combat.schemas import CombatResult
 from ..dm.brain import Brain
 from ..dm.context import build_context
 from ..enums import SKILL_ABILITY, Tier, Verb
-from ..record.events import EventKind
+from ..record.events import EventKind, StateOp
 from ..record.log import DebugLog
 from ..record.rng import Rng, RollOutcome
 from ..rules.checks import resolve_check
@@ -302,12 +302,28 @@ class TurnLoop:
                 keys.append(key)
         return keys
 
+    def _split_combat_xp(self, ops: list, xp_award: int) -> list:
+        """RAW (5e DMG): combat XP is shared — total ÷ party size, with the remainder
+        spread one-per-member so none is lost. `result_to_ops` credits the lead PC (the
+        frozen Arena import is left untouched); here we replace that single XP op with a
+        per-member share. A solo party keeps the lead's op as-is."""
+        party = self.repo.party()
+        if not xp_award or len(party) <= 1:
+            return ops
+        ops = [op for op in ops if op.op != "xp"]      # drop the lead-only combat XP op
+        base, extra = divmod(xp_award, len(party))
+        for i, c in enumerate(party):
+            share = base + (1 if i < extra else 0)
+            if share:
+                ops.append(StateOp.xp(c.id, share))
+        return ops
+
     def _emit_combat_result(
         self, result: CombatResult, player_text: str, assessment: TurnAssessment
     ) -> TurnReport:
         """Record a resolved fight as the ONE COMBAT_RESULT event (§8) and build
         its report. Shared by the instant non-combat-exit path and `enter_combat`."""
-        ops = result_to_ops(result)
+        ops = self._split_combat_xp(result_to_ops(result), result.xp_award)
         self.session.emit_state(
             EventKind.COMBAT_RESULT, ops, outcome=result.outcome,
             hp_final=result.hp_final, xp_award=result.xp_award,

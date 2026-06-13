@@ -1138,27 +1138,33 @@ async def upload_character_portrait(char_id: str, request: Request) -> JSONRespo
 
 
 class RestIn(BaseModel):
-    char_id: str = "pc"
+    char_id: str = "pc"             # legacy: the lone member who spends hit_dice (short rest)
     kind: str                       # "short" | "long"
-    hit_dice: int = 0               # short rest only: how many hit dice to spend healing
+    hit_dice: int = 0               # legacy single-member hit-dice spend
+    hit_dice_by: dict[str, int] | None = None  # short rest: hit dice each member spends, by char id
 
 
 @app.post("/api/rest")
 async def post_rest(body: RestIn) -> JSONResponse:
-    """Take a short or long rest (CS5): compute the recovery ops and record-then-apply
-    a REST_TAKEN event. Short-rest hit-die healing rolls through the seeded RNG."""
+    """Take a short or long rest (CS5) — a PARTY event: every member recovers, recorded
+    as one REST_TAKEN event carrying each member's recovery ops. Short-rest hit-die
+    healing is individual, so only the member whose sheet was used (`char_id`) spends
+    the entered dice; the rest of the party still takes the short rest (features
+    recharge) with 0 dice. Hit-die rolls go through the seeded RNG."""
     async with GAME.lock:
         rs = _ruleset()
-        try:
-            char = GAME.session.repo.get_character(body.char_id)
-        except StateError as e:
-            return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
-        if body.kind == "long":
-            ops = long_rest_ops(char, rs)
-        elif body.kind == "short":
-            ops = short_rest_ops(char, rs, spend_hit_dice=max(0, body.hit_dice), rng=GAME.rng)
-        else:
+        if body.kind not in ("short", "long"):
             return JSONResponse({"ok": False, "error": "rest kind must be 'short' or 'long'"}, status_code=400)
+        ops: list = []
+        for char in GAME.session.repo.party():
+            if body.kind == "long":
+                ops += long_rest_ops(char, rs)
+            else:
+                if body.hit_dice_by is not None:        # per-member spend (party popup)
+                    hd = max(0, body.hit_dice_by.get(char.id, 0))
+                else:                                   # legacy: only the named member spends
+                    hd = max(0, body.hit_dice) if char.id == body.char_id else 0
+                ops += short_rest_ops(char, rs, spend_hit_dice=hd, rng=GAME.rng)
         GAME.session.emit_state(EventKind.REST_TAKEN, ops, rest=body.kind)
         return JSONResponse({"ok": True, "party": [_sheet_member(c, rs) for c in GAME.session.repo.party()],
                              "state": _snapshot()})

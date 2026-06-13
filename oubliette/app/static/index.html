@@ -266,6 +266,17 @@
     color: var(--muted); cursor: pointer; font: inherit; font-size: 13px; font-family: var(--serif); }
   .sh-tab:hover { border-color: var(--accent); }
   .sh-tab.on { border-color: var(--accent); color: var(--gold); background: #2a231d; }
+  /* short-rest party popup */
+  .sr-modal { width: min(440px, 92vw); background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .sr-head { display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .sr-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 18px; }
+  .sr-note { padding: 12px 18px 4px; font-size: 12px; color: var(--muted); font-style: italic; }
+  .sr-body { padding: 8px 18px; display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; }
+  .sr-row { display: flex; align-items: center; gap: 10px; }
+  .sr-row .sr-name { flex: 1; font-family: var(--serif); color: var(--ink); }
+  .sr-row .sr-flavor { font-size: 11.5px; color: var(--faint); }
+  .sr-row input[type=number] { width: 60px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font: inherit; padding: 6px 8px; }
+  .sr-foot { display: flex; align-items: center; padding: 14px 18px; border-top: 1px solid var(--line); }
   .trade-modal { width: min(740px, 92vw); max-height: 86vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
   .trade-head { display: flex; align-items: center; gap: 14px; padding: 15px 18px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(0,0,0,.25), transparent); }
   .trade-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 18px; }
@@ -736,6 +747,19 @@
 
 <div id="lightbox-overlay" class="overlay hidden" title="Click anywhere to close">
   <img id="lightbox-img" alt="">
+</div>
+
+<div id="shortrest-overlay" class="overlay hidden">
+  <div class="sr-modal">
+    <div class="sr-head"><h2>Short Rest</h2><div class="spacer"></div></div>
+    <div class="sr-note">Each hero may spend hit dice to heal (rolled + CON). Short-rest features recharge for the whole party.</div>
+    <div class="sr-body" id="shortrest-body"></div>
+    <div class="sr-foot">
+      <button class="act" id="shortrest-cancel">Cancel</button>
+      <div class="spacer"></div>
+      <button class="act primary" id="shortrest-confirm">Take the rest</button>
+    </div>
+  </div>
 </div>
 
 <div id="bestiary-overlay" class="overlay hidden">
@@ -2458,9 +2482,11 @@ function shStatLine(name, mod, proficient, expertise, ability) {
   return row;
 }
 let sheetActive = 0;   // which party member's sheet is showing (tabs)
+let sheetParty = [];   // the current party roster (so the short-rest popup can list all)
 function renderSheet(data) {
   const body = $("sheet-body"); body.innerHTML = "";
   const party = data.party || [];
+  sheetParty = party;
   if (!party.length) { body.appendChild(el("div", "inv-empty", "no party members")); return; }
   if (party.length === 1) { body.appendChild(renderSheetMember(party[0])); return; }
   // A tab per hero; show one at a time. Clamp in case the party shrank.
@@ -2616,38 +2642,66 @@ function renderSheetMember(m) {
 function renderRestBar(m) {
   const bar = el("div", "sh-restbar");
   const availDice = m.hit_dice ? (m.hit_dice.total - m.hit_dice.used) : 0;
+  if (m.hit_dice && m.hit_dice.die)
+    bar.appendChild(el("span", "sh-flavor", `${availDice} of ${m.hit_dice.total}d${m.hit_dice.die} hit dice`));
+  // Rests are party-wide; the Short Rest popup collects each hero's hit-dice spend.
   const shortBtn = el("button", "act", "Short Rest");
-  let hdInput = null;
-  if (m.hit_dice && m.hit_dice.die) {
-    bar.appendChild(el("span", "sh-flavor", "spend"));
-    hdInput = el("input"); hdInput.type = "number"; hdInput.min = 0; hdInput.max = availDice;
-    hdInput.value = Math.min(1, availDice); hdInput.title = "hit dice to spend on a short rest";
-    bar.appendChild(hdInput);
-    bar.appendChild(el("span", "sh-flavor", `of ${availDice}d${m.hit_dice.die} hit dice`));
-  }
-  shortBtn.addEventListener("click", () => doRest(m.id, "short", hdInput ? parseInt(hdInput.value || "0", 10) : 0));
+  shortBtn.addEventListener("click", openShortRest);
   const longBtn = el("button", "act primary", "Long Rest");
-  longBtn.addEventListener("click", () => doRest(m.id, "long", 0));
+  longBtn.addEventListener("click", () => doRestParty("long", null));
   bar.appendChild(shortBtn); bar.appendChild(longBtn);
   if (m.has_sheet) {
     const ready = m.xp_progress && m.xp_progress.ready;
-    const luBtn = el("button", "act" + (ready ? " ready" : ""), "Level Up ✦");
+    const luBtn = el("button", "act" + (ready ? " ready" : ""), "Level Up ✦");   // per-character
     luBtn.addEventListener("click", () => openLevelUp(m.id));
     bar.appendChild(luBtn);
   }
   return bar;
 }
-async function doRest(charId, kind, hitDice) {
+// The party short-rest popup: a hit-dice spinner per hero, one Confirm.
+let shortRestInputs = {};
+function openShortRest() {
+  const body = $("shortrest-body"); body.innerHTML = "";
+  shortRestInputs = {};
+  (sheetParty || []).forEach(m => {
+    const avail = m.hit_dice ? (m.hit_dice.total - m.hit_dice.used) : 0;
+    const row = el("div", "sr-row");
+    row.appendChild(el("span", "sr-name", m.name));
+    if (m.hit_dice && m.hit_dice.die && avail > 0) {
+      const inp = el("input"); inp.type = "number"; inp.min = 0; inp.max = avail; inp.value = 0;
+      shortRestInputs[m.id] = inp;
+      row.appendChild(inp);
+      row.appendChild(el("span", "sr-flavor", `of ${avail}d${m.hit_dice.die}`));
+    } else {
+      row.appendChild(el("span", "sr-flavor", avail > 0 ? "" : "no hit dice"));
+    }
+    body.appendChild(row);
+  });
+  $("shortrest-overlay").classList.remove("hidden");
+}
+function closeShortRest() { $("shortrest-overlay").classList.add("hidden"); }
+async function confirmShortRest() {
+  const by = {};
+  Object.entries(shortRestInputs).forEach(([id, inp]) => {
+    const v = Math.max(0, parseInt(inp.value || "0", 10));
+    if (v) by[id] = v;
+  });
+  closeShortRest();
+  await doRestParty("short", by);
+}
+async function doRestParty(kind, hitDiceBy) {
   try {
     const res = await fetch("/api/rest", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ char_id: charId, kind, hit_dice: hitDice }),
+      body: JSON.stringify({ kind, hit_dice_by: hitDiceBy || null }),
     });
     const data = await res.json();
     if (!data.ok) { addMessage("System", "Rest failed: " + (data.error || "unknown"), "system"); return; }
     renderSheet({ party: data.party });
     if (data.state) renderState(data.state);
-    addMessage("System", kind === "long" ? "You take a long rest and wake restored." : "You take a short rest.", "system");
+    const who = (data.party || []).length > 1 ? "The party" : "You";
+    addMessage("System", kind === "long" ? `${who} take a long rest and wake restored.`
+                                         : `${who} take a short rest.`, "system");
   } catch (e) { /* transient */ }
 }
 function featRow(it) {
@@ -2703,6 +2757,9 @@ function spellRow(s) {
 }
 $("sheet-close").addEventListener("click", closeSheet);
 $("sheet-overlay").addEventListener("click", (e) => { if (e.target.id === "sheet-overlay") closeSheet(); });
+$("shortrest-cancel").addEventListener("click", closeShortRest);
+$("shortrest-confirm").addEventListener("click", confirmShortRest);
+$("shortrest-overlay").addEventListener("click", (e) => { if (e.target.id === "shortrest-overlay") closeShortRest(); });
 
 // --- level up (CS5) -------------------------------------------------------
 let luPlan = null, luCharId = "pc", lu = null;
