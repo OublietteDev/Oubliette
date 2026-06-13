@@ -82,6 +82,9 @@ def test_manifest_accounts_for_every_srd_spell():
     for spell in ("banishment", "maze", "resilient_sphere", "blink",
                   "plane_shift"):
         assert spell in manifest["generated"], spell
+    # C4f P-DISPEL: stripping spell effects
+    for spell in ("dispel_magic", "greater_restoration"):
+        assert spell in manifest["generated"], spell
 
 
 def test_fire_bolt_is_a_scaling_attack_cantrip():

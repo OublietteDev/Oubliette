@@ -52,6 +52,7 @@ from arena.combat.buff_effects import (
     get_buff_on_hit_riders,
     get_buff_save_modifiers,
     apply_buff,
+    remove_buff,
 )
 from arena.combat.cantrip_scaling import (
     get_caster_level,
@@ -1079,6 +1080,79 @@ def resolve_saving_throw(
     return success, event
 
 
+def _resolve_dispel(
+    user: Creature,
+    user_id: str,
+    target: Creature,
+    target_id: str,
+    action: Action,
+    cast_level: int | None,
+) -> list[CombatEvent]:
+    """Dispel Magic (P-DISPEL): strip spell effects from the target.
+
+    Buffs and conditions carrying a spell_level tag are spell effects;
+    those at or below the cast slot end automatically, higher ones need
+    d20 + the caster's spellcasting modifier vs DC 10 + effect level
+    (RAW). Untagged effects — class features, potions, monster abilities
+    — are not spells and can't be dispelled.
+    """
+    events: list[CombatEvent] = []
+    dispel_level = (cast_level if cast_level is not None
+                    else (action.spell_level or 3))
+    mod = 0
+    ability = getattr(user, "spellcasting_ability", None)
+    if ability:
+        mod = get_effective_ability_modifier(user, ability)
+
+    def attempt(effect_level: int, label: str) -> bool:
+        if effect_level <= dispel_level:
+            return True
+        dc = 10 + effect_level
+        roll = roll_die(20)
+        total = roll + mod
+        success = total >= dc
+        events.append(CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=(
+                f"Dispel check vs {label} (level {effect_level}): "
+                f"{total} ({roll}+{mod}) vs DC {dc} - "
+                f"{'SUCCESS' if success else 'FAILURE'}"
+            ),
+            source_id=user_id,
+            target_id=target_id,
+        ))
+        return success
+
+    removed = 0
+    for buff in list(target.active_buffs):
+        if buff.spell_level is None:
+            continue
+        if attempt(buff.spell_level, buff.name):
+            rm_event = remove_buff(target, target_id, buff.name)
+            if rm_event:
+                events.append(rm_event)
+                removed += 1
+    for ac in list(target.active_conditions):
+        if ac.spell_level is None:
+            continue
+        if attempt(ac.spell_level, f"{ac.source}'s {ac.condition.value}"):
+            rm_event = remove_condition(
+                target, target_id, ac.condition, source=ac.source,
+            )
+            if rm_event:
+                events.append(rm_event)
+                removed += 1
+
+    if removed == 0:
+        events.append(CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=f"No spell effects on {target.name} were dispelled.",
+            source_id=user_id,
+            target_id=target_id,
+        ))
+    return events
+
+
 def resolve_effect(
     user: Creature,
     user_id: str,
@@ -1147,6 +1221,12 @@ def resolve_effect(
             "is_effect_use": True,
         },
     ))
+
+    # --- Dispel Magic (P-DISPEL) ---
+    if action.dispel:
+        events.extend(_resolve_dispel(
+            user, user_id, target, target_id, action, cast_level,
+        ))
 
     # --- Healing ---
     if action.healing:
@@ -1232,6 +1312,12 @@ def resolve_effect(
                 source_id=user_id, target_id=target_id,
             ))
             return ActionResult(events=events, success=True)
+
+    # Effect-origin tag (P-DISPEL): conditions/buffs applied by a spell
+    # remember the slot level they were cast at, so Dispel Magic can find
+    # them. None for non-spell actions (monster abilities, features, items).
+    effect_spell_level = (cast_level if cast_level is not None
+                          else action.spell_level)
 
     # --- Saving throw ---
     save_success = None  # Track for forced movement integration
@@ -1368,6 +1454,7 @@ def resolve_effect(
                     cond_event = apply_condition(
                         target, target_id, cond,
                         source=user.name,
+                        spell_level=effect_spell_level,
                     )
                 else:
                     cond_event = apply_condition(
@@ -1376,6 +1463,7 @@ def resolve_effect(
                         duration_type="end_of_turn",
                         save_to_end=save.ability,
                         save_dc=dc,
+                        spell_level=effect_spell_level,
                     )
                 if cond_event:
                     events.append(cond_event)
@@ -1417,6 +1505,7 @@ def resolve_effect(
                 duration_rounds=cond_dur_rounds,
                 save_to_end=cond_save_to_end,
                 save_dc=cond_save_dc,
+                spell_level=effect_spell_level,
             )
             if cond_event:
                 events.append(cond_event)
@@ -1452,6 +1541,7 @@ def resolve_effect(
                 duration_type=dur_type,
                 duration_rounds=dur_rounds,
                 charges=action.buff_charges,
+                spell_level=effect_spell_level,
             )
             # For save-based debuffs with save-to-end (Bane, Slow)
             if action.saving_throw and not save_success:

@@ -1,0 +1,17 @@
+{
+  "name": "Greater Restoration",
+  "description": "You imbue a creature you touch with positive energy to undo a debilitating effect. You can reduce the target's exhaustion level by one, or end one of the following effects on the target:",
+  "action_type": "action",
+  "range": 5,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 5,
+  "resource_cost": {
+    "spell_slot_5": 1
+  },
+  "target_type": "one_ally",
+  "conditions_removed": [
+    "charmed",
+    "petrified"
+  ]
+}

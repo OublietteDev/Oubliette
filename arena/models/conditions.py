@@ -44,6 +44,10 @@ class AppliedCondition(BaseModel):
     save_dc: int | None = None
     level: int = 1  # For exhaustion
     extra_data: dict = Field(default_factory=dict)  # e.g., {"frightened_of": "Dragon"}
+    # Effect origin (P-DISPEL): the slot level of the spell that applied this
+    # condition. None = not a spell effect (monster ability, class feature,
+    # potion) — Dispel Magic can't touch it.
+    spell_level: int | None = None
 
 
 class BuffEffect(BaseModel):
@@ -89,3 +93,7 @@ class ActiveBuff(BaseModel):
     # (Branding Smite's next-hit = 1; Mirror Image's duplicates = 3).
     # None = unlimited (normal duration-bound buff).
     charges: int | None = None
+    # Effect origin (P-DISPEL): the slot level of the spell that applied this
+    # buff. None = not a spell effect (class feature, potion, magic item) —
+    # Dispel Magic can't touch it.
+    spell_level: int | None = None

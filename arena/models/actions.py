@@ -117,6 +117,10 @@ class Action(BaseModel):
     healing: str | None = None  # Dice expression, e.g., "2d8+3"
     conditions_applied: list[str] = Field(default_factory=list)
     conditions_removed: list[str] = Field(default_factory=list)
+    # Dispel Magic (P-DISPEL): strip spell-tagged buffs/conditions from the
+    # target — auto for effects at or below the cast slot level, d20 + the
+    # caster's spellcasting mod vs DC 10+level above it.
+    dispel: bool = False
 
     # Costs & Limits
     uses_per_rest: int | None = None  # None = unlimited

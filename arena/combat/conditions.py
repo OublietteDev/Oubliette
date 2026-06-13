@@ -25,6 +25,7 @@ def apply_condition(
     extra_data: dict | None = None,
     combatants: dict | None = None,
     positions: dict | None = None,
+    spell_level: int | None = None,
 ) -> CombatEvent | None:
     """Apply a condition to a creature.
 
@@ -70,6 +71,7 @@ def apply_condition(
         save_to_end=save_to_end,
         save_dc=save_dc,
         extra_data=extra_data or {},
+        spell_level=spell_level,
     )
 
     # For exhaustion, stack levels instead of replacing

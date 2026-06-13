@@ -704,6 +704,19 @@ _CURATED: dict[str, dict] = {
                          "conditions_on_fail": ["banished"],  # re-save = gone
                          "conditions_no_resave": True},       # for good; the
     },                                   # engine counts that as defeated
+    # --- C4f P-DISPEL: stripping spell effects -------------------------------
+    # Buffs/conditions applied by spells carry a spell_level origin tag;
+    # dispel ends those at or below the cast slot automatically, and rolls
+    # d20 + casting mod vs DC 10+level for higher ones. Untagged effects
+    # (features, potions, monster abilities) are not spells — untouchable.
+    "dispel_magic": {   # upcasting raises the auto-dispel threshold.
+        "target_type": "one_creature",   # approx: creature-targeted only —
+        "dispel": True,                  # zones/walls not dispellable yet
+    },
+    "greater_restoration": {  # approx of RAW "end ONE effect": cleanses
+        "target_type": "one_ally",       # charm + petrification; exhaustion
+        "conditions_removed": ["charmed", "petrified"],  # and curses stay
+    },                                   # story-side
 }
 
 
