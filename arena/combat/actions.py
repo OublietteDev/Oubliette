@@ -388,16 +388,27 @@ def resolve_attack_hit(
             total_roll=0, target_ac=0, effective_advantage=0,
             events=events,
         )
-    deduct_resource_cost(attacker, action, cast_level)
-
     # Use tracking (mirrors resolve_effect) — attack-shaped limited actions
-    # (a Scorching Ray scroll) spend a use per cast; multi-dart volleys blank
-    # uses_per_rest after the first dart, so one cast = one use.
+    # (a thrown javelin, a Scorching Ray scroll) spend a use per cast; multi-
+    # dart volleys blank uses_per_rest after the first dart, so one cast =
+    # one use. An exhausted action refuses outright (no 5th javelin from a
+    # stack of 2).
     if action.uses_per_rest is not None:
         if action.current_uses is None:
             action.current_uses = action.uses_per_rest
-        if action.current_uses > 0:
-            action.current_uses -= 1
+        if action.current_uses <= 0:
+            events.append(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=f"No uses of {action.name} remaining.",
+                source_id=attacker_id,
+            ))
+            return AttackHitResult(
+                hit=False, critical=False, natural_roll=0, modifier=0,
+                total_roll=0, target_ac=0, effective_advantage=0,
+                events=events,
+            )
+        action.current_uses -= 1
+    deduct_resource_cost(attacker, action, cast_level)
 
     attack = action.attack
     if attack is None:
@@ -1188,6 +1199,17 @@ def resolve_effect(
         ActionResult with all events produced.
     """
     events: list[CombatEvent] = []
+
+    # An exhausted limited action refuses outright (mirror of the attack
+    # path) — the actual decrement stays in the use-tracking block below.
+    if (action.uses_per_rest is not None and action.current_uses is not None
+            and action.current_uses <= 0):
+        events.append(CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=f"No uses of {action.name} remaining.",
+            source_id=user_id,
+        ))
+        return ActionResult(events=events, success=False)
 
     # Check resource cost (ki points, spell slots — adjusted for upcast)
     can_use, reason = check_resource_cost(user, action, cast_level)

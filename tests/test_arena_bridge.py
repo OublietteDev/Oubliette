@@ -29,6 +29,7 @@ from oubliette.combat.arena_bridge import (
     result_to_combat_result,
     statblock_to_monster,
     template_to_monster,
+    weapon_kit_actions,
 )
 from oubliette.combat.schemas import ConsumedItem, TerrainSpec
 from oubliette.combat.templates import ENEMY_TEMPLATES
@@ -602,3 +603,65 @@ def test_unresolved_window_close_maps_to_flee_with_partial_writeback():
     assert result.outcome == "flee"
     assert result.hp_final["hero"] == 12      # you took your hits before breaking off
     assert result.xp_award == 0 and result.loot == []
+
+
+# --- C5: the weapon kit ----------------------------------------------------
+
+def _give(char, item_id, qty=1):
+    char.inventory.append(ItemStack(item_id=item_id, qty=qty))
+    return char
+
+
+def test_every_carried_weapon_is_its_own_attack():
+    pc = _give(_give(_pc(), "longsword"), "longbow")
+    actions = {a.name: a for a in weapon_kit_actions(pc, RS.equipment)}
+    sword = actions["Longsword"]
+    assert sword.attack.attack_type == "melee_weapon"
+    assert sword.attack.ability == "strength"
+    assert sword.attack.damage[0].dice == "1d8"
+    assert sword.attack.damage[0].damage_type.value == "slashing"
+    assert sword.attack.damage[0].ability_modifier == "strength"
+    bow = actions["Longbow"]
+    assert bow.attack.attack_type == "ranged_weapon"
+    assert bow.attack.ability == "dexterity"
+    assert bow.attack.range_normal == 150 and bow.attack.range_long == 600
+    assert bow.uses_per_rest is None          # ammunition deliberately untracked
+
+
+def test_finesse_picks_the_better_mod():
+    pc = _give(_pc(), "dagger")               # DEX 16 beats STR 12
+    dagger = next(a for a in weapon_kit_actions(pc, RS.equipment)
+                  if a.name == "Dagger")
+    assert dagger.attack.ability == "dexterity"
+
+
+def test_thrown_melee_weapon_gets_a_consuming_ranged_twin():
+    pc = _give(_pc(), "javelin", qty=3)
+    acts = {a.name: a for a in weapon_kit_actions(pc, RS.equipment)}
+    melee, thrown = acts["Javelin"], acts["Javelin (thrown)"]
+    assert melee.uses_per_rest is None        # stabbing keeps the javelin
+    assert thrown.attack.attack_type == "ranged_weapon"
+    assert thrown.attack.ability == "strength"  # thrown keeps the melee ability
+    assert thrown.attack.range_normal == 30 and thrown.attack.range_long == 120
+    assert thrown.uses_per_rest == 3 and thrown.current_uses == 3
+    assert thrown.source_item_id == "javelin"   # B1 round-trip debits the stack
+
+
+def test_non_weapons_and_unknown_items_are_skipped():
+    pc = _give(_give(_pc(), "rope_hempen"), "no_such_item_xyz")
+    assert weapon_kit_actions(pc, RS.equipment) == []
+
+
+def test_equipped_but_unstacked_weapon_still_stages():
+    pc = _pc()
+    pc.equipped.append("handaxe")
+    names = [a.name for a in weapon_kit_actions(pc, RS.equipment)]
+    assert "Handaxe" in names and "Handaxe (thrown)" in names
+
+
+def test_kit_rides_into_the_staged_player_after_the_basic_attack():
+    pc = _give(_pc(), "handaxe")
+    creature = character_to_player(pc, RS.equipment, RS)
+    names = [a.name for a in creature.actions]
+    assert names[0] == "Attack"               # the solved sheet attack stays first
+    assert "Handaxe" in names and "Handaxe (thrown)" in names

@@ -50,6 +50,7 @@ from arena.paths import DATA_DIR
 
 from ..content.schemas import StatBlock
 from ..content.srd_schemas import SrdEquipment
+from ..enums import Ability
 from ..rules import derive
 from ..state.models import Character
 from ..tools.schemas import ValueEntry
@@ -443,6 +444,120 @@ def scroll_actions(
     return out
 
 
+# Weapon-profile readers (C5). Damage TYPE lives only in the CS4 item
+# description prose ("1d8 slashing damage" — deterministic generation, so the
+# shape is reliable); ranges in the property strings ("thrown (range 20/60)").
+_WEAPON_DMG_TYPE_RE = re.compile(r"\d+d\d+ (\w+) damage")
+_WEAPON_RANGE_RE = re.compile(r"range (\d+)/(\d+)")
+
+
+def weapon_kit_actions(
+    char: Character, catalog: dict[str, SrdEquipment] | None
+) -> list[Action]:
+    """Every carried weapon staged as its own attack action (C5 — the design
+    call: 5e's free object interaction makes weapon swapping free, so there is
+    NO switch action; the longsword AND the javelin are simply both available).
+
+    - melee weapons attack with STR (finesse: the better of STR/DEX), ranged
+      with DEX; the engine adds proficiency to every attack (proficiency with
+      the weapon is assumed). The ability mod rides the damage roll too.
+    - a thrown-property melee weapon gets a SECOND, ranged "(thrown)" action
+      that decrements from inventory like a potion (B1 round-trip — thrown
+      javelins are gone after the fight). Pure-ranged thrown weapons (darts)
+      consume on every shot.
+    - the sheet's basic "Attack" stays first with its solved/DM-tweaked
+      numbers and the B3 magic bake; the kit adds options, not a replacement.
+
+    Approximations, deliberate: ammunition is not tracked and hand economy is
+    not policed (per the design call); versatile uses the one-handed die; the
+    melee action of a thrown weapon never decrements (the last javelin is
+    still swingable)."""
+    if not catalog:
+        return []
+    str_mod = char.ability_mod(Ability.STR)
+    dex_mod = char.ability_mod(Ability.DEX)
+
+    qty_by_id: dict[str, int] = {}
+    for stack in char.inventory:
+        qty_by_id[stack.item_id] = qty_by_id.get(stack.item_id, 0) + stack.qty
+    for item_id in char.equipped:           # equipped but not stacked: still carried
+        qty_by_id.setdefault(item_id, 1)
+
+    out: list[Action] = []
+    for item_id, qty in qty_by_id.items():
+        item = catalog.get(item_id)
+        if (item is None or item.category != "weapon" or item.weapon is None
+                or not item.weapon.damage):
+            continue
+        props = [p.lower() for p in item.weapon.properties]
+        is_ranged = "ranged" in item.tags
+        finesse = any(p.startswith("finesse") for p in props)
+        thrown_prop = next((p for p in props if p.startswith("thrown")), None)
+        reach = 10 if any(p.startswith("reach") for p in props) else 5
+
+        m = _WEAPON_DMG_TYPE_RE.search(item.description or "")
+        try:
+            dmg_type = DamageType((m.group(1) if m else "").lower())
+        except ValueError:
+            dmg_type = DamageType.BLUDGEONING
+        ability = ("dexterity" if is_ranged or (finesse and dex_mod > str_mod)
+                   else "strength")
+        flat = item.weapon.attack_bonus      # pack-authored flat bonus, usually 0
+
+        def _attack_action(name, attack_type, *, rng=None, rng_long=None,
+                           consumes=False) -> Action:
+            a = Action(
+                name=name,
+                description=f"{item.name}: {item.weapon.damage} {dmg_type.value}.",
+                action_type=ActionType.ACTION,
+                target_type=TargetType.ONE_CREATURE,
+                range=rng or reach,
+                attack=Attack(
+                    name=name,
+                    attack_type=attack_type,
+                    ability=ability,
+                    reach=reach,
+                    range_normal=rng,
+                    range_long=rng_long,
+                    damage=[DamageRoll(dice=item.weapon.damage,
+                                       damage_type=dmg_type, bonus=flat,
+                                       ability_modifier=ability)],
+                    properties=props,
+                ),
+                ai_priority=5,
+            )
+            if consumes:
+                a.uses_per_rest = qty       # B1 entry invariant
+                a.current_uses = qty
+                a.source_item = item.name
+                a.source_item_id = item_id
+            return a
+
+        rng = rng_long = None
+        range_src = thrown_prop or next(
+            (p for p in props if p.startswith("ammunition")), None)
+        if range_src:
+            rm = _WEAPON_RANGE_RE.search(range_src)
+            if rm:
+                rng, rng_long = int(rm.group(1)), int(rm.group(2))
+
+        if is_ranged:
+            # Pure ranged weapon: one action. Thrown ones (darts) consume.
+            out.append(_attack_action(
+                item.name, "ranged_weapon",
+                rng=rng or 30, rng_long=rng_long,
+                consumes=thrown_prop is not None,
+            ))
+        else:
+            out.append(_attack_action(item.name, "melee_weapon"))
+            if thrown_prop is not None and rng:
+                out.append(_attack_action(
+                    f"{item.name} (thrown)", "ranged_weapon",
+                    rng=rng, rng_long=rng_long, consumes=True,
+                ))
+    return out
+
+
 @dataclass
 class StagedResources:
     """What a PC's resource trackers looked like when the encounter was staged —
@@ -592,6 +707,7 @@ def character_to_player(
             *turn_spells,
             *consumable_actions(char, catalog),
             *scroll_actions(char, catalog),
+            *weapon_kit_actions(char, catalog),
             *extra_actions,
         ],
         bonus_actions=bonus_actions,

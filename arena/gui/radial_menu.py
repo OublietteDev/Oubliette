@@ -636,6 +636,11 @@ class RadialMenu:
             ):
                 categorized_actions.add(action.name)
                 res_ok, _ = check_resource_cost(creature, action)
+                # Limited attacks (thrown weapons, scroll volleys) grey out
+                # once their uses are spent — the engine refuses anyway.
+                exhausted = (action.uses_per_rest is not None
+                             and action.current_uses is not None
+                             and action.current_uses <= 0)
                 slots.append(RadialSlot(
                     label=action.name,
                     slot_type="attack",
@@ -644,7 +649,7 @@ class RadialMenu:
                     tooltip_lines=self._build_attack_tooltip(
                         action, creature, slot_type="attack"
                     ),
-                    is_disabled=action_used or not res_ok,
+                    is_disabled=action_used or not res_ok or exhausted,
                 ))
 
         # 2. Cantrips → single "Cantrips" group slot
