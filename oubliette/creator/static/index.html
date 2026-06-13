@@ -107,6 +107,7 @@
   .card .cname { font-family: var(--serif); font-size: 15px; color: var(--ink); }
   .card .cline { font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
   .card .cactions { display: flex; gap: 6px; flex-shrink: 0; }
+  .card.card-child { border-left: 3px solid var(--accent); }   /* a child place, indented under its parent */
   .nothing { color: var(--faint); font-style: italic; font-size: 13px; }
   .readonly-note { font-size: 11px; color: var(--faint); font-style: italic; }
   .sec-warn { font-size: 10px; color: var(--bad); border: 1px solid #4d2c25;
@@ -433,11 +434,14 @@ function wireWorldSettings() {
   });
 }
 
-function renderGroup(kind) {
-  const entries = listOf(kind);
+// One card. `i` is the entry's index in listOf(kind) — edit/delete key off it, so it
+// must stay the ORIGINAL index even when places are reordered into a hierarchy. `depth`
+// indents children under their parent (places only; 0 everywhere else).
+function cardHtml(kind, e, i, depth) {
   const editable = EDITABLE.has(kind);
-  const cards = entries.length ? entries.map((e, i) => `
-    <div class="card">
+  const indent = depth ? ` style="margin-left:${depth * 20}px"` : "";
+  return `
+    <div class="card${depth ? " card-child" : ""}"${indent}>
       <div class="cbody">
         <div class="cname">${esc(e.name || e.title || e.id || "(unnamed)")}</div>
         <div class="cline">${esc(describe(kind, e))}</div>
@@ -445,7 +449,35 @@ function renderGroup(kind) {
       ${editable ? `<div class="cactions">
         <button class="btn mini" data-edit="${kind}" data-i="${i}">Edit</button>
         <button class="btn mini danger" data-del="${kind}" data-i="${i}">Delete</button></div>` : ""}
-    </div>`).join("") : '<div class="nothing">None yet.</div>';
+    </div>`;
+}
+
+// Places ordered as a tree: each top-level location followed by its children (and
+// their children) indented beneath it. Returns {e, i, depth} keeping the original
+// index. Cycle-safe; places whose parent is missing fall back to the top level.
+function placesHierarchy(entries) {
+  const byParent = {};
+  entries.forEach((e, i) => { const p = e.parent || ""; (byParent[p] = byParent[p] || []).push({ e, i }); });
+  const order = [], seen = new Set();
+  const walk = (key, depth) => (byParent[key] || []).forEach(({ e, i }) => {
+    if (seen.has(i)) return;
+    seen.add(i); order.push({ e, i, depth });
+    walk(e.id, depth + 1);
+  });
+  walk("", 0);
+  entries.forEach((e, i) => { if (!seen.has(i)) order.push({ e, i, depth: 0 }); });  // orphan parent ref
+  return order;
+}
+
+function renderGroup(kind) {
+  const entries = listOf(kind);
+  const editable = EDITABLE.has(kind);
+  let cards;
+  if (!entries.length) cards = '<div class="nothing">None yet.</div>';
+  else if (kind === "places")
+    cards = placesHierarchy(entries).map(({ e, i, depth }) => cardHtml(kind, e, i, depth)).join("");
+  else
+    cards = entries.map((e, i) => cardHtml(kind, e, i, 0)).join("");
   const warn = secCounts[kind] ? `<span class="sec-warn">⚠ ${secCounts[kind]}</span>` : "";
   const head = `<div class="ghead">
       <span class="gtoggle" data-toggle="${kind}">

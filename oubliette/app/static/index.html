@@ -485,6 +485,7 @@
   .wm-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
   .wm-pin { position: absolute; transform: translate(-50%, -100%); cursor: default; z-index: 2; }
   .wm-pin:hover { z-index: 30; }    /* lift the whole pin so its tooltip clears other pins */
+  .wm-canvas.pins-hidden .wm-pin { display: none; }   /* "Hide markers" — view the art unobstructed */
   .wm-pin.openable { cursor: pointer; }
   .wm-pin .pin-dot { width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
     background: var(--accent); border: 1.5px solid #1c130b; box-shadow: 0 3px 6px rgba(0,0,0,.5);
@@ -804,6 +805,7 @@
       <span class="map-crumbs" id="wm-crumbs"></span>
       <div class="spacer"></div>
       <span class="here" id="wm-here"></span>
+      <button class="act" id="map-pins-toggle">Hide markers</button>
       <button class="act" id="map-close">Close</button>
     </div>
     <div class="wm-canvas" id="wm-canvas"></div>
@@ -2154,6 +2156,12 @@ function wmLayoutStage() {
   stage.style.left = ((cw - sw) / 2) + "px"; stage.style.top = ((ch - sh) / 2) + "px";
 }
 
+let wmHidePins = false;   // "Hide markers" — view the artwork unobstructed (persists across drill-in/out)
+function applyPinVisibility() {
+  $("wm-canvas").classList.toggle("pins-hidden", wmHidePins);
+  $("map-pins-toggle").textContent = wmHidePins ? "Show markers" : "Hide markers";
+}
+$("map-pins-toggle").addEventListener("click", () => { wmHidePins = !wmHidePins; applyPinVisibility(); });
 $("map-close").addEventListener("click", closeWorldMap);
 $("map-overlay").addEventListener("click", (e) => { if (e.target.id === "map-overlay") closeWorldMap(); });
 window.addEventListener("resize", () => { if (!$("map-overlay").classList.contains("hidden")) wmLayoutStage(); });
