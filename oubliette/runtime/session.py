@@ -18,7 +18,7 @@ from ..content.loader import DEFAULT_PACK, load_pack
 from ..quest.models import Quest, QuestStatus
 from ..quest.store import QuestStore
 from ..record.events import (Event, EventKind, StateOp, apply_ops,
-                             install_character, replay)
+                             install_character, relevel_character, replay)
 from ..record.store import EventStore
 from ..rules.chargen import build_character
 from ..seed import DEFAULT_SCENE
@@ -210,24 +210,36 @@ class Session:
                           {"quest_id": quest_id, "status": status, "note": note, "reason": reason})
         self.quests.update(quest_id, status=status, note=note)
 
-    def emit_character_created(self, build: "CharacterBuild",
-                               reason: str = "character created") -> Character:
-        """Run chargen (design §6): validate the build against the ruleset, then
-        record-then-apply a CHARACTER_CREATED event carrying the built PC + the SRD
-        gear it was granted. Replaces the scenario's default-party stopgap with the
-        player's character; replay re-registers the gear and re-installs the PC.
-        Raises `ChargenError` if the build breaks the rules."""
+    def emit_party_created(self, builds: list["CharacterBuild"],
+                           reason: str = "party created") -> list[Character]:
+        """Run chargen (design §6) for each build, then record-then-apply ONE
+        CHARACTER_CREATED event carrying the whole built party + the SRD gear its
+        members were granted. The first build becomes the lead PC (`repo.pc()`); ids
+        are pc, pc2, pc3, … Replaces the scenario's default-party stopgap; replay
+        re-registers the gear and re-installs the party. Raises `ChargenError` if any
+        build breaks the rules."""
         if self.ruleset is None:
-            raise RuntimeError("this campaign has no ruleset loaded; cannot create a character")
-        char, items = build_character(build, self.ruleset)
+            raise RuntimeError("this campaign has no ruleset loaded; cannot create characters")
+        chars: list[Character] = []
+        items: list = []
+        for i, build in enumerate(builds):
+            char, granted = build_character(build, self.ruleset, "pc" if i == 0 else f"pc{i + 1}")
+            chars.append(char)
+            items.extend(granted)
         payload = {
-            "character": char.model_dump(mode="json"),
+            "characters": [c.model_dump(mode="json") for c in chars],
             "items": [it.model_dump(mode="json") for it in items],
             "reason": reason,
         }
         self.store.append(EventKind.CHARACTER_CREATED, payload)
         install_character(payload, self.repo)
-        return char
+        return chars
+
+    def emit_character_created(self, build: "CharacterBuild",
+                               reason: str = "character created") -> Character:
+        """Single-character convenience wrapper over `emit_party_created` (a party of
+        one) — back-compat for callers/tests that build a lone PC."""
+        return self.emit_party_created([build], reason=reason)[0]
 
     def emit_character_leveled(self, char: Character, reason: str = "level up") -> Character:
         """Record-then-apply a CHARACTER_LEVELED event carrying the rebuilt PC (CS5).
@@ -236,7 +248,7 @@ class Session:
         reproduces it exactly."""
         payload = {"character": char.model_dump(mode="json"), "items": [], "reason": reason}
         self.store.append(EventKind.CHARACTER_LEVELED, payload)
-        install_character(payload, self.repo)
+        relevel_character(payload, self.repo)
         return char
 
     def emit_log(self, kind: "str | EventKind", **payload) -> Event:

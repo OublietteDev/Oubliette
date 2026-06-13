@@ -408,13 +408,32 @@ class TurnLoop:
                 bits.append(f"{o.char} conditions={o.conditions}")
         return ", ".join(bits) or "(none)"
 
+    @staticmethod
+    def _check_modifier(char, ability, roll: RollRequest) -> int:
+        mod = char.ability_mod(ability) if ability is not None else 0
+        if roll.skill is not None and roll.skill in char.skill_proficiencies:
+            mod += char.proficiency_bonus
+        return mod
+
+    def _best_roller(self, roll: RollRequest):
+        """The party member most capable at this check — 'best member rolls': their
+        ability modifier, plus proficiency if they have the skill. Ties keep the lead
+        PC. Returns (character, modifier)."""
+        ability = roll.ability or (SKILL_ABILITY[roll.skill] if roll.skill else None)
+        lead = self.repo.pc()
+        best, best_mod = lead, self._check_modifier(lead, ability, roll)
+        for c in self.repo.party():
+            if c.id == lead.id:
+                continue
+            m = self._check_modifier(c, ability, roll)
+            if m > best_mod:
+                best, best_mod = c, m
+        return best, best_mod
+
     def _build_spec(self, roll: RollRequest) -> str:
         """Code supplies the modifier from the sheet (state-owned); the DM supplied
-        the DC (model-set, D8)."""
-        pc = self.repo.pc()
-        ability = roll.ability or (SKILL_ABILITY[roll.skill] if roll.skill else None)
-        mod = pc.ability_mod(ability) if ability is not None else 0
-        if roll.skill is not None and roll.skill in pc.skill_proficiencies:
-            mod += pc.proficiency_bonus
+        the DC (model-set, D8). With a party, the most capable member makes the
+        check ('best member rolls')."""
+        _, mod = self._best_roller(roll)
         sign = "+" if mod >= 0 else "-"
         return f"{roll.base}{sign}{abs(mod)}"

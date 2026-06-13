@@ -1222,24 +1222,28 @@ async def post_chargen_preview(body: CharacterBuild) -> JSONResponse:
 class NewGameIn(BaseModel):
     pack_id: str | None = None              # which world to start; None keeps the current one
     table: TableContract | None = None      # the table contract agreed at New Game (optional)
-    build: CharacterBuild | None = None     # the chargen character; None = quick-start (default party)
+    build: CharacterBuild | None = None     # legacy single character (a party of one)
+    builds: list[CharacterBuild] | None = None  # the chargen party (preferred); None/[] = quick-start
 
 
 @app.post("/api/new")
 async def post_new(body: NewGameIn | None = None) -> JSONResponse:
     async with GAME.lock:
-        build = body.build if body else None
-        # Validate the character BEFORE erasing the save — an invalid build must not
+        # The party: prefer the builds list; fall back to the single legacy build.
+        builds = ((body.builds if body and body.builds else
+                   ([body.build] if body and body.build else [])) or [])
+        # Validate EVERY character BEFORE erasing the save — an invalid build must not
         # cost the player their game. The ruleset is global, so the current session's
         # serves regardless of which world we're about to start.
-        if build is not None:
+        rs = _ruleset()
+        for b in builds:
             try:
-                build_character(build, _ruleset())
+                build_character(b, rs)
             except ChargenError as e:
                 return JSONResponse({"ok": False, "errors": e.errors}, status_code=400)
         GAME.new_game(body.pack_id if body else None, body.table if body else None)
-        if build is not None:
-            GAME.session.emit_character_created(build)   # replaces the default-party stopgap
+        if builds:
+            GAME.session.emit_party_created(builds)   # replaces the default-party stopgap
         return JSONResponse({"ok": True, "state": _snapshot(), "model": GAME.client_name,
                              "pack_id": GAME.pack_id, "has_progress": _has_progress(),
                              "soundscape": _soundscape()})

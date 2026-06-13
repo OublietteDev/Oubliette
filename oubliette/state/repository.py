@@ -30,6 +30,8 @@ class Repository(Protocol):
     def register_item(self, item: Item) -> None: ...
     def set_fallback_catalog(self, items: dict[str, Item]) -> None: ...
     def install_pc(self, char: Character) -> None: ...
+    def install_party(self, chars: list[Character]) -> None: ...
+    def replace_character(self, char: Character) -> None: ...
     def set_slots_used(self, char_id: str, mapping: dict) -> None: ...
     def set_hit_dice_used(self, char_id: str, value: int) -> None: ...
     def set_resources_used(self, char_id: str, mapping: dict) -> None: ...
@@ -183,15 +185,27 @@ class InMemoryRepository:
         it, so a repeated id simply overwrites with the same definition."""
         self._items[item.id] = item
 
-    def install_pc(self, char: Character) -> None:
-        """Replace the player character with a chargen-built one: drop the stopgap
-        default-party PC(s) and make `char` the sole PC. PC-only for now (design
-        §10.6), built to hold a party later. Also used by level-up (CHARACTER_LEVELED)
-        to swap in the rebuilt character."""
+    def install_party(self, chars: list[Character]) -> None:
+        """Replace the player party with chargen-built characters: drop the stopgap
+        default-party PC(s) and install the given list, the FIRST becoming the lead PC
+        (the one `pc()` returns). Used at game start when the player builds their party."""
         for cid in [c.id for c in self._chars.values() if c.kind == "pc"]:
             del self._chars[cid]
+        for c in chars:
+            self._chars[c.id] = c
+        if chars:
+            self._pc_id = chars[0].id
+
+    def install_pc(self, char: Character) -> None:
+        """Replace the whole party with a single chargen-built PC (the one-character
+        case of `install_party`). Kept for legacy single-PC saves."""
+        self.install_party([char])
+
+    def replace_character(self, char: Character) -> None:
+        """Swap ONE character in place (level-up: CHARACTER_LEVELED), preserving the
+        rest of the party and the lead-PC pointer. The character is stored whole, never
+        re-derived (D9)."""
         self._chars[char.id] = char
-        self._pc_id = char.id
 
     # --- rest / level-up trackers (CS5; absolute writes, D7) ------------------
     def set_slots_used(self, char_id: str, mapping: dict) -> None:

@@ -159,13 +159,28 @@ def apply_ops(ops: list[StateOp], repo: "Repository", strict: bool = True) -> No
 
 def install_character(payload: dict, repo: "Repository") -> None:
     """Apply a CHARACTER_CREATED payload: register the granted SRD gear into the
-    campaign catalog, then install the built PC (replacing the stopgap default
-    party). The single apply path shared by live emit and replay — replay trusts
-    the recorded character verbatim and never re-derives (D9)."""
+    campaign catalog, then install the built party (replacing the stopgap default
+    party). The payload carries either a `characters` list (a built party) or a single
+    legacy `character` (single-PC saves) — both install via `install_party`. The single
+    apply path shared by live emit and replay — replay trusts the recorded characters
+    verbatim and never re-derives (D9)."""
     from ..state.models import Character, Item
     for raw in payload.get("items", []):
         repo.register_item(Item.model_validate(raw))
-    repo.install_pc(Character.model_validate(payload["character"]))
+    raws = payload.get("characters")
+    if raws is None:
+        raws = [payload["character"]]          # legacy single-PC payload
+    repo.install_party([Character.model_validate(r) for r in raws])
+
+
+def relevel_character(payload: dict, repo: "Repository") -> None:
+    """Apply a CHARACTER_LEVELED payload: register any gear, then swap the rebuilt PC
+    in place — preserving the rest of the party (create replaces the party; level-up
+    must not). Replay-safe; the rebuilt character is stored whole, never re-derived (D9)."""
+    from ..state.models import Character, Item
+    for raw in payload.get("items", []):
+        repo.register_item(Item.model_validate(raw))
+    repo.replace_character(Character.model_validate(payload["character"]))
 
 
 class Event(BaseModel):
@@ -205,8 +220,11 @@ def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = N
             quests.update(event.payload["quest_id"], status=event.payload.get("status"),
                           note=event.payload.get("note"))
         return
-    if event.kind in (EventKind.CHARACTER_CREATED.value, EventKind.CHARACTER_LEVELED.value):
+    if event.kind == EventKind.CHARACTER_CREATED.value:
         install_character(event.payload, repo)
+        return
+    if event.kind == EventKind.CHARACTER_LEVELED.value:
+        relevel_character(event.payload, repo)
         return
     apply_ops(event.state_ops(), repo, strict=strict)
 

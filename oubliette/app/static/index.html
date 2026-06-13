@@ -245,6 +245,27 @@
   .cg-portrait-note { margin-top: 12px; padding: 8px 10px; border: 1px dashed var(--line); border-radius: 8px;
     background: var(--bg); font-size: 11.5px; line-height: 1.45; color: var(--muted); }
   .cg-portrait-note b { color: var(--gold); font-weight: 600; }
+  /* party size (Set the table) */
+  .ng-party { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 0 20px 4px; }
+  .ng-party label { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); }
+  .ng-party input[type=number] { width: 64px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font: inherit; padding: 6px 8px; }
+  .ng-party .cg-hint { margin: 0; }
+  /* party builder tab strip (one per hero) */
+  .cg-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 20px 10px; }
+  .cg-tab { display: inline-flex; align-items: center; gap: 7px; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 999px; padding: 5px 12px; color: var(--muted); cursor: pointer; font: inherit; font-size: 12.5px; }
+  .cg-tab:hover { border-color: var(--accent); }
+  .cg-tab.on { border-color: var(--accent); color: var(--ink); background: #2a231d; }
+  .cg-tab .cg-tab-n { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); }
+  .cg-tab .cg-tab-name { font-family: var(--serif); }
+  .cg-tab.ok .cg-tab-mark { color: #6fae6f; }
+  .cg-tab .cg-tab-mark { color: var(--faint); }
+  /* party-sheet tab strip (one per member) */
+  .sh-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+  .sh-tab { background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px;
+    color: var(--muted); cursor: pointer; font: inherit; font-size: 13px; font-family: var(--serif); }
+  .sh-tab:hover { border-color: var(--accent); }
+  .sh-tab.on { border-color: var(--accent); color: var(--gold); background: #2a231d; }
   .trade-modal { width: min(740px, 92vw); max-height: 86vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
   .trade-head { display: flex; align-items: center; gap: 14px; padding: 15px 18px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(0,0,0,.25), transparent); }
   .trade-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 18px; }
@@ -606,6 +627,11 @@
     </div>
     <div id="ng-step-contract" class="hidden">
       <div class="newgame-note">Set the table: the tone of the telling and any boundaries. All optional — you can change it later in Settings.</div>
+      <div class="ng-party">
+        <label for="ng-party-size">Party size</label>
+        <input type="number" id="ng-party-size" min="1" max="6" value="1">
+        <span class="cg-hint">How many heroes you'll create (1–6). A classic D&D party is about four.</span>
+      </div>
       <div class="newgame-list"><div class="contract-form" id="ng-contract"></div></div>
       <div class="ng-foot">
         <button class="act" id="ng-back">‹ Back</button>
@@ -616,6 +642,7 @@
     <div id="ng-step-character" class="hidden">
       <div class="newgame-note">Build your hero. Every number is computed by the rules from your choices — or
         <button class="linklike" id="cg-quickstart">skip and play a pre-made hero ›</button></div>
+      <div id="cg-tabs" class="cg-tabs hidden"></div>
       <div class="cg-grid">
         <div class="cg-form" id="cg-form"></div>
         <div class="cg-preview" id="cg-preview"></div>
@@ -1279,14 +1306,17 @@ async function ngToContract(packId, packName) {
   ngShowStep("contract");
 }
 function closeNewGame() { $("newgame-overlay").classList.add("hidden"); }
-async function beginNewGame(build) {
+async function beginNewGame(builds) {
   if (!ngPack) return;
-  const who = build ? `“${build.name}”` : "a pre-made hero";
+  const n = Array.isArray(builds) ? builds.length : 0;
+  const who = !n ? "a pre-made hero"
+    : n === 1 ? `“${builds[0].name}”`
+    : `a party of ${n} (${builds.map(b => b.name).join(", ")})`;
   if (!confirm(`Begin in “${ngPack.name}” as ${who}? This erases the current save.`)) return;
   const table = readContractForm($("ng-contract"));
   const res = await fetch("/api/new", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pack_id: ngPack.id, table, build: build || null }),
+    body: JSON.stringify({ pack_id: ngPack.id, table, builds: builds || null }),
   });
   const data = await res.json();
   if (!data.ok) { alert("Could not start: " + (data.errors || ["unknown error"]).join("; ")); return; }
@@ -1304,7 +1334,9 @@ async function beginNewGame(build) {
 
 // --- chargen wizard (CS2) -------------------------------------------------
 let cgOpt = null;          // ruleset options from the server
-let cg = null;             // the in-progress build
+let cg = null;             // the ACTIVE build (always === cgParty[cgActive])
+let cgParty = [];          // one build-state object per hero (party builder)
+let cgActive = 0;          // which slot the form is editing
 let cgValid = false, cgTimer = null, cgSeq = 0;
 const abilMod = (s) => Math.floor((s - 10) / 2);
 const signed = (n) => (n >= 0 ? "+" : "") + n;
@@ -1315,20 +1347,51 @@ const cgBg = () => cgOpt.backgrounds.find(b => b.id === cg.background);
 // extra languages of choice = race's + the selected subrace's (High Elf adds one)
 const raceLangCount = () => (cgRace().language_choices || 0) + (cgSubrace()?.language_choices || 0);
 
-async function ngToCharacter() {
-  if (!cgOpt) cgOpt = await (await fetch("/api/chargen/options")).json();
+// A fresh build slot, initialized with the default race/class/background/abilities.
+// selectRace/Class/Background/resetAbilities all mutate the global `cg`, so we point
+// `cg` at the new object first, then return it for the party array.
+function cgNewSlot() {
   cg = { name: "", race: "", subrace: null, char_class: "", subclass: null, background: "",
          ability_method: "standard_array", base_abilities: {}, skills: [], expertise: [],
          languages: [], race_ability_choices: [], race_skills: [], race_languages: [], race_cantrips: [],
          cantrips: [], spells: [], equipment_choices: [], alignment: "",
-         description: "", personality_traits: [], ideals: [], bonds: [], flaws: [], _pool: [] };
+         description: "", personality_traits: [], ideals: [], bonds: [], flaws: [], _pool: [], _valid: false };
   selectRace(cgOpt.races[0].id);
   selectClass(cgOpt.classes[0].id, true);
   selectBackground(cgOpt.backgrounds[0].id, true);
   resetAbilities("standard_array");
+  return cg;
+}
+async function ngToCharacter() {
+  if (!cgOpt) cgOpt = await (await fetch("/api/chargen/options")).json();
+  const n = Math.max(1, Math.min(6, parseInt($("ng-party-size").value || "1", 10)));
+  cgParty = [];
+  for (let i = 0; i < n; i++) cgParty.push(cgNewSlot());
+  cgActive = 0;
+  cg = cgParty[0];
+  renderCgTabs();
   renderCgForm();
   ngShowStep("character");
   cgPreview();
+}
+function renderCgTabs() {
+  const bar = $("cg-tabs");
+  bar.innerHTML = "";
+  if (cgParty.length <= 1) { bar.classList.add("hidden"); return; }   // one hero: no tabs
+  bar.classList.remove("hidden");
+  cgParty.forEach((b, i) => {
+    const ok = b._valid && (b.name || "").trim();
+    const tab = el("button", "cg-tab" + (i === cgActive ? " on" : "") + (ok ? " ok" : ""));
+    tab.appendChild(el("span", "cg-tab-n", `Hero ${i + 1}`));
+    tab.appendChild(el("span", "cg-tab-name", (b.name || "").trim() || "unnamed"));
+    tab.appendChild(el("span", "cg-tab-mark", ok ? "✓" : "•"));
+    tab.addEventListener("click", () => cgSwitchSlot(i));
+    bar.appendChild(tab);
+  });
+}
+function cgSwitchSlot(i) {
+  cgActive = i; cg = cgParty[i];   // edits mutate the slot object directly (cg is a reference)
+  renderCgTabs(); renderCgForm(); cgPreview();
 }
 
 function selectRace(id) {
@@ -1372,9 +1435,13 @@ function resetAbilities(method) {
   }
 }
 
-function cgBuild() {
-  const b = { ...cg }; delete b._pool;
+function cgBuildOf(slot) {
+  const b = { ...slot }; delete b._pool; delete b._valid;
   return b;
+}
+function cgBuild() { return cgBuildOf(cg); }   // the active slot
+function cgAllValid() {
+  return cgParty.length > 0 && cgParty.every(b => b._valid && (b.name || "").trim());
 }
 
 // --- rendering ---
@@ -1737,11 +1804,16 @@ function renderPreview(data) {
   const root = $("cg-preview"); root.innerHTML = "";
   const nameOk = (cg.name || "").trim().length > 0;
   cgValid = data.ok && nameOk;
-  $("ng-begin").disabled = !cgValid;
+  cg._valid = cgValid;                 // remember this slot's validity for the party gate
+  const party = cgParty.length > 1;
+  const allValid = cgAllValid();
+  $("ng-begin").disabled = !(party ? allValid : cgValid);
+  renderCgTabs();                      // refresh the active tab's ✓/name
   const status = $("cg-status");
   if (!data.ok) { status.className = "cg-status bad"; status.textContent = `${data.errors.length} to fix`; }
   else if (!nameOk) { status.className = "cg-status bad"; status.textContent = "Name your hero"; }
-  else { status.className = "cg-status ok"; status.textContent = "Ready to begin"; }
+  else if (party && !allValid) { status.className = "cg-status bad"; status.textContent = "Finish every hero"; }
+  else { status.className = "cg-status ok"; status.textContent = party ? "Party ready" : "Ready to begin"; }
 
   if (!data.ok) {
     root.appendChild(el("h3", null, "Not yet valid"));
@@ -1797,7 +1869,7 @@ $("new-btn").addEventListener("click", () => { if (!busy) openNewGame(); });
 $("ng-back").addEventListener("click", () => ngShowStep("world"));
 $("ng-to-char").addEventListener("click", ngToCharacter);
 $("cg-back").addEventListener("click", () => ngShowStep("contract"));
-$("ng-begin").addEventListener("click", () => { if (cgValid) beginNewGame(cgBuild()); });
+$("ng-begin").addEventListener("click", () => { if (cgAllValid()) beginNewGame(cgParty.map(cgBuildOf)); });
 $("cg-quickstart").addEventListener("click", () => beginNewGame(null));
 
 // --- Settings (edit this campaign's table contract mid-game) --------------
@@ -2385,10 +2457,22 @@ function shStatLine(name, mod, proficient, expertise, ability) {
   if (ability) row.appendChild(el("span", "sh-ab", ability));
   return row;
 }
+let sheetActive = 0;   // which party member's sheet is showing (tabs)
 function renderSheet(data) {
   const body = $("sheet-body"); body.innerHTML = "";
-  if (!data.party || !data.party.length) { body.appendChild(el("div", "inv-empty", "no party members")); return; }
-  data.party.forEach(m => body.appendChild(renderSheetMember(m)));
+  const party = data.party || [];
+  if (!party.length) { body.appendChild(el("div", "inv-empty", "no party members")); return; }
+  if (party.length === 1) { body.appendChild(renderSheetMember(party[0])); return; }
+  // A tab per hero; show one at a time. Clamp in case the party shrank.
+  if (sheetActive >= party.length) sheetActive = 0;
+  const tabs = el("div", "sh-tabs");
+  party.forEach((m, i) => {
+    const tab = el("button", "sh-tab" + (i === sheetActive ? " on" : ""), m.name || `Hero ${i + 1}`);
+    tab.addEventListener("click", () => { sheetActive = i; renderSheet(data); });
+    tabs.appendChild(tab);
+  });
+  body.appendChild(tabs);
+  body.appendChild(renderSheetMember(party[sheetActive]));
 }
 function renderSheetMember(m) {
   const root = el("div", "inv-member");
