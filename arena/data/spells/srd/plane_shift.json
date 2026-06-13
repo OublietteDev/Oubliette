@@ -1,0 +1,21 @@
+{
+  "name": "Plane Shift",
+  "description": "You and up to eight willing creatures who link hands in a circle are transported to a different plane of existence. You can specify a target destination in general terms, such as the City of Brass on the Elemental Plane of Fire or the palace of Dispater on the second level of the Nine Hells, and you",
+  "action_type": "action",
+  "range": 5,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 7,
+  "resource_cost": {
+    "spell_slot_7": 1
+  },
+  "target_type": "one_creature",
+  "saving_throw": {
+    "ability": "charisma",
+    "dc": null,
+    "conditions_on_fail": [
+      "banished"
+    ],
+    "conditions_no_resave": true
+  }
+}

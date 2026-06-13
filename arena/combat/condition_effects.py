@@ -185,6 +185,9 @@ def can_take_actions(creature: Creature) -> bool:
         Condition.PARALYZED,
         Condition.PETRIFIED,
         Condition.UNCONSCIOUS,
+        # Banished creatures are not on this plane: no actions, no
+        # reactions, no legendary actions until they return.
+        Condition.BANISHED,
     )
     return not any(_has(creature, c) for c in incapacitating)
 

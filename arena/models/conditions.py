@@ -28,6 +28,9 @@ class Condition(str, Enum):
     DODGING = "dodging"
     HELPED = "helped"  # Has advantage on next check
     HIDDEN = "hidden"  # Creature is hidden via stealth
+    BANISHED = "banished"  # Removed from the battlefield (Banishment, Maze, Blink);
+    # the manager stashes the creature's position and takes it off-grid while
+    # this is active, returning it when the condition ends (P-BANISH)
 
 
 class AppliedCondition(BaseModel):

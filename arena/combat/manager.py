@@ -18,7 +18,10 @@ from arena.combat.actions import (
 )
 from arena.combat.chain_effects import has_chain_effect, get_chain_targets
 from arena.models.actions import DamageRoll
-from arena.combat.conditions import process_start_of_turn, process_end_of_turn
+from arena.combat.conditions import (
+    process_start_of_turn, process_end_of_turn, has_condition,
+)
+from arena.models.conditions import Condition
 from arena.combat.buff_effects import process_buff_start_of_turn, process_buff_end_of_turn
 from arena.combat.death_saves import process_death_save
 from arena.combat.condition_effects import can_take_actions, get_movement_multiplier
@@ -225,6 +228,11 @@ class CombatManager:
         self.summon_links: dict[str, str] = {}  # summon_id -> summoner_id
         self.stored_creatures: dict[str, tuple] = {}  # summoner_id -> (original Creature, HexCoord | None)
         self.concentration_summons: set[str] = set()  # summon IDs linked to concentration
+
+        # Banishment tracking (P-BANISH): creature_id -> grid position held
+        # while the creature is off the battlefield with Condition.BANISHED.
+        # _reconcile_banishment() keeps this in sync with the condition.
+        self.banished_positions: dict[str, HexCoord] = {}
 
         # Recurring actions (Witch Bolt, Sunbeam, Call Lightning, Spiritual Weapon)
         self.active_recurring_actions: list[ActiveRecurringAction] = []
@@ -529,6 +537,11 @@ class CombatManager:
         for e in buff_events:
             self.log.add(e)
 
+        # Banishment may have just expired (Blink's one-round trip ends at
+        # the start of this creature's own turn) — return creatures BEFORE
+        # zones tick and before the skip checks, so they act normally.
+        self._reconcile_banishment()
+
         # Tick recurring action durations and remove expired ones
         self._tick_recurring_actions(combatant.creature_id)
 
@@ -611,6 +624,21 @@ class CombatManager:
             self.end_turn()
             return
 
+        # Skip banished creatures (off the battlefield until they return)
+        if has_condition(combatant.creature, Condition.BANISHED):
+            self.log.add(
+                CombatEvent(
+                    event_type=CombatEventType.INFO,
+                    message=(
+                        f"{combatant.creature.name} is banished from the "
+                        f"battlefield. Skipping turn."
+                    ),
+                    source_id=combatant.creature_id,
+                )
+            )
+            self.end_turn()
+            return
+
         # Skip incapacitated creatures (stunned, paralyzed, petrified)
         if not can_take_actions(combatant.creature):
             self.log.add(
@@ -645,6 +673,10 @@ class CombatManager:
             buff_events = process_buff_end_of_turn(combatant.creature, combatant.creature_id)
             for e in buff_events:
                 self.log.add(e)
+
+            # Blink (P-BANISH): roll at the end of the caster's turn; on a
+            # hit they vanish until the start of their next turn.
+            self._process_blink(combatant)
 
             self.log.add(
                 CombatEvent(
@@ -2670,11 +2702,11 @@ class CombatManager:
 
         # AI heuristic: always reroll if there's a condition or damage
         save = action.saving_throw
-        has_condition = bool(
+        has_cond_effect = bool(
             save and (save.conditions_on_fail or action.conditions_applied)
         )
         has_damage = bool(save and save.damage_on_fail)
-        if not has_condition and not has_damage:
+        if not has_cond_effect and not has_damage:
             return None  # Trivial effect, skip reroll
 
         # Restore creature to pre-resolve state, then deduct reroll cost
@@ -4773,6 +4805,170 @@ class CombatManager:
                 source_id=recurring.source_id,
             ))
 
+    # ------------------------------------------------------------------
+    # Banishment (P-BANISH)
+    # ------------------------------------------------------------------
+
+    def _reconcile_banishment(self) -> None:
+        """Sync grid presence with ``Condition.BANISHED``.
+
+        A sweep rather than per-path hooks, so every way the condition can
+        come or go is covered: failed saves apply it (Banishment, Resilient
+        Sphere), re-saves and round expiry remove it (Maze, Blink), and
+        concentration cleanup strips it like any other linked condition.
+
+        Banished creatures leave the grid with their position stashed; once
+        the condition is gone they return at the stashed hex, or the nearest
+        free one if something now stands there.
+        """
+        if self.grid is None:
+            return
+        for cid, c in self.combatants.items():
+            banished = has_condition(c.creature, Condition.BANISHED)
+            if banished and c.position is not None:
+                self.banished_positions[cid] = c.position
+                self.grid.remove_creature(c.position, c.creature.size)
+                c.position = None
+                self.log.add(CombatEvent(
+                    event_type=CombatEventType.INFO,
+                    message=(
+                        f"{c.creature.name} vanishes from the battlefield!"
+                    ),
+                    source_id=cid,
+                ))
+            elif (not banished and c.position is None
+                    and cid in self.banished_positions):
+                anchor = self._nearest_free_hex(
+                    self.banished_positions[cid], c.creature.size, cid,
+                )
+                if anchor is None:
+                    # No room anywhere (degenerate) — retry on a later sweep.
+                    continue
+                del self.banished_positions[cid]
+                self.grid.place_creature(anchor, cid, c.creature.size)
+                c.position = anchor
+                self.log.add(CombatEvent(
+                    event_type=CombatEventType.INFO,
+                    message=(
+                        f"{c.creature.name} returns to the battlefield!"
+                    ),
+                    source_id=cid,
+                ))
+
+    def _process_blink(self, combatant: Combatant) -> None:
+        """End-of-turn Blink roll.
+
+        A creature carrying a buff with a ``stat="blink"`` modifier rolls a
+        d20 as its turn ends; at or above the modifier's value (RAW: 11) it
+        is BANISHED for one round — gone for everyone else's turns, back at
+        the start of its own (the round tick in process_start_of_turn).
+        """
+        if has_condition(combatant.creature, Condition.BANISHED):
+            return
+
+        threshold: int | None = None
+        buff_name = "Blink"
+        for buff in combatant.creature.active_buffs:
+            for mod in buff.modifiers:
+                if mod.stat == "blink":
+                    try:
+                        threshold = int(mod.value)
+                    except (TypeError, ValueError):
+                        threshold = 11
+                    buff_name = buff.name
+                    break
+            if threshold is not None:
+                break
+        if threshold is None:
+            return
+
+        roll = roll_die(20)
+        if roll >= threshold:
+            self.log.add(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=(
+                    f"{combatant.creature.name}'s {buff_name}: rolled {roll} "
+                    f"— blinks to the Ethereal Plane!"
+                ),
+                source_id=combatant.creature_id,
+            ))
+            from arena.combat.conditions import apply_condition
+            event = apply_condition(
+                combatant.creature, combatant.creature_id, Condition.BANISHED,
+                source=buff_name,
+                duration_type="rounds",
+                duration_rounds=1,
+            )
+            if event:
+                self.log.add(event)
+            # end_turn's _check_victory will reconcile the grid.
+        else:
+            self.log.add(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=(
+                    f"{combatant.creature.name}'s {buff_name}: rolled {roll} "
+                    f"— stays on this plane."
+                ),
+                source_id=combatant.creature_id,
+            ))
+
+    def _nearest_free_hex(
+        self,
+        origin: HexCoord,
+        size,
+        creature_id: str,
+    ) -> HexCoord | None:
+        """Closest anchor to *origin* where the whole footprint fits.
+
+        Breadth-first over neighbours, so *origin* itself wins when free.
+        """
+        from collections import deque
+
+        from arena.grid.footprint import is_valid_placement
+
+        seen = {(origin.q, origin.r)}
+        queue = deque([origin])
+        while queue:
+            hex_ = queue.popleft()
+            if is_valid_placement(
+                hex_, size, self.grid, exclude_creature_id=creature_id,
+            ):
+                return hex_
+            for nb in hex_.neighbors():
+                key = (nb.q, nb.r)
+                if key not in seen and self.grid.is_valid(nb):
+                    seen.add(key)
+                    queue.append(nb)
+        return None
+
+    def _banished_for_good(self, creature_id: str, combatant) -> bool:
+        """True if this creature is banished with no path back to the fight.
+
+        A banished creature is still coming back if its condition carries a
+        re-save (Maze), a round duration (Blink), or is linked to someone's
+        active concentration (Banishment, Resilient Sphere). With none of
+        those (Plane Shift's offensive use) it is gone for good and counts
+        as defeated for victory purposes.
+        """
+        cond = next(
+            (ac for ac in combatant.creature.active_conditions
+             if ac.condition == Condition.BANISHED),
+            None,
+        )
+        if cond is None:
+            return False
+        if cond.save_to_end or cond.duration_rounds is not None:
+            return False
+        # Linked to anyone's active concentration?
+        for other in self.combatants.values():
+            for ac in other.creature.active_conditions:
+                if ac.condition != Condition.CONCENTRATING:
+                    continue
+                for pair in ac.extra_data.get("linked_targets", []):
+                    if list(pair) == [creature_id, Condition.BANISHED.value]:
+                        return False
+        return True
+
     def _check_victory(self) -> bool:
         """Check if all creatures on one side are defeated.
 
@@ -4783,6 +4979,10 @@ class CombatManager:
         Returns:
             True if combat has ended.
         """
+        # Banishment state may have changed by whatever triggered this check
+        # (saves, concentration breaks, condition expiry) — sync the grid.
+        self._reconcile_banishment()
+
         # Clean up downed summons before checking victory
         downed_summons = [
             sid for sid in list(self.summon_links)
@@ -4798,7 +4998,8 @@ class CombatManager:
         )
         enemies_alive = any(
             c.creature.is_conscious
-            for c in self.combatants.values()
+            and not self._banished_for_good(cid, c)
+            for cid, c in self.combatants.items()
             if c.team == "enemy"
         )
 
@@ -4871,3 +5072,4 @@ class CombatManager:
         self.legendary_points = {}
         self._legendary_queue = []
         self._legendary_actor_id = None
+        self.banished_positions = {}

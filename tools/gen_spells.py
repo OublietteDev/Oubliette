@@ -81,6 +81,13 @@ _DICE_RE = re.compile(r"^\s*(\d+)d(\d+)\s*(?:\+\s*(\d+|MOD))?\s*$")
 #   - DamageRoll.ability_modifier set to the placeholder = the bridge bakes
 #     the caster's spellcasting mod into damage (Spiritual Weapon).
 #   - grants_temporary_hp may carry the MOD token (Heroism); bridge bakes it.
+#   - the "banished" condition takes the creature OFF the grid (position
+#     stashed, untargetable, turns/reactions skipped) until the condition
+#     ends — re-save, round expiry, or concentration break (P-BANISH).
+#     saving_throw.conditions_no_resave suppresses the standard end-of-turn
+#     re-save (RAW Banishment/Resilient Sphere give no escape roll); a
+#     "blink" buff stat makes the engine roll d20 vs its value at the end
+#     of the caster's turn.
 #
 # DELIBERATE APPROXIMATIONS (the tactical essence is kept; noted per entry):
 # fixed condition lists for tiered/progressive effects, single damage type
@@ -658,6 +665,45 @@ _CURATED: dict[str, dict] = {
         ],
         "buff_charges": 1,
     },
+    # --- C4f P-BANISH: removal from the battlefield --------------------------
+    # The engine stashes a BANISHED creature's hex and takes it off-grid:
+    # untargetable, invisible, no turns/reactions/legendary actions. It
+    # returns at the stashed hex (or nearest free) when the condition ends.
+    # conditions_no_resave=True = RAW "no escape": the condition's lifetime
+    # is the concentration link (or, with no concentration, the whole fight).
+    "banishment": {     # approx: the "native plane → doesn't return" rider
+        "target_type": "one_creature",            # is dropped (always returns
+        "upcast_target_count": 1,                 # when concentration ends)
+        "saving_throw": {"ability": "charisma", "dc": None,
+                         "conditions_on_fail": ["banished"],
+                         "conditions_no_resave": True},
+    },
+    "maze": {           # no save on cast (RAW); the escape is the re-save:
+        "target_type": "one_creature",            # approx of the RAW DC 20
+        "conditions_applied": ["banished"],       # INT *check*, kept at a
+        "condition_duration_type": "end_of_turn",  # fixed DC 20
+        "condition_save_to_end": "intelligence",
+        "condition_save_to_end_dc": 20,
+    },
+    "resilient_sphere": {  # approx: the sphere = banishment-in-place (the
+        "target_type": "one_creature",   # occupant can't act or be touched;
+        "saving_throw": {"ability": "dexterity", "dc": None,  # rolling the
+                         "conditions_on_fail": ["banished"],  # sphere around
+                         "conditions_no_resave": True},       # not modeled)
+    },
+    "blink": {          # engine rolls d20 >= the threshold value at the end
+        "target_type": "self",           # of the caster's turn; banished one
+        "buff_effects": [                # round = back at own next turn start
+            {"stat": "blink", "modifier_type": "flat_bonus", "value": 11},
+        ],
+        "buff_duration_rounds": 10,      # 1 minute, no concentration
+    },
+    "plane_shift": {    # offensive use only; approx: the melee-spell-attack
+        "target_type": "one_creature",   # step is dropped (straight CHA save)
+        "saving_throw": {"ability": "charisma", "dc": None,  # no conc + no
+                         "conditions_on_fail": ["banished"],  # re-save = gone
+                         "conditions_no_resave": True},       # for good; the
+    },                                   # engine counts that as defeated
 }
 
 

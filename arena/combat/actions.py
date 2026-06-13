@@ -1361,13 +1361,22 @@ def resolve_effect(
                     cond = Condition(cond_name)
                 except ValueError:
                     continue
-                cond_event = apply_condition(
-                    target, target_id, cond,
-                    source=user.name,
-                    duration_type="end_of_turn",
-                    save_to_end=save.ability,
-                    save_dc=dc,
-                )
+                if save.conditions_no_resave:
+                    # No re-save escape (RAW Banishment / Resilient Sphere):
+                    # the condition only ends with concentration or an
+                    # explicit removal.
+                    cond_event = apply_condition(
+                        target, target_id, cond,
+                        source=user.name,
+                    )
+                else:
+                    cond_event = apply_condition(
+                        target, target_id, cond,
+                        source=user.name,
+                        duration_type="end_of_turn",
+                        save_to_end=save.ability,
+                        save_dc=dc,
+                    )
                 if cond_event:
                     events.append(cond_event)
                     applied_conditions.append((target_id, cond_name))

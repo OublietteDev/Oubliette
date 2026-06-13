@@ -1,0 +1,21 @@
+{
+  "name": "Blink",
+  "description": "Roll a d20 at the end of each of your turns for the duration of the spell. On a roll of 11 or higher, you vanish from your current plane of existence and appear in the Ethereal Plane (the spell fails and the casting is wasted if you were already on that plane). At the start of your next turn, and wh",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": false,
+  "ai_priority": 6,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "self",
+  "buff_effects": [
+    {
+      "stat": "blink",
+      "modifier_type": "flat_bonus",
+      "value": 11
+    }
+  ],
+  "buff_duration_rounds": 10
+}

@@ -1,0 +1,19 @@
+{
+  "name": "Maze",
+  "description": "You banish a creature that you can see within range into a labyrinthine demiplane. The target remains there for the duration or until it escapes the maze.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 8,
+  "resource_cost": {
+    "spell_slot_8": 1
+  },
+  "target_type": "one_creature",
+  "conditions_applied": [
+    "banished"
+  ],
+  "condition_duration_type": "end_of_turn",
+  "condition_save_to_end": "intelligence",
+  "condition_save_to_end_dc": 20
+}

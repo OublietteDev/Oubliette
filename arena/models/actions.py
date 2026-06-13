@@ -92,6 +92,11 @@ class SavingThrowEffect(BaseModel):
     damage_on_success: str = "none"  # "none", "half", "full"
     conditions_on_fail: list[str] = Field(default_factory=list)
     conditions_on_success: list[str] = Field(default_factory=list)
+    # Apply conditions_on_fail with NO save-to-end re-save (normally every
+    # save-applied condition gets an end-of-turn re-save, the Hold Person
+    # pattern). RAW Banishment / Resilient Sphere give the victim no re-save:
+    # the condition lasts until concentration ends or it's removed explicitly.
+    conditions_no_resave: bool = False
 
 
 class Action(BaseModel):

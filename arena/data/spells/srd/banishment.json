@@ -1,0 +1,22 @@
+{
+  "name": "Banishment",
+  "description": "You attempt to send one creature that you can see within range to another plane of existence. The target must succeed on a charisma saving throw or be banished.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 4,
+  "resource_cost": {
+    "spell_slot_4": 1
+  },
+  "target_type": "one_creature",
+  "upcast_target_count": 1,
+  "saving_throw": {
+    "ability": "charisma",
+    "dc": null,
+    "conditions_on_fail": [
+      "banished"
+    ],
+    "conditions_no_resave": true
+  }
+}
