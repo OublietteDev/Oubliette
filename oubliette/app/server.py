@@ -111,6 +111,21 @@ GAME = _Game()
 
 
 # --- serialization ----------------------------------------------------------
+def _pc_view(pc) -> dict:
+    """The HUD view of one player character (the sidebar + party roster)."""
+    return {
+        "id": pc.id, "name": pc.name, "hp": pc.hp, "max_hp": pc.max_hp,
+        "gold": pc.gold, "xp": pc.xp, "xp_progress": xp_progress(pc),
+        "armor_class": pc.armor_class,
+        "conditions": list(pc.conditions),
+        "inventory": [
+            {"id": s.item_id, "name": _stack_label(_ruleset(), s), "qty": s.qty,
+             "spell": s.spell, "spell_level": s.spell_level}
+            for s in pc.inventory
+        ],
+    }
+
+
 def _snapshot() -> dict:
     repo = GAME.session.repo
     pc = repo.pc()
@@ -126,17 +141,8 @@ def _snapshot() -> dict:
         "combat_pending": GAME.session.pending_combat is not None,
         "time_of_day": GAME.session.time_of_day,
         "weather": GAME.session.weather,
-        "pc": {
-            "name": pc.name, "hp": pc.hp, "max_hp": pc.max_hp,
-            "gold": pc.gold, "xp": pc.xp, "xp_progress": xp_progress(pc),
-            "armor_class": pc.armor_class,
-            "conditions": list(pc.conditions),
-            "inventory": [
-                {"id": s.item_id, "name": _stack_label(_ruleset(), s), "qty": s.qty,
-                 "spell": s.spell, "spell_level": s.spell_level}
-                for s in pc.inventory
-            ],
-        },
+        "pc": _pc_view(pc),                          # the lead PC (back-compat)
+        "party": [_pc_view(c) for c in repo.party()],  # the whole roster (HUD)
         "npcs": [
             {"id": n.id, "name": n.name, "disposition": n.disposition, "gold": n.gold}
             for n in npcs

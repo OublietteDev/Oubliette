@@ -148,6 +148,14 @@
   .stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
   .stats b { color: var(--ink); font-weight: 600; }
   .gold b { color: var(--gold); }
+  /* party roster (sidebar HUD when >1 hero) */
+  .pc-row { padding: 9px 0; border-top: 1px solid var(--line); }
+  .pc-row:first-child { border-top: none; }
+  .pc-row .pc-row-head { display: flex; align-items: center; gap: 8px; }
+  .pc-row .pc-row-name { font-family: var(--serif); font-size: 15px; color: var(--ink); flex: 1; }
+  .pc-row .hpbar { margin: 6px 0 4px; }
+  .pc-row .pc-row-stats { display: flex; gap: 12px; font-size: 12px; color: var(--muted); }
+  .pc-row .pc-row-cond { font-size: 11.5px; color: #d98b6a; margin-top: 3px; }
   .list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; }
   .list li { display: flex; justify-content: space-between; gap: 8px; color: var(--ink); }
   .list li .sub { color: var(--faint); font-size: 12px; }
@@ -589,20 +597,23 @@
         <div class="scene" id="scene"></div>
       </div>
       <div class="card">
-        <h2>Character</h2>
-        <div class="sheet-name" id="pc-name">—</div>
-        <div class="hpbar"><div class="hpfill" id="hpfill"></div></div>
-        <div class="stats">
-          <span id="hp"></span>
-          <span class="gold">Gold <b id="gold">0</b></span>
-          <span>AC <b id="ac">0</b></span>
+        <h2 id="pc-card-title">Character</h2>
+        <div id="pc-single">
+          <div class="sheet-name" id="pc-name">—</div>
+          <div class="hpbar"><div class="hpfill" id="hpfill"></div></div>
+          <div class="stats">
+            <span id="hp"></span>
+            <span class="gold">Gold <b id="gold">0</b></span>
+            <span>AC <b id="ac">0</b></span>
+          </div>
+          <div class="xprow">
+            <span class="xplabel">XP <b id="xp">0</b></span>
+            <span id="xp-ready" class="xp-ready hidden">✦ ready to level up</span>
+          </div>
+          <div class="xpbar" id="xpbar" title=""><div class="xpfill" id="xpfill"></div></div>
+          <div id="conditions" class="stats" style="margin-top:8px"></div>
         </div>
-        <div class="xprow">
-          <span class="xplabel">XP <b id="xp">0</b></span>
-          <span id="xp-ready" class="xp-ready hidden">✦ ready to level up</span>
-        </div>
-        <div class="xpbar" id="xpbar" title=""><div class="xpfill" id="xpfill"></div></div>
-        <div id="conditions" class="stats" style="margin-top:8px"></div>
+        <div id="party-roster" class="hidden"></div>
       </div>
       <div class="card">
         <h2>Present</h2>
@@ -1081,21 +1092,30 @@ function envLabel(t, w) {
 function renderState(s) {
   $("scene").textContent = s.scene || "";
   $("env-badge").textContent = envLabel(s.time_of_day, s.weather);
-  const pc = s.pc;
-  $("pc-name").textContent = pc.name;
-  $("hp").textContent = `HP ${pc.hp}/${pc.max_hp}`;
-  $("hpfill").style.width = Math.max(0, Math.min(100, 100 * pc.hp / pc.max_hp)) + "%";
-  $("gold").textContent = pc.gold;
-  $("ac").textContent = pc.armor_class;
-  const xpp = pc.xp_progress || { xp: pc.xp, pct: 0, is_max: false, ready: false, ceil: null };
-  $("xp").textContent = xpp.is_max ? `${xpp.xp.toLocaleString()} (max level)`
-    : `${xpp.xp.toLocaleString()} / ${(xpp.ceil || 0).toLocaleString()}`;
-  $("xpfill").style.width = (xpp.pct || 0) + "%";
-  $("xpbar").title = xpp.is_max ? "Maximum level reached"
-    : `${(xpp.needed || 0).toLocaleString()} XP to level ${xpp.level + 1}`;
-  $("xp-ready").classList.toggle("hidden", !xpp.ready);
-  const cond = $("conditions");
-  cond.textContent = pc.conditions.length ? "Conditions: " + pc.conditions.join(", ") : "";
+  const party = s.party && s.party.length ? s.party : [s.pc];
+  const isParty = party.length > 1;
+  $("pc-card-title").textContent = isParty ? `Party (${party.length})` : "Character";
+  $("pc-single").classList.toggle("hidden", isParty);
+  $("party-roster").classList.toggle("hidden", !isParty);
+  if (isParty) {
+    renderPartyRoster(party);
+  } else {
+    const pc = s.pc;
+    $("pc-name").textContent = pc.name;
+    $("hp").textContent = `HP ${pc.hp}/${pc.max_hp}`;
+    $("hpfill").style.width = Math.max(0, Math.min(100, 100 * pc.hp / pc.max_hp)) + "%";
+    $("gold").textContent = pc.gold;
+    $("ac").textContent = pc.armor_class;
+    const xpp = pc.xp_progress || { xp: pc.xp, pct: 0, is_max: false, ready: false, ceil: null };
+    $("xp").textContent = xpp.is_max ? `${xpp.xp.toLocaleString()} (max level)`
+      : `${xpp.xp.toLocaleString()} / ${(xpp.ceil || 0).toLocaleString()}`;
+    $("xpfill").style.width = (xpp.pct || 0) + "%";
+    $("xpbar").title = xpp.is_max ? "Maximum level reached"
+      : `${(xpp.needed || 0).toLocaleString()} XP to level ${xpp.level + 1}`;
+    $("xp-ready").classList.toggle("hidden", !xpp.ready);
+    const cond = $("conditions");
+    cond.textContent = pc.conditions.length ? "Conditions: " + pc.conditions.join(", ") : "";
+  }
 
   const npcs = $("npcs"); npcs.innerHTML = "";
   if (!s.npcs.length) npcs.appendChild(el("div", "empty", "no one nearby"));
@@ -1127,6 +1147,30 @@ function renderState(s) {
   combatPending = !!s.combat_pending;
   combatBar.classList.toggle("hidden", !combatPending);
   setBusy(busy);                // re-apply the composer lock (stays disabled when ended/in combat)
+}
+
+// Compact per-hero roster for the sidebar when the party has more than one member.
+function renderPartyRoster(party) {
+  const root = $("party-roster"); root.innerHTML = "";
+  party.forEach(pc => {
+    const row = el("div", "pc-row");
+    const head = el("div", "pc-row-head");
+    head.appendChild(el("span", "pc-row-name", pc.name));
+    if (pc.xp_progress && pc.xp_progress.ready)
+      head.appendChild(el("span", "xp-ready", "✦"));
+    row.appendChild(head);
+    const bar = el("div", "hpbar"); const fill = el("div", "hpfill");
+    fill.style.width = Math.max(0, Math.min(100, 100 * pc.hp / pc.max_hp)) + "%";
+    bar.appendChild(fill); row.appendChild(bar);
+    const stats = el("div", "pc-row-stats");
+    stats.appendChild(el("span", null, `HP ${pc.hp}/${pc.max_hp}`));
+    stats.appendChild(el("span", null, `AC ${pc.armor_class}`));
+    stats.appendChild(el("span", "gold", `${pc.gold}g`));
+    row.appendChild(stats);
+    if (pc.conditions && pc.conditions.length)
+      row.appendChild(el("div", "pc-row-cond", pc.conditions.join(", ")));
+    root.appendChild(row);
+  });
 }
 
 let busy = false;

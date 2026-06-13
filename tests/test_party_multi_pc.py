@@ -177,3 +177,24 @@ def test_combat_xp_solo_party_keeps_the_full_award():
     ops = loop._split_combat_xp([StateOp.xp("pc", 100)], 100)
     xp = {op.char: op.delta for op in ops if op.op == "xp"}
     assert xp == {"pc": 100}                       # solo: the lead keeps it all
+
+
+# --- Phase 2: party-aware narration + HUD -----------------------------------
+
+def test_dm_context_lists_the_whole_party_by_id():
+    from oubliette.dm.context import build_context
+    s = _session()
+    s.emit_party_created([_fighter("Bron"), _fighter("Sera", _HIGH_CHA)])
+    ctx = build_context(s.repo, scene="a tavern")
+    assert "PARTY" in ctx
+    # each hero appears with their id so the DM can call checks / award XP per member
+    assert "Bron (id: pc)" in ctx and "Sera (id: pc2)" in ctx
+
+
+def test_state_snapshot_includes_the_whole_party():
+    builds = [_fighter("Bron").model_dump(mode="json"),
+              _fighter("Sera", _HIGH_CHA).model_dump(mode="json")]
+    client.post("/api/new", json={"builds": builds})
+    state = client.get("/api/state").json()["state"]
+    assert [m["name"] for m in state["party"]] == ["Bron", "Sera"]
+    assert state["pc"]["name"] == "Bron"           # lead still present (back-compat)

@@ -144,7 +144,6 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   places: dict | None = None, quests: list | None = None,
                   time_of_day: str | None = None, weather: str | None = None,
                   ruleset=None) -> str:
-    pc = repo.pc()
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -152,17 +151,24 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
         worth = f", ~{item.base_value}g" if item.base_value else ""
         return f"{qty}x {item.name} [id: {item_id}{worth}]"
 
-    inv = ", ".join(_item_label(s.item_id, s.qty) for s in pc.inventory) or "nothing"
+    def _party_line(p) -> str:
+        inv = ", ".join(_item_label(s.item_id, s.qty) for s in p.inventory) or "nothing"
+        return f"{p.name} (id: {p.id}) — {p.hp}/{p.max_hp} HP, {p.gold}g, {p.xp} XP; carrying {inv}."
+
     lines: list[str] = []
     if scene:
         lines.append(f"SCENE: {scene}")
     if time_of_day or weather:
         lines.append(f"ENVIRONMENT: it is {time_of_day or 'day'}, weather {weather or 'clear'} "
                      f"(report these back on your TurnResolution; keep them unless the story turns).")
-    lines.append(
-        f"PARTY: {pc.name} (id: {pc.id}) — {pc.hp}/{pc.max_hp} HP, {pc.gold}g, {pc.xp} XP; "
-        f"carrying {inv}."
-    )
+    party = repo.party()
+    if len(party) == 1:
+        lines.append(f"PARTY: {_party_line(party[0])}")
+    else:
+        lines.append("PARTY (the player controls ALL of these heroes — address them by name/id, "
+                     "call for whoever's check fits, and award XP/loot to each):")
+        for p in party:
+            lines.append(f"  - {_party_line(p)}")
     # CS6: the mechanical 'card(s)' — who the PC(s) are in rules terms, so the DM
     # calls for the right checks/saves and narrates rules-aware (reference only).
     lines.extend(_character_cards(repo, ruleset))
