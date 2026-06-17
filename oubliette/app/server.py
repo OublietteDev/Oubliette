@@ -135,6 +135,14 @@ def _snapshot() -> dict:
     npcs = repo.npcs()
     if location is not None:
         npcs = [n for n in npcs if n.home_location == location]
+    # The party may pursue one quest at a time (the dispatcher enforces it). Surface
+    # that single active quest for the sidebar; completed/failed ones drop out and
+    # live on only in the player's journal if they choose to keep them.
+    active_quests = GAME.session.quests.active()
+    quest = None
+    if active_quests:
+        q = active_quests[0]
+        quest = {"id": q.id, "title": q.title, "text": q.text, "notes": list(q.notes)}
     return {
         "scene": GAME.session.scene,
         "ended": GAME.session.ended,
@@ -155,6 +163,7 @@ def _snapshot() -> dict:
              "text": r.text, "status": r.status}
             for r in GAME.session.canon.all() if r.origin != "authored"
         ],
+        "quest": quest,                              # the lone active quest, or None
     }
 
 

@@ -168,8 +168,12 @@
   .pill { font-size: 10.5px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); text-transform: uppercase; letter-spacing: .08em; }
   .pill.confirmed { color: #bcd4a8; border-color: #41613f; }
   .pill.provisional { color: #c3b6d6; border-color: #4a4358; }
-  .canon-name { font-family: var(--serif); }
-  .canon-text { color: var(--muted); font-size: 12px; margin-top: 2px; line-height: 1.45; }
+  /* active-quest panel */
+  .quest-goal { font-family: var(--serif); font-size: 15px; color: var(--ink); line-height: 1.35; }
+  .quest-goal-text { color: var(--muted); font-size: 12.5px; margin-top: 5px; line-height: 1.5; }
+  .quest-notes { list-style: none; margin: 11px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .quest-notes li { position: relative; padding-left: 14px; color: var(--ink); font-size: 12.5px; line-height: 1.45; }
+  .quest-notes li::before { content: "›"; position: absolute; left: 2px; color: var(--gold); }
   .scene { font-style: italic; color: var(--muted); font-size: 13px; line-height: 1.5; }
   ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: #2e2722; border-radius: 8px; }
 
@@ -626,8 +630,8 @@
         <ul class="list" id="npcs"></ul>
       </div>
       <div class="card">
-        <h2>Canon &amp; Memory</h2>
-        <ul class="list" id="canon"></ul>
+        <h2>Active Quest</h2>
+        <div id="quest"></div>
       </div>
     </aside>
   </main>
@@ -1137,17 +1141,19 @@ function renderState(s) {
     li.appendChild(el("span", "sub", n.gold + "g")); npcs.appendChild(li);
   });
 
-  const canon = $("canon"); canon.innerHTML = "";
-  if (!s.canon.length) canon.appendChild(el("div", "empty", "no canon yet — the world is unwritten"));
-  s.canon.forEach(r => {
-    const li = el("li"); li.style.flexDirection = "column"; li.style.alignItems = "stretch";
-    const top = el("div"); top.style.display = "flex"; top.style.justifyContent = "space-between"; top.style.gap = "8px";
-    top.appendChild(el("span", "canon-name", r.name));
-    top.appendChild(el("span", "pill " + r.status, r.status));
-    li.appendChild(top);
-    if (r.text) li.appendChild(el("div", "canon-text", r.text));
-    canon.appendChild(li);
-  });
+  const questEl = $("quest"); questEl.innerHTML = "";
+  const q = s.quest;
+  if (!q) {
+    questEl.appendChild(el("div", "empty", "no active quest — the road is open"));
+  } else {
+    questEl.appendChild(el("div", "quest-goal", q.title));
+    if (q.text) questEl.appendChild(el("div", "quest-goal-text", q.text));
+    if (q.notes && q.notes.length) {
+      const log = el("ul", "quest-notes");
+      q.notes.forEach(n => log.appendChild(el("li", null, n)));
+      questEl.appendChild(log);
+    }
+  }
 
   if (s.ended && !gameEnded) {
     gameEnded = true;

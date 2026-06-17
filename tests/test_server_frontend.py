@@ -80,6 +80,18 @@ def test_quest_start_emits_a_card_and_world_image_serves():
     assert img.status_code == 200
 
 
+def test_active_quest_surfaced_in_state_then_clears_when_closed():
+    _new()
+    # the scripted DM starts "A Favor Asked" on this beat
+    d = client.post("/api/turn", json={"text": "I accept the task."}).json()
+    quest = d["state"]["quest"]
+    assert quest is not None and quest["title"] == "A Favor Asked"
+    assert "notes" in quest and isinstance(quest["notes"], list)
+    # completing it (scripted) drops it from the panel — kept only in the journal now
+    d2 = client.post("/api/turn", json={"text": "Good news — the job is done."}).json()
+    assert d2["state"]["quest"] is None
+
+
 def test_ooc_turn_stays_in_table_talk():
     _new()
     d = client.post("/api/turn", json={"text": "I attack the bandit!", "ooc": True}).json()
