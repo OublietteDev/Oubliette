@@ -273,7 +273,7 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                 reward = _reward_text(repo, q.reward)
                 if reward:
                     lines.append(f"      REWARD (advisory — grant via give/transact, renegotiable): {reward}")
-                if q.branches:
+                if len(q.branches) > 1:        # only a genuine fork needs an outcome reported
                     lines.append("      OUTCOMES (on resolution, update_quest status=completed with "
                                  "outcome=<one label>): " + ", ".join(b.outcome for b in q.branches))
         # In-region: eligible elsewhere in the same top-level area, not present here.
@@ -307,6 +307,20 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
             text = (q.text[:200] + "…") if len(q.text) > 200 else q.text
             latest = f" — latest: {q.notes[-1]}" if q.notes else ""
             lines.append(f"  - [{q.id}] {q.title}{': ' + text if text else ''}{latest}")
+            # For an accepted AUTHORED quest, keep its secret briefing + intended reward +
+            # (for a fork) the outcome labels in view for the quest's whole life — not just at
+            # the offer — so the DM resolves it as authored, with the right reward and branch.
+            aq = (authored_quests or {}).get(q.authored_id)
+            if aq is not None:
+                if aq.briefing:
+                    lines.append(f"      BRIEFING (secret — yours alone): {aq.briefing}")
+                reward = _reward_text(repo, aq.reward)
+                if reward:
+                    lines.append(f"      INTENDED REWARD (hand over via give/transact when it "
+                                 f"resolves; renegotiable): {reward}")
+                if len(aq.branches) > 1:
+                    lines.append("      TO ADVANCE THE CHAIN, complete with update_quest "
+                                 "outcome=<one of>: " + ", ".join(b.outcome for b in aq.branches))
     # Short-term continuity: what just happened, so the DM honors established
     # fiction and successful checks instead of re-litigating each turn (gap G5).
     if recent:

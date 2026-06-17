@@ -304,3 +304,43 @@ def test_region_awareness_does_not_cross_regions(tmp_path, monkeypatch):
     ctx = _ctx(s, "dock")                              # region = Town
     assert "market rumor" in ctx                       # Market is in this town
     assert "cave rumor" not in ctx and "Cave Job" not in ctx        # the Wilds are a different region
+
+
+# --- chain robustness + post-acceptance context (regression: playtest 2026-06-17) ---
+def test_single_branch_step_advances_without_an_outcome(tmp_path, monkeypatch):
+    """A linear step (one branch) must advance on completion even when the DM omits the
+    outcome — a one-path step shouldn't require an artificial label (the bug that stalled
+    'The Empty Nets' → 'Salt and Suspicion' in playtesting)."""
+    quests = [
+        {"id": "q1", "title": "Step One", "giver_npc": "bromley", "root": True,
+         "branches": [{"outcome": "onward", "to": "q2"}]},
+        {"id": "q2", "title": "Step Two", "giver_place": "market", "discovery": "a board"},
+    ]
+    s = _session(tmp_path, monkeypatch, quests)
+    s.emit_quest_accept(s.authored_quests["q1"], "r")
+    s.emit_quest_update(s.quests.active()[0].id, status="completed", outcome=None, reason="r")
+    assert _eligible(s) == {"q2"}                      # advanced with no outcome supplied
+
+
+def test_fork_still_requires_the_matching_outcome(tmp_path, monkeypatch):
+    """A genuine fork (>1 branch) must NOT auto-advance — completing with no outcome
+    unlocks nothing (the DM has to report which way it went)."""
+    s = _session(tmp_path, monkeypatch, _CHAIN)        # q1 forks spared/killed
+    s.emit_quest_accept(s.authored_quests["q1"], "r")
+    s.emit_quest_update(s.quests.active()[0].id, status="completed", outcome=None, reason="r")
+    assert _eligible(s) == set()
+
+
+def test_active_authored_quest_retains_briefing_and_reward(tmp_path, monkeypatch):
+    """Once accepted, an authored quest keeps its secret briefing + intended reward in the
+    DM's context for the quest's whole life — not just while it was on offer."""
+    chain = [{"id": "q1", "title": "The Job", "hook": "do it", "briefing": "the secret truth",
+              "giver_npc": "bromley", "root": True, "reward": {"gold": 30, "note": "a favor owed"}}]
+    s = _session(tmp_path, monkeypatch, chain)
+    s.emit_quest_accept(s.authored_quests["q1"], "r")
+    ctx = build_context(s.repo, location="dock", places=s.places,
+                        authored_quests=s.authored_quests, offerable=set(), offered_here=set(),
+                        quests=s.quests.active())
+    assert "ACTIVE QUESTS" in ctx
+    assert "the secret truth" in ctx                   # briefing retained
+    assert "30g" in ctx and "favor owed" in ctx        # intended reward retained
