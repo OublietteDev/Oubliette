@@ -162,7 +162,22 @@ class UpdateQuest(BaseModel):
     status: Literal["active", "completed", "failed"] | None = Field(
         default=None, description="set when the quest finishes (completed/failed)")
     note: str | None = Field(default=None, description="a short development to record")
+    outcome: str | None = Field(
+        default=None,
+        description="ONLY when completing an authored quest that lists OUTCOMES: the exact "
+                    "outcome label that fits how it resolved (e.g. 'spared') — it unlocks the "
+                    "next quest in the chain. Omit for an emergent quest or one with no outcomes.")
     reason: str
+
+
+class AcceptQuest(BaseModel):
+    """Take up a pre-authored quest from the QUESTS OFFERED HERE list when the party
+    engages with it. Code activates the authored quest (its title/goal are already
+    written — don't retype them) as the party's single active quest."""
+
+    tool: Literal["accept_quest"] = "accept_quest"
+    quest_id: str = Field(description="the authored quest's id from QUESTS OFFERED HERE")
+    reason: str = Field(description="the fiction for taking it on")
 
 
 # The only doors into protected state + canon, as a discriminated union (the schema
@@ -170,6 +185,6 @@ class UpdateQuest(BaseModel):
 # branch in tools/dispatch.py.
 ToolCall = Annotated[
     Union[Transact, Give, Take, AwardXp, CreateEntity, PromoteCanon, Travel,
-          EndSession, StartQuest, UpdateQuest],
+          EndSession, StartQuest, UpdateQuest, AcceptQuest],
     Field(discriminator="tool"),
 ]

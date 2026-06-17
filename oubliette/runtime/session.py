@@ -58,6 +58,8 @@ class Session:
         self.pending_combat = None          # combat.arena_launch.PendingCombat | None
         self.table: TableContract = DEFAULT_TABLE   # campaign's tone + content boundaries
         self.ruleset = None                  # the global SRD ruleset (chargen/sheet/derivation)
+        self.authored_quests: dict = {}      # {id: AuthoredQuest} the pack ships (offered in play,
+                                             # not canon); deterministic baseline, re-seeded on open
 
     def _scene_for(self, location: str | None) -> str:
         """The prose for a location — the pack's opening text at the start spot
@@ -89,6 +91,7 @@ class Session:
             pack_name = world.pack_name
             statblocks = world.statblocks
             bestiary_gate = world.bestiary_gate
+            authored_quests = {q.id: q for q in world.quests}
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
         else:
             repo = seed()
@@ -101,6 +104,7 @@ class Session:
             pack_name = ""
             statblocks = ()
             bestiary_gate = None
+            authored_quests = {}
             marker = {}
         canon = CanonStore()
         quests = QuestStore()
@@ -152,6 +156,7 @@ class Session:
         session.ended = ended
         session.table = table
         session.ruleset = ruleset
+        session.authored_quests = authored_quests
         if events:
             replay(events, repo, canon, quests)   # existing session: rebuild to current
         else:
@@ -194,20 +199,35 @@ class Session:
         self.store.append(EventKind.SESSION_MARKER, {"marker": "end", "reason": reason})
         self.ended = True
 
-    def emit_quest_start(self, title: str, text: str, reason: str) -> Quest:
-        """Record a new quest (the DM's `start_quest` tool). The id is assigned now
-        and recorded, so replay reproduces it exactly."""
-        quest = Quest(id=self.quests.next_id(), title=title, text=text, status="active")
+    def emit_quest_start(self, title: str, text: str, reason: str,
+                         authored_id: str | None = None) -> Quest:
+        """Record a new quest (the DM's `start_quest`, or `accept_quest` for an authored
+        one). The id is assigned now and recorded, so replay reproduces it exactly. When
+        `authored_id` is set, it rides inside the record so reload knows which authored
+        quest this runtime quest came from (drives chain progress)."""
+        quest = Quest(id=self.quests.next_id(), title=title, text=text, status="active",
+                      authored_id=authored_id)
         self.store.append(EventKind.QUEST_STARTED, {"record": quest.model_dump(), "reason": reason})
         self.quests.add(quest)
         return quest
 
+    def emit_quest_accept(self, authored, reason: str) -> Quest:
+        """Activate a pre-authored quest (the DM's `accept_quest` tool) as the single
+        active quest, seeded from the authored definition (title + player-facing hook).
+        Links it back to the authored id so completing it can advance the chain."""
+        return self.emit_quest_start(authored.title, authored.hook, reason,
+                                     authored_id=authored.id)
+
     def emit_quest_update(self, quest_id: str, status: QuestStatus | None = None,
-                          note: str | None = None, reason: str = "") -> None:
+                          note: str | None = None, outcome: str | None = None,
+                          reason: str = "") -> None:
         """Advance a quest (the DM's `update_quest` tool): change its status and/or
-        append a note."""
+        append a note. `outcome` is recorded for authored-quest chain routing but is NOT
+        applied to quest state — it's read back from the log by quest.offers, so replay
+        stays byte-identical without it touching the QuestStore."""
         self.store.append(EventKind.QUEST_UPDATED,
-                          {"quest_id": quest_id, "status": status, "note": note, "reason": reason})
+                          {"quest_id": quest_id, "status": status, "note": note,
+                           "outcome": outcome, "reason": reason})
         self.quests.update(quest_id, status=status, note=note)
 
     def emit_party_created(self, builds: list["CharacterBuild"],

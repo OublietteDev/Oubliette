@@ -221,6 +221,73 @@ class Lore(_Strict):
     tags: list[str] = Field(default_factory=list)
 
 
+# --- authored quests ---------------------------------------------------------
+class QuestReward(_Strict):
+    """A quest's reward. ADVISORY only — it's surfaced to the DM, who hands it over with
+    the ordinary give/transact tools (so the player can even renegotiate). The engine never
+    auto-grants it. Like LootEntry, at most one of {gold, item}; a purely narrative reward
+    (a title, a favor owed) is fine as a `note` with neither."""
+
+    gold: int | None = None
+    item: str | None = None          # -> Item id
+    qty: int = 1
+    note: str = ""                   # free advisory text ("plus the captain's gratitude")
+
+    @model_validator(mode="after")
+    def _shape(self) -> "QuestReward":
+        if self.gold is not None and self.item is not None:
+            raise ValueError("a reward sets at most one of {gold, item}")
+        if self.gold is not None and self.gold <= 0:
+            raise ValueError("reward gold must be positive")
+        if self.item is not None and self.qty <= 0:
+            raise ValueError("reward qty must be positive")
+        if self.gold is None and self.item is None and not self.note.strip():
+            raise ValueError("a reward needs gold, an item, or a note")
+        return self
+
+
+class QuestBranch(_Strict):
+    """One outcome -> next-quest edge of a branching chain. At completion the DM reports an
+    `outcome` label (from the quest's OUTCOMES shown in context); the matching branch unlocks
+    its `to` quest as a new offer."""
+
+    outcome: str                     # the label the DM picks, e.g. "spared", "killed"
+    to: str                          # -> AuthoredQuest id this outcome unlocks
+
+
+class AuthoredQuest(_Strict):
+    """A pre-written quest shipped in a pack (designed in The Forge). It is OFFERED during
+    play — never auto-started — and tied to exactly one source: a quest-giver NPC, or a place
+    (found there, e.g. on a notice board). Standalone one-shots have no branches; a branching
+    chain links quests by outcome. Chains are implicit: a quest is reachable if it's a `root`
+    or named in some other quest's `branches[].to` (the `chain` label is for display only)."""
+
+    id: str
+    title: str
+    hook: str = ""                   # PLAYER-FACING: the offer as the party hears it (at source)
+    rumor: str = ""                  # optional region-wide breadcrumb the DM may drop as ambient
+                                     # gossip ("dockworkers whisper of missing cargo")
+    briefing: str = ""               # DM-ONLY secret: the real situation / twist / intended end
+    giver_npc: str | None = None     # -> NPC id      } exactly one source
+    giver_place: str | None = None   # -> Place id    }
+    discovery: str = ""              # required iff giver_place; how it's found ("a notice board")
+    reward: QuestReward | None = None
+    chain: str = ""                  # optional grouping/label for an arc (Forge display only)
+    root: bool = False               # offerable from the start (no prior quest needed to unlock)
+    branches: list[QuestBranch] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _source(self) -> "AuthoredQuest":
+        if (self.giver_npc is not None) == (self.giver_place is not None):
+            raise ValueError("a quest sets exactly one of {giver_npc, giver_place}")
+        if self.giver_place is not None and not self.discovery.strip():
+            raise ValueError("a place-given quest needs a `discovery` note (how it's found)")
+        if self.giver_npc is not None and self.discovery.strip():
+            raise ValueError("`discovery` only applies to a place-given quest")
+        return self
+
+
 # --- scenarios ---------------------------------------------------------------
 class Scenario(_Strict):
     id: str

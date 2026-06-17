@@ -26,8 +26,8 @@ from ..enums import Ability
 from ..state.models import Character, Item as StateItem, ItemStack
 from ..state.repository import InMemoryRepository
 from .ruleset import Ruleset, load_ruleset
-from .schemas import (NPC, BestiaryGate, Item, Lore, Place, PackManifest,
-                      Scenario, StatBlock)
+from .schemas import (NPC, AuthoredQuest, BestiaryGate, Item, Lore, Place,
+                      PackManifest, Scenario, StatBlock)
 
 DEFAULT_PACK = "brightvale"
 _PACKS_ROOT = Path(__file__).parent / "packs"
@@ -81,6 +81,7 @@ class LoadedWorld:
     pack_name: str = ""            # the pack's display name (manifest.name; bestiary source label)
     statblocks: tuple = ()         # the pack's authored StatBlocks (this-world bestiary section)
     bestiary_gate: "BestiaryGate | None" = None   # per-world bestiary knowledge cutoff (manifest)
+    quests: tuple = ()             # the pack's authored quests (offered during play, not canon)
 
 
 # --- file reading ------------------------------------------------------------
@@ -137,10 +138,11 @@ def _dup_ids(entities: list, type_name: str, errors: list[str]) -> None:
 
 def _lint(manifest: PackManifest | None, items: list[Item], statblocks: list[StatBlock],
           npcs: list[NPC], places: list[Place], scenarios: list[Scenario],
-          errors: list[str]) -> None:
+          quests: list[AuthoredQuest], errors: list[str]) -> None:
     """Validate the parsed pack as a graph. Appends every problem to `errors`."""
     for entities, name in [(items, "items"), (statblocks, "statblocks"),
-                           (npcs, "npcs"), (places, "places"), (scenarios, "scenarios")]:
+                           (npcs, "npcs"), (places, "places"), (scenarios, "scenarios"),
+                           (quests, "quests")]:
         _dup_ids(entities, name, errors)
 
     item_ids = {i.id for i in items}
@@ -192,6 +194,40 @@ def _lint(manifest: PackManifest | None, items: list[Item], statblocks: list[Sta
     # Manifest entry scenario.
     if manifest is not None and manifest.entry_scenario not in scenario_ids:
         errors.append(f"pack.json: entry_scenario references unknown scenario {manifest.entry_scenario!r}")
+
+    _lint_quests(quests, npcs, item_ids, need_item, need_place, errors)
+
+
+def _lint_quests(quests: list[AuthoredQuest], npcs: list[NPC], item_ids: set[str],
+                 need_item, need_place, errors: list[str]) -> None:
+    """Validate authored quests as a graph: sources resolve and are reachable, reward items
+    exist, and the branch edges form a sound chain (targets exist, no self-loops, every quest
+    reachable as a root or some branch's target)."""
+    quest_ids = {q.id for q in quests}
+    npc_by_id = {n.id: n for n in npcs}
+    branch_targets = {b.to for q in quests for b in q.branches}
+    for q in quests:
+        # Source resolves AND is reachable. A giver NPC with no home_location can never be
+        # present in a scene, so the quest could never be offered — an authoring error.
+        if q.giver_npc is not None:
+            npc = npc_by_id.get(q.giver_npc)
+            if npc is None:
+                errors.append(f"quests: {q.id}.giver_npc references unknown npc {q.giver_npc!r}")
+            elif npc.home_location is None:
+                errors.append(f"quests: {q.id} is given by {q.giver_npc!r}, who has no home_location "
+                              f"(the quest could never be found)")
+        need_place(q.giver_place, f"quests: {q.id}.giver_place")
+        if q.reward is not None:
+            need_item(q.reward.item, f"quests: {q.id}.reward")
+        # Branch edges: each target exists and isn't the quest itself.
+        for b in q.branches:
+            if b.to == q.id:
+                errors.append(f"quests: {q.id} branches to itself on outcome {b.outcome!r}")
+            elif b.to not in quest_ids:
+                errors.append(f"quests: {q.id}.branches references unknown quest {b.to!r}")
+        # Reachability: a quest nobody can reach (not a root, not unlocked by any branch) is dead.
+        if not q.root and q.id not in branch_targets:
+            errors.append(f"quests: {q.id} is unreachable — it is not a root and no branch unlocks it")
 
 
 def _lint_default_party(sc: Scenario, item_ids: set[str], errors: list[str]) -> None:
@@ -326,8 +362,9 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     places = _parse_list(base / "places.json", Place, "places.json", errors)
     lore = _parse_list(base / "lore.json", Lore, "lore.json", errors)
     scenarios = _parse_list(base / "scenarios.json", Scenario, "scenarios.json", errors)
+    quests = _parse_list(base / "quests.json", AuthoredQuest, "quests.json", errors)
 
-    _lint(manifest, items, statblocks, npcs, places, scenarios, errors)
+    _lint(manifest, items, statblocks, npcs, places, scenarios, quests, errors)
     _dup_ids(lore, "lore", errors)        # subjects are free-form, so only ids are checked
 
     if errors:
@@ -359,5 +396,5 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
         pack_id=manifest.id, pack_version=manifest.version, world_map=manifest.world_map,
         ruleset=load_ruleset(),   # the global SRD layer (shared by every world)
         pack_name=manifest.name, statblocks=tuple(statblocks),
-        bestiary_gate=manifest.bestiary_gate,
+        bestiary_gate=manifest.bestiary_gate, quests=tuple(quests),
     )

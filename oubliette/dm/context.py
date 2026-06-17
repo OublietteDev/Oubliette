@@ -139,11 +139,44 @@ def _reachable(location: str | None, places: dict) -> list:
     return [places[i] for i in ids if i in places]
 
 
+def region_root(location: str | None, places: dict) -> str | None:
+    """The party's top-level enclosing area — walk up the parent chain to the outermost
+    ancestor. This is "the area you're in" (a town and its districts resolve to one
+    region), used to scope ambient quest awareness and the quest-card art."""
+    cur, seen = location, set()
+    while cur in places and cur not in seen:
+        seen.add(cur)
+        parent = places[cur].parent
+        if not parent:
+            break
+        cur = parent
+    return cur
+
+
+def _reward_text(repo: Repository, reward) -> str:
+    """A short advisory reward line for the DM (the engine never auto-grants it)."""
+    if reward is None:
+        return ""
+    bits: list[str] = []
+    if reward.gold:
+        bits.append(f"{reward.gold}g")
+    if reward.item:
+        try:
+            name = repo.get_item(reward.item).name
+        except Exception:
+            name = reward.item
+        bits.append(f"{reward.qty}x {name}")
+    if reward.note:
+        bits.append(reward.note)
+    return ", ".join(bits)
+
+
 def build_context(repo: Repository, scene: str = "", recent: list[str] | None = None,
                   canon: list[CanonRecord] | None = None, location: str | None = None,
                   places: dict | None = None, quests: list | None = None,
                   time_of_day: str | None = None, weather: str | None = None,
-                  ruleset=None) -> str:
+                  ruleset=None, authored_quests: dict | None = None,
+                  offerable: set | None = None, offered_here: set | None = None) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -218,6 +251,54 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
             for r in other:
                 text = (r.text[:160] + "…") if len(r.text) > 160 else r.text
                 lines.append(f"  - [{r.status}] {r.entity_type} '{r.name}' (id: {r.id}){': ' + text if text else ''}")
+    # Authored quest offers, two tiers. AT-SOURCE (full hook + secret briefing + reward +
+    # outcomes; acceptable now) vs IN-REGION (a sparse signpost — count + place + rumor — so
+    # the DM can point the party toward work without spoiling it).
+    if authored_quests:
+        here_ids = sorted(offered_here or set())
+        npc_name = {n.id: n.name for n in repo.npcs()}
+        npc_home = {n.id: n.home_location for n in repo.npcs()}
+        if here_ids:
+            lines.append("QUESTS OFFERED HERE (the party can take these up now — accept_quest by "
+                         "id when they engage; tell the player the HOOK, never the BRIEFING):")
+            for qid in here_ids:
+                q = authored_quests[qid]
+                src = (f"from {npc_name.get(q.giver_npc, q.giver_npc)}" if q.giver_npc is not None
+                       else f"found here — {q.discovery}")
+                lines.append(f"  - [{qid}] \"{q.title}\" ({src})")
+                if q.hook:
+                    lines.append(f"      HOOK (tell the player): {q.hook}")
+                if q.briefing:
+                    lines.append(f"      BRIEFING (secret — yours alone): {q.briefing}")
+                reward = _reward_text(repo, q.reward)
+                if reward:
+                    lines.append(f"      REWARD (advisory — grant via give/transact, renegotiable): {reward}")
+                if q.branches:
+                    lines.append("      OUTCOMES (on resolution, update_quest status=completed with "
+                                 "outcome=<one label>): " + ", ".join(b.outcome for b in q.branches))
+        # In-region: eligible elsewhere in the same top-level area, not present here.
+        my_region = region_root(location, places or {})
+        groups: dict[str, list] = {}
+        for qid in (set(offerable or set()) - set(offered_here or set())):
+            q = authored_quests.get(qid)
+            if q is None:
+                continue
+            src_loc = q.giver_place if q.giver_place is not None else npc_home.get(q.giver_npc)
+            if src_loc is None or region_root(src_loc, places or {}) != my_region:
+                continue
+            node = (places or {}).get(src_loc)
+            groups.setdefault(node.name if node is not None else src_loc, []).append(q)
+        if groups:
+            total = sum(len(v) for v in groups.values())
+            lines.append(f"WORK AVAILABLE IN THE REGION ({total} elsewhere in this area — use ONLY to "
+                         "point the party toward where work is if they look for it; do NOT reveal "
+                         "details or accept until they travel there):")
+            for place in sorted(groups):
+                qs = groups[place]
+                lines.append(f"  - {place}: {len(qs)} available")
+                for q in qs:
+                    if q.rumor:
+                        lines.append(f"      rumor: {q.rumor}")
     # Ongoing goals the code is tracking — so the DM stays consistent about what the
     # party is pursuing and advances them (update_quest) as the fiction develops.
     if quests:

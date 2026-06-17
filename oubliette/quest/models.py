@@ -15,3 +15,7 @@ class Quest(BaseModel):
     text: str = ""                              # what the goal is / current understanding
     status: QuestStatus = "active"
     notes: list[str] = Field(default_factory=list)   # running beats the DM appends
+    authored_id: str | None = None              # the AuthoredQuest this was activated from
+                                                # (None = an emergent, DM-invented quest).
+                                                # Rides inside the QUEST_STARTED record, so it
+                                                # rebuilds byte-identically on reload.

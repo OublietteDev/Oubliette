@@ -36,6 +36,7 @@ from ..rules.levelup import (LevelUpChoice, LevelUpError, level_up, level_up_pla
 from ..runtime.loop import TurnLoop
 from ..runtime.session import Session
 from ..dm.brain import Brain
+from ..dm.context import region_root
 from ..enums import Ability, Skill
 from ..state.models import Character, CharacterSheet
 from ..state.repository import StateError
@@ -205,17 +206,9 @@ def _describe_applied(rt) -> str:
 
 def _top_location_id() -> str | None:
     """The party's enclosing top-level area (walk up the parent chain) — quest-card
-    illustrations key off this, not the specific sub-room."""
-    places = GAME.session.places
-    cur = GAME.session.location
-    seen: set = set()
-    while cur in places and cur not in seen:
-        seen.add(cur)
-        parent = places[cur].parent
-        if not parent:
-            break
-        cur = parent
-    return cur
+    illustrations key off this, not the specific sub-room. Same "what area am I in"
+    notion the DM context uses to scope ambient quest awareness."""
+    return region_root(GAME.session.location, GAME.session.places)
 
 
 def _quest_beats(report) -> list[dict]:
@@ -228,6 +221,10 @@ def _quest_beats(report) -> list[dict]:
     for rt in report.applied:
         if rt.quest_start is not None:
             beats.append({"kind": "started", "title": rt.quest_start.title, "detail": "", "image": image})
+        elif rt.quest_accept is not None:
+            aq = GAME.session.authored_quests.get(rt.quest_accept.quest_id)
+            title = aq.title if aq is not None else rt.quest_accept.quest_id
+            beats.append({"kind": "started", "title": title, "detail": "", "image": image})
         elif rt.quest_update is not None:
             q = GAME.session.quests.get(rt.quest_update.quest_id)
             title = q.title if q is not None else rt.quest_update.quest_id

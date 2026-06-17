@@ -33,16 +33,17 @@ from ..content.loader import PackValidationError, load_pack
 
 STATIC = Path(__file__).parent / "static"
 _DEFAULT_PACKS_ROOT = Path(__file__).parent.parent / "content" / "packs"
-_TYPES = ["items", "statblocks", "npcs", "places", "lore", "scenarios"]
+_TYPES = ["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios"]
 _TYPE_WORD = {"items": "items", "statblocks": "creatures", "npcs": "characters",
-              "places": "places", "lore": "lore entries", "scenarios": "opening setups"}
+              "places": "places", "lore": "lore entries", "quests": "quests",
+              "scenarios": "opening setups"}
 
 
 def _slug(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", name.strip().lower()).strip("_") or "world"
 
 # The per-type files a pack is made of (the world recipe).
-PACK_FILES = ["pack", "items", "statblocks", "npcs", "places", "lore", "scenarios"]
+PACK_FILES = ["pack", "items", "statblocks", "npcs", "places", "lore", "quests", "scenarios"]
 
 app = FastAPI(title="Oubliette: The Forge")
 
@@ -95,7 +96,7 @@ def _name_pools(pack_dir: Path) -> dict:
     pools = {}
     for t in _TYPES:
         data = _read_json(pack_dir / f"{t}.json") or []
-        pools[t] = {e.get("id"): e.get("name", e.get("id"))
+        pools[t] = {e.get("id"): e.get("name") or e.get("title") or e.get("id")
                     for e in data if isinstance(e, dict) and e.get("id")}
     return pools
 
@@ -141,6 +142,31 @@ def _translate(issue: str, pools: dict) -> dict:
         owner, ref = m.groups()
         return {"message": f"“{nm('npcs', owner)}” has a price for “{nm('items', ref)}”, but doesn’t carry it. "
                            f"Add it to their belongings, or remove the price.", "section": "npcs"}
+
+    # quest cross-references (the techier ones; place/item refs fall to the generic matcher)
+    m = re.match(r"^quests: (.+?)\.giver_npc references unknown npc '(.+?)'$", issue)
+    if m:
+        owner, ref = m.groups()
+        return {"message": f"The quest “{nm('quests', owner)}” is given by a character that doesn’t "
+                           f"exist (“{ref}”).{did_you_mean(ref, 'npcs')}", "section": "quests"}
+
+    m = re.match(r"^quests: (.+?) is given by '(.+?)', who has no home_location.*$", issue)
+    if m:
+        owner, ref = m.groups()
+        return {"message": f"The quest “{nm('quests', owner)}” is given by “{nm('npcs', ref)}”, but that "
+                           f"character lives nowhere — give them a home so the party can find them.",
+                "section": "quests"}
+
+    m = re.match(r"^quests: (.+?)\.branches references unknown quest '(.+?)'$", issue)
+    if m:
+        owner, ref = m.groups()
+        return {"message": f"The quest “{nm('quests', owner)}” leads on to a quest that doesn’t exist "
+                           f"(“{ref}”).", "section": "quests"}
+
+    m = re.match(r"^quests: (.+?) is unreachable.*$", issue)
+    if m:
+        return {"message": f"The quest “{nm('quests', m.group(1))}” can never start — make it a starting "
+                           f"quest, or have another quest lead to it.", "section": "quests"}
 
     m = re.match(r"^(\w+): duplicate id '(.+?)'$", issue)
     if m:
@@ -375,7 +401,7 @@ async def new_pack(body: NewIn) -> JSONResponse:
     _write_json(d / "pack.json", {
         "id": pack_id, "schema_version": 1, "name": name, "version": "0.1.0",
         "author": "", "description": "", "entry_scenario": "opening"})
-    for t in ["items", "statblocks", "npcs", "lore"]:
+    for t in ["items", "statblocks", "npcs", "lore", "quests"]:
         _write_json(d / f"{t}.json", [])
     _write_json(d / "places.json", [{
         "id": "town_square", "name": "Town Square",

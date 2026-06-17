@@ -260,6 +260,54 @@ def test_new_world_duplicate_is_refused(tmp_path, monkeypatch):
     assert client.post("/api/pack/new", json={"name": "Twice"}).status_code == 409
 
 
+# --- authored quests --------------------------------------------------------
+def test_save_authored_quest_chain_stays_valid(tmp_path, monkeypatch):
+    """Author a branching quest chain (the Forge quest editor's output) and confirm the
+    world still loads — a giver-NPC root that forks to a place-given follow-up."""
+    packs = _temp_brightvale(tmp_path, monkeypatch)
+    c = client.get("/api/pack/brightvale").json()["contents"]
+    assert c["quests"] in ([], None)                       # a pack with no quests yet
+    c["quests"] = [
+        {"id": "missing_cargo", "title": "The Missing Cargo", "hook": "find Thom's shipment",
+         "rumor": "traders mutter about vanishing crates", "briefing": "the porter took it",
+         "giver_npc": "merchant_thom", "root": True,
+         "reward": {"gold": 25, "note": "and Thom's goodwill"},
+         "branches": [{"outcome": "recovered", "to": "the_porter"}]},
+        {"id": "the_porter", "title": "The Guilty Porter", "hook": "confront the porter",
+         "giver_place": "brightvale_market", "discovery": "a notice nailed to a post"},
+    ]
+    r = client.post("/api/pack/brightvale/save", json={"contents": c})
+    assert r.status_code == 200 and r.json()["validation"]["ok"] is True
+
+    written = json.loads((packs / "brightvale" / "quests.json").read_text(encoding="utf-8"))
+    assert {q["id"] for q in written} == {"missing_cargo", "the_porter"}
+
+    # the game's own loader accepts it (Forge ✓ == game loads, by construction)
+    from oubliette.content.loader import load_pack
+    world = load_pack("brightvale", packs_root=packs)
+    assert {q.id for q in world.quests} == {"missing_cargo", "the_porter"}
+
+
+def test_quest_friendly_error_for_dangling_branch(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    c = client.get("/api/pack/brightvale").json()["contents"]
+    c["quests"] = [{"id": "q1", "title": "Lonely Lead", "giver_npc": "merchant_thom",
+                    "root": True, "branches": [{"outcome": "done", "to": "ghost_quest"}]}]
+    r = client.post("/api/pack/brightvale/save", json={"contents": c})
+    v = r.json()["validation"]
+    assert v["ok"] is False
+    assert any("ghost_quest" in i for i in v["issues"])
+    friendly = [f for f in v["friendly"] if "ghost_quest" in f["message"]]
+    assert friendly and friendly[0]["section"] == "quests"
+
+
+def test_new_world_scaffolds_an_empty_quests_section(tmp_path, monkeypatch):
+    monkeypatch.setenv("OUBLIETTE_PACKS_ROOT", str(tmp_path / "packs"))
+    client.post("/api/pack/new", json={"name": "Quest Realm"})
+    contents = client.get("/api/pack/quest_realm").json()["contents"]
+    assert contents["quests"] == []
+
+
 def test_friendly_errors_are_plain_with_suggestions(tmp_path, monkeypatch):
     _temp_brightvale(tmp_path, monkeypatch)
     c = client.get("/api/pack/brightvale").json()["contents"]

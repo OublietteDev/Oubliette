@@ -20,6 +20,7 @@ from ..dm.brain import Brain
 from ..dm.context import build_context
 from ..enums import SKILL_ABILITY, Tier, Verb
 from ..record.events import EventKind, StateOp
+from ..quest import offers
 from ..record.log import DebugLog
 from ..record.rng import Rng, RollOutcome
 from ..rules.checks import resolve_check
@@ -63,7 +64,8 @@ class TurnLoop:
         # explicit scene arg still overrides the opening text if given.
         self._scene_override = scene
         self.dispatcher = Dispatcher(session.repo, session.canon, session.places,
-                                     session.quests, ruleset=session.ruleset)
+                                     session.quests, ruleset=session.ruleset,
+                                     authored_quests=session.authored_quests)
         self.history: list[str] = []   # short-term continuity beats (gap G5)
 
     async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
@@ -72,12 +74,18 @@ class TurnLoop:
         # the party arrives, not only when someone names it.
         canon_hits = self.session.canon.search(self._retrieval_query(player_text))
         scene = self._scene_override if self._scene_override is not None else self.session.scene
+        # Authored-quest offers: chain-eligible set (replay-derived) and the subset whose
+        # source is present right now (acceptable this turn). The dispatcher gates
+        # accept_quest on `offered_here`; the context surfaces both tiers to the DM.
+        authored, eligible, here = self._compute_offers()
+        self.dispatcher.offered_here = here
         context = build_context(
             self.repo, scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits,
             location=self.session.location, places=self.session.places,
             quests=self.session.quests.active(),
             time_of_day=self.session.time_of_day, weather=self.session.weather,
-            ruleset=self.session.ruleset)
+            ruleset=self.session.ruleset,
+            authored_quests=authored, offerable=eligible, offered_here=here)
         # `ooc` is the player's explicit "out-of-character" signal (the composer
         # toggle). When set, the turn is table-talk — no model guessing, no combat
         # or trade — so in-character play is never mistaken for meta.
@@ -122,6 +130,18 @@ class TurnLoop:
 
         self._record_beat(report)
         return report
+
+    def _compute_offers(self) -> tuple[dict, set, set]:
+        """(authored defs, chain-eligible ids, offered-here ids) for this turn. Eligible is
+        replay-derived from the log; here is eligible narrowed to quests whose source NPC is
+        present or whose place is the party's location."""
+        authored = self.session.authored_quests
+        if not authored:
+            return authored, set(), set()
+        eligible = offers.offerable_ids(authored, self.session.store.read_all(), self.session.quests)
+        loc = self.session.location
+        present = {n.id for n in self.repo.npcs() if loc is None or n.home_location == loc}
+        return authored, eligible, offers.offered_here(eligible, authored, loc, present)
 
     def _retrieval_query(self, player_text: str) -> str:
         """Canon/lore search terms: the player's words + the situation. The location
@@ -211,10 +231,14 @@ class TurnLoop:
                 elif rt.quest_start is not None:
                     self.session.emit_quest_start(
                         rt.quest_start.title, rt.quest_start.text, rt.reason)
+                elif rt.quest_accept is not None:
+                    self.session.emit_quest_accept(
+                        self.session.authored_quests[rt.quest_accept.quest_id], rt.reason)
                 elif rt.quest_update is not None:
                     self.session.emit_quest_update(
                         rt.quest_update.quest_id, status=rt.quest_update.status,
-                        note=rt.quest_update.note, reason=rt.reason)
+                        note=rt.quest_update.note, outcome=rt.quest_update.outcome,
+                        reason=rt.reason)
                 else:
                     self.session.emit_state(
                         EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
@@ -390,6 +414,8 @@ class TurnLoop:
                 parts.append(f"travelled to {rt.travel_to}")
             elif rt.quest_start is not None:
                 parts.append(f"started quest '{rt.quest_start.title}'")
+            elif rt.quest_accept is not None:
+                parts.append(f"took up quest {rt.quest_accept.quest_id}")
             elif rt.quest_update is not None:
                 state = rt.quest_update.status or "updated"
                 parts.append(f"quest {rt.quest_update.quest_id} → {state}")

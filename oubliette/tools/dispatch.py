@@ -15,8 +15,8 @@ from ..canon.models import CanonDraft
 from ..canon.store import CanonStore
 from ..record.events import StateOp
 from ..state.repository import Repository, StateError
-from .schemas import (AwardXp, CreateEntity, EndSession, Give, PromoteCanon, StartQuest,
-                      Take, ToolCall, Transact, Travel, UpdateQuest, ValueEntry)
+from .schemas import (AcceptQuest, AwardXp, CreateEntity, EndSession, Give, PromoteCanon,
+                      StartQuest, Take, ToolCall, Transact, Travel, UpdateQuest, ValueEntry)
 
 
 class ToolApplyError(Exception):
@@ -38,16 +38,21 @@ class ResolvedTool:
     end_session: bool = False                            # end_session -> close the game
     quest_start: "StartQuest | None" = None              # start_quest
     quest_update: "UpdateQuest | None" = None            # update_quest
+    quest_accept: "AcceptQuest | None" = None            # accept_quest -> activate authored quest
 
 
 class Dispatcher:
     def __init__(self, repo: Repository, canon: CanonStore | None = None,
-                 places: dict | None = None, quests=None, ruleset=None) -> None:
+                 places: dict | None = None, quests=None, ruleset=None,
+                 authored_quests: dict | None = None) -> None:
         self.repo = repo
         self.canon = canon
         self.places = places or {}       # {place_id: PlaceNode} — for travel resolution
         self.quests = quests             # QuestStore — for update_quest validation
         self.ruleset = ruleset           # SRD ruleset — for scroll min-level validation (A5)
+        self.authored_quests = authored_quests or {}   # {id: AuthoredQuest} the pack ships
+        self.offered_here: set = set()   # authored quest ids acceptable RIGHT NOW (source
+                                         # present); the loop refreshes it each turn
 
     def resolve(self, call: ToolCall) -> ResolvedTool:
         if isinstance(call, Transact):
@@ -83,6 +88,17 @@ class Dispatcher:
             if self.quests is None or self.quests.get(call.quest_id) is None:
                 raise ToolApplyError(f"cannot update unknown quest {call.quest_id!r}")
             return ResolvedTool(call.tool, call.reason, quest_update=call)
+        if isinstance(call, AcceptQuest):
+            if call.quest_id not in self.authored_quests:
+                raise ToolApplyError(f"no authored quest {call.quest_id!r} exists in this world")
+            if call.quest_id not in self.offered_here:
+                raise ToolApplyError(
+                    f"quest {call.quest_id!r} isn't on offer here — the party must be with its "
+                    "giver or at its place to take it up")
+            if self.quests is not None and self.quests.active():
+                raise ToolApplyError(
+                    "a quest is already active — complete or fail it before taking another")
+            return ResolvedTool(call.tool, call.reason, quest_accept=call)
         raise ToolApplyError(f"no resolver for {type(call).__name__}")  # pragma: no cover
 
     def _assert_promotable(self, entity_id: str) -> None:
