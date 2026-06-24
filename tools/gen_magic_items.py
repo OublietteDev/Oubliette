@@ -8,8 +8,8 @@ Source: https://github.com/5e-bits/5e-database  (CC-BY-4.0 / OGL SRD 5.1 content
         src/2014/en/5e-SRD-Magic-Items.json
 
 Re-run:
-    curl -sL https://raw.githubusercontent.com/5e-bits/5e-database/main/src/2014/en/5e-SRD-Magic-Items.json -o srd-magic-items-raw.json
-    python tools/gen_magic_items.py srd-magic-items-raw.json oubliette/content/srd/equipment.json
+    curl -sL https://raw.githubusercontent.com/5e-bits/5e-database/main/src/2014/en/5e-SRD-Magic-Items.json -o tools/raw/srd-magic-items-raw.json
+    python tools/gen_magic_items.py tools/raw/srd-magic-items-raw.json oubliette/content/srd/equipment.json
 
 WHAT IT DOES
 - Drops the 21 "parent template" records (those with a non-empty `variants` list):

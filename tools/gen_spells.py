@@ -6,8 +6,8 @@ Source: https://github.com/5e-bits/5e-database  (CC-BY-4.0 / OGL SRD 5.1 content
         src/2014/en/5e-SRD-Spells.json
 
 Re-run:
-    curl -sL https://raw.githubusercontent.com/5e-bits/5e-database/main/src/2014/en/5e-SRD-Spells.json -o srd-spells-raw.json
-    python tools/gen_spells.py srd-spells-raw.json arena/data/spells/srd
+    curl -sL https://raw.githubusercontent.com/5e-bits/5e-database/main/src/2014/en/5e-SRD-Spells.json -o tools/raw/srd-spells-raw.json
+    python tools/gen_spells.py tools/raw/srd-spells-raw.json arena/data/spells/srd
 
 Each emitted file is ONE Arena `Action` (validated against the model on write),
 keyed by the Oubliette spell id (index with underscores) so the bridge can map a

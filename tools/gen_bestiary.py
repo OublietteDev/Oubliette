@@ -6,8 +6,8 @@ Source: https://github.com/5e-bits/5e-database  (CC-BY-4.0 / OGL SRD 5.1 content
         src/2014/en/5e-SRD-Monsters.json
 
 Re-run:
-    curl -sL https://raw.githubusercontent.com/5e-bits/5e-database/main/src/2014/en/5e-SRD-Monsters.json -o srd-monsters-raw.json
-    python tools/gen_bestiary.py srd-monsters-raw.json oubliette/content/srd/bestiary.json
+    curl -sL https://raw.githubusercontent.com/5e-bits/5e-database/main/src/2014/en/5e-SRD-Monsters.json -o tools/raw/srd-monsters-raw.json
+    python tools/gen_bestiary.py tools/raw/srd-monsters-raw.json oubliette/content/srd/bestiary.json
 
 Each monster is mapped onto the enriched `StatBlock` schema (content/schemas.py).
 Every action keeps BOTH the structured fields (attack_bonus/damage/damage_type — for

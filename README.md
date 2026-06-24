@@ -2,8 +2,8 @@
 
 A non-commercial, open-source AI-DM text RPG built on the D&D SRD. The thesis:
 **code owns state and the rules; the LLM only narrates and proposes; the player
-never holds the pen.** See [`oubliette-table-spec-v0.2.md`](oubliette-table-spec-v0.2.md)
-for the full design (and [`oubliette-table-design-v0.1.md`](oubliette-table-design-v0.1.md)
+never holds the pen.** See [`oubliette-table-spec-v0.2.md`](docs/design/oubliette-table-spec-v0.2.md)
+for the full design (and [`oubliette-table-design-v0.1.md`](docs/design/oubliette-table-design-v0.1.md)
 for the original rationale).
 
 ## Status: Phase 4 — web chat UI (on Phase 0–3)
@@ -84,7 +84,7 @@ rewrites. Everything runs with a **scripted (offline) DM** — no API key requir
   server-side in `/api/map`, so unvisited content never reaches the browser; DM-invented
   locations simply don't appear (you can only `travel` to authored places). Fits the
   DM-driven, location-to-location travel model (no free roam).
-- **Phase 11 — the Soundscape** (S1–S5; see [`oubliette-audio-mixer-v0.1.md`](oubliette-audio-mixer-v0.1.md)):
+- **Phase 11 — the Soundscape** (S1–S5; see [`oubliette-audio-mixer-v0.1.md`](docs/design/oubliette-audio-mixer-v0.1.md)):
   a **location-driven ambient audio mixer**, derived from state — the LLM never plays a
   sound. Looping **beds** + sparse randomized **one-shots**, each tagged music/sfx, riding
   the place tree (a top-level **theme passes down** into its children) and conditioned on
@@ -149,4 +149,4 @@ exist) and streaming responses are still to come. Canon quarantine is modeled
 Also note: RNG *state* isn't persisted across reload (past rolls
 are in the log; post-reload rolls restart from the base seed) — fine for
 single-player and it doesn't affect the byte-identical-**state** guarantee, since
-state comes from recorded ops, not rolls.
+state 

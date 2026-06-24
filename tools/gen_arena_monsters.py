@@ -6,8 +6,8 @@ Source: https://github.com/5e-bits/5e-database  (CC-BY-4.0 / OGL SRD 5.1)
         src/2014/en/5e-SRD-Monsters.json
 
 Re-run:
-    curl -sL https://raw.githubusercontent.com/5e-bits/5e-database/main/src/2014/en/5e-SRD-Monsters.json -o srd-monsters-raw.json
-    python tools/gen_arena_monsters.py srd-monsters-raw.json arena/data/monsters/srd
+    curl -sL https://raw.githubusercontent.com/5e-bits/5e-database/main/src/2014/en/5e-SRD-Monsters.json -o tools/raw/srd-monsters-raw.json
+    python tools/gen_arena_monsters.py tools/raw/srd-monsters-raw.json arena/data/monsters/srd
 
 What it maps onto the Arena `Monster` model, with full combat fidelity:
   - every weapon/natural attack, including MULTI-TYPE damage (a dragon's bite =
