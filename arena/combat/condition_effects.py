@@ -21,6 +21,8 @@ def get_attack_advantage(
     attacker: Creature,
     target: Creature,
     is_melee: bool = True,
+    attacker_sees_target: bool = True,
+    target_sees_attacker: bool = True,
 ) -> int:
     """Calculate net advantage/disadvantage for an attack roll.
 
@@ -32,6 +34,12 @@ def get_attack_advantage(
         attacker: The creature making the attack.
         target: The creature being attacked.
         is_melee: True for melee attacks, False for ranged.
+        attacker_sees_target: False if the attacker cannot see the target
+            (e.g. target hidden in fog/darkness) → disadvantage on the attack.
+        target_sees_attacker: False if the target cannot see the attacker
+            (e.g. attacker striking from concealment) → advantage on the attack.
+            The combat manager computes both via grid.vision.can_see; defaults
+            keep this a pure condition query when no spatial context is supplied.
 
     Returns:
         > 0 for advantage, < 0 for disadvantage, 0 for straight roll.
@@ -73,7 +81,17 @@ def get_attack_advantage(
     if _has(attacker, Condition.INVISIBLE):
         has_adv = True
 
+    # Target cannot see the attacker (concealment/obscurement): unseen
+    # attacker strikes with advantage.
+    if not target_sees_attacker:
+        has_adv = True
+
     # ── Sources of DISADVANTAGE ──
+
+    # Attacker cannot see the target (target in fog/darkness): attacking a
+    # target you can't see is at disadvantage.
+    if not attacker_sees_target:
+        has_dis = True
 
     # Attacker is blinded: has disadvantage
     if _has(attacker, Condition.BLINDED):
