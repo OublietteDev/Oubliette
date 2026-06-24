@@ -98,3 +98,124 @@ class TestVisibilityAdvantage:
         a = _creature(conditions=[Condition.POISONED])
         t = _creature()
         assert get_attack_advantage(a, t, attacker_sees_target=False) == -1
+
+
+# ── Integration: zone obscurement → attack advantage ─────────────────
+
+from arena.combat.zones import ActiveZone, compute_obscured_hexes
+from arena.combat.actions import resolve_attack_hit
+from arena.grid.hexgrid import HexGrid
+from arena.models.actions import Action, Attack, DamageRoll, DamageType, ActionType
+
+
+def _fog(center, radius_feet=10, **kw):
+    return ActiveZone(
+        zone_id=kw.pop("zone_id", "z"), caster_id=kw.pop("caster_id", "c"),
+        name=kw.pop("name", "Zone"), radius_feet=radius_feet,
+        follows_caster=False, center=center, damage_dice="0",
+        **kw,
+    )
+
+
+class TestComputeObscuredHexes:
+    def test_fog_zone_obscures_its_hexes(self):
+        grid = HexGrid(20, 20)
+        z = _fog(HexCoord(5, 5), obscures_vision=True, is_magical=False, spell_level=1)
+        obscured = compute_obscured_hexes([z], {}, grid)
+        assert (5, 5) in obscured
+
+    def test_daylight_dispels_lower_or_equal_level_darkness(self):
+        grid = HexGrid(20, 20)
+        dark = _fog(HexCoord(5, 5), zone_id="d", obscures_vision=True,
+                    is_magical=True, spell_level=2)
+        day = _fog(HexCoord(5, 5), zone_id="day", provides_bright_light=True,
+                   spell_level=3)
+        obscured = compute_obscured_hexes([dark, day], {}, grid)
+        assert (5, 5) not in obscured  # daylight L3 >= darkness L2 → dispelled
+
+    def test_daylight_does_not_dispel_higher_level_darkness(self):
+        grid = HexGrid(20, 20)
+        dark = _fog(HexCoord(5, 5), zone_id="d", obscures_vision=True,
+                    is_magical=True, spell_level=4)
+        day = _fog(HexCoord(5, 5), zone_id="day", provides_bright_light=True,
+                   spell_level=3)
+        obscured = compute_obscured_hexes([dark, day], {}, grid)
+        assert (5, 5) in obscured  # daylight L3 < darkness L4 → stands
+
+    def test_daylight_does_not_dispel_natural_fog(self):
+        grid = HexGrid(20, 20)
+        fog = _fog(HexCoord(5, 5), zone_id="f", obscures_vision=True,
+                   is_magical=False, spell_level=1)
+        day = _fog(HexCoord(5, 5), zone_id="day", provides_bright_light=True,
+                   spell_level=9)
+        obscured = compute_obscured_hexes([fog, day], {}, grid)
+        assert (5, 5) in obscured  # fog is physical; light doesn't clear it
+
+
+def _attacker_target_grid():
+    grid = HexGrid(20, 20)
+    grid.place_creature(HexCoord(5, 5), "atk")
+    grid.place_creature(HexCoord(5, 6), "tgt")
+    return grid
+
+
+def _melee():
+    return Action(
+        name="Sword", description="x", action_type=ActionType.ACTION,
+        attack=Attack(name="Sword", attack_type="melee_weapon", ability="strength",
+                      reach=5,
+                      damage=[DamageRoll(dice="1d8", damage_type=DamageType.SLASHING,
+                                         ability_modifier="strength")]),
+    )
+
+
+class TestAttackThroughObscurement:
+    def test_mutual_obscurement_cancels_to_normal(self):
+        # Target in fog, neither side has special senses: attacker can't see
+        # target (disadvantage) AND target (in fog) can't see attacker
+        # (advantage) → cancel → normal roll. Correct 5e.
+        grid = _attacker_target_grid()
+        atk, tgt = _creature("Atk"), _creature("Tgt")
+        res = resolve_attack_hit(
+            atk, "atk", tgt, "tgt", _melee(), grid,
+            combatants={}, attacker_pos=HexCoord(5, 5), target_pos=HexCoord(5, 6),
+            obscured_hexes={(5, 6)},
+        )
+        assert res.effective_advantage == 0
+
+    def test_one_sided_blindness_is_disadvantage(self):
+        # Target has truesight (sees attacker), attacker does not and the target
+        # sits in fog: attacker can't see target (disadvantage), target CAN see
+        # attacker (no offsetting advantage) → net disadvantage.
+        grid = _attacker_target_grid()
+        atk, tgt = _creature("Atk"), _creature("Tgt")
+        tgt.senses = {"truesight": 60}
+        res = resolve_attack_hit(
+            atk, "atk", tgt, "tgt", _melee(), grid,
+            combatants={}, attacker_pos=HexCoord(5, 5), target_pos=HexCoord(5, 6),
+            obscured_hexes={(5, 6)},
+        )
+        assert res.effective_advantage == -1
+
+    def test_clear_sight_no_penalty(self):
+        grid = _attacker_target_grid()
+        atk, tgt = _creature("Atk"), _creature("Tgt")
+        res = resolve_attack_hit(
+            atk, "atk", tgt, "tgt", _melee(), grid,
+            combatants={}, attacker_pos=HexCoord(5, 5), target_pos=HexCoord(5, 6),
+            obscured_hexes=set(),
+        )
+        assert res.effective_advantage == 0
+
+    def test_truesight_attacker_vs_fogbound_target_gets_advantage(self):
+        # Attacker has truesight (sees target); target in fog can't see attacker
+        # → attacker strikes an unseeing foe with advantage.
+        grid = _attacker_target_grid()
+        atk, tgt = _creature("Atk"), _creature("Tgt")
+        atk.senses = {"truesight": 60}
+        res = resolve_attack_hit(
+            atk, "atk", tgt, "tgt", _melee(), grid,
+            combatants={}, attacker_pos=HexCoord(5, 5), target_pos=HexCoord(5, 6),
+            obscured_hexes={(5, 6)},
+        )
+        assert res.effective_advantage == 1

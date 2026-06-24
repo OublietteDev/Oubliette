@@ -96,6 +96,22 @@ _DICE_RE = re.compile(r"^\s*(\d+)d(\d+)\s*(?:\+\s*(\d+|MOD))?\s*$")
 # this wave: the wall engine exists but no GUI placement mode is wired yet
 # (wall_of_stone/wall_of_force/forcecage/prismatic_wall wait on it).
 _CURATED: dict[str, dict] = {
+    # ── C4 P-VISION-LIGHT: obscurement & light zones (no save/damage) ────
+    "fog_cloud": {
+        "target_type": "area_sphere", "area_size": 20,
+        "requires_concentration": True,
+        "obscuring_zone": "fog", "ai_priority": 5,
+    },
+    "darkness": {
+        "target_type": "area_sphere", "area_size": 15,
+        "requires_concentration": True,
+        "obscuring_zone": "darkness", "ai_priority": 5,
+    },
+    "daylight": {
+        "target_type": "area_sphere", "area_size": 60,
+        "requires_concentration": False,
+        "obscuring_zone": "daylight", "ai_priority": 4,
+    },
     "magic_missile": {
         "target_type": "one_creature",
         "target_count": 3,

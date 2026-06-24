@@ -1,0 +1,15 @@
+{
+  "name": "Daylight",
+  "description": "A 60-foot-radius sphere of light spreads out from a point you choose within range. The sphere is bright light and sheds dim light for an additional 60 feet.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": false,
+  "ai_priority": 4,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 60,
+  "obscuring_zone": "daylight"
+}

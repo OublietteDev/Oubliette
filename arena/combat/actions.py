@@ -364,6 +364,7 @@ def resolve_attack_hit(
     attacker_pos: HexCoord | None = None,
     target_pos: HexCoord | None = None,
     cast_level: int | None = None,
+    obscured_hexes: set[tuple[int, int]] | None = None,
 ) -> AttackHitResult:
     """Phase 1 of attack resolution: roll to hit, determine hit/miss/crit.
 
@@ -534,8 +535,26 @@ def resolve_attack_hit(
             cast_level=cast_level,
         )
 
-    # Advantage calculation
-    condition_adv = get_attack_advantage(attacker, target, is_melee=is_melee)
+    # Advantage calculation (incl. pairwise vision: fog/darkness obscurement)
+    attacker_sees_target = True
+    target_sees_attacker = True
+    if obscured_hexes:
+        from arena.grid.vision import can_see
+        attacker_sees_target = can_see(
+            attacker_pos, target_pos, obscured_hexes,
+            truesight_ft=attacker.senses.get("truesight", 0),
+            blindsight_ft=attacker.senses.get("blindsight", 0),
+        )
+        target_sees_attacker = can_see(
+            target_pos, attacker_pos, obscured_hexes,
+            truesight_ft=target.senses.get("truesight", 0),
+            blindsight_ft=target.senses.get("blindsight", 0),
+        )
+    condition_adv = get_attack_advantage(
+        attacker, target, is_melee=is_melee,
+        attacker_sees_target=attacker_sees_target,
+        target_sees_attacker=target_sees_attacker,
+    )
     if has_condition(attacker, Condition.HELPED):
         remove_condition(attacker, attacker_id, Condition.HELPED)
 
@@ -973,6 +992,7 @@ def resolve_attack(
     target_pos: HexCoord | None = None,
     cast_level: int | None = None,
     damage_reduction: int = 0,
+    obscured_hexes: set[tuple[int, int]] | None = None,
 ) -> ActionResult:
     """Resolve a basic attack action (convenience wrapper).
 
@@ -984,7 +1004,7 @@ def resolve_attack(
         attacker, attacker_id, target, target_id, action, grid,
         advantage=advantage, combatants=combatants,
         attacker_pos=attacker_pos, target_pos=target_pos,
-        cast_level=cast_level,
+        cast_level=cast_level, obscured_hexes=obscured_hexes,
     )
     # If the hit check itself failed (out of range, no LOS, no resources)
     if not hit_result.hit and not hit_result.events:

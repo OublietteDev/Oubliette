@@ -845,6 +845,7 @@ class CombatManager:
                 combatants=self.combatants,
                 attacker_pos=actor.position,
                 target_pos=target.position,
+                obscured_hexes=self._get_obscured_hexes(),
             )
         elif action.saving_throw or action.healing:
             result = resolve_effect(
@@ -1564,6 +1565,7 @@ class CombatManager:
                         attacker_pos=combatant.position,
                         target_pos=tc.position,
                         cast_level=self._cast_level,
+                        obscured_hexes=self._get_obscured_hexes(),
                     )
                     all_events.extend(single.events)
                     if single.success:
@@ -1590,6 +1592,7 @@ class CombatManager:
                 attacker_pos=combatant.position,
                 target_pos=target_combatant.position,
                 cast_level=self._cast_level,
+                obscured_hexes=self._get_obscured_hexes(),
             )
             if not hit_result.hit and not hit_result.events:
                 result = ActionResult(events=[], success=False)
@@ -1741,6 +1744,7 @@ class CombatManager:
             attacker_pos=combatant.position,
             target_pos=target_combatant.position,
             cast_level=self._cast_level,
+            obscured_hexes=self._get_obscured_hexes(),
         )
 
         # Log the hit-check events immediately (attack roll result)
@@ -2398,6 +2402,18 @@ class CombatManager:
                     blocked.add((h.q, h.r))
         return blocked
 
+    def _get_obscured_hexes(self) -> set[tuple[int, int]]:
+        """(q, r) hexes heavily obscured by fog/darkness zones (P-VISION-LIGHT).
+
+        Passed to the attack resolver so vision-blocked attacks land at the
+        right advantage/disadvantage. Does NOT block targeting: a creature may
+        still attack a target it cannot see, at disadvantage (5e RAW).
+        """
+        if not self.active_zones:
+            return set()
+        from arena.combat.zones import compute_obscured_hexes
+        return compute_obscured_hexes(self.active_zones, self.combatants, self.grid)
+
     def execute_effect(self, target_id: str) -> ActionResult | None:
         """Execute the selected non-attack action (healing, saves, conditions).
 
@@ -2461,6 +2477,10 @@ class CombatManager:
                     "method": "effect",
                 }
                 return None  # GUI will handle popup
+
+        # ── Obscurement / light zones (P-VISION-LIGHT) ────────────────
+        if action.obscuring_zone:
+            return self._execute_obscuring_zone_spell(action, combatant, target_id)
 
         # ── Zone-creating spells: no initial burst ────────────────────
         if self._is_zone_creating_spell(action):
@@ -3042,6 +3062,109 @@ class CombatManager:
 
         return merged
 
+    def _execute_obscuring_zone_spell(
+        self, action: Action, combatant, target_id: str | None = None,
+    ) -> ActionResult:
+        """Handle vision zones (P-VISION-LIGHT): fog cloud, darkness, daylight.
+
+        Creates a persistent sight-affecting zone (and starts concentration when
+        the spell requires it). No save, no damage — the zone's only job is to
+        feed _get_obscured_hexes / grid.vision.can_see.
+        """
+        from arena.combat.actions import check_resource_cost, deduct_resource_cost
+        from arena.combat.concentration import start_concentrating
+        from arena.combat.zones import ActiveZone
+
+        events: list[CombatEvent] = []
+
+        can_use, reason = check_resource_cost(
+            combatant.creature, action, cast_level=self._cast_level,
+        )
+        if not can_use:
+            events.append(CombatEvent(
+                event_type=CombatEventType.INFO, message=reason,
+                source_id=combatant.creature_id,
+            ))
+            self.selected_action = None
+            self._cast_level = None
+            self.turn_phase = TurnPhase.AWAITING_ACTION
+            for e in events:
+                self.log.add(e)
+            return ActionResult(events=events, success=False)
+        deduct_resource_cost(combatant.creature, action, cast_level=self._cast_level)
+
+        # Centre on the clicked target's hex, else on the caster.
+        tc = self.combatants.get(target_id) if target_id else None
+        center = tc.position if (tc and tc.position) else combatant.position
+        if center is None:
+            center = HexCoord(0, 0)
+
+        events.append(CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=f"{combatant.creature.name} casts {action.name}!",
+            source_id=combatant.creature_id,
+            details={
+                "action_name": action.name,
+                "animation": action.animation,
+                "target_type": action.target_type.value,
+                "is_effect_use": True,
+            },
+        ))
+
+        if action.requires_concentration:
+            events.extend(start_concentrating(
+                combatant.creature, combatant.creature_id,
+                action.name, combatants=self.combatants,
+            ))
+
+        kind = action.obscuring_zone  # "fog" | "darkness" | "daylight"
+        zone = ActiveZone(
+            zone_id=f"{action.name.lower().replace(' ', '_')}_{combatant.creature_id}",
+            caster_id=combatant.creature_id,
+            name=action.name,
+            radius_feet=action.area_size or action.range,
+            follows_caster=action.zone_follows_caster,
+            center=None if action.zone_follows_caster else center,
+            damage_dice="0",
+            affects_enemies_only=False,
+            team=combatant.team,
+            concentration_linked=action.requires_concentration,
+            already_damaged=set(),
+            obscures_vision=(kind in ("fog", "darkness")),
+            is_magical=(kind == "darkness"),
+            provides_bright_light=(kind == "daylight"),
+            spell_level=action.spell_level or 0,
+        )
+        # One concentration zone per caster (a new one replaces the prior).
+        if action.requires_concentration:
+            self.active_zones = [
+                z for z in self.active_zones if z.caster_id != combatant.creature_id
+            ]
+        self.active_zones.append(zone)
+
+        events.append(CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=f"{combatant.creature.name}'s {action.name} fills the area!",
+            source_id=combatant.creature_id,
+            details={
+                "zone_created": True,
+                "zone_id": zone.zone_id,
+                "zone_center_hex": (center.q, center.r),
+                "zone_radius_feet": zone.radius_feet,
+                "obscuring_zone": kind,
+            },
+        ))
+
+        merged = ActionResult(events=events, success=True)
+        for event in merged.events:
+            self.log.add(event)
+        self._mark_action_type_used(action)
+        self.selected_action = None
+        self._cast_level = None
+        self.turn_phase = TurnPhase.AWAITING_ACTION
+        self._cleanup_orphaned_zones()
+        return merged
+
     def _resolve_effect_targets(
         self,
         action: Action,
@@ -3458,6 +3581,7 @@ class CombatManager:
             combatants=self.combatants,
             attacker_pos=combatant.position,
             target_pos=target_combatant.position,
+            obscured_hexes=self._get_obscured_hexes(),
         )
 
         for event in result.events:

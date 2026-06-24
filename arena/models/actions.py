@@ -140,6 +140,13 @@ class Action(BaseModel):
     zone_move_cost: str | None = None  # "action" or "bonus_action"
     zone_follows_caster: bool = False  # Zone centers on and moves with caster
 
+    # Vision/obscurement zones (P-VISION-LIGHT): create a sight-affecting
+    # zone rather than a damaging one. "fog" = natural heavy obscurement;
+    # "darkness" = magical (only truesight/blindsight pierce; suppressed by
+    # an overlapping Daylight of >= level); "daylight" = bright light that
+    # dispels lower/equal-level magical darkness it overlaps.
+    obscuring_zone: str | None = None  # "fog" | "darkness" | "daylight"
+
     # Teleportation
     teleport_range: int | None = None  # Max teleport distance in feet (e.g., 30 for Misty Step)
     teleport_self: bool = True  # Caster teleports themselves (vs. teleporting a target)

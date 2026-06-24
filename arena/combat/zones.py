@@ -60,6 +60,12 @@ class ActiveZone:
     concentration_linked: bool = True
     already_damaged: set[str] = field(default_factory=set)
 
+    # P-VISION-LIGHT: obscurement / light zones carry no damage.
+    obscures_vision: bool = False        # fog cloud / darkness block sight
+    is_magical: bool = False             # darkness (magical) vs natural fog
+    provides_bright_light: bool = False  # daylight — dispels magical darkness
+    spell_level: int = 0                 # for daylight-vs-darkness comparison
+
 
 # ------------------------------------------------------------------
 # Geometry helpers
@@ -111,6 +117,43 @@ def get_zone_hexes(
                 hexes.add(coord)
 
     return hexes
+
+
+def compute_obscured_hexes(
+    zones: list[ActiveZone],
+    combatants: dict[str, "Combatant"],
+    grid: "HexGrid | None",
+) -> set[tuple[int, int]]:
+    """Return the (q, r) hexes heavily obscured by fog/darkness (P-VISION-LIGHT).
+
+    Fed to grid.vision.can_see for the pairwise-visibility advantage check.
+    Magical-darkness hexes are dropped where an overlapping bright-light
+    (Daylight) zone of equal-or-higher spell level dispels them; natural fog
+    is physical and is NOT dispelled by light.
+    """
+    if grid is None:
+        return set()
+
+    bright: list[tuple[set[tuple[int, int]], int]] = []
+    for z in zones:
+        if getattr(z, "provides_bright_light", False):
+            bright.append((
+                {(h.q, h.r) for h in get_zone_hexes(z, combatants, grid)},
+                z.spell_level,
+            ))
+
+    obscured: set[tuple[int, int]] = set()
+    for z in zones:
+        if not getattr(z, "obscures_vision", False):
+            continue
+        for h in get_zone_hexes(z, combatants, grid):
+            key = (h.q, h.r)
+            if z.is_magical and any(
+                key in bh and lvl >= z.spell_level for bh, lvl in bright
+            ):
+                continue
+            obscured.add(key)
+    return obscured
 
 
 def is_in_zone(
