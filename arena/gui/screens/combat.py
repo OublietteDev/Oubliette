@@ -17,6 +17,7 @@ from arena.combat.actions import is_in_range, AttackHitResult
 from arena.models.actions import DamageRoll, DamageType
 from arena.gui.rider_popup import RiderPopup, RiderChoice
 from arena.gui.reroll_popup import RerollPopup, RerollChoice
+from arena.gui.bardic_popup import BardicInspirationPopup, BardicChoice
 from arena.gui.reaction_popup import ReactionPopup, ReactionChoice
 from arena.gui.counterspell_popup import CounterspellPopup, CounterspellChoice
 from arena.models.character import OnHitRider, RiderTrigger
@@ -422,6 +423,9 @@ class CombatScreen(Screen):
         # Forced save reroll popup state
         self._reroll_popup: RerollPopup | None = None
 
+        # Bardic Inspiration spend popup state
+        self._bardic_popup: BardicInspirationPopup | None = None
+
         # Counterspell popup state
         self._counterspell_popup: CounterspellPopup | None = None
 
@@ -550,6 +554,13 @@ class CombatScreen(Screen):
             choice = self._reroll_popup.handle_event(event)
             if choice is not None:
                 self._resolve_reroll_choice(choice)
+            return
+
+        # --- Bardic Inspiration popup intercepts ALL input when open ---
+        if self._bardic_popup is not None:
+            choice = self._bardic_popup.handle_event(event)
+            if choice is not None:
+                self._resolve_bardic_choice(choice)
             return
 
         # --- Shove choice popup intercepts ALL input when open ---
@@ -1084,6 +1095,44 @@ class CombatScreen(Screen):
         self._reroll_popup = None
         feature_name = choice.feature_name if choice.used else None
         self.combat.resolve_save_reroll_choice(feature_name)
+
+    # ------------------------------------------------------------------
+    # Bardic Inspiration spend popup (player attacker, missed)
+    # ------------------------------------------------------------------
+
+    def _check_pending_bardic(self) -> None:
+        """Show the popup if the manager has a pending Bardic Inspiration choice."""
+        pending = self.combat._pending_bardic_choice
+        if pending is None:
+            return
+        hit_result = pending["hit_result"]
+        attacker_c = self.combat.combatants.get(hit_result.attacker_id)
+        attacker_name = attacker_c.creature.name if attacker_c else "Attacker"
+        sw = getattr(self, "screen_width", 1280)
+        sh = getattr(self, "screen_height", 720)
+        self._bardic_popup = BardicInspirationPopup(
+            attacker_name=attacker_name,
+            die_size=pending["die_size"],
+            total_roll=hit_result.total_roll,
+            target_ac=hit_result.target_ac,
+            screen_width=sw,
+            screen_height=sh,
+        )
+        if (attacker_c is not None and attacker_c.position is not None
+                and self.grid_view is not None):
+            sx, sy = self.grid_view.hex_to_screen(
+                attacker_c.position.q, attacker_c.position.r)
+            self._bardic_popup.reposition((
+                int(sx + self.grid_view.origin[0]),
+                int(sy + self.grid_view.origin[1] - 40),
+            ))
+        else:
+            self._bardic_popup.reposition((sw // 2, sh // 2))
+
+    def _resolve_bardic_choice(self, choice: BardicChoice) -> None:
+        """Handle a BardicInspirationPopup result."""
+        self._bardic_popup = None
+        self.combat.resolve_bardic_choice(choice.use)
 
     # ------------------------------------------------------------------
     # Damage reduction reaction (Parry, Uncanny Dodge, Deflect Missiles)
@@ -1624,6 +1673,13 @@ class CombatScreen(Screen):
         ):
             self._show_reaction_popup()
 
+        # Check for pending Bardic Inspiration popup (player attacker missed)
+        if (
+            self._bardic_popup is None
+            and self.combat._pending_bardic_choice is not None
+        ):
+            self._check_pending_bardic()
+
         # Drive player hex-by-hex movement
         if self._player_move_path is not None:
             current_time = pygame.time.get_ticks()
@@ -1742,6 +1798,10 @@ class CombatScreen(Screen):
         # Forced save reroll popup
         if self._reroll_popup is not None:
             self._reroll_popup.render(surface)
+
+        # Bardic Inspiration spend popup
+        if self._bardic_popup is not None:
+            self._bardic_popup.render(surface)
 
         # Shove choice popup
         if self._shove_popup is not None:

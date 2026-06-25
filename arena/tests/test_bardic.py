@@ -224,6 +224,74 @@ class TestCuttingWordsOnDamage:
         assert bard.class_resources["bardic_inspiration"] == 2  # die preserved
 
 
+class TestBardicAttackPrompt:
+    """Player-choice prompt: a player attacker who misses but holds a flippable
+    die is offered the spend (NPCs still auto-spend)."""
+
+    def _combat(self, attacker_player=True):
+        if attacker_player:
+            atk = PlayerCharacter(name="Fighter", character_class="Fighter", max_hit_points=30,
+                                  ability_scores=AbilityScores(strength=14), proficiency_bonus=2)
+        else:
+            atk = Creature(name="Fighter", max_hit_points=30,
+                           ability_scores=AbilityScores(strength=14), proficiency_bonus=2,
+                           is_player_controlled=False)
+        atk.actions = [_weapon()]
+        grant_inspiration(atk, "atk", 8, "bard")
+        orc = Creature(name="Orc", max_hit_points=20, armor_class=16,
+                       ability_scores=AbilityScores(), is_player_controlled=False)
+        enc = Encounter(name="t", grid_width=8, grid_height=8, combatants=[
+            CombatantEntry(creature_id="atk", creature_data=atk, team="player", starting_position=(2, 2)),
+            CombatantEntry(creature_id="orc", creature_data=orc, team="enemy", starting_position=(2, 3)),
+        ])
+        cm = CombatManager(); cm.load_encounter(enc, Path("."))
+        with patch("arena.combat.manager.roll_die", side_effect=[20, 1]):
+            cm.roll_initiative()
+        cm.begin_combat()
+        ids = {c.creature.name: cid for cid, c in cm.combatants.items()}
+        cm.selected_action = cm.combatants[ids["Fighter"]].creature.actions[0]
+        return cm, ids
+
+    def _miss(self, cm, ids):
+        # nat 10 + STR 2 + prof 2 = 14 vs AC 16 → miss by 2 (≤ d8)
+        with patch("arena.combat.actions.roll_die", return_value=10):
+            return cm.execute_attack(ids["Orc"])
+
+    def test_player_miss_defers_for_prompt(self):
+        cm, ids = self._combat(attacker_player=True)
+        res = self._miss(cm, ids)
+        assert res is None                                   # deferred, no popup-less resolution
+        assert cm._pending_bardic_choice is not None
+        assert inspiration_die_size(cm.combatants[ids["Fighter"]].creature) == 8  # not yet spent
+
+    def test_resolve_use_flips_to_hit_and_consumes_die(self):
+        cm, ids = self._combat(attacker_player=True)
+        self._miss(cm, ids)
+        fighter = cm.combatants[ids["Fighter"]].creature
+        with patch("arena.combat.manager.roll_die", return_value=5):  # d8=5 → 14+5=19 ≥ 16
+            cm.resolve_bardic_choice(use=True)
+        assert cm._pending_bardic_choice is None
+        assert inspiration_die_size(fighter) is None         # die consumed
+        assert cm.combatants[ids["Orc"]].creature.current_hit_points < 20  # the hit landed
+
+    def test_resolve_skip_keeps_miss_and_die(self):
+        cm, ids = self._combat(attacker_player=True)
+        self._miss(cm, ids)
+        fighter = cm.combatants[ids["Fighter"]].creature
+        cm.resolve_bardic_choice(use=False)
+        assert cm._pending_bardic_choice is None
+        assert inspiration_die_size(fighter) == 8            # die kept for later
+        assert cm.combatants[ids["Orc"]].creature.current_hit_points == 20  # still a miss
+
+    def test_npc_attacker_auto_spends_without_a_prompt(self):
+        cm, ids = self._combat(attacker_player=False)
+        with patch("arena.combat.actions.roll_die", return_value=10):
+            with patch("arena.combat.bardic.roll_die", return_value=5):  # auto d8=5 → hit
+                cm.execute_attack(ids["Orc"])
+        assert cm._pending_bardic_choice is None             # never deferred
+        assert inspiration_die_size(cm.combatants[ids["Fighter"]].creature) is None  # auto-spent
+
+
 class TestBardDiceOnContests:
     def test_roller_adds_own_die_to_win(self):
         roller = Creature(name="Esc", max_hit_points=10, ability_scores=AbilityScores())

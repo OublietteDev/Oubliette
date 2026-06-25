@@ -365,6 +365,7 @@ def resolve_attack_hit(
     target_pos: HexCoord | None = None,
     cast_level: int | None = None,
     obscured_hexes: set[tuple[int, int]] | None = None,
+    suppress_player_bardic: bool = False,
 ) -> AttackHitResult:
     """Phase 1 of attack resolution: roll to hit, determine hit/miss/crit.
 
@@ -688,6 +689,7 @@ def resolve_attack_hit(
         total_roll, hit, _bard_events = apply_bard_dice_to_attack(
             attacker, attacker_id, target, target_id,
             total_roll, target_ac, hit, combatants or {},
+            suppress_player_self=suppress_player_bardic,
         )
         events.extend(_bard_events)
         result = AttackResult.HIT if hit else AttackResult.MISS

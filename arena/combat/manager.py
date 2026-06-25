@@ -213,6 +213,10 @@ class CombatManager:
         # Pending damage reduction reaction (for player-controlled targets)
         self._pending_damage_reduction: dict | None = None
 
+        # Pending Bardic Inspiration choice: a player attacker missed but holds a
+        # banked die that could flip the miss to a hit (GUI offers spend/skip).
+        self._pending_bardic_choice: dict | None = None
+
         # Readied actions: creature_id -> ReadiedAction
         self.readied_actions: dict[str, ReadiedAction] = {}
 
@@ -1600,6 +1604,7 @@ class CombatManager:
                 target_pos=target_combatant.position,
                 cast_level=self._cast_level,
                 obscured_hexes=self._get_obscured_hexes(),
+                suppress_player_bardic=True,
             )
             if not hit_result.hit and not hit_result.events:
                 result = ActionResult(events=[], success=False)
@@ -1612,6 +1617,28 @@ class CombatManager:
                     events=hit_result.events, success=False,
                 )
             else:
+                # Bardic Inspiration: a player attacker who missed may spend a
+                # banked die to flip miss→hit. Defer to the GUI popup (the auto
+                # path was suppressed for player attackers above).
+                if (
+                    not hit_result.hit
+                    and getattr(combatant.creature, "is_player_controlled", False)
+                ):
+                    from arena.combat.bardic import inspiration_die_size
+                    die = inspiration_die_size(combatant.creature)
+                    gap = hit_result.target_ac - hit_result.total_roll
+                    if die and 1 <= gap <= die:
+                        for evt in hit_result.events:
+                            self.log.add(evt)
+                        self._pending_bardic_choice = {
+                            "hit_result": hit_result,
+                            "action": action,
+                            "combatant": combatant,
+                            "target_id": target_id,
+                            "die_size": die,
+                        }
+                        return None  # Deferred — GUI shows the bardic popup
+
                 # Evaluate damage reduction reaction on the target
                 dr_amount = 0
                 if hit_result.hit and hit_result.attack is not None:
@@ -2110,6 +2137,69 @@ class CombatManager:
                 )
             finally:
                 self._reaction_window_closed = False
+
+    def resolve_bardic_choice(self, use: bool) -> None:
+        """Resolve a player's Bardic Inspiration prompt on their own missed
+        attack. Called by the GUI after the BardicInspirationPopup closes; on
+        ``use`` the banked die is rolled and added (may turn the miss into a hit),
+        then the attack is finalized either way."""
+        pending = self._pending_bardic_choice
+        if pending is None:
+            return
+        self._pending_bardic_choice = None
+
+        hit_result = pending["hit_result"]
+        action = pending.get("action")
+        combatant = pending.get("combatant")
+        die = pending["die_size"]
+
+        if use:
+            from arena.combat.bardic import _consume_inspiration_die
+            val = roll_die(die)
+            _consume_inspiration_die(hit_result.attacker)
+            hit_result.total_roll += val
+            if hit_result.total_roll >= hit_result.target_ac:
+                hit_result.hit = True
+                msg = (f"{hit_result.attacker.name} calls on their Bardic "
+                       f"Inspiration (d{die}={val}) — the miss becomes a HIT!")
+            else:
+                msg = (f"{hit_result.attacker.name} spends a Bardic Inspiration "
+                       f"die (d{die}={val}) — but it still misses.")
+            self.log.add(CombatEvent(
+                event_type=CombatEventType.INFO, message=msg,
+                source_id=hit_result.attacker_id, target_id=hit_result.target_id,
+                details={"bardic_inspiration_used": val},
+            ))
+
+        # Finalize the attack (mirrors execute_attack's from_execute_attack tail).
+        # If the die landed a hit on an enemy, give it its AI damage reduction.
+        dr = 0
+        if hit_result.hit:
+            tc = self.combatants.get(hit_result.target_id)
+            if tc is not None and not getattr(tc.creature, "is_player_controlled", False):
+                dr = self._evaluate_ai_damage_reduction(hit_result.target_id, hit_result)
+        result = resolve_attack_damage(hit_result, damage_reduction=dr)
+
+        if (result.success and combatant is not None
+                and combatant.position is not None):
+            fm_events = self._apply_pending_forced_movement(
+                result.events, combatant.creature_id, combatant.position,
+            )
+            result.events.extend(fm_events)
+
+        # Log only NEW events (hit/miss roll events already logged at deferral).
+        for event in result.events[len(hit_result.events):]:
+            self.log.add(event)
+
+        if result.success and action is not None and combatant is not None:
+            self._handle_extra_attack_tracking(action, combatant.creature)
+
+        self.selected_action = None
+        self._cast_level = None
+        self.turn_phase = TurnPhase.AWAITING_ACTION
+        self._cleanup_orphaned_zones()
+        self._cleanup_orphaned_recurring_actions()
+        self._check_victory()
 
     def complete_attack(
         self,

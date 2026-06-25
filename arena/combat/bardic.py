@@ -207,19 +207,24 @@ def apply_bard_dice_to_attack(
     target: Creature, target_id: str,
     total_roll: int, target_ac: int, hit: bool,
     combatants: dict[str, "Combatant"],
+    suppress_player_self: bool = False,
 ) -> tuple[int, bool, list[CombatEvent]]:
     """Apply Bardic Inspiration / Cutting Words to a (non-crit) attack outcome.
 
     Returns (possibly-updated total_roll, hit, events). Only spends a die when it
-    could flip the result.
-    """
+    could flip the result. With ``suppress_player_self`` the attacker's OWN
+    Bardic Inspiration is NOT auto-spent for a player-controlled attacker — the
+    manager surfaces a choose-to-spend popup instead (NPCs always auto-spend, and
+    Cutting Words is unaffected)."""
     events: list[CombatEvent] = []
+    suppress_self = suppress_player_self and attacker.is_player_controlled
 
     if not hit:
         # Bardic Inspiration on the attacker's OWN roll: close a near-miss.
+        # Suppressed for a player attacker when the manager will offer a popup.
         die = inspiration_die_size(attacker)
         gap = target_ac - total_roll
-        if die and 1 <= gap <= die:
+        if die and 1 <= gap <= die and not suppress_self:
             val = roll_die(die)
             _consume_inspiration_die(attacker)
             total_roll += val
