@@ -352,18 +352,26 @@ Inspiration rescues a near-miss save or a lost grapple/shove contest; Cutting Wo
 contested check and blunts a would-be-lethal damage roll) — still auto-optimal; (3) **player-choice
 prompt** — a spend/skip popup on a player attacker's missed attack (own-attack only; NPCs auto-spend;
 `BardicInspirationPopup` + manager `_pending_bardic_choice`, mirroring the reroll-popup pattern) —
-**GUI logic unit-tested but NOT yet live-verified: needs an Arena run (stale-server gotcha applies —
-restart the app server so the bridge ships the new bard fields)**; (4) Compulsion (above). Also
-fixed Cowork-session suite drift that was left red: 4 stale `adv:`/`dis:` label assertions + the
-missing DOMINATED display badge. Per-feature playtest labs: `vision_lab`, `dominate_lab`,
-`terrain_lab`, `bard_lab` (launch via `tools/lab.py <name>`).
+**LIVE-VERIFIED by OublietteDev (2026-06-25)**: grant→spend→empty→re-grant loop all confirmed in `bard_lab`.
+The fix-ups it took to get there: the GUI player path is `execute_attack_hit_check`→`complete_attack`
+(NOT the `execute_attack` convenience method) — the prompt had to suppress auto-spend + defer there
+(commit 84902cc); and the popup-positioning copied a `GridView.hex_to_screen` call that doesn't
+exist — both the bard popup AND the latent forced-save-reroll popup now center on screen (commit
+743ddfc). The prompt only fires when the die *could* reach the AC (miss-by ≤ die); else no prompt.
+(4) Compulsion (above). Also fixed Cowork-session suite drift that was left red: 4 stale `adv:`/`dis:`
+label assertions + the missing DOMINATED display badge. **→ Every C4 item is now live-verified or
+unit-tested; 2587 green.** Per-feature playtest labs: `vision_lab`, `dominate_lab`, `terrain_lab`,
+`bard_lab` (launch via `tools/lab.py <name>`; `bard_lab` has an AC-15 Practice Dummy so every miss
+pops the prompt, plus Lyric for the grant + auto Cutting Words demo).
 
 **Open / future work (roughly in the order it tends to come up):**
 - **Stretch C4 one-offs** (metamagic, time stop, antimagic…) — mostly "do last or never". (The
-  deferred Compulsion and the bard approximations are now DONE — see the C4 wrap-up above.)
-- **Live-verify the bard prompt** — the only un-validated piece of the C4 wrap-up: run the Arena
-  with a real bard, miss an attack, confirm the spend/skip popup renders + clicks; extend to
-  saves / Cutting Words if OublietteDev wants the prompt there too (currently those stay auto-optimal).
+  deferred Compulsion and the bard approximations are now DONE & live-verified — see above. Could
+  still extend the spend/skip prompt to saves / Cutting Words if play wants the choice there; today
+  those stay auto-optimal.)
+- **Arena UI/UX cleanup pass (someday, BIG)** — OublietteDev's call (2026-06-25): the Arena was never
+  optimized for looks on its first pass; it's functional but ugly. A dedicated visual/UX overhaul is
+  wanted eventually — not scheduled yet. See [[oubliette-arena-ui-cleanup]].
 - **C5 stragglers:** prone movement penalty; re-prepare-spells-on-long-rest. **C6:** the final
   "ship-readiness" combat playtest (use the labs as a starting battery).
 - **The Forge creature/NPC editor** — currently the weakest authoring section; enriching it would
