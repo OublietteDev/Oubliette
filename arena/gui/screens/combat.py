@@ -1085,14 +1085,9 @@ class CombatScreen(Screen):
             screen_width=sw,
             screen_height=sh,
         )
-        if tc.position is not None and self.grid_view is not None:
-            sx, sy = self.grid_view.hex_to_screen(tc.position.q, tc.position.r)
-            self._reroll_popup.reposition((
-                int(sx + self.grid_view.origin[0]),
-                int(sy + self.grid_view.origin[1] - 40),
-            ))
-        else:
-            self._reroll_popup.reposition((sw // 2, sh // 2))
+        # Centered (GridView has no hex_to_screen — the old grid-relative call
+        # crashed; the reaction popup centers too).
+        self._reroll_popup.reposition((sw // 2, sh // 2))
 
     def _resolve_reroll_choice(self, choice: RerollChoice) -> None:
         """Handle a RerollPopup result."""
@@ -1122,16 +1117,7 @@ class CombatScreen(Screen):
             screen_width=sw,
             screen_height=sh,
         )
-        if (attacker_c is not None and attacker_c.position is not None
-                and self.grid_view is not None):
-            sx, sy = self.grid_view.hex_to_screen(
-                attacker_c.position.q, attacker_c.position.r)
-            self._bardic_popup.reposition((
-                int(sx + self.grid_view.origin[0]),
-                int(sy + self.grid_view.origin[1] - 40),
-            ))
-        else:
-            self._bardic_popup.reposition((sw // 2, sh // 2))
+        self._bardic_popup.reposition((sw // 2, sh // 2))
 
     def _resolve_bardic_choice(self, choice: BardicChoice) -> None:
         """Handle a BardicInspirationPopup result."""

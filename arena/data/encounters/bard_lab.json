@@ -1,6 +1,6 @@
 {
   "name": "Bard Lab \u2014 Bardic Inspiration & Cutting Words test bed",
-  "description": "Bard Lab \u2014 Bardic Inspiration & Cutting Words, NOW with the C4 player-choice prompt. PRIMARY TEST (the new popup): on Garrick's turn he already holds a banked d8 die; attack the Practice Dummy (AC 18) \u2014 when he misses within d8, a Spend/Save-it popup appears. 'Spend d8' rolls the die and may turn the miss into a HIT (die consumed); 'Save it' keeps the die for later. Garrick is player-controlled, so HE gets the choice. SECONDARY: Lyric (College of Lore) can re-grant dice (Bardic Inspiration bonus action, 4\u00d7d8 onto an ally) and AUTO-applies Cutting Words \u2014 when an orc's attack would hit a party member she can see, she spends a die to subtract it (hit\u2192miss when it can). The two orcs are there to attack the party so Cutting Words fires. NOTE: NPCs auto-spend their dice; only player attackers get the prompt; saves / contested checks / damage stay auto-optimal (no prompt there yet).",
+  "description": "Bard Lab \u2014 Bardic Inspiration & Cutting Words, NOW with the C4 player-choice prompt. PRIMARY TEST (the new popup): on Garrick's turn he already holds a banked d8 die; attack the Practice Dummy (AC 15) \u2014 every miss is within d8 reach, so a Spend/Save-it popup appears on EVERY miss. 'Spend d8' rolls the die and may turn the miss into a HIT (die consumed); 'Save it' keeps the die for later. Garrick is player-controlled, so HE gets the choice. SECONDARY: Lyric (College of Lore) can re-grant dice (Bardic Inspiration bonus action, 4\u00d7d8 onto an ally) and AUTO-applies Cutting Words \u2014 when an orc's attack would hit a party member she can see, she spends a die to subtract it (hit\u2192miss when it can). The two orcs are there to attack the party so Cutting Words fires. NOTE: NPCs auto-spend their dice; only player attackers get the prompt; saves / contested checks / damage stay auto-optimal (no prompt there yet).",
   "grid_width": 18,
   "grid_height": 12,
   "terrain": [],
@@ -535,7 +535,7 @@
     {
       "creature_id": "lab/dummy",
       "creature_data": {
-        "name": "Practice Dummy (AC 18)",
+        "name": "Practice Dummy (AC 15)",
         "size": "medium",
         "creature_type": "humanoid",
         "alignment": null,
@@ -547,7 +547,7 @@
           "wisdom": 10,
           "charisma": 10
         },
-        "armor_class": 18,
+        "armor_class": 15,
         "max_hit_points": 80,
         "current_hit_points": 80,
         "temporary_hit_points": 0,
