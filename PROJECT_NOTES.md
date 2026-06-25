@@ -331,25 +331,39 @@ save flips the target to the caster's `team` + `is_player_controlled` (the radia
 with its own actions — the turn loop keys off `is_player_controlled`); reverts on the caster losing
 concentration or the target succeeding a WIS re-save when it takes damage; creature-type gated.
 Full control is a deliberate simplification of RAW (caster-commands-each-turn) — fun > fiddly.
-Lives in `arena/combat/domination.py`. **Compulsion deferred** (mechanically a forced-move, low
-value vs turn-loop cost). **C4 — condition-zones / P-TERRAIN is COMPLETE**: `ActiveZone` now
+Lives in `arena/combat/domination.py`. **Compulsion is now BUILT** (`arena/combat/compulsion.py`):
+WIS save → a COMPELLED condition that, at the start of the creature's turn, drags it toward the
+caster (forced "pull", spends its full speed) and bars its reactions; concentration-linked,
+reverts via the generic cleanup. Simplified vs RAW to single-target / toward-the-caster /
+no per-turn re-save. **C4 — condition-zones / P-TERRAIN is COMPLETE**: `ActiveZone` now
 applies a condition on a failed start-of-turn/entry save (folded into `_resolve_zone_damage`) —
 Stinking Cloud (CON save or incapacitated, ≈ "lose your action"), Sleet Storm (DEX save or prone +
 heavily obscured + difficult terrain), Plant Growth (instant difficult terrain, no save/zone). Zone
 effects stay enemies-only (RAW hits all — a noted simplification). **C4 — Bardic Inspiration &
 Cutting Words is COMPLETE** (`arena/combat/bardic.py`): a banked inspiration die flips an attack —
 the inspired creature adds it (own miss → hit), a defending bard subtracts it via Cutting Words
-(enemy hit → miss). **Approximations to revisit before ship:** applies to ATTACK ROLLS only
-(saves / ability checks / damage rolls TBD); dice are spent AUTO-OPTIMALLY (only when they can flip
-the outcome) rather than via a player-choice prompt (a follow-up that rides the reroll-popup
-pattern); bard pools are CHA-scaled in `class_resources` (`bardic_inspiration` uses +
-`bardic_inspiration_die`) — staging them from real bard sheets is the classes.json feature-bridge
-data gap. **→ C4 is fully complete.** Per-feature playtest labs: `vision_lab`, `dominate_lab`,
+(enemy hit → miss). **→ C4 is COMPLETE and its whole punch-list is now CLOSED** (the 2026-06-25
+"wrap-up" session — commits 32db19f / 3a94ef7 / 2a6b149 / 6069630, 2586 green): (1) **real bard
+sheets feed the pools** — `arena_bridge._bardic_resources` injects inspiration USES (CHA mod, min 1)
++ DIE size (d6→d8→d10→d12 at L1/5/10/15) and the feature-bridge emits a `cutting_words` Feature for
+College of Lore bards, so it lights up from a genuine story→Arena handoff (not just hand-set
+resources); (2) **dice now cover saves / contested checks / damage**, not just attacks (Bardic
+Inspiration rescues a near-miss save or a lost grapple/shove contest; Cutting Words docks a
+contested check and blunts a would-be-lethal damage roll) — still auto-optimal; (3) **player-choice
+prompt** — a spend/skip popup on a player attacker's missed attack (own-attack only; NPCs auto-spend;
+`BardicInspirationPopup` + manager `_pending_bardic_choice`, mirroring the reroll-popup pattern) —
+**GUI logic unit-tested but NOT yet live-verified: needs an Arena run (stale-server gotcha applies —
+restart the app server so the bridge ships the new bard fields)**; (4) Compulsion (above). Also
+fixed Cowork-session suite drift that was left red: 4 stale `adv:`/`dis:` label assertions + the
+missing DOMINATED display badge. Per-feature playtest labs: `vision_lab`, `dominate_lab`,
 `terrain_lab`, `bard_lab` (launch via `tools/lab.py <name>`).
 
 **Open / future work (roughly in the order it tends to come up):**
-- **Stretch C4 one-offs** (metamagic, time stop, antimagic…) — mostly "do last or never"; and the
-  deferred Compulsion + the bard approximations above, if play shows they're worth tightening.
+- **Stretch C4 one-offs** (metamagic, time stop, antimagic…) — mostly "do last or never". (The
+  deferred Compulsion and the bard approximations are now DONE — see the C4 wrap-up above.)
+- **Live-verify the bard prompt** — the only un-validated piece of the C4 wrap-up: run the Arena
+  with a real bard, miss an attack, confirm the spend/skip popup renders + clicks; extend to
+  saves / Cutting Words if OublietteDev wants the prompt there too (currently those stay auto-optimal).
 - **C5 stragglers:** prone movement penalty; re-prepare-spells-on-long-rest. **C6:** the final
   "ship-readiness" combat playtest (use the labs as a starting battery).
 - **The Forge creature/NPC editor** — currently the weakest authoring section; enriching it would
