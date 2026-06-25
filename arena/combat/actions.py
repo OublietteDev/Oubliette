@@ -901,6 +901,15 @@ def resolve_attack_damage(
             for p in packets:
                 p.tags.add("magical")
 
+        # Cutting Words on the damage roll: an ally Lore bard blunts a would-be
+        # downing blow (auto-optimal, lethal-only — see bardic.py).
+        if getattr(hit_result, "combatants", None):
+            from arena.combat.bardic import apply_cutting_words_to_damage
+            events.extend(apply_cutting_words_to_damage(
+                hit_result.target, hit_result.target_id, packets,
+                hit_result.combatants,
+            ))
+
         # Apply damage reduction from reactions (Parry, Uncanny Dodge, etc.)
         # damage_reduction == -1 is the "halve" sentinel (Uncanny Dodge).
         if damage_reduction == -1:
@@ -1131,6 +1140,12 @@ def resolve_saving_throw(
     total = natural_roll + modifier
     success = total >= dc
 
+    # Bardic Inspiration: the saver may spend a banked die to rescue a near-miss
+    # save (Cutting Words never applies to saving throws, RAW).
+    from arena.combat.bardic import apply_bardic_inspiration_to_roll
+    total, success, _bardic_detail = apply_bardic_inspiration_to_roll(creature, total, dc)
+    bardic_detail = _bardic_detail or ""
+
     result_text = "SUCCESS" if success else "FAILURE"
 
     event = CombatEvent(
@@ -1138,7 +1153,7 @@ def resolve_saving_throw(
         message=(
             f"{creature.name} makes a {ability.upper()} saving throw: "
             f"{total} ({natural_roll}+{modifier}) vs DC {dc} "
-            f"- {result_text}{roll_detail}{buff_roll_detail}"
+            f"- {result_text}{roll_detail}{buff_roll_detail}{bardic_detail}"
         ),
         source_id=creature_id,
         details={

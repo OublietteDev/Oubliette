@@ -1,18 +1,24 @@
 """Tests for Bardic Inspiration & Cutting Words (the reaction-modify-roll mechanic).
 
-A banked Bardic Inspiration die nudges an attack roll: the inspired creature adds
-it to flip its own miss into a hit; a defending bard subtracts it (Cutting Words)
-to flip an enemy's hit into a miss. Auto-optimal use (spent only when it can flip
-the outcome). Applied here to attack rolls; saves/checks/damage + a player-choice
-prompt are noted follow-ups.
+A banked Bardic Inspiration die nudges a d20 roll: the inspired creature adds it
+to flip its own miss into a hit / a failed save into a success / a lost contest
+into a win; a Lore bard subtracts it (Cutting Words) to flip an enemy's hit into a
+miss, blunt a would-be downing blow, or spoil a winning contest. Auto-optimal use
+(spent only when it can flip the outcome; on damage, only when the blow is lethal).
+Covers attack rolls, saving throws, contested checks, and damage. A player-choice
+prompt for the cleanest pause points (attack + save) is the remaining follow-up.
 """
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
-from arena.combat.actions import resolve_attack_hit
+from arena.combat.actions import resolve_attack_hit, resolve_saving_throw
 from arena.combat.bardic import (
     grant_inspiration, inspiration_die_size, find_cutting_words_bard,
+    apply_bardic_inspiration_to_roll, apply_bard_dice_to_contest,
+    apply_cutting_words_to_damage,
 )
+from arena.combat.damage import DamagePacket
 from arena.combat.manager import CombatManager
 from arena.grid.coordinates import HexCoord
 from arena.grid.hexgrid import HexGrid
@@ -146,3 +152,95 @@ class TestCuttingWords:
         cm, ids = self._combat(pool=0)
         bard, bid = find_cutting_words_bard(ids["Ally"], cm.combatants)
         assert bard is None
+
+
+def _cb(creature, team):
+    """A minimal Combatant stand-in for the pure bard helpers (they read only
+    .creature and .team; the dict key is the id)."""
+    return SimpleNamespace(creature=creature, team=team, creature_id=creature.name)
+
+
+def _lore_bard(pool=2, die=8):
+    bard = PlayerCharacter(name="Lorebard", character_class="Bard", max_hit_points=18,
+                           ability_scores=AbilityScores(charisma=16), proficiency_bonus=3,
+                           features=[Feature(name="Cutting Words", description="x", cutting_words=True)])
+    bard.class_resources = {"bardic_inspiration": pool, "bardic_inspiration_die": die}
+    return bard
+
+
+class TestBardicInspirationOnSaves:
+    def test_rescues_a_failed_save(self):
+        c = Creature(name="C", max_hit_points=10, ability_scores=AbilityScores())
+        grant_inspiration(c, "c", 8, "bard")
+        with patch("arena.combat.bardic.roll_die", return_value=5):
+            total, ok, det = apply_bardic_inspiration_to_roll(c, total=10, target=13)
+        assert ok is True and total == 15 and "SUCCESS" in det
+        assert inspiration_die_size(c) is None              # die consumed
+
+    def test_not_spent_when_save_already_passed(self):
+        c = Creature(name="C", max_hit_points=10, ability_scores=AbilityScores())
+        grant_inspiration(c, "c", 8, "bard")
+        total, ok, det = apply_bardic_inspiration_to_roll(c, total=15, target=13)
+        assert ok is True and det is None and inspiration_die_size(c) == 8
+
+    def test_not_spent_when_gap_exceeds_die(self):
+        c = Creature(name="C", max_hit_points=10, ability_scores=AbilityScores())
+        grant_inspiration(c, "c", 8, "bard")
+        total, ok, det = apply_bardic_inspiration_to_roll(c, total=2, target=13)  # gap 11 > d8
+        assert ok is False and det is None and inspiration_die_size(c) == 8
+
+    def test_resolve_saving_throw_threads_the_die(self):
+        c = Creature(name="C", max_hit_points=10, ability_scores=AbilityScores())  # +0 WIS
+        grant_inspiration(c, "c", 8, "bard")
+        with patch("arena.combat.actions.roll_die", return_value=10):  # 10 vs DC 13 → fail by 3
+            with patch("arena.combat.bardic.roll_die", return_value=5):  # +5 → 15 → pass
+                ok, ev = resolve_saving_throw(c, "c", "wisdom", 13)
+        assert ok is True
+        assert ev.details["success"] is True
+        assert inspiration_die_size(c) is None
+
+
+class TestCuttingWordsOnDamage:
+    def test_blunts_a_lethal_blow(self):
+        ally = Creature(name="Ally", max_hit_points=20, ability_scores=AbilityScores())
+        ally.current_hit_points = 8
+        bard = _lore_bard()
+        combatants = {"ally": _cb(ally, "player"), "bard": _cb(bard, "player")}
+        packets = [DamagePacket(amount=10, dtype="slashing")]
+        with patch("arena.combat.bardic.roll_die", return_value=6):
+            evs = apply_cutting_words_to_damage(ally, "ally", packets, combatants)
+        assert packets[0].amount == 4                       # 10 - 6
+        assert bard.class_resources["bardic_inspiration"] == 1
+        assert evs
+
+    def test_skips_non_lethal_damage(self):
+        ally = Creature(name="Ally", max_hit_points=20, ability_scores=AbilityScores())
+        ally.current_hit_points = 20
+        bard = _lore_bard()
+        combatants = {"ally": _cb(ally, "player"), "bard": _cb(bard, "player")}
+        packets = [DamagePacket(amount=5, dtype="slashing")]
+        evs = apply_cutting_words_to_damage(ally, "ally", packets, combatants)
+        assert packets[0].amount == 5 and evs == []
+        assert bard.class_resources["bardic_inspiration"] == 2  # die preserved
+
+
+class TestBardDiceOnContests:
+    def test_roller_adds_own_die_to_win(self):
+        roller = Creature(name="Esc", max_hit_points=10, ability_scores=AbilityScores())
+        grant_inspiration(roller, "esc", 8, "bard")
+        with patch("arena.combat.bardic.roll_die", return_value=4):  # 12 +4 = 16 ≥ 14
+            total, win, evs = apply_bard_dice_to_contest(roller, "esc", "grap", 12, 14, {})
+        assert win is True and total == 16 and evs
+        assert inspiration_die_size(roller) is None
+
+    def test_enemy_cutting_words_flips_a_winning_roll(self):
+        roller = Creature(name="Esc", max_hit_points=10, ability_scores=AbilityScores())
+        grappler = Creature(name="Grap", max_hit_points=20, ability_scores=AbilityScores())
+        bard = _lore_bard()
+        combatants = {"esc": _cb(roller, "player"), "grap": _cb(grappler, "enemy"),
+                      "bard": _cb(bard, "enemy")}
+        # roller 15 vs 14 → winning by 1; CW d8=6 → 9 < 14 → loses
+        with patch("arena.combat.bardic.roll_die", return_value=6):
+            total, win, evs = apply_bard_dice_to_contest(roller, "esc", "grap", 15, 14, combatants)
+        assert win is False and evs
+        assert bard.class_resources["bardic_inspiration"] == 1

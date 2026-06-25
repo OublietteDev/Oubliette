@@ -409,6 +409,7 @@ def resolve_shove_contest(
     attacker_id: str,
     target: Creature,
     target_id: str,
+    combatants: dict | None = None,
 ) -> tuple[bool, list[CombatEvent]]:
     """Resolve a contested Athletics check for the Shove action.
 
@@ -416,6 +417,10 @@ def resolve_shove_contest(
     - Attacker rolls d20 + Athletics modifier
     - Defender rolls d20 + higher of Athletics or Acrobatics
     - Attacker wins on tie
+
+    With ``combatants``, bard dice may swing the contest from the shover's side
+    (their own Bardic Inspiration, or the target-side Cutting Words against a
+    winning shove).
 
     Returns:
         (success, events) where success means the shove worked.
@@ -443,6 +448,12 @@ def resolve_shove_contest(
     # Attacker wins ties
     success = atk_total >= def_total
 
+    bard_events: list[CombatEvent] = []
+    if combatants is not None:
+        from arena.combat.bardic import apply_bard_dice_to_contest
+        atk_total, success, bard_events = apply_bard_dice_to_contest(
+            attacker, attacker_id, target_id, atk_total, def_total, combatants)
+
     result_text = "SUCCESS" if success else "FAILURE"
     events.append(CombatEvent(
         event_type=CombatEventType.SAVING_THROW,
@@ -466,5 +477,6 @@ def resolve_shove_contest(
             "success": success,
         },
     ))
+    events.extend(bard_events)
 
     return success, events

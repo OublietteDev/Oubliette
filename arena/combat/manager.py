@@ -4005,7 +4005,7 @@ class CombatManager:
         # Contested check
         success, contest_events = resolve_shove_contest(
             combatant.creature, combatant.creature_id,
-            target_c.creature, target_id,
+            target_c.creature, target_id, self.combatants,
         )
         events.extend(contest_events)
 
@@ -4064,6 +4064,9 @@ class CombatManager:
         GRAPPLED; either way the action is spent.
         """
         from arena.combat.actions import ActionResult
+        from arena.combat.bardic import (
+            apply_bard_dice_to_contest, apply_bardic_inspiration_to_roll,
+        )
         from arena.combat.forced_movement import _get_skill_modifier
 
         combatant = self.active_combatant
@@ -4092,8 +4095,13 @@ class CombatManager:
         # simultaneous grapplers are rare; RAW would be one check each).
         grapple = grapples[0]
         escape_dc = grapple.extra_data.get("escape_dc")
+        bard_events: list[CombatEvent] = []
+        bard_detail = ""
         if escape_dc is not None:
-            success = total >= int(escape_dc)
+            # Bardic Inspiration can rescue a near-miss vs a fixed escape DC.
+            total, success, det = apply_bardic_inspiration_to_roll(
+                creature, total, int(escape_dc))
+            bard_detail = det or ""
             vs_text = f"vs escape DC {escape_dc}"
         else:
             grappler = next(
@@ -4109,8 +4117,12 @@ class CombatManager:
                 g_roll = roll_die(20)
                 g_total = g_roll + g_mod
                 # The escaper initiates the contest — ties go to them
-                # (the Shove convention, from the other side).
-                success = total >= g_total
+                # (the Shove convention, from the other side). Bard dice may
+                # swing it: the escaper's own die, or the grappler-side Cutting
+                # Words against a winning escape.
+                total, success, bard_events = apply_bard_dice_to_contest(
+                    creature, combatant.creature_id, grappler.creature_id,
+                    total, g_total, self.combatants)
                 vs_text = (f"vs {grapple.source}'s Athletics "
                            f"{g_total} ({g_roll}+{g_mod})")
 
@@ -4119,12 +4131,13 @@ class CombatManager:
             message=(
                 f"{creature.name} tries to escape the grapple: "
                 f"{skill} {total} ({roll}+{mod}) {vs_text} - "
-                f"{'SUCCESS' if success else 'FAILURE'}"
+                f"{'SUCCESS' if success else 'FAILURE'}{bard_detail}"
             ),
             source_id=combatant.creature_id,
             details={"escape_grapple": True, "roll": total,
                      "success": success},
         )]
+        events.extend(bard_events)
         if success:
             rm = remove_condition(
                 creature, combatant.creature_id, Condition.GRAPPLED,

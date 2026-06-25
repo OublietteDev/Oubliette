@@ -84,6 +84,124 @@ def find_cutting_words_bard(target_id: str, combatants: dict[str, "Combatant"]):
     return None, None
 
 
+def apply_bardic_inspiration_to_roll(
+    creature: Creature, total: int, target: int,
+) -> tuple[int, bool, str | None]:
+    """Spend a creature's banked Bardic Inspiration die to rescue a near-miss d20
+    outcome against a fixed target — a SAVING THROW or a check vs a DC. Add-only:
+    Cutting Words never applies to saving throws (RAW). Returns
+    (total, success, detail); ``detail`` (or ``None``) is appended to the roll's
+    log line, the way buff/aura modifiers already are."""
+    if total >= target:
+        return total, True, None
+    die = inspiration_die_size(creature)
+    gap = target - total
+    if not die or not (1 <= gap <= die):
+        return total, False, None
+    val = roll_die(die)
+    _consume_inspiration_die(creature)
+    total += val
+    if total >= target:
+        return total, True, f" [Bardic Inspiration: d{die}={val} → SUCCESS]"
+    return total, False, f" [Bardic Inspiration: d{die}={val}, still short]"
+
+
+def apply_bard_dice_to_contest(
+    roller: Creature, roller_id: str, opponent_id: str,
+    roller_total: int, opponent_total: int,
+    combatants: dict[str, "Combatant"], *, roller_wins_ties: bool = True,
+) -> tuple[int, bool, list[CombatEvent]]:
+    """Bard dice on a contested ability check (grapple escape, shove), from the
+    active roller's side:
+
+      * roller is LOSING  → spend the roller's own Bardic Inspiration die to win;
+      * roller is WINNING → an opponent-allied Lore bard spends Cutting Words to
+        drag the roll back under the threshold.
+
+    Returns (roller_total, roller_wins, events). The *opponent's* own potential
+    inspiration die is a deliberate omission — it keeps a contest to a single
+    bard-die swing rather than a four-way bidding war."""
+    events: list[CombatEvent] = []
+    need = opponent_total if roller_wins_ties else opponent_total + 1
+    roller_wins = roller_total >= need
+
+    if not roller_wins:
+        die = inspiration_die_size(roller)
+        gap = need - roller_total
+        if die and 1 <= gap <= die:
+            val = roll_die(die)
+            _consume_inspiration_die(roller)
+            roller_total += val
+            roller_wins = roller_total >= need
+            verb = "and wins the contest!" if roller_wins else "but still loses the contest."
+            events.append(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=(f"{roller.name} calls on their Bardic Inspiration "
+                         f"(d{die}={val}) — {verb}"),
+                source_id=roller_id, target_id=opponent_id,
+                details={"bardic_inspiration_used": val},
+            ))
+    else:
+        bard, bard_id = find_cutting_words_bard(opponent_id, combatants)
+        if bard is not None:
+            die = int(getattr(bard, "class_resources", {}).get("bardic_inspiration_die", 6))
+            margin = roller_total - need
+            if 0 <= margin < die:
+                val = roll_die(die)
+                bard.class_resources["bardic_inspiration"] = (
+                    bard.class_resources.get("bardic_inspiration", 0) - 1)
+                roller_total -= val
+                roller_wins = roller_total >= need
+                verb = (f"{roller.name} prevails anyway." if roller_wins
+                        else f"{roller.name} loses the contest!")
+                events.append(CombatEvent(
+                    event_type=CombatEventType.INFO,
+                    message=(f"{bard.name} uses Cutting Words (d{die}={val}) — {verb}"),
+                    source_id=bard_id, target_id=roller_id,
+                    details={"cutting_words_used": val},
+                ))
+    return roller_total, roller_wins, events
+
+
+def apply_cutting_words_to_damage(
+    target: Creature, target_id: str, packets: list,
+    combatants: dict[str, "Combatant"],
+) -> list[CombatEvent]:
+    """Cutting Words on a DAMAGE roll: an ally Lore bard spends a die to blunt a
+    hit on ``target``. Applied auto-optimally and CONSERVATIVELY — only when the
+    incoming total would drop the target — so the bard's limited dice aren't burnt
+    on chip damage. Mutates ``packets`` in place; returns log events. (Bardic
+    Inspiration never adds to damage, RAW.)"""
+    total = sum(max(0, p.amount) for p in packets)
+    if total <= 0 or total < getattr(target, "current_hit_points", 0):
+        return []
+    bard, bard_id = find_cutting_words_bard(target_id, combatants)
+    if bard is None:
+        return []
+    die = int(getattr(bard, "class_resources", {}).get("bardic_inspiration_die", 6))
+    val = roll_die(die)
+    bard.class_resources["bardic_inspiration"] = (
+        bard.class_resources.get("bardic_inspiration", 0) - 1)
+    # Drain the reduction from the largest reducible packets first.
+    remaining = val
+    for p in sorted(packets, key=lambda x: x.amount, reverse=True):
+        if remaining <= 0:
+            break
+        if not getattr(p, "can_reduce", True):
+            continue
+        take = min(p.amount, remaining)
+        p.amount -= take
+        remaining -= take
+    blunted = val - max(0, remaining)
+    return [CombatEvent(
+        event_type=CombatEventType.INFO,
+        message=(f"{bard.name} uses Cutting Words (d{die}={val}) — blunting the "
+                 f"blow against {target.name} by {blunted}."),
+        source_id=bard_id, target_id=target_id,
+        details={"cutting_words_used": val},
+    )]
+
+
 def apply_bard_dice_to_attack(
     attacker: Creature, attacker_id: str,
     target: Creature, target_id: str,
