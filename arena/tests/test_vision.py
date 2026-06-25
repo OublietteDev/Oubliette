@@ -286,3 +286,20 @@ class TestFogCloudCastEndToEnd:
         cm.execute_effect("brute")
         zones = [z for z in cm.active_zones if z.obscures_vision]
         assert len(zones) == 1 and zones[0].is_magical is True
+
+    def test_fog_cloud_via_hex_cast_sets_zone_and_concentration(self):
+        # The GUI routes AoE casts through execute_effect_at_hex, NOT
+        # execute_effect — this guards that path (the bug OublietteDev hit: no zone,
+        # no concentration when casting fog on a hex/area).
+        from arena.combat.conditions import has_condition
+        from arena.models.conditions import Condition
+        fog = _load_spell("fog_cloud").model_copy(update={"resource_cost": {}})
+        cm = self._combat_with(fog)
+        caster = cm.combatants["caster"].creature
+        cm.selected_action = fog
+        res = cm.execute_effect_at_hex(HexCoord(4, 6), clicked_target_id=None)
+        assert res.success
+        zones = [z for z in cm.active_zones if z.obscures_vision]
+        assert len(zones) == 1
+        assert zones[0].center == HexCoord(4, 6)   # centered on the chosen hex
+        assert has_condition(caster, Condition.CONCENTRATING)

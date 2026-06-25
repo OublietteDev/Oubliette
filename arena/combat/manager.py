@@ -3064,6 +3064,7 @@ class CombatManager:
 
     def _execute_obscuring_zone_spell(
         self, action: Action, combatant, target_id: str | None = None,
+        center: HexCoord | None = None,
     ) -> ActionResult:
         """Handle vision zones (P-VISION-LIGHT): fog cloud, darkness, daylight.
 
@@ -3093,9 +3094,11 @@ class CombatManager:
             return ActionResult(events=events, success=False)
         deduct_resource_cost(combatant.creature, action, cast_level=self._cast_level)
 
-        # Centre on the clicked target's hex, else on the caster.
-        tc = self.combatants.get(target_id) if target_id else None
-        center = tc.position if (tc and tc.position) else combatant.position
+        # Centre on the explicit hex (AoE cast), else the clicked target's
+        # hex, else the caster.
+        if center is None:
+            tc = self.combatants.get(target_id) if target_id else None
+            center = tc.position if (tc and tc.position) else combatant.position
         if center is None:
             center = HexCoord(0, 0)
 
@@ -3366,6 +3369,12 @@ class CombatManager:
                     "method": "effect_at_hex",
                 }
                 return None  # GUI will handle popup
+
+        # ── Obscurement / light zones (P-VISION-LIGHT) at the chosen hex ─
+        if action.obscuring_zone:
+            return self._execute_obscuring_zone_spell(
+                action, combatant, clicked_target_id, center=target_hex,
+            )
 
         # ── Zone-creating spells: create fixed-center zone ──────────
         if self._is_zone_creating_spell(action):
