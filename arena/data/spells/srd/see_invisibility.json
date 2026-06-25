@@ -1,0 +1,21 @@
+{
+  "name": "See Invisibility",
+  "description": "For the duration of the spell, you see invisible creatures and objects as if they were visible, and you can see through Ethereal. The ethereal objects and creatures appear ghostly translucent.",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": false,
+  "ai_priority": 4,
+  "spell_level": 2,
+  "resource_cost": {
+    "spell_slot_2": 1
+  },
+  "target_type": "self",
+  "buff_effects": [
+    {
+      "stat": "see_invisible",
+      "modifier_type": "set",
+      "value": 1
+    }
+  ],
+  "buff_duration_rounds": 600
+}

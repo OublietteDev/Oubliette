@@ -58,6 +58,27 @@ def get_buff_stat_set_values(creature: Creature, stat: str) -> list[int | str]:
     return values
 
 
+def get_buff_truesight_ft(creature: Creature) -> int:
+    """Truesight range (ft) granted by an active buff (True Seeing). 0 if none."""
+    vals = [v for v in get_buff_stat_set_values(creature, "truesight")
+            if isinstance(v, int)]
+    return max(vals) if vals else 0
+
+
+def can_see_invisible(creature: Creature) -> bool:
+    """Can this creature see invisible creatures?
+
+    True if it has a see-invisible buff (See Invisibility), or any truesight —
+    from its own senses or a True Seeing buff. (Truesight inherently sees the
+    invisible.)
+    """
+    if get_buff_stat_set_values(creature, "see_invisible"):
+        return True
+    if creature.senses.get("truesight", 0) or get_buff_truesight_ft(creature):
+        return True
+    return False
+
+
 def get_buff_speed_bonus(creature: Creature) -> int:
     """Sum all flat speed bonuses from active buffs (e.g., Longstrider +10)."""
     total = 0

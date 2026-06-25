@@ -335,3 +335,78 @@ class TestRollTypeLabel:
                                      combatants={}, attacker_pos=HexCoord(5, 5),
                                      target_pos=HexCoord(5, 6), obscured_hexes={(5, 6)})
         assert "[disadvantage:" in self._line(res)
+
+
+# ── Detection trio: See Invisibility / True Seeing / Mislead ─────────
+
+from arena.combat.buff_effects import can_see_invisible, get_buff_truesight_ft
+from arena.combat.conditions import has_condition, apply_condition
+from arena.models.conditions import Condition, ActiveBuff, BuffEffect
+
+
+def _self_cast(spell_id):
+    """Build a 1v1 combat, cast a self-target spell, return the caster creature."""
+    from arena.combat.manager import CombatManager
+    from arena.models.encounter import Encounter, CombatantEntry
+    from unittest.mock import patch
+    from pathlib import Path as _P
+    fog_caster = _creature("Caster")
+    fog_caster.is_player_controlled = True
+    fog_caster.actions = [_load_spell(spell_id).model_copy(update={"resource_cost": {}})]
+    enemy = _creature("Baboon"); enemy.is_player_controlled = False
+    enc = Encounter(name="t", grid_width=10, grid_height=10, combatants=[
+        CombatantEntry(creature_id="caster", creature_data=fog_caster, team="player", starting_position=(4, 4)),
+        CombatantEntry(creature_id="baboon", creature_data=enemy, team="enemy", starting_position=(4, 6)),
+    ])
+    cm = CombatManager(); cm.load_encounter(enc, _P("."))
+    with patch("arena.combat.manager.roll_die", side_effect=[20, 1]):
+        cm.roll_initiative()
+    cm.begin_combat()
+    cm.selected_action = cm.combatants["caster"].creature.actions[0]
+    cm.execute_effect("caster")
+    return cm.combatants["caster"].creature
+
+
+class TestSeeInvisibleGating:
+    def test_see_invisible_negates_target_invisible_disadvantage(self):
+        a, t = _creature("A"), _creature("T", conditions=[Condition.INVISIBLE])
+        assert get_attack_advantage(a, t) == -1
+        assert get_attack_advantage(a, t, attacker_can_see_invisible=True) == 0
+
+    def test_see_invisible_negates_attacker_invisible_advantage(self):
+        a = _creature("A", conditions=[Condition.INVISIBLE])
+        t = _creature("T")
+        assert get_attack_advantage(a, t) == 1
+        assert get_attack_advantage(a, t, target_can_see_invisible=True) == 0
+
+
+class TestDetectionSpells:
+    def test_see_invisibility_grants_flag(self):
+        caster = _self_cast("see_invisibility")
+        assert can_see_invisible(caster) is True
+
+    def test_true_seeing_grants_truesight_and_see_invisible(self):
+        caster = _self_cast("true_seeing")
+        assert can_see_invisible(caster) is True
+        assert get_buff_truesight_ft(caster) == 120
+
+    def test_mislead_invisible_decoy_concentration(self):
+        caster = _self_cast("mislead")
+        assert has_condition(caster, Condition.INVISIBLE)
+        assert has_condition(caster, Condition.CONCENTRATING)
+        decoy = [b for b in caster.active_buffs
+                 if any(m.stat == "decoy_images" for m in b.modifiers)]
+        assert decoy and decoy[0].charges == 1
+
+    def test_attacking_invisible_target_with_see_invisibility_is_normal(self):
+        # Full path: attacker carries a see-invisible buff; target is invisible.
+        a = _creature("A")
+        a.active_buffs.append(ActiveBuff(
+            name="See Invisibility", source_id="a",
+            modifiers=[BuffEffect(stat="see_invisible", modifier_type="set", value=1)],
+        ))
+        t = _creature("T", conditions=[Condition.INVISIBLE])
+        grid = _attacker_target_grid()
+        res = resolve_attack_hit(a, "atk", t, "tgt", _melee(), grid, combatants={},
+                                 attacker_pos=HexCoord(5, 5), target_pos=HexCoord(5, 6))
+        assert res.effective_advantage == 0  # disadvantage negated by seeing invisible

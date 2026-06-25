@@ -23,6 +23,8 @@ def get_attack_advantage(
     is_melee: bool = True,
     attacker_sees_target: bool = True,
     target_sees_attacker: bool = True,
+    attacker_can_see_invisible: bool = False,
+    target_can_see_invisible: bool = False,
 ) -> int:
     """Calculate net advantage/disadvantage for an attack roll.
 
@@ -77,8 +79,8 @@ def get_attack_advantage(
     if _has(attacker, Condition.HELPED):
         has_adv = True
 
-    # Attacker is invisible: has advantage
-    if _has(attacker, Condition.INVISIBLE):
+    # Attacker is invisible: has advantage (unless the target sees invisible)
+    if _has(attacker, Condition.INVISIBLE) and not target_can_see_invisible:
         has_adv = True
 
     # Target cannot see the attacker (concealment/obscurement): unseen
@@ -117,8 +119,8 @@ def get_attack_advantage(
     if _has(target, Condition.DODGING):
         has_dis = True
 
-    # Target is invisible: attacker has disadvantage
-    if _has(target, Condition.INVISIBLE):
+    # Target is invisible: attacker has disadvantage (unless attacker sees invisible)
+    if _has(target, Condition.INVISIBLE) and not attacker_can_see_invisible:
         has_dis = True
 
     # Target is prone but ranged: disadvantage

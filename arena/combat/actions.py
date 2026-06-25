@@ -535,25 +535,31 @@ def resolve_attack_hit(
             cast_level=cast_level,
         )
 
-    # Advantage calculation (incl. pairwise vision: fog/darkness obscurement)
+    # Advantage calculation: pairwise vision (fog/darkness obscurement) plus
+    # see-invisible / truesight negating the invisibility adv/dis.
+    from arena.combat.buff_effects import can_see_invisible, get_buff_truesight_ft
     attacker_sees_target = True
     target_sees_attacker = True
     if obscured_hexes:
         from arena.grid.vision import can_see
+        atk_truesight = max(attacker.senses.get("truesight", 0), get_buff_truesight_ft(attacker))
+        tgt_truesight = max(target.senses.get("truesight", 0), get_buff_truesight_ft(target))
         attacker_sees_target = can_see(
             attacker_pos, target_pos, obscured_hexes,
-            truesight_ft=attacker.senses.get("truesight", 0),
+            truesight_ft=atk_truesight,
             blindsight_ft=attacker.senses.get("blindsight", 0),
         )
         target_sees_attacker = can_see(
             target_pos, attacker_pos, obscured_hexes,
-            truesight_ft=target.senses.get("truesight", 0),
+            truesight_ft=tgt_truesight,
             blindsight_ft=target.senses.get("blindsight", 0),
         )
     condition_adv = get_attack_advantage(
         attacker, target, is_melee=is_melee,
         attacker_sees_target=attacker_sees_target,
         target_sees_attacker=target_sees_attacker,
+        attacker_can_see_invisible=can_see_invisible(attacker),
+        target_can_see_invisible=can_see_invisible(target),
     )
     if has_condition(attacker, Condition.HELPED):
         remove_condition(attacker, attacker_id, Condition.HELPED)

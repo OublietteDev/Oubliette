@@ -112,6 +112,26 @@ _CURATED: dict[str, dict] = {
         "requires_concentration": False,
         "obscuring_zone": "daylight", "ai_priority": 4,
     },
+    # ── C4 P-VISION-LIGHT detection trio (invisibility axis) ─────────────
+    "see_invisibility": {   # self buff: see invisible creatures
+        "target_type": "self",
+        "buff_effects": [{"stat": "see_invisible", "modifier_type": "set", "value": 1}],
+        "buff_duration_rounds": 600, "ai_priority": 4,
+    },
+    "true_seeing": {        # see invisible + truesight (pierces magical darkness)
+        "target_type": "self",
+        "buff_effects": [
+            {"stat": "see_invisible", "modifier_type": "set", "value": 1},
+            {"stat": "truesight", "modifier_type": "set", "value": 120},
+        ],
+        "buff_duration_rounds": 600, "ai_priority": 4,
+    },
+    "mislead": {            # self: turn invisible + one illusory decoy, concentration
+        "target_type": "self", "requires_concentration": True,
+        "conditions_applied": ["invisible"],
+        "buff_effects": [{"stat": "decoy_images", "modifier_type": "flat_bonus", "value": 1}],
+        "buff_charges": 1, "ai_priority": 6,
+    },
     "magic_missile": {
         "target_type": "one_creature",
         "target_count": 3,

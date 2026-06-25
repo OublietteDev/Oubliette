@@ -1,0 +1,24 @@
+{
+  "name": "Mislead",
+  "description": "You become invisible at the same time that an illusory double of you appears where you are standing. The double lasts for the duration, but the invisibility ends if you attack or cast a spell.",
+  "action_type": "action",
+  "range": 0,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 5,
+  "resource_cost": {
+    "spell_slot_5": 1
+  },
+  "target_type": "self",
+  "conditions_applied": [
+    "invisible"
+  ],
+  "buff_effects": [
+    {
+      "stat": "decoy_images",
+      "modifier_type": "flat_bonus",
+      "value": 1
+    }
+  ],
+  "buff_charges": 1
+}
