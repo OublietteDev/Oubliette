@@ -1,0 +1,19 @@
+{
+  "name": "Dominate Monster",
+  "description": "You attempt to beguile a creature that you can see within range. It must succeed on a wisdom saving throw or be charmed by you for the duration. If you or creatures that are friendly to you are fighting it, it has advantage on the saving throw.",
+  "action_type": "action",
+  "range": 60,
+  "requires_concentration": true,
+  "ai_priority": 7,
+  "spell_level": 8,
+  "resource_cost": {
+    "spell_slot_8": 1
+  },
+  "target_type": "one_creature",
+  "control_effect": true,
+  "target_creature_types": [],
+  "saving_throw": {
+    "ability": "wisdom",
+    "dc": null
+  }
+}

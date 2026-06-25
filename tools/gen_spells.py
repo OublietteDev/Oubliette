@@ -132,6 +132,22 @@ _CURATED: dict[str, dict] = {
         "buff_effects": [{"stat": "decoy_images", "modifier_type": "flat_bonus", "value": 1}],
         "buff_charges": 1, "ai_priority": 6,
     },
+    # ── C4 P-CONTROL: Dominate (control on a failed WIS save) ────────────
+    "dominate_person": {
+        "target_type": "one_creature", "requires_concentration": True,
+        "control_effect": True, "target_creature_types": ["humanoid"],
+        "saving_throw": {"ability": "wisdom", "dc": None}, "ai_priority": 7,
+    },
+    "dominate_beast": {
+        "target_type": "one_creature", "requires_concentration": True,
+        "control_effect": True, "target_creature_types": ["beast"],
+        "saving_throw": {"ability": "wisdom", "dc": None}, "ai_priority": 7,
+    },
+    "dominate_monster": {
+        "target_type": "one_creature", "requires_concentration": True,
+        "control_effect": True, "target_creature_types": [],
+        "saving_throw": {"ability": "wisdom", "dc": None}, "ai_priority": 7,
+    },
     "magic_missile": {
         "target_type": "one_creature",
         "target_count": 3,

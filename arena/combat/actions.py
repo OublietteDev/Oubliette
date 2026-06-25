@@ -957,6 +957,10 @@ def resolve_attack_damage(
             combatants=hit_result.combatants,
         )
         events.extend(conc_events)
+        # Dominated creatures re-save when damaged (may break free)
+        from arena.combat.domination import check_domination_on_damage
+        events.extend(check_domination_on_damage(
+            hit_result.target, hit_result.target_id, hit_result.combatants or {}))
 
         # Check KO
         if not hit_result.target.is_conscious:
@@ -1507,6 +1511,9 @@ def resolve_effect(
                     combatants=combatants,
                 )
                 events.extend(conc_events)
+                from arena.combat.domination import check_domination_on_damage
+                events.extend(check_domination_on_damage(
+                    target, target_id, combatants or {}))
 
         # Conditions on fail / success
         # Track which conditions are actually applied (for concentration links)

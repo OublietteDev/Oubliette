@@ -147,6 +147,11 @@ class Action(BaseModel):
     # dispels lower/equal-level magical darkness it overlaps.
     obscuring_zone: str | None = None  # "fog" | "darkness" | "daylight"
 
+    # Control (P-CONTROL): Dominate Person/Beast/Monster. On a failed save the
+    # target is taken over by the caster (flipped to player control + team).
+    control_effect: bool = False
+    target_creature_types: list[str] = Field(default_factory=list)  # gating; [] = any
+
     # Teleportation
     teleport_range: int | None = None  # Max teleport distance in feet (e.g., 30 for Misty Step)
     teleport_self: bool = True  # Caster teleports themselves (vs. teleporting a target)

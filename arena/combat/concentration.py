@@ -195,6 +195,12 @@ def end_concentration(
             target_combatant = combatants.get(target_id)
             if target_combatant is None:
                 continue
+            # Dominate links revert team/control, not just the condition.
+            if cond_name == "dominated":
+                from arena.combat.domination import end_domination
+                events.extend(end_domination(
+                    target_combatant.creature, target_id, combatants))
+                continue
             try:
                 cond = Condition(cond_name)
             except ValueError:
