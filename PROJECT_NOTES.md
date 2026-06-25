@@ -301,6 +301,16 @@ These are hard-won. Internalize them.
 - **Deferred coupling:** Brightvale ships 3 pack creatures (`commoner`, `road_bandit`, `lean_wolf`)
   wired to `merchant_thom`'s stat block and to several tests — don't remove them casually; it needs
   a coordinated rewire. Revisit when the Forge's creature/NPC editor gets fleshed out.
+- **The mounted-filesystem gotcha (Cowork/sandbox builds):** when working from the Cowork desktop
+  tool, the repo is a Windows folder mounted into a Linux sandbox. The mount is flaky: it blocks
+  file *deletion* from the sandbox (use the host delete affordance), and editor-channel writes can
+  leave the sandbox with a *stale/truncated* view of a just-edited file (caught as a phantom syntax
+  error on import). Workaround: write files via the **sandbox shell** when you need to run/test them
+  immediately, and verify with `wc -l`/`ast.parse` before trusting a read. Git from the sandbox can
+  also corrupt its index mid-write — keep commits atomic, stage explicit paths, verify after, and
+  do any heavy git surgery from native Windows. The `.venv` is Windows-format; in the sandbox use
+  system `python3` with `PYTHONPATH=.` (install `pydantic`/`pytest` with `--break-system-packages`;
+  GUI/pygame tests can't run headless there and will error on import — not a real failure).
 
 ---
 
@@ -310,15 +320,38 @@ These are hard-won. Internalize them.
 creation, a multi-PC party, exploration with maps and audio, lore, trade, emergent *and* authored
 quests, and tactical combat in the Arena.
 
+**Phase C progress (as of the 2026-06 build sessions):** C1–C3 done (feature bridge, monster
+data, spell curation 58→130). **C4 — P-VISION-LIGHT is COMPLETE**: fog/darkness/daylight as
+obscuring/light zones with faithful pairwise vision (you can't see / can't be seen → advantage &
+disadvantage cancel; darkvision does NOT pierce fog/magical darkness, blindsight & truesight do;
+daylight dispels magical darkness of ≤ its level), plus the detection trio (See Invisibility, True
+Seeing, Mislead). Attack/save log lines now carry a roll-type label (`[normal]`/`[advantage:…]`/
+`[disadvantage:…]`). **C4 — P-CONTROL Dominate Person/Beast/Monster is COMPLETE**: a failed WIS
+save flips the target to the caster's `team` + `is_player_controlled` (the radial then drives it
+with its own actions — the turn loop keys off `is_player_controlled`); reverts on the caster losing
+concentration or the target succeeding a WIS re-save when it takes damage; creature-type gated.
+Full control is a deliberate simplification of RAW (caster-commands-each-turn) — fun > fiddly.
+Lives in `arena/combat/domination.py`. **Compulsion deferred** (mechanically a forced-move, low
+value vs turn-loop cost).
+
 **Open / future work (roughly in the order it tends to come up):**
-- **Combat polish** — the last Phase C items (a couple of control spells like Dominate, a
-  vision/light layer, a walls placement UI, re-prepare-spells-on-long-rest) and a final
+- **Remaining C4 primitives:** condition-zones / P-TERRAIN (Sleet Storm, Stinking Cloud, Plant
+  Growth — extend `ActiveZone` from damage-only to apply conditions/terrain); Bardic Inspiration /
+  Cutting Words (reaction-modify-roll); stretch one-offs (metamagic, time stop…) mostly "do last or
+  never."
+- **C5 stragglers:** prone movement penalty; re-prepare-spells-on-long-rest. **C6:** the final
   "ship-readiness" combat playtest.
 - **The Forge creature/NPC editor** — currently the weakest authoring section; enriching it would
   also unblock the deferred Brightvale-creature cleanup.
-- **More portraits** — the ongoing art grind (OublietteDev).
+- **More portraits** — the ongoing art grind (OublietteDev). 56/334 as of this session.
 - **Possible later:** richer cross-turn "session memory" for the DM; non-gold coinage (a purist
   nicety, probably never).
+
+**Per-feature test beds:** standalone Arena encounters launched by name via `tools/lab.py <name>`
+(or a `.bat`) drop you straight into a fight to playtest one feature in isolation — `vision_lab`
+and `dominate_lab` exist. Author a focused encounter JSON (inline `creature_data`), no launcher
+code needed. Stockpiles encounters for the C6 playtest. Repo root was also tidied this session:
+loose design docs → `docs/{design,roadmap,feedback}/`; SRD source dumps → gitignored `tools/raw/`.
 
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a
 repository abstraction; async edges / sync core; LLM-first routing behind the model seam;

@@ -149,4 +149,4 @@ exist) and streaming responses are still to come. Canon quarantine is modeled
 Also note: RNG *state* isn't persisted across reload (past rolls
 are in the log; post-reload rolls restart from the base seed) — fine for
 single-player and it doesn't affect the byte-identical-**state** guarantee, since
-state 
+state comes from recorded ops, not rolls.
