@@ -303,3 +303,35 @@ class TestFogCloudCastEndToEnd:
         assert len(zones) == 1
         assert zones[0].center == HexCoord(4, 6)   # centered on the chosen hex
         assert has_condition(caster, Condition.CONCENTRATING)
+
+
+class TestRollTypeLabel:
+    """The combat log line carries an explicit roll-type word (OublietteDev's ask)."""
+
+    def _line(self, res):
+        from arena.combat.events import CombatEventType
+        for e in res.events:
+            if e.event_type == CombatEventType.ATTACK_ROLL:
+                return e.message
+        return ""
+
+    def test_normal_attack_says_normal(self):
+        from unittest.mock import patch
+        grid = _attacker_target_grid()
+        a, t = _creature("A"), _creature("B")
+        with patch("arena.combat.actions.roll_die", return_value=11):
+            res = resolve_attack_hit(a, "atk", t, "tgt", _melee(), grid,
+                                     combatants={}, attacker_pos=HexCoord(5, 5),
+                                     target_pos=HexCoord(5, 6))
+        assert "[normal]" in self._line(res)
+
+    def test_disadvantage_attack_says_disadvantage(self):
+        from unittest.mock import patch
+        grid = _attacker_target_grid()
+        a, t = _creature("A"), _creature("B")
+        t.senses = {"truesight": 60}  # one-sided: attacker blind, target sees
+        with patch("arena.combat.actions.roll_with_disadvantage", return_value=(7, 7, 15)):
+            res = resolve_attack_hit(a, "atk", t, "tgt", _melee(), grid,
+                                     combatants={}, attacker_pos=HexCoord(5, 5),
+                                     target_pos=HexCoord(5, 6), obscured_hexes={(5, 6)})
+        assert "[disadvantage:" in self._line(res)

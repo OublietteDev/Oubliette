@@ -573,12 +573,13 @@ def resolve_attack_hit(
     roll_detail = ""
     if effective_advantage > 0:
         natural_roll, r1, r2 = roll_with_advantage()
-        roll_detail = f" [adv: {r1},{r2}]"
+        roll_detail = f" [advantage: {r1},{r2}]"
     elif effective_advantage < 0:
         natural_roll, r1, r2 = roll_with_disadvantage()
-        roll_detail = f" [dis: {r1},{r2}]"
+        roll_detail = f" [disadvantage: {r1},{r2}]"
     else:
         natural_roll = roll_die(20)
+        roll_detail = " [normal]"
 
     modifier = get_attack_modifier(attacker, attack, action)
     # Add buff bonuses to attack roll (Bless +1d4, etc.)
@@ -1098,13 +1099,13 @@ def resolve_saving_throw(
 
     if effective_advantage > 0:
         natural_roll, r1, r2 = roll_with_advantage()
-        roll_detail = f" [adv: {r1},{r2}]"
+        roll_detail = f" [advantage: {r1},{r2}]"
     elif effective_advantage < 0:
         natural_roll, r1, r2 = roll_with_disadvantage()
-        roll_detail = f" [dis: {r1},{r2}]"
+        roll_detail = f" [disadvantage: {r1},{r2}]"
     else:
         natural_roll = roll_die(20)
-        roll_detail = ""
+        roll_detail = " [normal]"
 
     total = natural_roll + modifier
     success = total >= dc
