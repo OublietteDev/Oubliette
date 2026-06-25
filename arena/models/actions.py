@@ -151,6 +151,9 @@ class Action(BaseModel):
     # Control (P-CONTROL): Dominate Person/Beast/Monster. On a failed save the
     # target is taken over by the caster (flipped to player control + team).
     control_effect: bool = False
+    # Compulsion (P-CONTROL): on a failed save the target is drawn toward the
+    # caster each turn and can't take reactions, for the (concentration) duration.
+    compulsion_effect: bool = False
     target_creature_types: list[str] = Field(default_factory=list)  # gating; [] = any
     grants_inspiration_die: int | None = None  # Bardic Inspiration: bank a dN on an ally
 

@@ -1,0 +1,18 @@
+{
+  "name": "Compulsion",
+  "description": "Creatures of your choice that you can see within range and that can hear you must make a Wisdom saving throw. A target automatically succeeds if it can't be charmed. On a failed save, a target is affected: until the spell ends, on its turn it must move toward you by the most direct route, and it can't take reactions. The spell ends if you lose concentration.",
+  "action_type": "action",
+  "range": 30,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 4,
+  "resource_cost": {
+    "spell_slot_4": 1
+  },
+  "target_type": "one_creature",
+  "compulsion_effect": true,
+  "saving_throw": {
+    "ability": "wisdom",
+    "dc": null
+  }
+}

@@ -543,6 +543,13 @@ class CombatManager:
         # zones tick and before the skip checks, so they act normally.
         self._reconcile_banishment()
 
+        # Compulsion: a compelled creature is dragged toward the caster and
+        # barred from reactions at the start of its turn (P-CONTROL). Runs after
+        # movement reset (so its full speed is the pull distance).
+        from arena.combat.compulsion import process_compulsion_start_of_turn
+        for ce in process_compulsion_start_of_turn(self, combatant):
+            self.log.add(ce)
+
         # Tick recurring action durations and remove expired ones
         self._tick_recurring_actions(combatant.creature_id)
 
@@ -2483,6 +2490,10 @@ class CombatManager:
         if action.grants_inspiration_die:
             return self._execute_grant_inspiration(action, combatant, target_id)
 
+        # ── Control: Compulsion (P-CONTROL) ───────────────────────────
+        if action.compulsion_effect:
+            return self._execute_compulsion(action, combatant, target_id)
+
         # ── Control: Dominate Person/Beast/Monster (P-CONTROL) ────────
         if action.control_effect:
             return self._execute_dominate(action, combatant, target_id)
@@ -3207,6 +3218,95 @@ class CombatManager:
                 combatant.creature_id, self.combatants, dc,
             ))
             add_concentration_link(combatant.creature, target_id, "dominated")
+
+        merged = ActionResult(events=events, success=not success)
+        for event in merged.events:
+            self.log.add(event)
+        self._mark_action_type_used(action)
+        self.selected_action = None
+        self._cast_level = None
+        self.turn_phase = TurnPhase.AWAITING_ACTION
+        self._cleanup_orphaned_zones()
+        return merged
+
+    def _execute_compulsion(
+        self, action: Action, combatant, target_id: str,
+    ) -> ActionResult:
+        """Compulsion (P-CONTROL).
+
+        Wisdom save vs the caster DC; on a failure the target gains COMPELLED —
+        dragged toward the caster each turn and barred from reactions for the
+        (concentration) duration. The concentration link clears it on drop.
+        """
+        from arena.combat.actions import (
+            check_resource_cost, deduct_resource_cost, resolve_saving_throw,
+            _compute_condition_save_dc,
+        )
+        from arena.combat.concentration import start_concentrating, add_concentration_link
+        from arena.combat.compulsion import start_compulsion
+
+        events: list[CombatEvent] = []
+        target = self.combatants.get(target_id)
+        if target is None:
+            return None
+
+        # ── Resource cost ─────────────────────────────────────────────
+        can_use, reason = check_resource_cost(
+            combatant.creature, action, cast_level=self._cast_level,
+        )
+        if not can_use:
+            events.append(CombatEvent(
+                event_type=CombatEventType.INFO, message=reason,
+                source_id=combatant.creature_id,
+            ))
+            self.selected_action = None
+            self._cast_level = None
+            self.turn_phase = TurnPhase.AWAITING_ACTION
+            for e in events:
+                self.log.add(e)
+            return ActionResult(events=events, success=False)
+        deduct_resource_cost(combatant.creature, action, cast_level=self._cast_level)
+
+        events.append(CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=f"{combatant.creature.name} casts {action.name} on {target.creature.name}!",
+            source_id=combatant.creature_id, target_id=target_id,
+            details={"action_name": action.name, "animation": action.animation,
+                     "is_effect_use": True},
+        ))
+
+        # ── Save DC ───────────────────────────────────────────────────
+        dc = (action.saving_throw.dc if action.saving_throw else None)
+        if dc is None:
+            dc = _compute_condition_save_dc(combatant.creature, action)
+        if dc is None:
+            cr = combatant.creature
+            best = max(cr.ability_scores.get_modifier(a)
+                       for a in ("intelligence", "wisdom", "charisma"))
+            dc = 8 + cr.proficiency_bonus + best
+
+        # ── Wisdom save ───────────────────────────────────────────────
+        success, save_event = resolve_saving_throw(
+            target.creature, target_id, "wisdom", dc,
+        )
+        events.append(save_event)
+
+        if success:
+            events.append(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=f"{target.creature.name} resists {action.name}!",
+                source_id=combatant.creature_id, target_id=target_id,
+            ))
+        else:
+            events.extend(start_concentrating(
+                combatant.creature, combatant.creature_id, action.name,
+                combatants=self.combatants,
+            ))
+            events.extend(start_compulsion(
+                target.creature, target_id, combatant.creature,
+                combatant.creature_id, dc,
+            ))
+            add_concentration_link(combatant.creature, target_id, "compelled")
 
         merged = ActionResult(events=events, success=not success)
         for event in merged.events:

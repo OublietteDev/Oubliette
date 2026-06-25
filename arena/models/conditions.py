@@ -29,6 +29,7 @@ class Condition(str, Enum):
     HELPED = "helped"  # Has advantage on next check
     HIDDEN = "hidden"  # Creature is hidden via stealth
     DOMINATED = "dominated"  # controlled by the caster (Dominate Person/Beast/Monster)
+    COMPELLED = "compelled"  # drawn toward the caster + no reactions (Compulsion)
     BANISHED = "banished"  # Removed from the battlefield (Banishment, Maze, Blink);
     # the manager stashes the creature's position and takes it off-grid while
     # this is active, returning it when the condition ends (P-BANISH)
