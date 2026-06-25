@@ -207,7 +207,7 @@ class TestResolveAttackAdvantage:
         mock_adv.assert_called_once()
         assert result.events[0].details["natural"] == 18
         assert result.events[0].details["advantage"] == 1
-        assert "adv:" in result.events[0].message
+        assert "[advantage:" in result.events[0].message
 
     @patch("arena.combat.actions.roll_with_disadvantage")
     def test_disadvantage_rolls_twice_takes_lower(self, mock_dis):
@@ -227,7 +227,7 @@ class TestResolveAttackAdvantage:
         mock_dis.assert_called_once()
         assert result.events[0].details["natural"] == 5
         assert result.events[0].details["advantage"] == -1
-        assert "dis:" in result.events[0].message
+        assert "[disadvantage:" in result.events[0].message
 
     @patch("arena.combat.actions.roll_die")
     @patch("arena.combat.damage.roll_expression")

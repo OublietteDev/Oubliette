@@ -194,6 +194,7 @@ CONDITION_DISPLAY: dict[str, tuple[str, str]] = {
     "helped": ("HE", "condition_buff"),
     "hidden": ("HI", "condition_buff"),
     "banished": ("BA", "condition_debuff"),
+    "dominated": ("DM", "condition_debuff"),
 }
 
 PROFICIENCY_BY_LEVEL = {

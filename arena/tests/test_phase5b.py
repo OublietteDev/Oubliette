@@ -89,7 +89,7 @@ class TestResolveSavingThrow:
         # 18 + 0 = 18 >= 15
         assert success is True
         assert event.details["advantage"] == 1
-        assert "adv:" in event.message
+        assert "[advantage:" in event.message
 
     @patch("arena.combat.actions.roll_with_disadvantage")
     def test_disadvantage_on_save(self, mock_dis):
@@ -101,7 +101,7 @@ class TestResolveSavingThrow:
         # 5 + 0 = 5 < 15
         assert success is False
         assert event.details["advantage"] == -1
-        assert "dis:" in event.message
+        assert "[disadvantage:" in event.message
 
     @patch("arena.combat.actions.roll_die")
     def test_event_details_complete(self, mock_d20):
