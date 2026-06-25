@@ -283,6 +283,23 @@ class TestBardicAttackPrompt:
         assert inspiration_die_size(fighter) == 8            # die kept for later
         assert cm.combatants[ids["Orc"]].creature.current_hit_points == 20  # still a miss
 
+    def test_gui_hit_check_path_suppresses_autospend_and_defers(self):
+        # Regression: the GUI drives attacks via execute_attack_hit_check (NOT
+        # execute_attack); that path must suppress the auto-spend and defer, or
+        # the die gets silently burnt with no popup.
+        cm, ids = self._combat(attacker_player=True)
+        with patch("arena.combat.actions.roll_die", return_value=10):  # 14 vs AC 16 → miss
+            hit_result = cm.execute_attack_hit_check(ids["Orc"])
+        assert hit_result is not None and hit_result.hit is False
+        fighter = cm.combatants[ids["Fighter"]].creature
+        assert inspiration_die_size(fighter) == 8           # NOT auto-spent
+        assert cm.maybe_defer_bardic(hit_result) is True    # popup would show
+        assert cm._pending_bardic_choice is not None
+        with patch("arena.combat.manager.roll_die", return_value=5):  # d8=5 → 19 ≥ 16
+            cm.resolve_bardic_choice(use=True)
+        assert inspiration_die_size(fighter) is None        # spent on the player's say-so
+        assert cm.combatants[ids["Orc"]].creature.current_hit_points < 20
+
     def test_npc_attacker_auto_spends_without_a_prompt(self):
         cm, ids = self._combat(attacker_player=False)
         with patch("arena.combat.actions.roll_die", return_value=10):

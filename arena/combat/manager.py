@@ -1618,26 +1618,13 @@ class CombatManager:
                 )
             else:
                 # Bardic Inspiration: a player attacker who missed may spend a
-                # banked die to flip miss→hit. Defer to the GUI popup (the auto
-                # path was suppressed for player attackers above).
-                if (
-                    not hit_result.hit
-                    and getattr(combatant.creature, "is_player_controlled", False)
-                ):
-                    from arena.combat.bardic import inspiration_die_size
-                    die = inspiration_die_size(combatant.creature)
-                    gap = hit_result.target_ac - hit_result.total_roll
-                    if die and 1 <= gap <= die:
-                        for evt in hit_result.events:
-                            self.log.add(evt)
-                        self._pending_bardic_choice = {
-                            "hit_result": hit_result,
-                            "action": action,
-                            "combatant": combatant,
-                            "target_id": target_id,
-                            "die_size": die,
-                        }
-                        return None  # Deferred — GUI shows the bardic popup
+                # banked die to flip miss→hit — defer to the GUI popup (the auto
+                # path was suppressed for player attackers above). This path hasn't
+                # logged the hit roll yet, so log it when we actually defer.
+                if not hit_result.hit and self.maybe_defer_bardic(hit_result):
+                    for evt in hit_result.events:
+                        self.log.add(evt)
+                    return None
 
                 # Evaluate damage reduction reaction on the target
                 dr_amount = 0
@@ -1779,6 +1766,7 @@ class CombatManager:
             target_pos=target_combatant.position,
             cast_level=self._cast_level,
             obscured_hexes=self._get_obscured_hexes(),
+            suppress_player_bardic=True,
         )
 
         # Log the hit-check events immediately (attack roll result)
@@ -2138,19 +2126,37 @@ class CombatManager:
             finally:
                 self._reaction_window_closed = False
 
+    def maybe_defer_bardic(self, hit_result: AttackHitResult) -> bool:
+        """If a player attacker MISSED but holds a banked Bardic Inspiration die
+        that could still flip the roll to a hit, stash a pending choice (the GUI
+        shows the spend/skip popup via its per-frame poll) and return True. Pure
+        state — does no logging, so each caller controls when the hit roll is
+        logged. (The auto-spend is suppressed for player attackers upstream, so
+        the die is untouched here.)"""
+        if hit_result.hit:
+            return False
+        attacker = hit_result.attacker
+        if attacker is None or not getattr(attacker, "is_player_controlled", False):
+            return False
+        from arena.combat.bardic import inspiration_die_size
+        die = inspiration_die_size(attacker)
+        gap = hit_result.target_ac - hit_result.total_roll
+        if not die or not (1 <= gap <= die):
+            return False
+        self._pending_bardic_choice = {"hit_result": hit_result, "die_size": die}
+        return True
+
     def resolve_bardic_choice(self, use: bool) -> None:
         """Resolve a player's Bardic Inspiration prompt on their own missed
         attack. Called by the GUI after the BardicInspirationPopup closes; on
         ``use`` the banked die is rolled and added (may turn the miss into a hit),
-        then the attack is finalized either way."""
+        then the attack is finalized through the normal phase-2 path either way."""
         pending = self._pending_bardic_choice
         if pending is None:
             return
         self._pending_bardic_choice = None
 
         hit_result = pending["hit_result"]
-        action = pending.get("action")
-        combatant = pending.get("combatant")
         die = pending["die_size"]
 
         if use:
@@ -2171,35 +2177,9 @@ class CombatManager:
                 details={"bardic_inspiration_used": val},
             ))
 
-        # Finalize the attack (mirrors execute_attack's from_execute_attack tail).
-        # If the die landed a hit on an enemy, give it its AI damage reduction.
-        dr = 0
-        if hit_result.hit:
-            tc = self.combatants.get(hit_result.target_id)
-            if tc is not None and not getattr(tc.creature, "is_player_controlled", False):
-                dr = self._evaluate_ai_damage_reduction(hit_result.target_id, hit_result)
-        result = resolve_attack_damage(hit_result, damage_reduction=dr)
-
-        if (result.success and combatant is not None
-                and combatant.position is not None):
-            fm_events = self._apply_pending_forced_movement(
-                result.events, combatant.creature_id, combatant.position,
-            )
-            result.events.extend(fm_events)
-
-        # Log only NEW events (hit/miss roll events already logged at deferral).
-        for event in result.events[len(hit_result.events):]:
-            self.log.add(event)
-
-        if result.success and action is not None and combatant is not None:
-            self._handle_extra_attack_tracking(action, combatant.creature)
-
-        self.selected_action = None
-        self._cast_level = None
-        self.turn_phase = TurnPhase.AWAITING_ACTION
-        self._cleanup_orphaned_zones()
-        self._cleanup_orphaned_recurring_actions()
-        self._check_victory()
+        # Finalize through the same phase-2 path a normal GUI attack uses, so the
+        # bookkeeping (damage, action economy, victory) matches exactly.
+        self.complete_attack(hit_result)
 
     def complete_attack(
         self,

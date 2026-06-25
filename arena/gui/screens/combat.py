@@ -961,6 +961,10 @@ class CombatScreen(Screen):
             return
 
         if not hit_result.hit:
+            # A player miss with a flippable banked die → offer the spend/skip
+            # popup (shown via the per-frame poll); otherwise finalize the miss.
+            if self.combat.maybe_defer_bardic(hit_result):
+                return
             self.combat.complete_attack(hit_result)
             return
 
