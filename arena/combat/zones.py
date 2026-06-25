@@ -66,6 +66,11 @@ class ActiveZone:
     provides_bright_light: bool = False  # daylight — dispels magical darkness
     spell_level: int = 0                 # for daylight-vs-darkness comparison
 
+    # P-TERRAIN: condition-zones (Sleet Storm prone, Stinking Cloud retching).
+    # Applied on a FAILED start-of-turn/entry save (reuses saving_throw_*).
+    condition_on_fail: str | None = None
+    condition_duration_type: str = "end_of_turn"
+
 
 # ------------------------------------------------------------------
 # Geometry helpers
@@ -257,6 +262,23 @@ def _resolve_zone_damage(
             combatants=combatants,
         )
         events.extend(conc_events)
+
+    # Condition on a failed save (Sleet Storm → prone, Stinking Cloud → retching).
+    # Reuses the save already rolled above (same ability/DC).
+    if zone.condition_on_fail and not success:
+        from arena.combat.conditions import apply_condition
+        from arena.models.conditions import Condition
+        try:
+            cond = Condition(zone.condition_on_fail)
+        except ValueError:
+            cond = None
+        if cond is not None:
+            cev = apply_condition(
+                target, creature_id, cond, source=zone.name,
+                duration_type=zone.condition_duration_type,
+            )
+            if cev:
+                events.append(cev)
 
     zone.already_damaged.add(creature_id)
     return events

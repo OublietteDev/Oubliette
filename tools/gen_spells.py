@@ -148,6 +148,23 @@ _CURATED: dict[str, dict] = {
         "control_effect": True, "target_creature_types": [],
         "saving_throw": {"ability": "wisdom", "dc": None}, "ai_priority": 7,
     },
+    # ── C4 condition-zones (P-TERRAIN): save-or-condition AoE zones ──────
+    "stinking_cloud": {     # CON save or lose your action (approx: incapacitated to EoT)
+        "target_type": "area_sphere", "area_size": 20, "requires_concentration": True,
+        "saving_throw": {"ability": "constitution", "dc": None,
+                         "conditions_on_fail": ["incapacitated"]},
+        "ai_priority": 6,
+    },
+    "sleet_storm": {        # DEX save or prone; difficult terrain; heavily obscured
+        "target_type": "area_sphere", "area_size": 20, "requires_concentration": True,
+        "saving_throw": {"ability": "dexterity", "dc": None,
+                         "conditions_on_fail": ["prone"]},
+        "terrain_modification": "difficult", "zone_obscures": True, "ai_priority": 6,
+    },
+    "plant_growth": {       # overgrowth: difficult terrain (instantaneous, no save)
+        "target_type": "area_sphere", "area_size": 20,
+        "terrain_modification": "difficult", "ai_priority": 4,
+    },
     "magic_missile": {
         "target_type": "one_creature",
         "target_count": 3,

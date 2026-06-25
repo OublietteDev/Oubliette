@@ -1,0 +1,21 @@
+{
+  "name": "Stinking Cloud",
+  "description": "You create a 20-foot-radius sphere of yellow, nauseating gas centered on a point within range. The cloud spreads around corners, and its area is heavily obscured. The cloud lingers in the air for the duration.",
+  "action_type": "action",
+  "range": 90,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 20,
+  "saving_throw": {
+    "ability": "constitution",
+    "dc": null,
+    "conditions_on_fail": [
+      "incapacitated"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "Sleet Storm",
+  "description": "Until the spell ends, freezing rain and sleet fall in a 20-foot-tall cylinder with a 40-foot radius centered on a point you choose within range. The area is heavily obscured, and exposed flames in the area are doused.",
+  "action_type": "action",
+  "range": 150,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 20,
+  "saving_throw": {
+    "ability": "dexterity",
+    "dc": null,
+    "conditions_on_fail": [
+      "prone"
+    ]
+  },
+  "terrain_modification": "difficult",
+  "zone_obscures": true
+}

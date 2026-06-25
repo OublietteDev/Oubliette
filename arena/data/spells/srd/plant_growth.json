@@ -1,0 +1,15 @@
+{
+  "name": "Plant Growth",
+  "description": "This spell channels vitality into plants within a specific area. There are two possible uses for the spell, granting either immediate or long-term benefits.",
+  "action_type": "action",
+  "range": 150,
+  "requires_concentration": false,
+  "ai_priority": 4,
+  "spell_level": 3,
+  "resource_cost": {
+    "spell_slot_3": 1
+  },
+  "target_type": "area_sphere",
+  "area_size": 20,
+  "terrain_modification": "difficult"
+}

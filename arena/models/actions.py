@@ -146,6 +146,7 @@ class Action(BaseModel):
     # an overlapping Daylight of >= level); "daylight" = bright light that
     # dispels lower/equal-level magical darkness it overlaps.
     obscuring_zone: str | None = None  # "fog" | "darkness" | "daylight"
+    zone_obscures: bool = False  # a save/condition zone that ALSO heavily obscures (Sleet Storm)
 
     # Control (P-CONTROL): Dominate Person/Beast/Monster. On a failed save the
     # target is taken over by the caster (flipped to player control + team).

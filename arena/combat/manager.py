@@ -2248,7 +2248,8 @@ class CombatManager:
             action.requires_concentration
             and action.target_type.value.startswith("area_")
             and action.saving_throw is not None
-            and bool(action.saving_throw.damage_on_fail)
+            and bool(action.saving_throw.damage_on_fail
+                     or action.saving_throw.conditions_on_fail)
         )
 
     def _apply_terrain_modification(
@@ -2995,7 +2996,7 @@ class CombatManager:
         save = action.saving_throw
 
         # Upcast: augment zone damage dice if cast at higher level
-        zone_dice = save.damage_on_fail[0].dice
+        zone_dice = save.damage_on_fail[0].dice if save.damage_on_fail else "0"
         if self._cast_level is not None:
             from arena.combat.upcast import calculate_upcast_zone_dice
             upcast_dice = calculate_upcast_zone_dice(action, self._cast_level)
@@ -3012,12 +3013,16 @@ class CombatManager:
             saving_throw_ability=save.ability,
             saving_throw_dc=save.dc or 10,
             damage_dice=zone_dice,
-            damage_type=save.damage_on_fail[0].damage_type.value,
-            damage_on_save=save.damage_on_success,
+            damage_type=(save.damage_on_fail[0].damage_type.value
+                         if save.damage_on_fail else "none"),
+            damage_on_save=save.damage_on_success or "none",
             affects_enemies_only=True,
             team=combatant.team,
             concentration_linked=True,
             already_damaged=set(),
+            condition_on_fail=(save.conditions_on_fail[0]
+                               if save.conditions_on_fail else None),
+            obscures_vision=action.zone_obscures,
         )
         # Remove any existing zone from this caster first
         self.active_zones = [z for z in self.active_zones if z.caster_id != combatant.creature_id]
