@@ -219,3 +219,70 @@ class TestAttackThroughObscurement:
             obscured_hexes={(5, 6)},
         )
         assert res.effective_advantage == 1
+
+
+# ── End-to-end: casting fog cloud creates & persists an obscuring zone ─
+
+import json as _json
+from pathlib import Path as _Path
+from unittest.mock import patch as _patch
+from arena.combat.manager import CombatManager
+from arena.models.encounter import Encounter, CombatantEntry
+
+
+def _load_spell(spell_id):
+    from arena.paths import DATA_DIR
+    p = DATA_DIR / "spells" / "srd" / f"{spell_id}.json"
+    return Action.model_validate(_json.loads(p.read_text()))
+
+
+class TestFogCloudCastEndToEnd:
+    """Guards the full cast path: bridge-shaped spell JSON → manager → zone.
+
+    (The field must reach the manager. In live play a stale Oubliette server
+    can strip the obscuring_zone field during staging — this test pins the
+    in-process behavior so the engine half never regresses.)
+    """
+
+    def _combat_with(self, action):
+        caster = _creature("Caster")
+        caster.actions = [action]
+        enemy = _creature("Brute")
+        enemy.is_player_controlled = False
+        enc = Encounter(name="FogE2E", grid_width=10, grid_height=10, combatants=[
+            CombatantEntry(creature_id="caster", creature_data=caster,
+                           team="player", starting_position=(4, 4)),
+            CombatantEntry(creature_id="brute", creature_data=enemy,
+                           team="enemy", starting_position=(4, 6)),
+        ])
+        cm = CombatManager()
+        cm.load_encounter(enc, _Path("."))
+        with _patch("arena.combat.manager.roll_die", side_effect=[20, 1]):
+            cm.roll_initiative()
+        cm.begin_combat()
+        return cm
+
+    def test_fog_cloud_creates_persistent_obscuring_zone(self):
+        fog = _load_spell("fog_cloud").model_copy(update={"resource_cost": {}})
+        assert fog.obscuring_zone == "fog"  # field survives the model
+        cm = self._combat_with(fog)
+        cm.selected_action = fog
+        res = cm.execute_effect("brute")
+        assert res.success
+        zones = [z for z in cm.active_zones if z.obscures_vision]
+        assert len(zones) == 1
+        assert zones[0].concentration_linked is True
+        # persists across a full round (concentration held)
+        cm.end_turn(); cm.end_turn()
+        assert any(z.obscures_vision for z in cm.active_zones)
+        # and actually obscures the target's hex
+        obs = compute_obscured_hexes(cm.active_zones, cm.combatants, cm.grid)
+        assert (4, 6) in obs
+
+    def test_darkness_zone_is_magical(self):
+        dark = _load_spell("darkness").model_copy(update={"resource_cost": {}})
+        cm = self._combat_with(dark)
+        cm.selected_action = dark
+        cm.execute_effect("brute")
+        zones = [z for z in cm.active_zones if z.obscures_vision]
+        assert len(zones) == 1 and zones[0].is_magical is True
