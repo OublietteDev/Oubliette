@@ -226,6 +226,12 @@ def features_for(char: Character) -> list[Feature]:
             # C4: the caster's harmful AoE spares allies entirely
             # (approximation of RAW's chosen-creatures auto-succeed).
             f = Feature(name=ref.name, description=desc, sculpt_spells=True)
+        elif name == "cutting words":
+            # C4: College of Lore — the engine's bardic.py reads this flag to let
+            # the bard spend an inspiration die as a reaction to dock an enemy's
+            # attack/check/damage roll. Only Lore bards carry the feature ref, so
+            # the subclass gate is automatic.
+            f = Feature(name=ref.name, description=desc, cutting_words=True)
 
         if f is not None:
             out.append(f)

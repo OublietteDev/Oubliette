@@ -185,6 +185,48 @@ def test_sculpt_spells_stages_the_exemption_flag():
     assert features["Sculpt Spells"].sculpt_spells is True
 
 
+def _bard(level=3, cha=16, subclass="lore") -> Character:
+    refs = [("Bardic Inspiration", 1)]
+    if subclass == "lore" and level >= 3:
+        refs.append(("Cutting Words", 3))
+    return Character(
+        id="lyric", name="Lyric", kind="pc", level=level, hp=8 * level, max_hp=8 * level,
+        abilities={Ability.CHA: cha, Ability.DEX: 14, Ability.CON: 12},
+        armor_class=13, attack_bonus=4, damage="1d6+2",
+        sheet=CharacterSheet(
+            race="half-elf", char_class="bard", background="acolyte", subclass=subclass,
+            spellcasting_ability=Ability.CHA, features=_refs(*refs)))
+
+
+def test_lore_bard_stages_cutting_words_flag():
+    features = {f.name: f for f in features_for(_bard(3))}
+    assert features["Cutting Words"].cutting_words is True
+
+
+def test_bard_inspiration_pools_inject_uses_and_die_size():
+    # Uses = CHA modifier (min 1); die scales d6→d8→d10→d12 at L1/5/10/15.
+    res = character_to_player(_bard(3, cha=16), None, RS).class_resources
+    assert res["bardic_inspiration"] == 3          # +3 from CHA 16
+    assert res["bardic_inspiration_die"] == 6       # L3 → d6
+    assert character_to_player(_bard(5), None, RS).class_resources["bardic_inspiration_die"] == 8
+    assert character_to_player(_bard(10), None, RS).class_resources["bardic_inspiration_die"] == 10
+    assert character_to_player(_bard(15), None, RS).class_resources["bardic_inspiration_die"] == 12
+    # CHA 10 → +0 modifier still floors to one usable die.
+    assert character_to_player(_bard(2, cha=10), None, RS).class_resources["bardic_inspiration"] == 1
+
+
+def test_non_lore_bard_gets_pools_but_no_cutting_words():
+    valor = _bard(5, subclass="valor")
+    assert "Cutting Words" not in {f.name for f in features_for(valor)}
+    assert character_to_player(valor, None, RS).class_resources["bardic_inspiration_die"] == 8
+
+
+def test_non_bard_has_no_bardic_pools():
+    res = character_to_player(_fighter(5), None, RS).class_resources
+    assert "bardic_inspiration" not in res
+    assert "bardic_inspiration_die" not in res
+
+
 def test_unarmored_defense_and_fighting_style_are_not_staged():
     # Story-side AC already includes Unarmored Defense; staging it would
     # double-count. Fighting Style has no stored choice to bake.

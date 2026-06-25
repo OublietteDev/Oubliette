@@ -609,6 +609,24 @@ def _resources_in(staged: StagedResources) -> tuple[dict[int, int], dict[str, in
     return dict(staged.slots_max), class_res
 
 
+def _bardic_resources(char: Character) -> dict[str, int]:
+    """Bard-only engine resources the SRD `by_level` resource table can't express:
+    the inspiration USES count (CHA modifier, min 1 — scales with an ability, not
+    level) and the inspiration DIE size (d6→d8→d10→d12 at L1/5/10/15). Empty for
+    non-bards. Injected flat into `class_resources` so the Arena's bardic.py reads
+    them directly (it expects plain ints under `bardic_inspiration` /
+    `bardic_inspiration_die`, not the derived {max,...} resource shape)."""
+    sheet = char.sheet
+    if sheet is None or (sheet.char_class or "").strip().lower() != "bard":
+        return {}
+    level = char.level
+    die = 6 if level < 5 else 8 if level < 10 else 10 if level < 15 else 12
+    return {
+        "bardic_inspiration": max(1, char.ability_mod(Ability.CHA)),
+        "bardic_inspiration_die": die,
+    }
+
+
 def _size(value: str | None) -> CreatureSize:
     try:
         return CreatureSize((value or "medium").strip().lower())
@@ -660,6 +678,7 @@ def character_to_player(
     char_class = sheet.char_class if sheet else "Adventurer"
     race = sheet.race if sheet else "Human"
     slots_max, class_res = _resources_in(staged_resources(char, ruleset))
+    class_res.update(_bardic_resources(char))   # bard inspiration uses + die size
     casting_ability = (
         _ABILITY_LONG[sheet.spellcasting_ability.value]
         if sheet and sheet.spellcasting_ability else None
