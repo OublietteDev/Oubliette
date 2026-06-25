@@ -2479,6 +2479,10 @@ class CombatManager:
                 }
                 return None  # GUI will handle popup
 
+        # ── Bardic Inspiration: bank a die on an ally ─────────────────
+        if action.grants_inspiration_die:
+            return self._execute_grant_inspiration(action, combatant, target_id)
+
         # ── Control: Dominate Person/Beast/Monster (P-CONTROL) ────────
         if action.control_effect:
             return self._execute_dominate(action, combatant, target_id)
@@ -3069,6 +3073,42 @@ class CombatManager:
         # Clean up old zones if old concentration was replaced
         self._cleanup_orphaned_zones()
 
+        return merged
+
+    def _execute_grant_inspiration(
+        self, action: Action, combatant, target_id: str,
+    ) -> ActionResult:
+        """Bardic Inspiration (grant half): bank a die on an ally, spending a use."""
+        from arena.combat.actions import check_resource_cost, deduct_resource_cost
+        from arena.combat.bardic import grant_inspiration
+
+        events: list[CombatEvent] = []
+        target = self.combatants.get(target_id)
+        if target is None:
+            return None
+
+        can_use, reason = check_resource_cost(combatant.creature, action, cast_level=self._cast_level)
+        if not can_use:
+            events.append(CombatEvent(event_type=CombatEventType.INFO, message=reason,
+                                      source_id=combatant.creature_id))
+            self.selected_action = None
+            self.turn_phase = TurnPhase.AWAITING_ACTION
+            for e in events:
+                self.log.add(e)
+            return ActionResult(events=events, success=False)
+        deduct_resource_cost(combatant.creature, action, cast_level=self._cast_level)
+
+        events.extend(grant_inspiration(
+            target.creature, target_id, action.grants_inspiration_die,
+            combatant.creature_id, combatant.creature.name,
+        ))
+        merged = ActionResult(events=events, success=True)
+        for event in merged.events:
+            self.log.add(event)
+        self._mark_action_type_used(action)
+        self.selected_action = None
+        self._cast_level = None
+        self.turn_phase = TurnPhase.AWAITING_ACTION
         return merged
 
     def _execute_dominate(

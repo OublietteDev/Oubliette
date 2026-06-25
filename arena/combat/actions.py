@@ -681,6 +681,17 @@ def resolve_attack_hit(
 
     hit = result in (AttackResult.HIT, AttackResult.CRITICAL_HIT)
 
+    # Bardic Inspiration / Cutting Words: a banked die nudges a non-crit roll
+    # (own miss → hit; a defending bard's reaction turns a hit → miss).
+    if result in (AttackResult.HIT, AttackResult.MISS):
+        from arena.combat.bardic import apply_bard_dice_to_attack
+        total_roll, hit, _bard_events = apply_bard_dice_to_attack(
+            attacker, attacker_id, target, target_id,
+            total_roll, target_ac, hit, combatants or {},
+        )
+        events.extend(_bard_events)
+        result = AttackResult.HIT if hit else AttackResult.MISS
+
     # Build attack roll message
     crit_text = " (CRITICAL!)" if result == AttackResult.CRITICAL_HIT else ""
     miss_text = " (Critical Miss!)" if result == AttackResult.CRITICAL_MISS else ""

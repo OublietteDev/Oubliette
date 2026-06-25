@@ -152,6 +152,7 @@ class Action(BaseModel):
     # target is taken over by the caster (flipped to player control + team).
     control_effect: bool = False
     target_creature_types: list[str] = Field(default_factory=list)  # gating; [] = any
+    grants_inspiration_die: int | None = None  # Bardic Inspiration: bank a dN on an ally
 
     # Teleportation
     teleport_range: int | None = None  # Max teleport distance in feet (e.g., 30 for Misty Step)
