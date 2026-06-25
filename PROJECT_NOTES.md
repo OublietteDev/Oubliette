@@ -332,15 +332,26 @@ with its own actions — the turn loop keys off `is_player_controlled`); reverts
 concentration or the target succeeding a WIS re-save when it takes damage; creature-type gated.
 Full control is a deliberate simplification of RAW (caster-commands-each-turn) — fun > fiddly.
 Lives in `arena/combat/domination.py`. **Compulsion deferred** (mechanically a forced-move, low
-value vs turn-loop cost).
+value vs turn-loop cost). **C4 — condition-zones / P-TERRAIN is COMPLETE**: `ActiveZone` now
+applies a condition on a failed start-of-turn/entry save (folded into `_resolve_zone_damage`) —
+Stinking Cloud (CON save or incapacitated, ≈ "lose your action"), Sleet Storm (DEX save or prone +
+heavily obscured + difficult terrain), Plant Growth (instant difficult terrain, no save/zone). Zone
+effects stay enemies-only (RAW hits all — a noted simplification). **C4 — Bardic Inspiration &
+Cutting Words is COMPLETE** (`arena/combat/bardic.py`): a banked inspiration die flips an attack —
+the inspired creature adds it (own miss → hit), a defending bard subtracts it via Cutting Words
+(enemy hit → miss). **Approximations to revisit before ship:** applies to ATTACK ROLLS only
+(saves / ability checks / damage rolls TBD); dice are spent AUTO-OPTIMALLY (only when they can flip
+the outcome) rather than via a player-choice prompt (a follow-up that rides the reroll-popup
+pattern); bard pools are CHA-scaled in `class_resources` (`bardic_inspiration` uses +
+`bardic_inspiration_die`) — staging them from real bard sheets is the classes.json feature-bridge
+data gap. **→ C4 is fully complete.** Per-feature playtest labs: `vision_lab`, `dominate_lab`,
+`terrain_lab`, `bard_lab` (launch via `tools/lab.py <name>`).
 
 **Open / future work (roughly in the order it tends to come up):**
-- **Remaining C4 primitives:** condition-zones / P-TERRAIN (Sleet Storm, Stinking Cloud, Plant
-  Growth — extend `ActiveZone` from damage-only to apply conditions/terrain); Bardic Inspiration /
-  Cutting Words (reaction-modify-roll); stretch one-offs (metamagic, time stop…) mostly "do last or
-  never."
+- **Stretch C4 one-offs** (metamagic, time stop, antimagic…) — mostly "do last or never"; and the
+  deferred Compulsion + the bard approximations above, if play shows they're worth tightening.
 - **C5 stragglers:** prone movement penalty; re-prepare-spells-on-long-rest. **C6:** the final
-  "ship-readiness" combat playtest.
+  "ship-readiness" combat playtest (use the labs as a starting battery).
 - **The Forge creature/NPC editor** — currently the weakest authoring section; enriching it would
   also unblock the deferred Brightvale-creature cleanup.
 - **More portraits** — the ongoing art grind (OublietteDev). 56/334 as of this session.
