@@ -299,9 +299,13 @@ auto path, mirroring `_evaluate_ai_damage_reduction`). RAW "must see attacker / 
 not checked. `test_monster_reactions.py` (8) + `parry_lab`; verified live (knight parried 6/40
 marginal hits). Other reactions (Split, Unnerving Mask) left out.
 
-Next (remaining D-MON): on-hit aura saves (Stench poison aura, Heated Body) and the advantage riders
-(Reckless both-directions, Blood Frenzy vs damaged, Surprise Attack first-round). After those,
-Package D-MON is essentially closed (Rampage + the charge follow-ups stay with the AI rework).
+**D-MON-6 — aura/retaliation/advantage traits (full repo suite 2723 green; new file `test_monster_aura_traits.py` +19, `dmon_aura_lab`).** The final batch, four traits across two mechanics, all flag-driven on `Feature` (hydrated from monster `special_abilities`):
+- **Blood Frenzy** (`attack_advantage_vs_damaged`, on sahuagin/hunter_shark/giant_shark/quipper/swarm_of_quippers) — advantage on a *melee* attack vs a target below its HP max. Folded straight into `get_attack_advantage` (both creatures already in scope).
+- **Reckless** (`reckless_attacker` → new `Condition.RECKLESS` pseudo-condition, on minotaur/berserker) — at the start of an AI monster's turn `_process_reckless_start_of_turn` re-applies RECKLESS (rounds=1, so the condition tick at turn-start clears last turn's instance first). `get_attack_advantage`: a RECKLESS attacker has advantage on its melee; *any* attack vs a RECKLESS target has advantage. Only fires for a conscious, action-capable monster with a melee attack (a ranged/incapacitated creature shouldn't hand out free advantage). PCs are never auto-recklessed.
+- **Stench** (`aura_save_condition`/`aura_save_ability`/`aura_save_dc`/`aura_range`, on ghast DC10·5ft, hezrou DC14·10ft) — `_process_stench_start_of_turn` runs at the victim's turn-start (after the condition tick, so last turn's stench-poison has expired): a CON save or poisoned (rounds=1); a *success* records per-(victim,source) immunity in `self._stench_immune` for the rest of the fight (RAW 24h). Indiscriminate, like Death Burst.
+- **Heated Body** (`retaliate_damage_dice`/`retaliate_damage_type`, on azer 1d10·salamander 2d6·remorhaz 3d6) — `complete_attack` calls `_apply_heated_body` on a landed melee hit vs a creature with the trait: the attacker takes the fire packet, no save, per-hit (so each multiattack swing retaliates). A parried swing already set `hit=False`, so it doesn't trigger.
+
+**Surprise Attack (bugbear) deferred** — the Arena models no surprise/ambush at all (no surprise round, no SURPRISED condition, no ambush setup). Rather than fake it, OublietteDev chose to split Surprise Attack into the backlog, paired with a future surprise/ambush subsystem (which would also unlock Assassinate and story-bridge ambushes). With that deferral, **Package D-MON is closed** (Rampage + charge follow-ups stay with the AI rework).
 
 ---
 
