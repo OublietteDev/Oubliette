@@ -490,6 +490,34 @@ def _charge_rider(sa: dict) -> dict | None:
     return rider
 
 
+_PARRY_AC_RE = re.compile(r"adds (\d+) to its ac", re.IGNORECASE)
+
+
+def _reactions_actions(m: dict) -> list:
+    """Parse the source `reactions` array → Arena reaction Actions (D-MON-5).
+
+    Only Parry is given mechanics (a +AC reaction vs one melee attack, the same
+    shape as Shield). Other reactions (Split, Unnerving Mask) are narrative /
+    complex and left out for now."""
+    out = []
+    for r in m.get("reactions", []):
+        if r["name"].lower().strip() != "parry":
+            continue
+        mm = _PARRY_AC_RE.search(r.get("desc", ""))
+        if not mm:
+            continue
+        out.append({
+            "name": "Parry",
+            "description": r.get("desc", ""),
+            "action_type": "reaction",
+            "target_type": "self",
+            "buff_effects": [
+                {"stat": "ac", "modifier_type": "flat_bonus", "value": int(mm.group(1))},
+            ],
+        })
+    return out
+
+
 def _legendary_resistance_count(specials: list) -> int:
     """Legendary Resistance pool size, parsed from '(3/Day)' in the trait name."""
     for sa in specials:
@@ -533,6 +561,7 @@ def build_monster(m: dict) -> dict:
     regen_amount, regen_negated = _regeneration(specials_raw)
     undead_fort = _undead_fortitude(specials_raw)
     death_burst = _death_burst(specials_raw)
+    reactions = _reactions_actions(m)
 
     size = m.get("size", "Medium").lower()
     ctype = m.get("type", "humanoid").lower()
@@ -573,6 +602,8 @@ def build_monster(m: dict) -> dict:
         mon["undead_fortitude"] = True
     if death_burst:
         mon["death_burst"] = death_burst
+    if reactions:
+        mon["reactions"] = reactions
     return mon
 
 

@@ -1949,6 +1949,47 @@ class CombatManager:
                 options.append((act, self.AC_REACTION))
         return options
 
+    def _evaluate_monster_parry(self, hit_result: AttackHitResult) -> bool:
+        """A non-player target auto-uses a Parry reaction (D-MON-5) when its +AC
+        would turn the incoming melee hit into a miss. Returns True if parried.
+
+        Parry is melee-only and one attack; a natural-20 crit can't be parried.
+        Simplifications: the RAW "must see the attacker / be wielding a melee
+        weapon" clauses are not checked (the monsters that have Parry are melee
+        fighters that can normally see their attacker)."""
+        if not hit_result.hit or hit_result.critical or hit_result.attack is None:
+            return False
+        if not hit_result.attack.attack_type.startswith("melee"):
+            return False
+        target_id = hit_result.target_id
+        tc = self.combatants.get(target_id)
+        if tc is None or getattr(tc.creature, "is_player_controlled", False):
+            return False  # players choose via the reaction popup, not auto
+        if self.reaction_used.get(target_id, False):
+            return False
+        creature = tc.creature
+        if (creature.current_hit_points or 0) <= 0:
+            return False
+        from arena.models.actions import ActionType
+        for act in creature.reactions:
+            if act.action_type != ActionType.REACTION:
+                continue
+            bonus = self._ac_reaction_bonus(act)
+            # Use it only when it actually negates THIS hit.
+            if bonus > 0 and hit_result.total_roll - bonus < hit_result.target_ac:
+                hit_result.hit = False
+                self.reaction_used[target_id] = True
+                self.log.add(CombatEvent(
+                    event_type=CombatEventType.INFO,
+                    message=(f"{creature.name} uses {act.name} (+{bonus} AC) — "
+                             f"the attack is parried to a miss!"),
+                    source_id=target_id,
+                    details={"parry": True, "ac_bonus": bonus,
+                             "action_name": act.name},
+                ))
+                return True
+        return False
+
     def _hit_reaction_options(
         self, target_id: str, attack_type: str,
     ) -> list[tuple]:
@@ -2287,6 +2328,13 @@ class CombatManager:
                         "options": options,
                     }
                     return None  # Deferred -- GUI will show popup
+
+        # A monster target may Parry (D-MON-5): a +AC reaction that turns the
+        # incoming melee hit into a miss. If it fires, there is no hit — drop the
+        # damage and any riders.
+        if self._evaluate_monster_parry(hit_result):
+            rider_results = None
+            bonus_damage = None
 
         # Aggregate rider bonus damage into the bonus_damage list
         all_bonus = list(bonus_damage) if bonus_damage else []

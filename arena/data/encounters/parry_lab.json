@@ -1,0 +1,25 @@
+{
+  "name": "Parry Lab — monster reactions (D-MON-5)",
+  "description": "Bench for the Parry reaction. Trade melee blows with the Knight (+2 AC), Gladiator (+3) and Erinyes (+4): whenever one of your attacks would hit by a small margin, the monster spends its reaction to add its AC bonus and turn that hit into a miss — you'll see 'uses Parry — the attack is parried to a miss!' in the log. It's once per round and melee-only, and it can't stop a hit that clears the raised AC or a natural-20 crit. (It fires only on marginal hits, so it won't trigger every swing.)",
+  "grid_width": 16,
+  "grid_height": 12,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/valeria.json", "creature_data": null, "team": "player", "starting_position": [3, 4], "count": 1, "name_override": null},
+    {"creature_id": "characters/thorin.json", "creature_data": null, "team": "player", "starting_position": [3, 7], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/knight.json", "creature_data": null, "team": "enemy", "starting_position": [6, 4], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/gladiator.json", "creature_data": null, "team": "enemy", "starting_position": [6, 7], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/erinyes.json", "creature_data": null, "team": "enemy", "starting_position": [7, 9], "count": 1, "name_override": null}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

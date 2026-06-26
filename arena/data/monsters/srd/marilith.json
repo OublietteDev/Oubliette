@@ -112,5 +112,20 @@
   ],
   "challenge_rating": 16.0,
   "experience_points": 15000,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "reactions": [
+    {
+      "name": "Parry",
+      "description": "The marilith adds 5 to its AC against one melee attack that would hit it. To do so, the marilith must see the attacker and be wielding a melee weapon.",
+      "action_type": "reaction",
+      "target_type": "self",
+      "buff_effects": [
+        {
+          "stat": "ac",
+          "modifier_type": "flat_bonus",
+          "value": 5
+        }
+      ]
+    }
+  ]
 }
