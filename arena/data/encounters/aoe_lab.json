@@ -1,0 +1,29 @@
+{
+  "name": "AoE Lab — Cone / Line / Cube shapes + shove-into-spikes (D-AOE-1)",
+  "description": "Bench for true AoE geometry. Vesper the Geometer (your only hero — drive her) carries the shape spells. LINE (Lightning Bolt): aim straight east down row 9 at the three Line Cultists — the bolt is now a 5-ft-wide LINE, so it zaps the row but spares the Flanker sitting four rows up (a sphere would have caught him too). CONE (Cone of Cold / Burning Hands): aim down-right at the huddled Cone Cluster — the blast is a widening wedge from Vesper, not a circle; sweep the aim and watch the hex preview fan out. CUBE (Thunderwave): a 15-ft cube originating from Vesper — the preview is a boxy patch, not a ring. SHOVE-INTO-SPIKES (the folded-in forced-movement payoff): drop Spike Growth on the open lane east of the Shove Dummy, then Thunderwave the Dummy — the failed CON save pushes it 10 ft east THROUGH the spikes, and it takes 2d4 per 5 ft travelled (no save) on top of the thunder damage. The AoE preview shows exactly which hexes each shape will hit before you click.",
+  "grid_width": 30,
+  "grid_height": 18,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/aoe_warden.json", "creature_data": null, "team": "player", "starting_position": [4, 9], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/cultist.json", "creature_data": null, "team": "enemy", "starting_position": [12, 9], "count": 1, "name_override": "Line Cultist A"},
+    {"creature_id": "monsters/srd/cultist.json", "creature_data": null, "team": "enemy", "starting_position": [16, 9], "count": 1, "name_override": "Line Cultist B"},
+    {"creature_id": "monsters/srd/cultist.json", "creature_data": null, "team": "enemy", "starting_position": [20, 9], "count": 1, "name_override": "Line Cultist C"},
+    {"creature_id": "monsters/srd/cultist.json", "creature_data": null, "team": "enemy", "starting_position": [16, 5], "count": 1, "name_override": "Flanker (off the line)"},
+    {"creature_id": "monsters/srd/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [11, 14], "count": 1, "name_override": "Cone Goblin A"},
+    {"creature_id": "monsters/srd/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [13, 15], "count": 1, "name_override": "Cone Goblin B"},
+    {"creature_id": "monsters/srd/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [12, 16], "count": 1, "name_override": "Cone Goblin C"},
+    {"creature_id": "monsters/srd/orc.json", "creature_data": null, "team": "enemy", "starting_position": [7, 9], "count": 1, "name_override": "Shove Dummy"}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

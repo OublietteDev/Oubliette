@@ -4125,17 +4125,22 @@ class CombatManager:
         combatant,
         target_hex: HexCoord,
     ) -> list[str]:
-        """Find all creatures within area_size feet of a target hex.
+        """Find all creatures the AoE's true shape covers (D-AOE-1).
 
-        Unlike ``_resolve_effect_targets``, uses the clicked hex as the AoE
-        center instead of the caster's position, and does NOT automatically
-        skip the caster (they may be in their own Fireball).
+        Builds the affected hex set from the action's shape — sphere/cube placed
+        on the clicked hex, line/cone emanating from the caster toward it — then
+        keeps creatures whose footprint overlaps that set. Does NOT automatically
+        skip the caster (they may be standing in their own Fireball).
         """
-        area_feet = action.area_size or action.range
         if self.grid is None:
             return []
 
-        from arena.grid.footprint import min_distance_between
+        from arena.grid.aoe_shapes import aoe_hexes
+        from arena.grid.footprint import get_occupied_hexes
+
+        # Line/cone emanate from the caster; sphere/cube are placed on the aim.
+        origin = combatant.position or target_hex
+        area_set = {(h.q, h.r) for h in aoe_hexes(action, origin, target_hex, self.grid)}
 
         # Team filtering — same logic as _resolve_effect_targets:
         # beneficial AoE is allies-only, harmful AoE hits every team
@@ -4166,12 +4171,9 @@ class CombatManager:
             target_pos = c.position
             if target_pos is None:
                 continue
-            # Distance from AoE center (the clicked hex, size 1)
-            dist_feet = min_distance_between(
-                target_hex, 1,
-                target_pos, c.creature.size,
-            ) * 5
-            if dist_feet <= area_feet:
+            # Caught if any hex of the creature's footprint is in the shape.
+            occ = get_occupied_hexes(target_pos, c.creature.size)
+            if any((h.q, h.r) in area_set for h in occ):
                 affected.append(cid)
 
         return affected
@@ -5873,7 +5875,9 @@ class CombatManager:
         resolve_forced_movement() and returns additional events.
         """
         from arena.combat.forced_movement import resolve_forced_movement
-        from arena.combat.zones import process_zone_entry
+        from arena.combat.zones import (
+            process_zone_entry, process_zone_movement_path,
+        )
 
         new_events: list[CombatEvent] = []
         markers_to_remove: list[CombatEvent] = []
@@ -5904,6 +5908,7 @@ class CombatManager:
                 knock_prone=event.details.get("fm_prone", False),
             )
 
+            start_hex = target_c.position
             # Update combatant position
             target_c.position = result.destination_hex
             new_events.extend(result.events)
@@ -5915,6 +5920,13 @@ class CombatManager:
                     self.combatants, self.grid,
                 )
                 new_events.extend(zone_events)
+                # Spike Growth & co. deal 2d4 per 5 ft TRAVELLED — reconstruct
+                # the shoved-through path (forced movement teleports straight to
+                # the destination, so there's no per-step hook). (D-AOE-1)
+                new_events.extend(process_zone_movement_path(
+                    self.active_zones, target_id, start_hex,
+                    result.destination_hex, self.combatants, self.grid,
+                ))
 
         # Remove marker events from the original list
         for marker in markers_to_remove:

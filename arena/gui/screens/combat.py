@@ -2944,34 +2944,55 @@ class CombatScreen(Screen):
             area_feet = float(action.area_size or action.range)
             max_range = action.range
 
-        # Only show preview if hovered hex is within spell range
-        dist_feet = min_distance_between(
-            combatant.position, combatant.creature.size,
-            center_hex, 1,
-        ) * 5
-        if dist_feet > max_range:
-            return
+        # Emanating shapes (cone/line) aim by direction and self-limit to their
+        # length; placed shapes (sphere/cube) must land within range.
+        action = None if self._pending_zone_move else self.combat.selected_action
+        emanating = (action is not None
+                     and action.target_type.value in ("area_cone", "area_line"))
+        if not emanating:
+            dist_feet = min_distance_between(
+                combatant.position, combatant.creature.size,
+                center_hex, 1,
+            ) * 5
+            if dist_feet > max_range:
+                return
 
-        area_hexes = area_feet / 5
+        # The exact hex set that will be hit — the SAME geometry the resolver
+        # uses (aoe_hexes), so the preview can't lie. Zone-move has no action:
+        # fall back to a plain radius around the hovered hex.
+        if action is not None:
+            from arena.grid.aoe_shapes import aoe_hexes
+            shape = {
+                (h.q, h.r) for h in aoe_hexes(
+                    action, combatant.position, center_hex, grid,
+                )
+            }
+        else:
+            area_hexes = area_feet / 5
+            shape = {
+                (q, r)
+                for q in range(grid.width) for r in range(grid.height)
+                if center_hex.distance_to(HexCoord(q, r)) <= area_hexes
+            }
+
         preview_color = parse_color(COLORS["hex_aoe_preview"])
         scaled_size = get_settings().display.default_hex_size * self.grid_view.camera.zoom
         ox, oy = self.grid_view.origin
 
-        for q in range(grid.width):
-            for r in range(grid.height):
-                coord = HexCoord(q, r)
-                if center_hex.distance_to(coord) <= area_hexes:
-                    wx, wy = coord.to_pixel(get_settings().display.default_hex_size)
-                    lx, ly = self.grid_view.camera.world_to_screen(wx, wy)
-                    draw_hex_highlight(
-                        surface, (lx + ox, ly + oy), scaled_size,
-                        preview_color, alpha=60,
-                    )
+        for q, r in shape:
+            coord = HexCoord(q, r)
+            wx, wy = coord.to_pixel(get_settings().display.default_hex_size)
+            lx, ly = self.grid_view.camera.world_to_screen(wx, wy)
+            draw_hex_highlight(
+                surface, (lx + ox, ly + oy), scaled_size,
+                preview_color, alpha=60,
+            )
 
         # Mark every creature actually caught in the blast (same geometry as
         # _resolve_effect_targets_at_hex). Friendly fire is real (B5), so a
         # caught ally glows warning-red — see the splash BEFORE you click.
         if not self._pending_zone_move:
+            from arena.grid.footprint import get_occupied_hexes
             warning_color = parse_color(COLORS["hp_critical"])
             caster_team = combatant.team
             # Beneficial AoE (Mass Cure) never splashes — no warning there
@@ -2983,9 +3004,10 @@ class CombatScreen(Screen):
             for c in self.combat.combatants.values():
                 if c.position is None or not c.creature.is_conscious:
                     continue
-                caught = min_distance_between(
-                    center_hex, 1, c.position, c.creature.size,
-                ) * 5 <= area_feet
+                caught = any(
+                    (h.q, h.r) in shape
+                    for h in get_occupied_hexes(c.position, c.creature.size)
+                )
                 if not caught:
                     continue
                 if sculpted and c.team == caster_team:

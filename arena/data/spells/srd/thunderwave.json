@@ -23,5 +23,7 @@
     ],
     "damage_on_success": "half"
   },
+  "forced_movement_type": "push",
+  "forced_movement_distance": 10,
   "upcast_damage_dice": "1d8"
 }

@@ -373,6 +373,46 @@ def process_zone_entry(
     return events
 
 
+def _apply_hazard_tick(
+    zone: ActiveZone,
+    creature_id: str,
+    combatants: dict[str, Combatant],
+) -> list[CombatEvent]:
+    """Deal one movement-hazard tick (e.g. Spike Growth's 2d4) to a creature.
+
+    No save, no ``already_damaged`` guard — every 5 ft travelled hurts. Returns
+    the damage + concentration-check events (empty if the roll was 0)."""
+    from arena.combat.actions import apply_damage
+    from arena.combat.concentration import check_concentration
+    from arena.combat.damage import DamagePacket
+    from arena.util.dice import roll_expression
+
+    creature_comb = combatants.get(creature_id)
+    if creature_comb is None:
+        return []
+    total_dmg, _rolls = roll_expression(zone.movement_hazard_dice or "0")
+    if total_dmg <= 0:
+        return []
+
+    target = creature_comb.creature
+    events: list[CombatEvent] = []
+    packet = DamagePacket(
+        amount=total_dmg, dtype=zone.movement_hazard_type,
+        source=zone.name, tags={"magical"},
+    )
+    dmg_event, dp_events = apply_damage(target, [packet], creature_id=creature_id)
+    dmg_event.source_id = zone.caster_id
+    dmg_event.target_id = creature_id
+    dmg_event.message = f"{target.name} {dmg_event.message}"
+    events.append(dmg_event)
+    events.extend(dp_events)
+    events.extend(check_concentration(
+        target, creature_id, dmg_event.details.get("damage", total_dmg),
+        combatants=combatants,
+    ))
+    return events
+
+
 def process_zone_movement_step(
     zones: list[ActiveZone],
     creature_id: str,
@@ -381,20 +421,13 @@ def process_zone_movement_step(
 ) -> list[CombatEvent]:
     """Resolve movement-hazard damage for a single 5-ft step (D-CTRL-1).
 
-    Called after each successful movement step (voluntary or forced). For every
-    movement-hazard zone (Spike Growth) whose area now contains the creature,
-    deal the hazard dice with NO save — 2d4 piercing per 5 ft travelled. Unlike
-    save zones there is no ``already_damaged`` guard: every step that lands in
-    the spikes hurts, including the step that first enters them.
+    Called after each successful voluntary movement step. For every movement-
+    hazard zone (Spike Growth) whose area now contains the creature, deal the
+    hazard dice with NO save — 2d4 per 5 ft. Every step that lands in the spikes
+    hurts, including the step that first enters them.
     """
-    from arena.combat.actions import apply_damage
-    from arena.combat.concentration import check_concentration
-    from arena.combat.damage import DamagePacket
-    from arena.util.dice import roll_expression
-
     events: list[CombatEvent] = []
-    creature_comb = combatants.get(creature_id)
-    if creature_comb is None:
+    if combatants.get(creature_id) is None:
         return events
 
     for zone in zones:
@@ -406,27 +439,47 @@ def process_zone_movement_step(
             continue
         if not is_in_zone(creature_id, zone, combatants, grid):
             continue
+        events.extend(_apply_hazard_tick(zone, creature_id, combatants))
 
-        target = creature_comb.creature
-        total_dmg, _rolls = roll_expression(zone.movement_hazard_dice)
-        if total_dmg <= 0:
+    return events
+
+
+def process_zone_movement_path(
+    zones: list[ActiveZone],
+    creature_id: str,
+    from_hex: HexCoord,
+    to_hex: HexCoord,
+    combatants: dict[str, Combatant],
+    grid: HexGrid | None,
+) -> list[CombatEvent]:
+    """Resolve movement-hazard damage along a FORCED move's path (D-AOE-1).
+
+    Forced movement (push/pull) teleports a creature straight to its destination,
+    so — unlike a voluntary hex-by-hex walk — there is no per-step hook. This
+    reconstructs the line of hexes the creature crossed (``hex_line``) and deals
+    one hazard tick (2d4, no save) for every spike hex on that path, matching RAW
+    "2d4 per 5 ft travelled (voluntary or forced)".
+    """
+    from arena.grid.line_of_sight import hex_line
+
+    events: list[CombatEvent] = []
+    creature_comb = combatants.get(creature_id)
+    if creature_comb is None or grid is None:
+        return events
+
+    path = hex_line(from_hex, to_hex)[1:]  # exclude the starting hex
+    if not path:
+        return events
+
+    for zone in zones:
+        if not zone.movement_hazard_dice or creature_id == zone.caster_id:
             continue
-        packet = DamagePacket(
-            amount=total_dmg, dtype=zone.movement_hazard_type,
-            source=zone.name, tags={"magical"},
-        )
-        dmg_event, dp_events = apply_damage(target, [packet], creature_id=creature_id)
-        dmg_event.source_id = zone.caster_id
-        dmg_event.target_id = creature_id
-        dmg_event.message = f"{target.name} {dmg_event.message}"
-        events.append(dmg_event)
-        events.extend(dp_events)
-
-        conc_events = check_concentration(
-            target, creature_id, dmg_event.details.get("damage", total_dmg),
-            combatants=combatants,
-        )
-        events.extend(conc_events)
+        zone_hexes = {(h.q, h.r) for h in get_zone_hexes(zone, combatants, grid)}
+        for ph in path:
+            if (ph.q, ph.r) in zone_hexes:
+                events.extend(_apply_hazard_tick(zone, creature_id, combatants))
+                if not creature_comb.creature.is_conscious:
+                    break
 
     return events
 
