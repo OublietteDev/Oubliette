@@ -188,6 +188,35 @@ def get_save_advantage(creature: Creature, ability: str) -> int:
     return 0
 
 
+def get_trait_save_advantage(
+    creature: Creature,
+    is_spell_save: bool = False,
+    imposes_conditions: list[str] | None = None,
+) -> tuple[int, str | None]:
+    """Advantage on a saving throw from a monster trait (D-MON-4a).
+
+    - Magic Resistance (``save_advantage_vs_spells``): advantage on saves
+      against spells.
+    - Brave / Dark Devotion (``save_advantage_vs_conditions=['frightened']``)
+      and Fey Ancestry (``['charmed']``): advantage on a save that would
+      impose one of those conditions.
+
+    These traits only ever grant advantage (never disadvantage). Returns
+    ``(advantage, trait_label)`` where advantage is 0 or 1 and trait_label
+    names the trait for the combat log (or None).
+    """
+    imposed = {c.lower() for c in (imposes_conditions or [])}
+    feats = list(getattr(creature, "special_abilities", []) or [])
+    feats += list(getattr(creature, "features", []) or [])
+    for feat in feats:
+        if is_spell_save and getattr(feat, "save_advantage_vs_spells", False):
+            return 1, getattr(feat, "name", None) or "Magic Resistance"
+        vs = getattr(feat, "save_advantage_vs_conditions", None) or []
+        if imposed and {c.lower() for c in vs} & imposed:
+            return 1, getattr(feat, "name", None)
+    return 0, None
+
+
 def is_auto_fail_save(creature: Creature, ability: str) -> bool:
     """Check if a creature auto-fails a saving throw due to conditions.
 

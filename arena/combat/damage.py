@@ -212,6 +212,8 @@ def attack_is_magical(attacker: Creature, action, attack) -> bool:
                 if item.name == src and (item.is_magical or item.magic_bonus > 0):
                     return True
     for trait in getattr(attacker, "special_abilities", []) or []:
+        if getattr(trait, "attacks_are_magical", False):
+            return True
         if (getattr(trait, "name", "") or "").strip().lower() == "magic weapons":
             return True
     return False

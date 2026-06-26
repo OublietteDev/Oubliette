@@ -33,6 +33,7 @@ from arena.combat.condition_effects import (
     get_attack_advantage,
     is_auto_crit,
     get_save_advantage,
+    get_trait_save_advantage,
     is_auto_fail_save,
 )
 from arena.grid.line_of_sight import has_line_of_sight, get_cover
@@ -352,6 +353,41 @@ def _decoy_buff(creature: Creature):
     return None
 
 
+def _pack_tactics_advantage(
+    attacker, attacker_id, target, target_id, target_pos, combatants, grid,
+) -> bool:
+    """Pack Tactics (D-MON-4a): the attacker has advantage on an attack if a
+    conscious, non-incapacitated ally (same team, not the attacker) is within
+    5 ft of the target."""
+    if not combatants or target_pos is None:
+        return False
+    feats = (getattr(attacker, "special_abilities", []) or []) + (
+        getattr(attacker, "features", []) or []
+    )
+    if not any(getattr(f, "attack_advantage_when_ally_adjacent", False) for f in feats):
+        return False
+    attacker_comb = combatants.get(attacker_id)
+    team = getattr(attacker_comb, "team", None)
+    if team is None:
+        return False
+    from arena.grid.footprint import min_distance_between
+
+    for cid, comb in combatants.items():
+        if cid in (attacker_id, target_id):
+            continue
+        if getattr(comb, "team", None) != team:
+            continue
+        ally = comb.creature
+        if not ally.is_conscious or has_condition(ally, Condition.INCAPACITATED):
+            continue
+        ally_pos = grid.find_creature(cid)
+        if ally_pos is None:
+            continue
+        if min_distance_between(ally_pos, ally.size, target_pos, target.size) <= 1:
+            return True
+    return False
+
+
 def resolve_attack_hit(
     attacker: Creature,
     attacker_id: str,
@@ -569,7 +605,12 @@ def resolve_attack_hit(
     if has_condition(attacker, Condition.HIDDEN):
         remove_condition(attacker, attacker_id, Condition.HIDDEN)
 
-    total_adv_sources = max(advantage, 0) + max(condition_adv, 0)
+    # Pack Tactics (D-MON-4a): advantage when an ally flanks the target.
+    pack_adv = _pack_tactics_advantage(
+        attacker, attacker_id, target, target_id, target_pos, combatants, grid,
+    )
+
+    total_adv_sources = max(advantage, 0) + max(condition_adv, 0) + (1 if pack_adv else 0)
     total_dis_sources = abs(min(advantage, 0)) + abs(min(condition_adv, 0))
     if total_adv_sources > 0 and total_dis_sources > 0:
         effective_advantage = 0
@@ -702,6 +743,7 @@ def resolve_attack_hit(
     crit_text = " (CRITICAL!)" if result == AttackResult.CRITICAL_HIT else ""
     miss_text = " (Critical Miss!)" if result == AttackResult.CRITICAL_MISS else ""
     hit_miss = "HIT" if hit else "MISS"
+    pack_detail = " [Pack Tactics]" if pack_adv and effective_advantage > 0 else ""
 
     events.append(
         CombatEvent(
@@ -709,7 +751,7 @@ def resolve_attack_hit(
             message=(
                 f"{attacker.name} attacks {target.name} with {action.name}: "
                 f"{total_roll} ({natural_roll}+{modifier}) vs AC {target_ac} "
-                f"- {hit_miss}{crit_text}{miss_text}{roll_detail}{buff_roll_detail}"
+                f"- {hit_miss}{crit_text}{miss_text}{roll_detail}{buff_roll_detail}{pack_detail}"
             ),
             source_id=attacker_id,
             target_id=target_id,
@@ -1091,6 +1133,8 @@ def resolve_saving_throw(
     combatants: dict | None = None,
     positions: dict | None = None,
     legendary_resistance_eligible: bool = False,
+    is_spell_save: bool = False,
+    imposes_conditions: list[str] | None = None,
 ) -> tuple[bool, CombatEvent]:
     """Roll a saving throw for a creature.
 
@@ -1104,6 +1148,11 @@ def resolve_saving_throw(
             may spend a Legendary Resistance charge to succeed instead. Callers set
             this ONLY for save-or-lose effects (a condition/control on failure), so
             the pool is never wasted on a plain damage save.
+        is_spell_save: True when the save is against a spell — lets Magic
+            Resistance (D-MON-4a) grant advantage.
+        imposes_conditions: the conditions this save would inflict on a failure
+            — lets Brave/Dark Devotion (frightened) and Fey Ancestry (charmed)
+            grant advantage (D-MON-4a).
 
     Returns:
         (success, event) tuple. success is True if the save passed.
@@ -1155,9 +1204,13 @@ def resolve_saving_throw(
             modifier += aura_bonus
             buff_roll_detail += f" [aura: +{aura_bonus}]"
 
-    # Merge condition-based advantage with explicit parameter
+    # Merge condition-based advantage with explicit parameter, plus monster
+    # trait advantage (Magic Resistance vs spells / Brave / Fey Ancestry).
     condition_adv = get_save_advantage(creature, ability)
-    total_adv = max(advantage, 0) + max(condition_adv, 0)
+    trait_adv, trait_label = get_trait_save_advantage(
+        creature, is_spell_save=is_spell_save, imposes_conditions=imposes_conditions,
+    )
+    total_adv = max(advantage, 0) + max(condition_adv, 0) + max(trait_adv, 0)
     total_dis = abs(min(advantage, 0)) + abs(min(condition_adv, 0))
     if total_adv > 0 and total_dis > 0:
         effective_advantage = 0
@@ -1188,13 +1241,14 @@ def resolve_saving_throw(
     bardic_detail = _bardic_detail or ""
 
     result_text = "SUCCESS" if success else "FAILURE"
+    trait_detail = f" [{trait_label}]" if trait_adv > 0 and trait_label else ""
 
     event = CombatEvent(
         event_type=CombatEventType.SAVING_THROW,
         message=(
             f"{creature.name} makes a {ability.upper()} saving throw: "
             f"{total} ({natural_roll}+{modifier}) vs DC {dc} "
-            f"- {result_text}{roll_detail}{buff_roll_detail}{bardic_detail}"
+            f"- {result_text}{roll_detail}{buff_roll_detail}{bardic_detail}{trait_detail}"
         ),
         source_id=creature_id,
         details={
@@ -1205,6 +1259,7 @@ def resolve_saving_throw(
             "dc": dc,
             "success": success,
             "advantage": effective_advantage,
+            "trait_advantage": trait_label if trait_adv > 0 else None,
         },
     )
 
@@ -1480,6 +1535,8 @@ def resolve_effect(
             target, target_id, save.ability, dc,
             legendary_resistance_eligible=bool(save.conditions_on_fail)
             or action.control_effect or action.compulsion_effect,
+            is_spell_save=action.spell_level is not None,
+            imposes_conditions=save.conditions_on_fail,
         )
         events.append(save_event)
 

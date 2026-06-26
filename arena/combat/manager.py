@@ -1010,6 +1010,8 @@ class CombatManager:
                 save_success, save_event = resolve_saving_throw(
                     target.creature, tid, save.ability, dc,
                     legendary_resistance_eligible=bool(save.conditions_on_fail),
+                    is_spell_save=action.spell_level is not None,
+                    imposes_conditions=save.conditions_on_fail,
                 )
                 all_events.append(save_event)
 
@@ -3300,8 +3302,11 @@ class CombatManager:
             dc = 8 + cr.proficiency_bonus + best
 
         # ── Wisdom save ───────────────────────────────────────────────
+        # Dominate is a charm spell → Magic Resistance and Fey Ancestry apply.
         success, save_event = resolve_saving_throw(
             target.creature, target_id, "wisdom", dc,
+            is_spell_save=action.spell_level is not None,
+            imposes_conditions=["charmed"],
         )
         events.append(save_event)
 
@@ -3389,8 +3394,10 @@ class CombatManager:
             dc = 8 + cr.proficiency_bonus + best
 
         # ── Wisdom save ───────────────────────────────────────────────
+        # Compulsion is an enchantment spell → Magic Resistance applies.
         success, save_event = resolve_saving_throw(
             target.creature, target_id, "wisdom", dc,
+            is_spell_save=action.spell_level is not None,
         )
         events.append(save_event)
 

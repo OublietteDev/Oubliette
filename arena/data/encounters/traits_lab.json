@@ -1,0 +1,26 @@
+{
+  "name": "Traits Lab — Magic Resistance & Pack Tactics (D-MON-4a)",
+  "description": "Bench for the monster trait primitives. Cast Fireball or Web at the Bearded Devil and watch its save roll come up with advantage tagged [Magic Resistance] (it has advantage on saves vs spells). Let the wolves close on Valeria: once two of them flank her, each bite roll is tagged [Pack Tactics] (advantage when an ally is within 5 ft of the target). Elara herself is an elf with Fey Ancestry — a charm cast at her would roll with advantage too.",
+  "grid_width": 20,
+  "grid_height": 15,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/elara.json", "creature_data": null, "team": "player", "starting_position": [3, 9], "count": 1, "name_override": null},
+    {"creature_id": "characters/valeria.json", "creature_data": null, "team": "player", "starting_position": [5, 7], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/bearded_devil.json", "creature_data": null, "team": "enemy", "starting_position": [15, 4], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/wolf.json", "creature_data": null, "team": "enemy", "starting_position": [15, 7], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/wolf.json", "creature_data": null, "team": "enemy", "starting_position": [15, 9], "count": 1, "name_override": "Wolf 2"},
+    {"creature_id": "monsters/srd/wolf.json", "creature_data": null, "team": "enemy", "starting_position": [16, 8], "count": 1, "name_override": "Wolf 3"}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}
