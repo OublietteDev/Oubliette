@@ -200,12 +200,26 @@ recorded event (so replay never re-runs the fight — only its outcome is persis
 
 A **bridge** maps the party and the bestiary into the Arena and maps the result back. Two big
 arcs are done: **Phase B** (the Arena consumes Oubliette's full SRD content — items, potions,
-spell slots, spells, portraits-as-tokens, resource round-trip) and most of **Phase C** (Arena
+spell slots, spells, portraits-as-tokens, resource round-trip) and **Phase C** (Arena
 "completeness" — class features, more spells, on-hit riders, reactions like Shield, Mirror Image,
-Turn Undead, Banishment, scrolls, weapon kits, grapple/escape). Remaining combat work is polish
-(a few control spells, vision/light, a walls placement UI, re-prepare-on-long-rest, a ship-
-readiness playtest). The original "burnout" pitfall — trying to build a *universal* effect
-generator — is explicitly **capped**: build only what real play needs.
+Turn Undead, Banishment, scrolls, weapon kits, grapple/escape, vision/light, prone movement,
+re-prepare-on-long-rest, the C6 lab battery). The original "burnout" pitfall — trying to build a
+*universal* effect generator — is explicitly **capped**: build only what real play needs.
+
+**Phase D — closing the SRD feature surface (started 2026-06-26).** A thorough multi-agent
+*completeness audit* (58 agents; finder → independent-verifier → completeness-critic → synthesis)
+asked "is the Arena SRD-5.1-combat-complete?" Verdict: feature-rich and RAW-faithful in many hard
+places (the damage pipeline, death saves, concentration, most conditions, **and — refuting a
+standing hunch — legendary AND lair actions** are all solid), but with targeted gaps. The biggest
+cluster was **"monsters fight below their stat block."** Phase D closes the *mechanic* gaps (the
+plan is `docs/roadmap/oubliette-phase-d-plan-v0.1.md`); AI-driven gaps (monsters not *using*
+multiattack/their spell lists) are deferred to a future AI pass, and a few RAW deviations are kept
+on purpose (downed PCs stay "weirdly safe" — no live DM to grant mercy; lair-action *content* is
+out because the SRD ships none). **Done so far (lab + integration tested, suite 2654 green):**
+D-MON-1 **Legendary Resistance** (a boss turns 3 failed save-or-lose throws into successes, never
+wasted on plain damage saves), D-MON-2 **Recharge** (breath weapons roll a real d6 to recur),
+D-MON-3 **Regeneration** (start-of-turn heal, suppressed a turn by acid/fire). Next: the trait
+primitives (Magic Resistance, Pack Tactics, …) and monster reactions (Parry).
 
 ---
 
