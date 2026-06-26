@@ -205,6 +205,32 @@ def test_pack_tactics_ignores_incapacitated_ally():
     assert res.effective_advantage == 0
 
 
+# ── Integration: real data files (guards the spell_level / trait wiring) ─────
+
+def test_real_bearded_devil_resists_real_hold_person():
+    """The shipped bearded_devil + elara.json Hold Person must produce a save
+    with Magic Resistance advantage — guards both the trait flag in the monster
+    data AND the spell_level tag on the spell action (a None there silently
+    disables Magic Resistance, which is the bug this test exists to catch)."""
+    import json
+    from pathlib import Path
+
+    data = Path(__file__).resolve().parent.parent / "data"
+    devil = Monster.model_validate(
+        json.loads((data / "monsters/srd/bearded_devil.json").read_text(encoding="utf-8")))
+    elara = json.loads((data / "characters/elara.json").read_text(encoding="utf-8"))
+    hp = next(a for a in elara["actions"] if a["name"] == "Hold Person")
+    assert hp["spell_level"] is not None, "Hold Person must carry a spell_level"
+    save = hp["saving_throw"]
+    _, event = resolve_saving_throw(
+        devil, "devil", save["ability"], save["dc"] or 10,
+        is_spell_save=hp["spell_level"] is not None,
+        imposes_conditions=save["conditions_on_fail"],
+    )
+    assert event.details["advantage"] == 1
+    assert event.details["trait_advantage"] == "Magic Resistance"
+
+
 # ── Magic Weapons (attacks count as magical) ─────────────────────────────────
 
 def test_magic_weapons_flag_makes_attacks_magical():
