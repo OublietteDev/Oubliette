@@ -263,9 +263,20 @@ bridge that would bake it). Fixed by backfilling `spell_level` from the library;
 test that loads the REAL bearded_devil + elara Hold Person. First thing to check if a *lab* spell
 misbehaves: is `spell_level` None on that legacy character's baked action? Suite 2685 green.
 
-Next: the rest of D-MON-4 (move-then-strike — Charge/Pounce/Trampling Charge/Rampage; on-hit aura
-saves — Stench/Heated Body; Reckless/Blood Frenzy/Surprise Attack advantage riders) and D-MON-5
-monster reactions (Parry).
+**D-MON-4c — move-then-strike (commit b26118a, suite 2692 green).** Charge/Pounce/Trampling Charge
+expressed as on-hit riders gated on movement: `OnHitRider` gained `requires_charge_ft` (the gate)
+and `save_dc_fixed` (Trampling Charge's DC is NOT 8+prof+mod — triceratops 13 vs computed 17 — so
+it's taken verbatim from the block). `MovementTracker.turn_start_position` (set at turn start) lets
+the manager's `get_applicable_riders` filter charge riders via `_attacker_charged` (has_moved AND
+closed ≥ threshold/5 hexes toward the target). Generator parses 23 monsters (12 Charge, 6 Pounce,
+5 Trampling Charge) → `Feature.on_hit_rider`; prone applied indefinitely (stand-up clears). NOT
+modeled: minotaur's "pushed away" clause, and the lion/triceratops "bonus attack vs a prone target"
+follow-up. `test_move_then_strike.py` (6) + `charge_lab` bench. **Rampage** (gnoll: on-kill bonus
+move+bite) is a different shape (not a move-then-strike rider) — deferred with the AI rework.
+
+Next (remaining D-MON): on-hit aura saves (Stench poison aura, Heated Body), the advantage riders
+(Reckless both-directions, Blood Frenzy vs damaged, Surprise Attack first-round), and D-MON-5
+monster reactions (Parry — +AC reaction, 12 monsters).
 
 ---
 
