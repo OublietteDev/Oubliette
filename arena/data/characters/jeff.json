@@ -110,7 +110,8 @@
       "ai_priority": 5,
       "ai_use_condition": null,
       "source_item": null,
-      "animation": "fireball"
+      "animation": "fireball",
+      "spell_level": 3
     }
   ],
   "bonus_actions": [],

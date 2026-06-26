@@ -2,7 +2,6 @@
   "name": "Gareth Stoneheart",
   "size": "medium",
   "creature_type": "humanoid",
-
   "ability_scores": {
     "strength": 14,
     "dexterity": 10,
@@ -11,17 +10,23 @@
     "wisdom": 12,
     "charisma": 8
   },
-
   "armor_class": 15,
   "max_hit_points": 58,
-  "speed": {"walk": 25},
+  "speed": {
+    "walk": 25
+  },
   "proficiency_bonus": 4,
-
-  "saving_throw_proficiencies": ["intelligence", "wisdom"],
+  "saving_throw_proficiencies": [
+    "intelligence",
+    "wisdom"
+  ],
   "passive_perception": 15,
-  "senses": {"darkvision": 60},
-  "damage_resistances": ["poison"],
-
+  "senses": {
+    "darkvision": 60
+  },
+  "damage_resistances": [
+    "poison"
+  ],
   "actions": [
     {
       "name": "Wall of Stone",
@@ -32,7 +37,9 @@
       "area_size": 10,
       "requires_concentration": true,
       "terrain_modification": "wall",
-      "resource_cost": {"spell_slot_5": 1},
+      "resource_cost": {
+        "spell_slot_5": 1
+      },
       "ai_priority": 8,
       "ai_use_condition": "enemies_in_range >= 2"
     },
@@ -49,13 +56,19 @@
         "ability": "dexterity",
         "dc": 17,
         "damage_on_fail": [
-          {"dice": "2d4", "damage_type": "piercing"}
+          {
+            "dice": "2d4",
+            "damage_type": "piercing"
+          }
         ],
         "damage_on_success": "none"
       },
-      "resource_cost": {"spell_slot_2": 1},
+      "resource_cost": {
+        "spell_slot_2": 1
+      },
       "ai_priority": 7,
-      "ai_use_condition": "enemies_in_range >= 2"
+      "ai_use_condition": "enemies_in_range >= 2",
+      "spell_level": 2
     },
     {
       "name": "Mold Earth",
@@ -80,11 +93,16 @@
         "ability": "dexterity",
         "dc": 17,
         "damage_on_fail": [
-          {"dice": "4d6", "damage_type": "bludgeoning"}
+          {
+            "dice": "4d6",
+            "damage_type": "bludgeoning"
+          }
         ],
         "damage_on_success": "half"
       },
-      "resource_cost": {"spell_slot_5": 1},
+      "resource_cost": {
+        "spell_slot_5": 1
+      },
       "ai_priority": 7,
       "ai_use_condition": "enemies_in_range >= 1"
     },
@@ -99,13 +117,19 @@
         "ability": "dexterity",
         "dc": 17,
         "damage_on_fail": [
-          {"dice": "8d6", "damage_type": "fire"}
+          {
+            "dice": "8d6",
+            "damage_type": "fire"
+          }
         ],
         "damage_on_success": "half"
       },
-      "resource_cost": {"spell_slot_3": 1},
+      "resource_cost": {
+        "spell_slot_3": 1
+      },
       "ai_priority": 9,
-      "ai_use_condition": "enemies_in_range >= 2"
+      "ai_use_condition": "enemies_in_range >= 2",
+      "spell_level": 3
     },
     {
       "name": "Fire Bolt",
@@ -120,10 +144,14 @@
         "reach": 5,
         "range_normal": 120,
         "damage": [
-          {"dice": "2d10", "damage_type": "fire"}
+          {
+            "dice": "2d10",
+            "damage_type": "fire"
+          }
         ]
       },
-      "ai_priority": 5
+      "ai_priority": 5,
+      "spell_level": 0
     },
     {
       "name": "Warhammer",
@@ -137,13 +165,16 @@
         "ability": "strength",
         "reach": 5,
         "damage": [
-          {"dice": "1d8", "damage_type": "bludgeoning", "ability_modifier": "strength"}
+          {
+            "dice": "1d8",
+            "damage_type": "bludgeoning",
+            "ability_modifier": "strength"
+          }
         ]
       },
       "ai_priority": 3
     }
   ],
-
   "bonus_actions": [
     {
       "name": "Misty Step",
@@ -153,12 +184,14 @@
       "range": 30,
       "teleport_range": 30,
       "teleport_self": true,
-      "resource_cost": {"spell_slot_2": 1},
+      "resource_cost": {
+        "spell_slot_2": 1
+      },
       "ai_priority": 7,
-      "ai_use_condition": "is_in_melee"
+      "ai_use_condition": "is_in_melee",
+      "spell_level": 2
     }
   ],
-
   "reactions": [
     {
       "name": "Shield",
@@ -166,18 +199,19 @@
       "action_type": "reaction",
       "target_type": "self",
       "range": 5,
-      "resource_cost": {"spell_slot_1": 1},
-      "ai_priority": 9
+      "resource_cost": {
+        "spell_slot_1": 1
+      },
+      "ai_priority": 9,
+      "spell_level": 1
     }
   ],
-
   "is_player_controlled": true,
   "character_class": "Wizard",
   "subclass": "School of Transmutation",
   "level": 9,
   "race": "Mountain Dwarf",
   "background": "Guild Artisan",
-
   "class_resources": {
     "spell_slot_1": 4,
     "spell_slot_2": 3,
@@ -185,7 +219,6 @@
     "spell_slot_4": 3,
     "spell_slot_5": 1
   },
-
   "features": [
     {
       "name": "Transmuter's Stone",
@@ -203,7 +236,6 @@
       "source": "Dwarf"
     }
   ],
-
   "feats": [],
   "spellcasting_ability": "intelligence",
   "token_color": "#8B7355",

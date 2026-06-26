@@ -86,7 +86,8 @@
       "ai_priority": 6,
       "ai_use_condition": null,
       "source_item": null,
-      "animation": null
+      "animation": null,
+      "spell_level": 0
     },
     {
       "name": "Armor of Agathys",
@@ -164,7 +165,8 @@
       "ai_priority": 5,
       "ai_use_condition": "self.hp_percent < 100",
       "source_item": null,
-      "animation": null
+      "animation": null,
+      "spell_level": 1
     },
     {
       "name": "Hellish Rebuke",
@@ -218,7 +220,8 @@
       "ai_priority": 7,
       "ai_use_condition": null,
       "source_item": null,
-      "animation": null
+      "animation": null,
+      "spell_level": 1
     },
     {
       "name": "Hex",

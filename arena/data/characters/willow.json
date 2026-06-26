@@ -2,7 +2,6 @@
   "name": "Willow Thornroot",
   "size": "medium",
   "creature_type": "humanoid",
-
   "ability_scores": {
     "strength": 10,
     "dexterity": 14,
@@ -11,15 +10,17 @@
     "wisdom": 18,
     "charisma": 10
   },
-
   "armor_class": 14,
   "max_hit_points": 38,
-  "speed": {"walk": 30},
+  "speed": {
+    "walk": 30
+  },
   "proficiency_bonus": 3,
-
-  "saving_throw_proficiencies": ["intelligence", "wisdom"],
+  "saving_throw_proficiencies": [
+    "intelligence",
+    "wisdom"
+  ],
   "passive_perception": 17,
-
   "actions": [
     {
       "name": "Thorn Whip",
@@ -34,7 +35,11 @@
         "reach": 30,
         "range_normal": 30,
         "damage": [
-          {"dice": "2d6", "damage_type": "piercing", "ability_modifier": null}
+          {
+            "dice": "2d6",
+            "damage_type": "piercing",
+            "ability_modifier": null
+          }
         ]
       },
       "forced_movement_type": "pull",
@@ -52,15 +57,21 @@
         "ability": "constitution",
         "dc": 15,
         "damage_on_fail": [
-          {"dice": "2d8", "damage_type": "thunder"}
+          {
+            "dice": "2d8",
+            "damage_type": "thunder"
+          }
         ],
         "damage_on_success": "half"
       },
       "forced_movement_type": "push",
       "forced_movement_distance": 10,
-      "resource_cost": {"spell_slot_1": 1},
+      "resource_cost": {
+        "spell_slot_1": 1
+      },
       "ai_priority": 7,
-      "ai_use_condition": "enemies_in_range >= 1"
+      "ai_use_condition": "enemies_in_range >= 1",
+      "spell_level": 1
     },
     {
       "name": "Produce Flame",
@@ -75,10 +86,15 @@
         "reach": 5,
         "range_normal": 30,
         "damage": [
-          {"dice": "2d8", "damage_type": "fire", "ability_modifier": null}
+          {
+            "dice": "2d8",
+            "damage_type": "fire",
+            "ability_modifier": null
+          }
         ]
       },
-      "ai_priority": 4
+      "ai_priority": 4,
+      "spell_level": 0
     },
     {
       "name": "Moonbeam",
@@ -93,13 +109,19 @@
         "ability": "constitution",
         "dc": 15,
         "damage_on_fail": [
-          {"dice": "2d10", "damage_type": "radiant"}
+          {
+            "dice": "2d10",
+            "damage_type": "radiant"
+          }
         ],
         "damage_on_success": "half"
       },
-      "resource_cost": {"spell_slot_2": 1},
+      "resource_cost": {
+        "spell_slot_2": 1
+      },
       "ai_priority": 8,
-      "ai_use_condition": "enemies_in_range >= 1"
+      "ai_use_condition": "enemies_in_range >= 1",
+      "spell_level": 2
     },
     {
       "name": "Flaming Sphere",
@@ -114,13 +136,19 @@
         "ability": "dexterity",
         "dc": 15,
         "damage_on_fail": [
-          {"dice": "2d6", "damage_type": "fire"}
+          {
+            "dice": "2d6",
+            "damage_type": "fire"
+          }
         ],
         "damage_on_success": "half"
       },
-      "resource_cost": {"spell_slot_2": 1},
+      "resource_cost": {
+        "spell_slot_2": 1
+      },
       "ai_priority": 7,
-      "ai_use_condition": "enemies_in_range >= 1"
+      "ai_use_condition": "enemies_in_range >= 1",
+      "spell_level": 2
     },
     {
       "name": "Spike Growth",
@@ -135,13 +163,19 @@
         "ability": "dexterity",
         "dc": 15,
         "damage_on_fail": [
-          {"dice": "2d4", "damage_type": "piercing"}
+          {
+            "dice": "2d4",
+            "damage_type": "piercing"
+          }
         ],
         "damage_on_success": "none"
       },
-      "resource_cost": {"spell_slot_2": 1},
+      "resource_cost": {
+        "spell_slot_2": 1
+      },
       "ai_priority": 7,
-      "ai_use_condition": "enemies_in_range >= 2"
+      "ai_use_condition": "enemies_in_range >= 2",
+      "spell_level": 2
     },
     {
       "name": "Entangle",
@@ -157,11 +191,16 @@
         "dc": 15,
         "damage_on_fail": [],
         "damage_on_success": "none",
-        "conditions_on_fail": ["restrained"]
+        "conditions_on_fail": [
+          "restrained"
+        ]
       },
-      "resource_cost": {"spell_slot_1": 1},
+      "resource_cost": {
+        "spell_slot_1": 1
+      },
       "ai_priority": 6,
-      "ai_use_condition": "enemies_in_range >= 2"
+      "ai_use_condition": "enemies_in_range >= 2",
+      "spell_level": 1
     },
     {
       "name": "Healing Word",
@@ -170,9 +209,12 @@
       "target_type": "one_ally",
       "range": 60,
       "healing": "1d4+4",
-      "resource_cost": {"spell_slot_1": 1},
+      "resource_cost": {
+        "spell_slot_1": 1
+      },
       "ai_priority": 7,
-      "ai_use_condition": "ally_hp_percent < 50"
+      "ai_use_condition": "ally_hp_percent < 50",
+      "spell_level": 1
     },
     {
       "name": "Wild Shape (Bear)",
@@ -197,7 +239,11 @@
         "ability": "dexterity",
         "reach": 5,
         "damage": [
-          {"dice": "1d6", "damage_type": "slashing", "ability_modifier": "dexterity"}
+          {
+            "dice": "1d6",
+            "damage_type": "slashing",
+            "ability_modifier": "dexterity"
+          }
         ]
       },
       "ai_priority": 3
@@ -205,20 +251,17 @@
   ],
   "bonus_actions": [],
   "reactions": [],
-
   "is_player_controlled": true,
   "character_class": "Druid",
   "subclass": "Circle of the Moon",
   "level": 5,
   "race": "Wood Elf",
   "background": "Hermit",
-
   "class_resources": {
     "spell_slot_1": 4,
     "spell_slot_2": 3,
     "spell_slot_3": 2
   },
-
   "features": [
     {
       "name": "Wild Shape",
@@ -231,7 +274,6 @@
       "source": "Circle of the Moon 2"
     }
   ],
-
   "feats": [],
   "token_color": "#228B22",
   "death_save_successes": 0,

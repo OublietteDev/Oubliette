@@ -2,7 +2,6 @@
   "name": "Finn Whisperwind",
   "size": "medium",
   "creature_type": "humanoid",
-
   "ability_scores": {
     "strength": 10,
     "dexterity": 14,
@@ -11,15 +10,17 @@
     "wisdom": 14,
     "charisma": 10
   },
-
   "armor_class": 12,
   "max_hit_points": 27,
-  "speed": {"walk": 30},
+  "speed": {
+    "walk": 30
+  },
   "proficiency_bonus": 3,
-
-  "saving_throw_proficiencies": ["intelligence", "wisdom"],
+  "saving_throw_proficiencies": [
+    "intelligence",
+    "wisdom"
+  ],
   "passive_perception": 15,
-
   "actions": [
     {
       "name": "Fire Bolt",
@@ -34,10 +35,14 @@
         "reach": 5,
         "range_normal": 120,
         "damage": [
-          {"dice": "2d10", "damage_type": "fire"}
+          {
+            "dice": "2d10",
+            "damage_type": "fire"
+          }
         ]
       },
-      "ai_priority": 5
+      "ai_priority": 5,
+      "spell_level": 0
     },
     {
       "name": "Find Familiar (Owl)",
@@ -47,7 +52,9 @@
       "range": 30,
       "summon_creature": "monsters/owl.json",
       "is_wild_shape": false,
-      "resource_cost": {"spell_slot_1": 1},
+      "resource_cost": {
+        "spell_slot_1": 1
+      },
       "ai_priority": 6,
       "ai_use_condition": null
     },
@@ -64,13 +71,28 @@
         "reach": 5,
         "range_normal": 120,
         "damage": [
-          {"dice": "1d4", "damage_type": "force", "bonus": 1},
-          {"dice": "1d4", "damage_type": "force", "bonus": 1},
-          {"dice": "1d4", "damage_type": "force", "bonus": 1}
+          {
+            "dice": "1d4",
+            "damage_type": "force",
+            "bonus": 1
+          },
+          {
+            "dice": "1d4",
+            "damage_type": "force",
+            "bonus": 1
+          },
+          {
+            "dice": "1d4",
+            "damage_type": "force",
+            "bonus": 1
+          }
         ]
       },
-      "resource_cost": {"spell_slot_1": 1},
-      "ai_priority": 7
+      "resource_cost": {
+        "spell_slot_1": 1
+      },
+      "ai_priority": 7,
+      "spell_level": 1
     },
     {
       "name": "Dagger",
@@ -84,7 +106,11 @@
         "ability": "dexterity",
         "reach": 5,
         "damage": [
-          {"dice": "1d4", "damage_type": "piercing", "ability_modifier": "dexterity"}
+          {
+            "dice": "1d4",
+            "damage_type": "piercing",
+            "ability_modifier": "dexterity"
+          }
         ]
       },
       "ai_priority": 2
@@ -92,20 +118,17 @@
   ],
   "bonus_actions": [],
   "reactions": [],
-
   "is_player_controlled": true,
   "character_class": "Wizard",
   "subclass": "School of Conjuration",
   "level": 5,
   "race": "Halfling",
   "background": "Sage",
-
   "class_resources": {
     "spell_slot_1": 4,
     "spell_slot_2": 3,
     "spell_slot_3": 2
   },
-
   "features": [
     {
       "name": "Conjuration Savant",
@@ -118,7 +141,6 @@
       "source": "Halfling"
     }
   ],
-
   "feats": [],
   "token_color": "#4682B4",
   "death_save_successes": 0,

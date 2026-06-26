@@ -24,7 +24,9 @@
     "constitution",
     "charisma"
   ],
-  "damage_resistances": ["fire"],
+  "damage_resistances": [
+    "fire"
+  ],
   "damage_immunities": [],
   "damage_vulnerabilities": [],
   "condition_immunities": [],
@@ -56,7 +58,8 @@
       },
       "resource_cost": {},
       "ai_priority": 5,
-      "animation": "fireball"
+      "animation": "fireball",
+      "spell_level": 0
     },
     {
       "name": "Thunder Step",
@@ -93,7 +96,8 @@
         "spell_slot_4": 1
       },
       "ai_priority": 7,
-      "ai_use_condition": "self.hp_percent < 30"
+      "ai_use_condition": "self.hp_percent < 30",
+      "spell_level": 4
     },
     {
       "name": "Dagger",
@@ -116,7 +120,11 @@
             "ability_modifier": "dexterity"
           }
         ],
-        "properties": ["finesse", "light", "thrown"]
+        "properties": [
+          "finesse",
+          "light",
+          "thrown"
+        ]
       },
       "resource_cost": {},
       "ai_priority": 2
@@ -135,7 +143,8 @@
         "spell_slot_2": 1
       },
       "ai_priority": 7,
-      "ai_use_condition": "is_in_melee"
+      "ai_use_condition": "is_in_melee",
+      "spell_level": 2
     }
   ],
   "reactions": [],

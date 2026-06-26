@@ -390,7 +390,8 @@
       "ai_priority": 8,
       "ai_use_condition": "allies_wounded >= 1",
       "source_item": null,
-      "animation": null
+      "animation": null,
+      "spell_level": 1
     },
     {
       "name": "Misty Step",
@@ -422,7 +423,8 @@
       "ai_priority": 6,
       "ai_use_condition": null,
       "source_item": null,
-      "animation": null
+      "animation": null,
+      "spell_level": 2
     }
   ],
   "reactions": [],
