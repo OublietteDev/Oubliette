@@ -123,6 +123,103 @@ def create_wall(
     )
 
 
+# ------------------------------------------------------------------
+# Entry / start-of-turn damage (D-WALL-1)
+#
+# Wall of Fire (and Thorns/Blade Barrier/Ice) deal damage to a creature that
+# *enters* the wall's space or *ends its turn* there. We model this with no save
+# — matching RAW's ongoing Wall-of-Fire damage — mirroring the Spike Growth
+# movement-hazard tick (zones._apply_hazard_tick). The on-appear DEX save is
+# simplified to a no-save tick applied to whoever the wall materialises on.
+# The damage-side nuance (Wall of Fire burns only one chosen side) is deferred:
+# being *inside* the wall always burns, which is the common play case.
+# ------------------------------------------------------------------
+
+
+def creature_in_wall(wall: ActiveWall, creature_comb) -> bool:
+    """Whether *creature_comb*'s footprint overlaps this wall's live hexes."""
+    pos = getattr(creature_comb, "position", None)
+    if pos is None:
+        return False
+    from arena.grid.footprint import get_occupied_hexes
+
+    occupied = set(get_occupied_hexes(pos, creature_comb.creature.size))
+    return bool(occupied & wall.get_wall_hexes())
+
+
+def _apply_wall_damage(
+    wall: ActiveWall, creature_id: str, combatants: dict,
+) -> list[CombatEvent]:
+    """Deal one tick of a wall's ``damage_on_enter`` (no save) to a creature.
+
+    Mirrors ``zones._apply_hazard_tick``: rolls the dice, applies a magical
+    damage packet, and runs a concentration check. Returns [] for a 0 roll or a
+    wall that deals no damage."""
+    creature_comb = combatants.get(creature_id)
+    if creature_comb is None or not wall.damage_on_enter:
+        return []
+
+    from arena.combat.actions import apply_damage
+    from arena.combat.concentration import check_concentration
+    from arena.combat.damage import DamagePacket
+    from arena.util.dice import roll_expression
+
+    total_dmg, _rolls = roll_expression(wall.damage_on_enter)
+    if total_dmg <= 0:
+        return []
+
+    target = creature_comb.creature
+    events: list[CombatEvent] = []
+    packet = DamagePacket(
+        amount=total_dmg, dtype=wall.damage_type or "fire",
+        source=wall.name, tags={"magical"},
+    )
+    dmg_event, dp_events = apply_damage(target, [packet], creature_id=creature_id)
+    dmg_event.source_id = wall.source_id
+    dmg_event.target_id = creature_id
+    dmg_event.message = f"{target.name} {dmg_event.message}"
+    events.append(dmg_event)
+    events.extend(dp_events)
+    events.extend(check_concentration(
+        target, creature_id, dmg_event.details.get("damage", total_dmg),
+        combatants=combatants,
+    ))
+    return events
+
+
+def process_wall_movement_step(
+    walls: list[ActiveWall], creature_id: str, combatants: dict,
+) -> list[CombatEvent]:
+    """Damage a creature that just stepped into a damaging wall's space.
+
+    Called after each 5-ft movement step (alongside the zone hazard hook). One
+    tick per damaging wall the creature now overlaps; the wall's own caster is
+    spared (mirrors the zone-hazard convention)."""
+    events: list[CombatEvent] = []
+    cc = combatants.get(creature_id)
+    if cc is None:
+        return events
+    for wall in walls:
+        if not wall.damage_on_enter or creature_id == wall.source_id:
+            continue
+        if creature_in_wall(wall, cc):
+            events.extend(_apply_wall_damage(wall, creature_id, combatants))
+            if not cc.creature.is_conscious:
+                break
+    return events
+
+
+def process_wall_start_of_turn(
+    walls: list[ActiveWall], creature_id: str, combatants: dict,
+) -> list[CombatEvent]:
+    """Damage a creature that starts its turn standing in a damaging wall.
+
+    RAW Wall of Fire burns a creature that ends its turn inside/adjacent; we
+    apply it at the start of the creature's own turn (same effect, simpler hook
+    than tracking end-of-turn). One tick per damaging wall it overlaps."""
+    return process_wall_movement_step(walls, creature_id, combatants)
+
+
 def get_wall_at_hex(
     walls: list[ActiveWall], hex_coord: HexCoord
 ) -> ActiveWall | None:

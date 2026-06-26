@@ -1,0 +1,27 @@
+{
+  "name": "Wall Lab — barriers, blocking & burn-on-entry (D-WALL-1)",
+  "description": "Bench for wall spells as REAL barriers (not the old line-burst). Mason the Wallwright (your only hero — drive him) carries all six wall spells. PLACE A WALL WITH TWO CLICKS: pick the spell, click one end of the wall (first click, within range), then click the far end (second click) — the hex line between them becomes the wall, capped at the spell's length. The preview shows exactly which hexes it occupies; RIGHT-CLICK ANYWHERE cancels. BLOCKING (Wall of Force / Wall of Stone / Wall of Ice): drop a vertical wall at about column 14 spanning the foes' lane (e.g. click (14,4) then (14,14)) — the Raiders to the east can no longer path through it and must go the long way around (or stop). BURN-ON-ENTRY (Wall of Fire / Wall of Thorns / Blade Barrier): these DON'T block movement (Fire is opaque, so it also blocks line of sight), but a creature that walks into the wall's space OR starts its turn there takes the damage with no save — drop a Wall of Fire across the Raiders' path and watch them cook as they cross. A wall cast directly on top of a creature burns it immediately. Walls are concentration-linked: drop concentration (or break it) and the wall vanishes. The Pillar Dummy (immobile, 400 HP) sits east so you can wall it in or burn it at leisure.",
+  "grid_width": 30,
+  "grid_height": 18,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/wall_warden.json", "creature_data": null, "team": "player", "starting_position": [4, 9], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/orc.json", "creature_data": null, "team": "enemy", "starting_position": [22, 6], "count": 1, "name_override": "Raider A"},
+    {"creature_id": "monsters/srd/orc.json", "creature_data": null, "team": "enemy", "starting_position": [22, 9], "count": 1, "name_override": "Raider B"},
+    {"creature_id": "monsters/srd/orc.json", "creature_data": null, "team": "enemy", "starting_position": [22, 12], "count": 1, "name_override": "Raider C"},
+    {"creature_id": "monsters/srd/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [24, 8], "count": 1, "name_override": "Skirmisher A"},
+    {"creature_id": "monsters/srd/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [24, 10], "count": 1, "name_override": "Skirmisher B"},
+    {"creature_id": "monsters/training_dummy.json", "creature_data": null, "team": "enemy", "starting_position": [18, 9], "count": 1, "name_override": "Pillar Dummy"}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

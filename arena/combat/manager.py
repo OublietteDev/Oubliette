@@ -657,6 +657,26 @@ class CombatManager:
                 self.end_turn()
                 return
 
+        # Wall entry damage (D-WALL-1): a creature that starts its turn inside a
+        # damaging wall (Wall of Fire/Thorns/...) takes its damage, no save.
+        if self.active_walls:
+            from arena.combat.wall_spells import process_wall_start_of_turn
+            wall_events = process_wall_start_of_turn(
+                self.active_walls, combatant.creature_id, self.combatants,
+            )
+            for we in wall_events:
+                self.log.add(we)
+            if not combatant.creature.is_conscious:
+                self.log.add(
+                    CombatEvent(
+                        event_type=CombatEventType.TURN_START,
+                        message=f"{combatant.creature.name}'s turn",
+                        source_id=combatant.creature_id,
+                    )
+                )
+                self.end_turn()
+                return
+
         self.log.add(
             CombatEvent(
                 event_type=CombatEventType.TURN_START,
@@ -2803,6 +2823,7 @@ class CombatManager:
         """
         return (
             action.requires_concentration
+            and not action.is_wall
             and action.target_type.value.startswith("area_")
             and not action.aoe_condition_once
             and action.saving_throw is not None
@@ -2924,6 +2945,25 @@ class CombatManager:
                 )
                 events.extend(conc_events)
 
+            # Refresh movement blocking so the wall takes effect immediately —
+            # blocked_hexes is otherwise only recomputed at each turn start, so
+            # the caster's own remaining movement would ignore a fresh wall.
+            if self.movement is not None:
+                self.movement.blocked_hexes = self._get_wall_blocked_hexes()
+
+            # A damaging wall (Wall of Fire/Thorns/Ice/Blade Barrier) burns any
+            # creature it materialises on — the RAW on-appear damage, modelled
+            # no-save for the slice.
+            if wall.damage_on_enter:
+                from arena.combat.wall_spells import (
+                    creature_in_wall, _apply_wall_damage,
+                )
+                for cid, other in list(self.combatants.items()):
+                    if cid == combatant.creature_id or not other.creature.is_conscious:
+                        continue
+                    if creature_in_wall(wall, other):
+                        events.extend(_apply_wall_damage(wall, cid, self.combatants))
+
         self._mark_action_type_used(action)
         self.selected_action = None
         self._cast_level = None
@@ -2936,6 +2976,33 @@ class CombatManager:
         self._check_victory()
 
         return ActionResult(events=events, success=wall is not None)
+
+    def execute_wall_line(self, start: HexCoord, end: HexCoord) -> ActionResult | None:
+        """Cast the selected wall spell as a line segment from ``start``→``end``.
+
+        The wall occupies the hex line between the two clicked points, capped at
+        the spell's ``wall_length``. This is the canonical entry for placing a
+        wall (GUI two-click, lab, AI): unlike an emanating line AoE, a wall is a
+        free-standing barrier the caster draws where they like.
+        """
+        action = self.selected_action
+        combatant = self.active_combatant
+        if action is None or combatant is None or self.grid is None:
+            return None
+        if not action.is_wall:
+            return None
+
+        from arena.grid.line_of_sight import hex_line
+        from arena.grid.aoe_shapes import _extend_to_length
+
+        length_ft = action.wall_length or action.area_size or 30
+        length_hexes = max(1, round(length_ft / 5))
+        if start.distance_to(end) > length_hexes:
+            end = _extend_to_length(start, end, length_hexes)
+        wall_hexes = [h for h in hex_line(start, end) if self.grid.is_valid(h)]
+        if not wall_hexes:
+            return None
+        return self._execute_wall_spell(action, combatant, wall_hexes)
 
     def _get_wall_blocked_hexes(self) -> set[tuple[int, int]]:
         """Compute the set of (q, r) tuples blocked by active walls.
@@ -4602,6 +4669,21 @@ class CombatManager:
                 # Zone/hazard damage may break concentration — clean up
                 self._cleanup_orphaned_zones()
                 # If knocked out by zone damage, stop moving
+                if not combatant.creature.is_conscious:
+                    self._check_victory()
+                    return True
+
+            # Wall entry damage (D-WALL-1): stepping into a damaging wall
+            # (Wall of Fire/Thorns/...) burns the mover, no save — one tick per
+            # step that lands in the wall's space.
+            if self.active_walls:
+                from arena.combat.wall_spells import process_wall_movement_step
+                wall_events = process_wall_movement_step(
+                    self.active_walls, combatant.creature_id, self.combatants,
+                )
+                for we in wall_events:
+                    self.log.add(we)
+                self._cleanup_orphaned_zones()
                 if not combatant.creature.is_conscious:
                     self._check_victory()
                     return True

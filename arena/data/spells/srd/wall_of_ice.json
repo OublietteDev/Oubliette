@@ -1,6 +1,6 @@
 {
   "name": "Wall of Ice",
-  "description": "You create a wall of ice on a solid surface within range. You can form it into a hemispherical dome or a sphere with a radius of up to 10 feet, or you can shape a flat surface made up of ten 10-foot-square panels. Each panel must be contiguous with another panel. In any form, the wall is 1 foot thic",
+  "description": "You create a wall of ice on a solid surface within range, shaped as a flat surface of ten 10-foot-square panels, 1 foot thick. The wall blocks movement and sight; a creature that moves through the wall takes 10d6 cold damage, and a creature that enters the wall's space or starts its turn there takes the same.",
   "action_type": "action",
   "range": 120,
   "requires_concentration": true,
@@ -9,19 +9,15 @@
   "resource_cost": {
     "spell_slot_6": 1
   },
-  "target_type": "area_sphere",
-  "area_size": 10,
-  "saving_throw": {
-    "ability": "dexterity",
-    "dc": null,
-    "damage_on_fail": [
-      {
-        "dice": "10d6",
-        "damage_type": "cold",
-        "bonus": 0
-      }
-    ],
-    "damage_on_success": "half"
-  },
-  "upcast_damage_dice": "2d6"
+  "target_type": "area_line",
+  "area_size": 100,
+  "is_wall": true,
+  "wall_length": 100,
+  "wall_height": 10,
+  "wall_thickness": 1,
+  "wall_hp_per_panel": null,
+  "wall_blocks_movement": true,
+  "wall_blocks_los": true,
+  "wall_damage_on_enter": "10d6",
+  "wall_damage_type": "cold"
 }

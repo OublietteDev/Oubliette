@@ -402,6 +402,11 @@ class CombatScreen(Screen):
         self._pending_teleport: bool = False  # True when selecting teleport destination
         self._pending_shove: bool = False  # True when selecting enemy for Shove
         self._pending_grapple: bool = False  # True when selecting enemy for Grapple
+        # Wall placement (D-WALL-1): two-click line drawing. First click anchors
+        # one end, second click sets the far end; the wall is the hex line
+        # between them, capped at the spell's length.
+        self._pending_wall: bool = False
+        self._wall_anchor: HexCoord | None = None
 
         # Multi-dart volley aiming (RAW Magic Missile: one click per dart,
         # repeats allowed; fires once every dart has a target)
@@ -806,6 +811,31 @@ class CombatScreen(Screen):
                             passenger_id=self._pending_passenger_id,
                         )
                         self._pending_passenger_id = None
+                return
+
+            # ── Wall placement: two clicks define a line (D-WALL-1) ──
+            if self._pending_wall:
+                action = self.combat.selected_action
+                if action is None or not action.is_wall:
+                    self._pending_wall = False
+                    self._wall_anchor = None
+                    return
+                from arena.grid.footprint import min_distance_between
+                dist_feet = min_distance_between(
+                    combatant.position, combatant.creature.size, clicked_hex, 1,
+                ) * 5
+                if self._wall_anchor is None:
+                    # First click: anchor one end of the wall (within range).
+                    if dist_feet <= action.range:
+                        self._wall_anchor = clicked_hex
+                    return
+                # Second click: draw the wall from the anchor toward here
+                # (execute_wall_line caps it at the spell's length).
+                self.combat.execute_wall_line(self._wall_anchor, clicked_hex)
+                self._pending_wall = False
+                self._wall_anchor = None
+                self.combat.turn_phase = TurnPhase.AWAITING_ACTION
+                self._check_pending_counterspell()
                 return
 
             # ── AoE hex placement (area_* target types) ─────────────
@@ -1405,6 +1435,7 @@ class CombatScreen(Screen):
             or self._pending_summon
             or self._pending_teleport
             or self._pending_zone_move
+            or self._pending_wall
         )
 
     def _cancel_targeting(self) -> None:
@@ -1416,6 +1447,8 @@ class CombatScreen(Screen):
         self._pending_teleport = False
         self._pending_summon = False
         self._pending_zone_move = False
+        self._pending_wall = False
+        self._wall_anchor = None
         self._pending_passenger_id = None
         self._passenger_popup = None
         self.combat.cancel_action()
@@ -1519,7 +1552,14 @@ class CombatScreen(Screen):
             if active:
                 for action in active.creature.actions:
                     if action.name == action_name:
-                        if action.summon_creature:
+                        if action.is_wall:
+                            # Wall placement (D-WALL-1): enter two-click line mode
+                            # — first click anchors one end, second draws the wall.
+                            self.combat.select_action(action)
+                            self._pending_wall = True
+                            self._wall_anchor = None
+                            self.combat.turn_phase = TurnPhase.SELECTING_TARGET
+                        elif action.summon_creature:
                             self.combat.select_action(action)
                             if action.is_wild_shape and active.position:
                                 # Wild Shape transforms in-place — no hex click needed
@@ -2951,6 +2991,38 @@ class CombatScreen(Screen):
         center_hex = self.grid_view.hovered_hex
         grid = self.combat.grid
         if grid is None or not grid.is_valid(center_hex):
+            return
+
+        # Wall placement preview (D-WALL-1): draw the hex line the wall will
+        # occupy — from the anchored end (or the caster, before the first click)
+        # to the hovered hex, capped at the spell's length. Preview == reality
+        # (same hex_line + length cap as execute_wall_line).
+        if self._pending_wall:
+            action = self.combat.selected_action
+            if action is None or not action.is_wall:
+                return
+            from arena.grid.line_of_sight import hex_line as _hex_line
+            from arena.grid.aoe_shapes import _extend_to_length as _ext
+            anchor = self._wall_anchor or combatant.position
+            end = center_hex
+            length_hexes = max(1, round(
+                (action.wall_length or action.area_size or 30) / 5))
+            if anchor.distance_to(end) > length_hexes:
+                end = _ext(anchor, end, length_hexes)
+            wall_shape = {(h.q, h.r) for h in _hex_line(anchor, end)
+                          if grid.is_valid(h)}
+            preview_color = parse_color(COLORS["hex_aoe_preview"])
+            scaled_size = (get_settings().display.default_hex_size
+                           * self.grid_view.camera.zoom)
+            ox, oy = self.grid_view.origin
+            for q, r in wall_shape:
+                coord = HexCoord(q, r)
+                wx, wy = coord.to_pixel(get_settings().display.default_hex_size)
+                lx, ly = self.grid_view.camera.world_to_screen(wx, wy)
+                draw_hex_highlight(
+                    surface, (lx + ox, ly + oy), scaled_size,
+                    preview_color, alpha=90,
+                )
             return
 
         from arena.grid.footprint import min_distance_between

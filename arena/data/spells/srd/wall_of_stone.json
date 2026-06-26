@@ -1,0 +1,21 @@
+{
+  "name": "Wall of Stone",
+  "description": "A nonmagical wall of solid stone springs into existence within range, formed of ten 10-foot-by-10-foot panels, 6 inches thick. The wall blocks movement and sight. While you concentrate on it for the full duration, the wall becomes permanent and can't be dispelled; otherwise it lasts as long as you concentrate.",
+  "action_type": "action",
+  "range": 120,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 5,
+  "resource_cost": {
+    "spell_slot_5": 1
+  },
+  "target_type": "area_line",
+  "area_size": 100,
+  "is_wall": true,
+  "wall_length": 100,
+  "wall_height": 10,
+  "wall_thickness": 1,
+  "wall_hp_per_panel": null,
+  "wall_blocks_movement": true,
+  "wall_blocks_los": true
+}

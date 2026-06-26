@@ -1,0 +1,21 @@
+{
+  "name": "Wall of Force",
+  "description": "An invisible wall of force springs into existence within range, up to 100 feet long and 1 foot thick. The wall is invisible and immune to damage; nothing can physically pass through it, and it blocks line of effect. The wall lasts for the duration while you concentrate.",
+  "action_type": "action",
+  "range": 120,
+  "requires_concentration": true,
+  "ai_priority": 6,
+  "spell_level": 5,
+  "resource_cost": {
+    "spell_slot_5": 1
+  },
+  "target_type": "area_line",
+  "area_size": 100,
+  "is_wall": true,
+  "wall_length": 100,
+  "wall_height": 10,
+  "wall_thickness": 1,
+  "wall_hp_per_panel": null,
+  "wall_blocks_movement": true,
+  "wall_blocks_los": true
+}
