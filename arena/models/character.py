@@ -72,6 +72,9 @@ class OnHitRider(BaseModel):
     # Save effect (Stunning Strike pattern)
     save_ability: str | None = None    # "constitution", etc.
     save_dc_ability: str | None = None  # Ability used for DC: 8 + prof + mod
+    save_dc_fixed: int | None = None   # Exact DC from the stat block (overrides
+                                       # save_dc_ability — Trampling Charge uses a
+                                       # non-8+prof+mod DC, so it must be fixed).
     condition_on_fail: str | None = None  # "stunned", "frightened", etc.
     condition_duration: str = "end_of_turn"  # Duration type for applied condition
     condition_save_to_end: bool = True  # Target re-saves to end
@@ -79,6 +82,10 @@ class OnHitRider(BaseModel):
     # Requirements
     requires_melee: bool = False       # Only melee weapon attacks
     requires_weapon: bool = False      # Only weapon attacks (not spell)
+    # Move-then-strike gate (D-MON-4c): the rider only fires if the attacker
+    # moved at least this many feet toward the target this turn (Charge/Pounce/
+    # Trampling Charge). 0 = no movement requirement (normal riders).
+    requires_charge_ft: int = 0
 
 
 class Feature(BaseModel):

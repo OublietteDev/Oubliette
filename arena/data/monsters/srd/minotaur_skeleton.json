@@ -81,7 +81,20 @@
   "special_abilities": [
     {
       "name": "Charge",
-      "description": "If the skeleton moves at least 10 feet straight toward a target and then hits it with a gore attack on the same turn, the target takes an extra 9 (2d8) piercing damage. If the target is a creature, it must succeed on a DC 14 Strength saving throw or be pushed up to 10 feet away and knocked prone."
+      "description": "If the skeleton moves at least 10 feet straight toward a target and then hits it with a gore attack on the same turn, the target takes an extra 9 (2d8) piercing damage. If the target is a creature, it must succeed on a DC 14 Strength saving throw or be pushed up to 10 feet away and knocked prone.",
+      "on_hit_rider": {
+        "trigger": "automatic",
+        "once_per_turn": true,
+        "requires_melee": true,
+        "requires_charge_ft": 10,
+        "damage_dice": "2d8",
+        "damage_type": "piercing",
+        "save_ability": "strength",
+        "save_dc_fixed": 14,
+        "condition_on_fail": "prone",
+        "condition_duration": "indefinite",
+        "condition_save_to_end": false
+      }
     }
   ],
   "challenge_rating": 2.0,

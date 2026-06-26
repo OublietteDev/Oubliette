@@ -174,6 +174,10 @@ def calculate_rider_save_dc(
     if rider.save_ability is None:
         return None
 
+    # A stat-block fixed DC (Trampling Charge) wins over the computed one.
+    if rider.save_dc_fixed is not None:
+        return rider.save_dc_fixed
+
     if rider.save_dc_ability:
         # DC = 8 + proficiency + ability modifier
         mod = attacker.ability_scores.get_modifier(rider.save_dc_ability)

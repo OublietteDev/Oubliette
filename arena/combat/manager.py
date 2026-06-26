@@ -544,7 +544,7 @@ class CombatManager:
         base_speed = get_effective_speed(combatant.creature)
         multiplier = get_movement_multiplier(combatant.creature)
         speed = int(base_speed * multiplier)
-        self.movement.reset(combatant.creature_id, speed)
+        self.movement.reset(combatant.creature_id, speed, position=combatant.position)
         self.movement.cost_multiplier = get_movement_cost_multiplier(combatant.creature)
         self.movement.dead_creature_ids = self._get_dead_creature_ids()
         self.movement.blocked_hexes = self._get_wall_blocked_hexes()
@@ -638,7 +638,7 @@ class CombatManager:
                     base_speed = get_effective_speed(combatant.creature)
                     multiplier = get_movement_multiplier(combatant.creature)
                     speed = int(base_speed * multiplier)
-                    self.movement.reset(combatant.creature_id, speed)
+                    self.movement.reset(combatant.creature_id, speed, position=combatant.position)
                     self.movement.cost_multiplier = get_movement_cost_multiplier(combatant.creature)
                     self.movement.dead_creature_ids = self._get_dead_creature_ids()
                     self.movement.blocked_hexes = self._get_wall_blocked_hexes()
@@ -1825,9 +1825,34 @@ class CombatManager:
             return []
 
         used = self.turn_resources.used_riders or set()
-        return discover_riders(
+        riders = discover_riders(
             hit_result.attacker, hit_result.action, used_this_turn=used,
         )
+        # Move-then-strike gate (D-MON-4c): a Charge/Pounce rider only fires if
+        # the attacker actually charged the target this turn.
+        return [
+            (feat, rider) for feat, rider in riders
+            if rider.requires_charge_ft <= 0
+            or self._attacker_charged(hit_result, rider.requires_charge_ft)
+        ]
+
+    def _attacker_charged(self, hit_result: AttackHitResult, min_ft: int) -> bool:
+        """Whether the attacker moved at least `min_ft` toward the target this
+        turn — approximated as 'closed at least that distance' (which on the grid
+        requires moving straight in, matching the SRD's 'straight toward')."""
+        start = self.movement.turn_start_position
+        atk = self.combatants.get(hit_result.attacker_id)
+        tgt = self.combatants.get(hit_result.target_id)
+        if (start is None or atk is None or tgt is None
+                or atk.position is None or tgt.position is None):
+            return False
+        if not self.movement.has_moved:
+            return False
+        from arena.grid.footprint import min_distance_between
+        a_size, t_size = atk.creature.size, tgt.creature.size
+        d_start = min_distance_between(start, a_size, tgt.position, t_size)
+        d_now = min_distance_between(atk.position, a_size, tgt.position, t_size)
+        return (d_start - d_now) >= (min_ft // 5)
 
     # ------------------------------------------------------------------
     # Damage reduction reactions (Parry, Uncanny Dodge, Deflect Missiles)

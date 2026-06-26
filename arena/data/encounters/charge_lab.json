@@ -1,0 +1,25 @@
+{
+  "name": "Charge Lab — move-then-strike riders (D-MON-4c)",
+  "description": "Bench for Charge / Pounce / Trampling Charge. The beasts start far from the party so the AI has to run them in. When one moves at least its threshold straight toward a hero and then hits, the rider fires: the boar adds tusk damage and forces a STR save vs prone, the lion's Pounce knocks prone on a failed save, and the triceratops' Trampling Charge knocks prone too (note its DC is the stat block's, not 8+prof+STR). Stand a hero right next to a beast at the start of a round and it WON'T charge (no run-up = no rider) — that's the gate working.",
+  "grid_width": 26,
+  "grid_height": 14,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/valeria.json", "creature_data": null, "team": "player", "starting_position": [3, 6], "count": 1, "name_override": null},
+    {"creature_id": "characters/thorin.json", "creature_data": null, "team": "player", "starting_position": [3, 8], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/boar.json", "creature_data": null, "team": "enemy", "starting_position": [21, 5], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/lion.json", "creature_data": null, "team": "enemy", "starting_position": [22, 8], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/triceratops.json", "creature_data": null, "team": "enemy", "starting_position": [22, 11], "count": 1, "name_override": null}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

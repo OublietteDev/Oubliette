@@ -1,0 +1,138 @@
+"""D-MON-4c: move-then-strike riders — Charge / Pounce / Trampling Charge.
+
+A charge rider only fires when the attacker moved at least its threshold toward
+the target this turn (approximated as 'closed that distance straight in'). On a
+qualifying hit it deals bonus damage and/or forces a STR save vs prone, using the
+stat block's verbatim DC (Trampling Charge's DC is not 8+prof+mod).
+"""
+
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+
+from arena.combat.manager import CombatManager
+from arena.combat.riders import calculate_rider_save_dc, resolve_rider
+from arena.grid.coordinates import HexCoord
+from arena.models.abilities import AbilityScores
+from arena.models.actions import Action, ActionType, Attack, DamageRoll, DamageType
+from arena.models.character import Creature, Feature, OnHitRider, RiderTrigger
+from arena.models.encounter import CombatantEntry, Encounter
+from arena.models.monster import Monster
+
+
+def _charge_rider():
+    return OnHitRider(
+        trigger=RiderTrigger.AUTOMATIC, once_per_turn=True, requires_melee=True,
+        requires_charge_ft=20, damage_dice="1d6", damage_type="slashing",
+        save_ability="strength", save_dc_fixed=11, condition_on_fail="prone",
+        condition_duration="indefinite", condition_save_to_end=False)
+
+
+def _tusk():
+    return Action(name="Tusk", description="x", action_type=ActionType.ACTION,
+                  attack=Attack(name="Tusk", attack_type="melee_weapon", ability="strength",
+                                reach=5,
+                                damage=[DamageRoll(dice="1d6", damage_type=DamageType.SLASHING,
+                                                   ability_modifier="strength")]))
+
+
+def _boar():
+    return Monster(name="Boar", max_hit_points=11, armor_class=11,
+                   ability_scores=AbilityScores(strength=12), proficiency_bonus=2,
+                   special_abilities=[Feature(name="Charge", description="x",
+                                              on_hit_rider=_charge_rider())],
+                   actions=[_tusk()])
+
+
+# ── Fixed save DC (Trampling Charge doesn't use 8+prof+mod) ───────────────────
+
+def test_fixed_dc_overrides_computed():
+    rider = OnHitRider(save_ability="strength", save_dc_ability="strength",
+                       save_dc_fixed=13, condition_on_fail="prone")
+    beefy = Monster(name="Triceratops", max_hit_points=95,
+                    ability_scores=AbilityScores(strength=22), proficiency_bonus=3)
+    # 8 + 3 + 6 = 17 computed, but the block says 13.
+    assert calculate_rider_save_dc(rider, beefy) == 13
+
+
+# ── The movement gate ─────────────────────────────────────────────────────────
+
+def _scene():
+    boar, target = _boar(), Creature(name="Hero", max_hit_points=30, armor_class=10,
+                                     ability_scores=AbilityScores(), is_player_controlled=True)
+    enc = Encounter(name="charge", grid_width=20, grid_height=12, combatants=[
+        CombatantEntry(creature_id="hero", creature_data=target, team="player",
+                       starting_position=(0, 0)),
+        CombatantEntry(creature_id="boar", creature_data=boar, team="enemy",
+                       starting_position=(8, 0)),
+    ])
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("."))
+    with patch("arena.combat.manager.roll_die", side_effect=[20, 10]):
+        cm.roll_initiative()
+    cm.begin_combat()
+    boar_id = next(k for k, v in cm.combatants.items() if v.team == "enemy")
+    hero_id = next(k for k, v in cm.combatants.items() if v.team == "player")
+    return cm, boar_id, hero_id
+
+
+def _hit_result(cm, boar_id, hero_id):
+    boar = cm.combatants[boar_id]
+    return SimpleNamespace(hit=True, attacker=boar.creature, attacker_id=boar_id,
+                           target=cm.combatants[hero_id].creature, target_id=hero_id,
+                           action=_tusk(), attack=_tusk().attack)
+
+
+def test_charged_when_closed_the_distance():
+    cm, boar_id, hero_id = _scene()
+    cm.movement.reset(boar_id, 40, position=HexCoord(8, 0))
+    cm.movement.has_moved = True
+    cm.combatants[boar_id].position = HexCoord(1, 0)  # adjacent to hero at (0,0)
+    assert cm._attacker_charged(_hit_result(cm, boar_id, hero_id), 20) is True
+
+
+def test_not_charged_when_stationary():
+    cm, boar_id, hero_id = _scene()
+    cm.movement.reset(boar_id, 40, position=HexCoord(1, 0))  # already adjacent
+    cm.movement.has_moved = False
+    cm.combatants[boar_id].position = HexCoord(1, 0)
+    assert cm._attacker_charged(_hit_result(cm, boar_id, hero_id), 20) is False
+
+
+def test_get_applicable_riders_includes_charge_only_when_charged():
+    cm, boar_id, hero_id = _scene()
+    # Charged in:
+    cm.movement.reset(boar_id, 40, position=HexCoord(8, 0))
+    cm.movement.has_moved = True
+    cm.combatants[boar_id].position = HexCoord(1, 0)
+    names = [f.name for f, _ in cm.get_applicable_riders(_hit_result(cm, boar_id, hero_id))]
+    assert "Charge" in names
+    # Stood still:
+    cm.movement.reset(boar_id, 40, position=HexCoord(1, 0))
+    cm.movement.has_moved = False
+    names = [f.name for f, _ in cm.get_applicable_riders(_hit_result(cm, boar_id, hero_id))]
+    assert "Charge" not in names
+
+
+# ── The rider effect (bonus damage + prone on a failed save) ──────────────────
+
+def test_charge_rider_applies_damage_and_prone_on_failed_save():
+    boar = _boar()
+    target = Creature(name="Hero", max_hit_points=30, ability_scores=AbilityScores())
+    feat = boar.special_abilities[0]
+    with patch("arena.combat.riders.roll_die", return_value=1):  # save fails
+        rr = resolve_rider(feat, feat.on_hit_rider, boar, target)
+    assert rr.used
+    assert rr.condition_to_apply == "prone"
+    assert rr.bonus_damage and rr.bonus_damage[0].dice == "1d6"
+    assert rr.save_dc == 11  # fixed DC from the block
+
+
+def test_charge_rider_no_prone_on_successful_save():
+    boar = _boar()
+    target = Creature(name="Hero", max_hit_points=30, ability_scores=AbilityScores())
+    feat = boar.special_abilities[0]
+    with patch("arena.combat.riders.roll_die", return_value=20):  # save succeeds
+        rr = resolve_rider(feat, feat.on_hit_rider, boar, target)
+    assert rr.condition_to_apply is None
+    assert rr.bonus_damage  # damage still applies regardless of the save

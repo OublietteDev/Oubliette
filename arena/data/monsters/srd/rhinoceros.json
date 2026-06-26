@@ -52,7 +52,20 @@
   "special_abilities": [
     {
       "name": "Charge",
-      "description": "If the rhinoceros moves at least 20 ft. straight toward a target and then hits it with a gore attack on the same turn, the target takes an extra 9 (2d8) bludgeoning damage. If the target is a creature, it must succeed on a DC 15 Strength saving throw or be knocked prone."
+      "description": "If the rhinoceros moves at least 20 ft. straight toward a target and then hits it with a gore attack on the same turn, the target takes an extra 9 (2d8) bludgeoning damage. If the target is a creature, it must succeed on a DC 15 Strength saving throw or be knocked prone.",
+      "on_hit_rider": {
+        "trigger": "automatic",
+        "once_per_turn": true,
+        "requires_melee": true,
+        "requires_charge_ft": 20,
+        "damage_dice": "2d8",
+        "damage_type": "bludgeoning",
+        "save_ability": "strength",
+        "save_dc_fixed": 15,
+        "condition_on_fail": "prone",
+        "condition_duration": "indefinite",
+        "condition_save_to_end": false
+      }
     }
   ],
   "challenge_rating": 2.0,

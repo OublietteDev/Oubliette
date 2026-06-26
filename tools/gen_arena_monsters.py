@@ -445,6 +445,51 @@ def _death_burst(specials: list) -> dict | None:
     return None
 
 
+_CHARGE_NAMES = {"charge", "pounce", "trampling charge"}
+_CHARGE_FT_RE = re.compile(r"at least (\d+)\s*f", re.IGNORECASE)
+_CHARGE_DMG_RE = re.compile(r"extra \d+ \((\d+d\d+)\)(?:\s+(\w+))? damage", re.IGNORECASE)
+# Match the save DC + ability; the "or be knocked prone" clause is checked
+# separately (a literal "prone" substring) because the SRD's "pushed up to 10
+# ft. away and knocked prone" wording carries an "ft." period mid-clause.
+_CHARGE_SAVE_RE = re.compile(r"dc (\d+) (\w+) saving throw", re.IGNORECASE)
+
+
+def _charge_rider(sa: dict) -> dict | None:
+    """Move-then-strike rider (Charge / Pounce / Trampling Charge) → OnHitRider.
+
+    Parses the SRD prose: '... moves at least N ft. straight toward a target and
+    then hits it ... [extra D (XdY) <type> damage] ... [DC Z STR save or be
+    knocked prone]'. The prone save DC is taken VERBATIM from the block (Trampling
+    Charge does not use 8+prof+mod). The 'pushed away' clause and the 'bonus
+    attack vs a prone target' follow-up are not modeled."""
+    if sa["name"].lower().strip() not in _CHARGE_NAMES:
+        return None
+    desc = sa.get("desc", "")
+    ft_m = _CHARGE_FT_RE.search(desc)
+    dmg_m = _CHARGE_DMG_RE.search(desc)
+    save_m = _CHARGE_SAVE_RE.search(desc)
+    has_prone = save_m is not None and "prone" in desc.lower()
+    if not dmg_m and not has_prone:
+        return None
+    rider: dict = {
+        "trigger": "automatic",
+        "once_per_turn": True,
+        "requires_melee": True,
+        "requires_charge_ft": int(ft_m.group(1)) if ft_m else 20,
+    }
+    if dmg_m:
+        rider["damage_dice"] = dmg_m.group(1)
+        rider["damage_type"] = (dmg_m.group(2) or "bludgeoning").lower()
+    if has_prone:
+        ability = save_m.group(2).lower()
+        rider["save_ability"] = ability if ability in _ABILS else "strength"
+        rider["save_dc_fixed"] = int(save_m.group(1))
+        rider["condition_on_fail"] = "prone"
+        rider["condition_duration"] = "indefinite"
+        rider["condition_save_to_end"] = False
+    return rider
+
+
 def _legendary_resistance_count(specials: list) -> int:
     """Legendary Resistance pool size, parsed from '(3/Day)' in the trait name."""
     for sa in specials:
@@ -478,6 +523,9 @@ def build_monster(m: dict) -> dict:
     for sa in m.get("special_abilities", []):
         feat = {"name": sa["name"], "description": sa.get("desc", "")}
         feat.update(_trait_flags(sa["name"]))
+        rider = _charge_rider(sa)
+        if rider:
+            feat["on_hit_rider"] = rider
         special.append(feat)
 
     specials_raw = m.get("special_abilities", [])

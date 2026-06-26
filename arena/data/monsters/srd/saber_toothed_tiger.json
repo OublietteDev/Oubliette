@@ -76,7 +76,18 @@
     },
     {
       "name": "Pounce",
-      "description": "If the tiger moves at least 20 ft. straight toward a creature and then hits it with a claw attack on the same turn, that target must succeed on a DC 14 Strength saving throw or be knocked prone. If the target is prone, the tiger can make one bite attack against it as a bonus action."
+      "description": "If the tiger moves at least 20 ft. straight toward a creature and then hits it with a claw attack on the same turn, that target must succeed on a DC 14 Strength saving throw or be knocked prone. If the target is prone, the tiger can make one bite attack against it as a bonus action.",
+      "on_hit_rider": {
+        "trigger": "automatic",
+        "once_per_turn": true,
+        "requires_melee": true,
+        "requires_charge_ft": 20,
+        "save_ability": "strength",
+        "save_dc_fixed": 14,
+        "condition_on_fail": "prone",
+        "condition_duration": "indefinite",
+        "condition_save_to_end": false
+      }
     }
   ],
   "challenge_rating": 2.0,

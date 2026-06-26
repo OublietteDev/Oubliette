@@ -97,7 +97,15 @@
     },
     {
       "name": "Charge",
-      "description": "If the centaur moves at least 30 ft. straight toward a target and then hits it with a pike attack on the same turn, the target takes an extra 10 (3d6) piercing damage."
+      "description": "If the centaur moves at least 30 ft. straight toward a target and then hits it with a pike attack on the same turn, the target takes an extra 10 (3d6) piercing damage.",
+      "on_hit_rider": {
+        "trigger": "automatic",
+        "once_per_turn": true,
+        "requires_melee": true,
+        "requires_charge_ft": 30,
+        "damage_dice": "3d6",
+        "damage_type": "piercing"
+      }
     }
   ],
   "challenge_rating": 2.0,

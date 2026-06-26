@@ -32,19 +32,24 @@ class MovementTracker:
     dead_creature_ids: set[str] = field(default_factory=set)
     blocked_hexes: set[tuple[int, int]] = field(default_factory=set)
     cost_multiplier: int = 1
+    turn_start_position: HexCoord | None = None  # for move-then-strike riders (Charge)
 
-    def reset(self, creature_id: str, speed: int) -> None:
+    def reset(self, creature_id: str, speed: int,
+              position: HexCoord | None = None) -> None:
         """Reset for a new creature's turn.
 
         Args:
             creature_id: ID of the creature taking its turn.
             speed: Walking speed in feet.
+            position: The creature's position at the start of its turn (so a
+                Charge rider can tell how far it moved toward its target).
         """
         self.creature_id = creature_id
         self.max_movement = speed
         self.remaining_movement = speed
         self.has_moved = False
         self.cost_multiplier = 1
+        self.turn_start_position = position
 
     def get_reachable(
         self,
