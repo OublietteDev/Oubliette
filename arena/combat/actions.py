@@ -325,10 +325,68 @@ def is_in_range(
         if action.attack.attack_type.startswith("melee"):
             return distance_feet <= action.attack.reach
         else:
-            # Ranged attack
+            # Ranged attack: allowed out to LONG range (D-ACT-4) — the shot is
+            # legal up to range_long and merely rolls at disadvantage past
+            # range_normal (handled in resolve_attack_hit). Falls back to
+            # range_normal when no long range is defined.
             normal_range = action.attack.range_normal or action.range
-            return distance_feet <= normal_range
+            max_range = action.attack.range_long or normal_range
+            return distance_feet <= max_range
     return distance_feet <= action.range
+
+
+def ranged_positional_disadvantage(
+    attacker_pos: HexCoord,
+    attacker_size: CreatureSize,
+    target_pos: HexCoord,
+    target_size: CreatureSize,
+    action: Action,
+    attacker_id: str,
+    combatants: dict | None,
+) -> tuple[bool, str]:
+    """RAW (D-ACT-4) disadvantage on a RANGED attack roll when the shot is at
+    LONG range (beyond range_normal, within range_long) and/or a hostile,
+    action-capable creature is within 5 ft of the attacker.
+
+    Returns (has_disadvantage, reason-for-log). Melee attacks never qualify.
+    """
+    if action.attack is None or action.attack.attack_type.startswith("melee"):
+        return False, ""
+    from arena.grid.footprint import min_distance_between, get_footprint_hex_count
+    from arena.combat.condition_effects import can_take_actions
+
+    reasons: list[str] = []
+
+    # Long-range band: past normal range but still within long range.
+    normal_range = action.attack.range_normal or action.range
+    long_range = action.attack.range_long
+    if (get_footprint_hex_count(attacker_size) == 1
+            and get_footprint_hex_count(target_size) == 1):
+        dist_ft = attacker_pos.distance_to(target_pos) * 5
+    else:
+        dist_ft = min_distance_between(
+            attacker_pos, attacker_size, target_pos, target_size) * 5
+    if long_range and dist_ft > normal_range:
+        reasons.append("long range")
+
+    # A hostile, conscious, action-capable creature within 5 ft of the shooter.
+    if combatants is not None:
+        me = combatants.get(attacker_id)
+        if me is not None:
+            for cid, c in combatants.items():
+                if cid == attacker_id or c.team == me.team:
+                    continue
+                if c.position is None or not c.creature.is_conscious:
+                    continue
+                if not can_take_actions(c.creature):
+                    continue
+                if min_distance_between(
+                    attacker_pos, attacker_size, c.position, c.creature.size
+                ) <= 1:
+                    reasons.append("foe within 5 ft")
+                    break
+
+    return (len(reasons) > 0, ", ".join(reasons))
 
 
 def _sanctuary_dc(creature: Creature) -> int | None:
@@ -610,8 +668,17 @@ def resolve_attack_hit(
         attacker, attacker_id, target, target_id, target_pos, combatants, grid,
     )
 
+    # Ranged positional disadvantage (D-ACT-4): long range and/or a foe in melee.
+    ranged_dis, ranged_reason = ranged_positional_disadvantage(
+        attacker_pos, attacker.size, target_pos, target.size, action,
+        attacker_id, combatants,
+    )
+
     total_adv_sources = max(advantage, 0) + max(condition_adv, 0) + (1 if pack_adv else 0)
-    total_dis_sources = abs(min(advantage, 0)) + abs(min(condition_adv, 0))
+    total_dis_sources = (
+        abs(min(advantage, 0)) + abs(min(condition_adv, 0))
+        + (1 if ranged_dis else 0)
+    )
     if total_adv_sources > 0 and total_dis_sources > 0:
         effective_advantage = 0
     elif total_adv_sources > 0:
@@ -632,6 +699,8 @@ def resolve_attack_hit(
     else:
         natural_roll = roll_die(20)
         roll_detail = " [normal]"
+    if ranged_dis and ranged_reason:
+        roll_detail += f" [{ranged_reason}]"
 
     modifier = get_attack_modifier(attacker, attack, action)
     # Add buff bonuses to attack roll (Bless +1d4, etc.)
@@ -1136,6 +1205,7 @@ def resolve_saving_throw(
     legendary_resistance_eligible: bool = False,
     is_spell_save: bool = False,
     imposes_conditions: list[str] | None = None,
+    cover_bonus: int = 0,
 ) -> tuple[bool, CombatEvent]:
     """Roll a saving throw for a creature.
 
@@ -1204,6 +1274,14 @@ def resolve_saving_throw(
         if aura_bonus > 0:
             modifier += aura_bonus
             buff_roll_detail += f" [aura: +{aura_bonus}]"
+
+    # Cover bonus to DEX saves (D-ACT-3): half/three-quarters cover between the
+    # effect's origin and the target grants +2/+5 — the same values cover adds
+    # to AC. The caller computes it (it knows the origin geometry); only a DEX
+    # save against an area effect ever passes a non-zero value.
+    if cover_bonus:
+        modifier += cover_bonus
+        buff_roll_detail += f" [cover: +{cover_bonus}]"
 
     # Merge condition-based advantage with explicit parameter, plus monster
     # trait advantage (Magic Resistance vs spells / Brave / Fey Ancestry).
@@ -1361,8 +1439,14 @@ def resolve_effect(
     user_pos: HexCoord | None = None,
     target_pos: HexCoord | None = None,
     cast_level: int | None = None,
+    effect_origin: HexCoord | None = None,
 ) -> ActionResult:
     """Resolve a non-attack action (healing, saving throws, conditions).
+
+    effect_origin: the point an AREA effect emanates from, used to measure cover
+        for DEX saves (D-ACT-3). For a placed blast (Fireball) it is the target
+        hex; for a caster-centered effect (Thunderwave) it is the caster. When
+        None it falls back to user_pos.
 
     Handles potions, scrolls, and any action that has no attack roll
     but applies healing, saving throws, conditions, or combinations.
@@ -1532,12 +1616,22 @@ def resolve_effect(
     if action.saving_throw:
         save = action.saving_throw
         dc = save.dc or 10
+        # Cover bonus to a DEX save (D-ACT-3): measured from the effect's origin
+        # (the blast center for a placed AoE, else the caster) to the target.
+        cover_bonus = 0
+        if save.ability.lower() == "dexterity" and grid is not None:
+            origin = effect_origin or user_pos
+            if origin is not None and target_pos is not None:
+                cover_bonus = _get_cover_multi(
+                    origin, CreatureSize.MEDIUM, target_pos, target.size, grid,
+                )
         save_success, save_event = resolve_saving_throw(
             target, target_id, save.ability, dc,
             legendary_resistance_eligible=bool(save.conditions_on_fail)
             or action.control_effect or action.compulsion_effect,
             is_spell_save=action.spell_level is not None,
             imposes_conditions=save.conditions_on_fail,
+            cover_bonus=cover_bonus,
         )
         events.append(save_event)
 

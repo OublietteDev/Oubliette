@@ -1,0 +1,32 @@
+{
+  "name": "Cheap-Cluster Lab — Zone friendly-fire, Cover saves, Ranged disadvantage",
+  "description": "Bench for the three quick D-SPELL/COND/ACT fixes. ZONE FRIENDLY-FIRE (D-ZONE-1): have Gareth drop Spike Growth (or Elara her Web) on a patch that also covers an ally, then walk Valeria into it — she takes the damage / gets restrained just like an enemy would. Only Spirit-Guardians-style auras that follow the caster still spare your side; a placed cloud is indiscriminate now. RANGED DISADVANTAGE (D-ACT-4): with Kael, shoot the Distant Sentry on the far right (past 150 ft, the longbow's normal range) — the to-hit rolls with disadvantage and the log says [long range]. Then shoot anything while the Goblin Skirmisher is still adjacent to Kael — that also rolls with disadvantage, logged [foe within 5 ft]; step away and the penalty disappears. A shot past 600 ft is refused entirely. COVER ON DEX SAVES (D-ACT-3): two cultists stand in a line with a three-quarters-cover wall between them — the Exposed Cultist out front, the Covered Cultist tucked behind the wall. Drop Elara's Fireball ON the Exposed Cultist: the blast still reaches the Covered Cultist at its edge, but with the wall between the blast's center and him his Dexterity save logs [cover: +5] (half cover would be +2), while the Exposed Cultist at ground zero gets no such bonus. Note (RAW): cover is measured from the blast's CENTRE, so a creature you center the blast on never has cover — that is why aiming straight at one target shows nothing. Cover now helps the DEX save, not just AC.",
+  "grid_width": 44,
+  "grid_height": 16,
+  "terrain": [
+    {"position": [20, 8], "terrain_type": "cover_three_quarters"},
+    {"position": [20, 9], "terrain_type": "cover_three_quarters"},
+    {"position": [20, 10], "terrain_type": "cover_three_quarters"}
+  ],
+  "combatants": [
+    {"creature_id": "characters/kael.json", "creature_data": null, "team": "player", "starting_position": [3, 6], "count": 1, "name_override": null},
+    {"creature_id": "characters/elara.json", "creature_data": null, "team": "player", "starting_position": [3, 9], "count": 1, "name_override": null},
+    {"creature_id": "characters/gareth.json", "creature_data": null, "team": "player", "starting_position": [3, 11], "count": 1, "name_override": null},
+    {"creature_id": "characters/valeria.json", "creature_data": null, "team": "player", "starting_position": [5, 10], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [4, 6], "count": 1, "name_override": "Goblin Skirmisher"},
+    {"creature_id": "monsters/srd/cultist.json", "creature_data": null, "team": "enemy", "starting_position": [18, 9], "count": 1, "name_override": "Exposed Cultist"},
+    {"creature_id": "monsters/srd/cultist.json", "creature_data": null, "team": "enemy", "starting_position": [21, 9], "count": 1, "name_override": "Covered Cultist"},
+    {"creature_id": "monsters/srd/scout.json", "creature_data": null, "team": "enemy", "starting_position": [41, 9], "count": 1, "name_override": "Distant Sentry"}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

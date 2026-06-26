@@ -909,9 +909,12 @@ class TestAttackForcedMovement:
         blast = _repelling_blast()
         player = _make_fighter(actions=[blast])
         enemy = _make_enemy()
+        # Enemy two hexes away (10 ft): a ranged blast from melee range would
+        # roll at disadvantage (D-ACT-4), which routes through dice the
+        # actions.roll_die patch doesn't reach — keep it a clean straight shot.
         manager, pid, eid = _setup_combat(
             player=player, enemy=enemy,
-            player_pos=(4, 4), enemy_pos=(5, 4),
+            player_pos=(4, 4), enemy_pos=(6, 4),
         )
         self._advance_to(manager, pid)
 
@@ -932,9 +935,11 @@ class TestAttackForcedMovement:
         blast = _repelling_blast()
         player = _make_fighter(actions=[blast])
         enemy = _make_enemy()
+        # Two hexes away: a clean straight shot so the forced low roll lands
+        # (a point-blank ranged blast would roll at disadvantage — D-ACT-4).
         manager, pid, eid = _setup_combat(
             player=player, enemy=enemy,
-            player_pos=(4, 4), enemy_pos=(5, 4),
+            player_pos=(4, 4), enemy_pos=(6, 4),
         )
         self._advance_to(manager, pid)
 

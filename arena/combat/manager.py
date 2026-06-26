@@ -3379,7 +3379,16 @@ class CombatManager:
             damage_type=(save.damage_on_fail[0].damage_type.value
                          if save.damage_on_fail else "none"),
             damage_on_save=save.damage_on_success or "none",
-            affects_enemies_only=True,
+            # D-ZONE-1: most zones are indiscriminate (Cloudkill, Stinking Cloud,
+            # Moonbeam, Web, Spike Growth, …) — RAW "each creature in the area",
+            # so allies standing in the caster's cloud are NOT safe. Only a
+            # caster-selective aura spares allies, and in current SRD content the
+            # lone such zone is Spirit Guardians ("creatures of your choice"),
+            # which is exactly the set that follows the caster. Deriving from
+            # zone_follows_caster is robust across SRD JSON, bridge-generated, and
+            # baked lab actions without tagging each spell. (The caster is always
+            # spared by the per-tick caster_id check in zones.py.)
+            affects_enemies_only=action.zone_follows_caster,
             team=combatant.team,
             concentration_linked=True,
             already_damaged=set(),
@@ -4072,6 +4081,9 @@ class CombatManager:
                 user_pos=combatant.position,
                 target_pos=tc.position,
                 cast_level=self._cast_level,
+                # The blast is centered on the clicked hex, so cover for DEX
+                # saves (D-ACT-3) is measured from there, not the caster.
+                effect_origin=target_hex,
             )
             all_events.extend(result.events)
             if result.success:

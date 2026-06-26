@@ -122,10 +122,16 @@ class TestIsInRange:
         # 80 ft = 16 hexes
         assert is_in_range(HexCoord(0, 0), HexCoord(0, 10), action) is True
 
-    def test_ranged_out_of_range(self):
+    def test_ranged_within_long_range_allowed(self):
+        # D-ACT-4: past normal (80) but within long (320) is now in range —
+        # the shot is legal, just at disadvantage. 17 hexes = 85 ft.
         action = _make_ranged_action()
-        # 80 ft = 16 hexes, 17 hexes = 85 ft > 80
-        assert is_in_range(HexCoord(0, 0), HexCoord(0, 17), action) is False
+        assert is_in_range(HexCoord(0, 0), HexCoord(0, 17), action) is True
+
+    def test_ranged_beyond_long_range_refused(self):
+        action = _make_ranged_action()
+        # 320 ft = 64 hexes; 65 hexes = 325 ft > long range.
+        assert is_in_range(HexCoord(0, 0), HexCoord(0, 65), action) is False
 
 
 class TestResolveAttack:

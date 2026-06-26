@@ -50,27 +50,30 @@ def _melee(name="Bite", ability="strength"):
 def _ranged(name="Spit", ability="dexterity"):
     return Action(name=name, description="x", action_type=ActionType.ACTION,
                   attack=Attack(name=name, attack_type="ranged_weapon", ability=ability,
-                                reach=5, long_range=120,
+                                reach=5, range_normal=80, range_long=120,
                                 damage=[DamageRoll(dice="1d6", damage_type=DamageType.PIERCING,
                                                    ability_modifier=ability)]))
 
 
 def _scene(attacker, target, *, melee=True):
-    """Adjacent attacker/target, plus a combatants+grid context. Returns the
-    AttackHitResult for the given action against the target."""
+    """attacker + target with a combatants+grid context, returning the
+    AttackHitResult. Melee pairs are adjacent; ranged places the target a few
+    hexes off (within normal range, NOT in melee) so the aura mechanic under
+    test stays isolated from D-ACT-4's long-range / in-melee disadvantage."""
+    tgt_pos = HexCoord(2, 3) if melee else HexCoord(2, 6)  # adjacent vs 20 ft
     grid = HexGrid(10, 10)
     grid.place_creature(HexCoord(2, 2), "atk")
-    grid.place_creature(HexCoord(2, 3), "tgt")
+    grid.place_creature(tgt_pos, "tgt")
     combatants = {
         "atk": Combatant(creature_id="atk", creature=attacker, team="enemy",
                          position=HexCoord(2, 2)),
         "tgt": Combatant(creature_id="tgt", creature=target, team="player",
-                         position=HexCoord(2, 3)),
+                         position=tgt_pos),
     }
     action = _melee() if melee else _ranged()
     return resolve_attack_hit(attacker, "atk", target, "tgt", action, grid,
                               combatants=combatants,
-                              attacker_pos=HexCoord(2, 2), target_pos=HexCoord(2, 3))
+                              attacker_pos=HexCoord(2, 2), target_pos=tgt_pos)
 
 
 # ── Blood Frenzy ─────────────────────────────────────────────────────────────
