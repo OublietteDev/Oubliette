@@ -215,11 +215,23 @@ cluster was **"monsters fight below their stat block."** Phase D closes the *mec
 plan is `docs/roadmap/oubliette-phase-d-plan-v0.1.md`); AI-driven gaps (monsters not *using*
 multiattack/their spell lists) are deferred to a future AI pass, and a few RAW deviations are kept
 on purpose (downed PCs stay "weirdly safe" — no live DM to grant mercy; lair-action *content* is
-out because the SRD ships none). **Done so far (lab + integration tested, suite 2654 green):**
+out because the SRD ships none). **Done so far (lab + integration tested, suite 2668 green):**
 D-MON-1 **Legendary Resistance** (a boss turns 3 failed save-or-lose throws into successes, never
 wasted on plain damage saves), D-MON-2 **Recharge** (breath weapons roll a real d6 to recur),
-D-MON-3 **Regeneration** (start-of-turn heal, suppressed a turn by acid/fire). Next: the trait
-primitives (Magic Resistance, Pack Tactics, …) and monster reactions (Parry).
+D-MON-3 **Regeneration** (start-of-turn heal, suppressed a turn by acid/fire), and **D-MON-4a**
+(commit 0152be6) — the first batch of trait primitives wired into existing hooks: **Magic
+Resistance** (advantage on saves vs spells), **Brave/Dark Devotion** (vs frightened) & **Fey
+Ancestry** (vs charmed), **Pack Tactics** (advantage when an ally is within 5 ft of the target),
+and **Magic Weapons** (now keyed off the structured flag, not just the trait name). Save/attack
+logs tag the source (`[Magic Resistance]`, `[Pack Tactics]`). New `traits_lab` bench +
+`test_monster_traits.py` (14). **BRIDGE FIDELITY CONFIRMED (corrects a momentary false alarm this
+session):** D-MON traits DO reach real story→Arena fights — the bridge entry point
+`enemy_from_statblock` prefers the full-fidelity Arena stat block via `arena_monster_file`, and the
+Oubliette bestiary id ↔ `arena/data/monsters/srd/<id>.json` alignment is **334/334 exact**; the flat
+`statblock_to_monster` fallback only hits synthetic templates + pack-authored monsters with no
+generated Arena file (a minor edge tied to the deferred Forge creature editor). Next: the rest of
+D-MON-4 (death-triggered — Undead Fortitude/Relentless/Death Burst; move-then-strike — Charge/Pounce;
+on-hit aura saves — Stench) and D-MON-5 monster reactions (Parry).
 
 ---
 
