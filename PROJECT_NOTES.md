@@ -229,9 +229,20 @@ session):** D-MON traits DO reach real story→Arena fights — the bridge entry
 `enemy_from_statblock` prefers the full-fidelity Arena stat block via `arena_monster_file`, and the
 Oubliette bestiary id ↔ `arena/data/monsters/srd/<id>.json` alignment is **334/334 exact**; the flat
 `statblock_to_monster` fallback only hits synthetic templates + pack-authored monsters with no
-generated Arena file (a minor edge tied to the deferred Forge creature editor). Next: the rest of
-D-MON-4 (death-triggered — Undead Fortitude/Relentless/Death Burst; move-then-strike — Charge/Pounce;
-on-hit aura saves — Stench) and D-MON-5 monster reactions (Parry).
+generated Arena file (a minor edge tied to the deferred Forge creature editor). **D-MON-4b**
+(commit 7467922, suite 2681 green) closes the death-triggered batch: **Undead Fortitude** (zombie/
+ogre_zombie — a CON save DC 5+damage on a 0-HP hit drops it to 1 HP instead, unless the blow was
+radiant or a crit; `apply_damage` gained an `is_critical` arg + `check_undead_fortitude`) and
+**Death Burst** (steam/ice/magma mephits + magmin — detonate on death, indiscriminate save-for-
+damage within radius via a new `_reconcile_death_bursts` pass in `_check_victory`, cascades). New
+`Monster.undead_fortitude` flag + `DeathBurst` submodel, generator parses both from prose, 6 srd
+files regen'd; `test_death_triggered.py` (11) + `death_triggered_lab` bench. **Relentless Endurance
+= no-op** (0 SRD monsters; it's a half-orc PC trait the death-prevention framework already serves —
+`get_death_prevention_features` now also reads monster `special_abilities`). **Dust mephit's
+condition-only burst** (blinded, no damage dice) is intentionally not modeled yet — `DeathBurst`
+covers damage bursts; a `condition_on_fail` variant is a small follow-up. Next: the rest of D-MON-4
+(move-then-strike — Charge/Pounce/Trampling Charge/Rampage; on-hit aura saves — Stench/Heated Body;
+Reckless/Blood Frenzy/Surprise Attack advantage riders) and D-MON-5 monster reactions (Parry).
 
 ---
 
