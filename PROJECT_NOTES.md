@@ -285,6 +285,9 @@ clean lanes (charge range); verified the Lion Pounces Thorin prone, etc. NOTE: t
 maneuver to *set up* a charge (deferred AI rework) — charge fires automatically when the engagement
 move is a straight run-in, so a charge bench must position beasts at one-turn-melee range. GOTCHA
 for future labs: high-AC targets make charge attacks miss, hiding the rider (gate only logs on a hit).
+**UI follow-up (OublietteDev, deferred to the Arena UI arc):** a charge hit currently looks like a normal
+melee swing — it wants its own run-in/impact animation so the bonus-damage+prone hit isn't mistaken
+for an ordinary attack. Logged in [[oubliette-arena-ui-cleanup]] (animation backlog).
 
 Next (remaining D-MON): on-hit aura saves (Stench poison aura, Heated Body), the advantage riders
 (Reckless both-directions, Blood Frenzy vs damaged, Surprise Attack first-round), and D-MON-5
