@@ -274,6 +274,18 @@ modeled: minotaur's "pushed away" clause, and the lion/triceratops "bonus attack
 follow-up. `test_move_then_strike.py` (6) + `charge_lab` bench. **Rampage** (gnoll: on-kill bonus
 move+bite) is a different shape (not a move-then-strike rider) — deferred with the AI rework.
 
+**4c playtest fix (commit 0a01f7f).** OublietteDev's charge_lab showed "no monster charged" — two causes:
+(1) a **latent bug**: `complete_attack` never actually applied ANY on-hit rider's condition (it
+passed a bool as `save_to_end`, an `AppliedCondition` where a `Condition` enum was expected, and
+iterated a single return) — so Charge/Pounce prone AND **Stunning Strike's stun** silently no-op'd;
+the rider tests only cover the pure `resolve_rider`, so it went unnoticed. Fixed + regression test.
+(2) **lab geometry**: beasts started ~18 hexes out, so they Dashed in (Dash = no attack) and then
+meleed from a standstill — the move-then-strike gate never opened. Retuned charge_lab to ~6-hex
+clean lanes (charge range); verified the Lion Pounces Thorin prone, etc. NOTE: the AI does not
+maneuver to *set up* a charge (deferred AI rework) — charge fires automatically when the engagement
+move is a straight run-in, so a charge bench must position beasts at one-turn-melee range. GOTCHA
+for future labs: high-AC targets make charge attacks miss, hiding the rider (gate only logs on a hit).
+
 Next (remaining D-MON): on-hit aura saves (Stench poison aura, Heated Body), the advantage riders
 (Reckless both-directions, Blood Frenzy vs damaged, Surprise Attack first-round), and D-MON-5
 monster reactions (Parry — +AC reaction, 12 monsters).
