@@ -565,6 +565,14 @@ class CombatManager:
         ):
             self.log.add(re_ev)
 
+        # Regeneration (D-MON-3): heal at the start of the turn unless a negating
+        # damage type was taken since the last turn.
+        from arena.combat.regeneration import process_regeneration_start_of_turn
+        for rg_ev in process_regeneration_start_of_turn(
+            combatant.creature, combatant.creature_id,
+        ):
+            self.log.add(rg_ev)
+
         # Banishment may have just expired (Blink's one-round trip ends at
         # the start of this creature's own turn) — return creatures BEFORE
         # zones tick and before the skip checks, so they act normally.

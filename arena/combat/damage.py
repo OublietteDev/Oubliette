@@ -315,6 +315,16 @@ def apply_damage(
 
     modified_damage = sum(amt for amt, _, _ in defended)
 
+    # Regeneration (D-MON-3): taking a negating damage type (Troll: acid/fire)
+    # suppresses next turn's regeneration. Flag it on the creature; the
+    # start-of-turn regen check reads and clears it.
+    negating = [t.lower() for t in getattr(target, "regeneration_negated_by", [])]
+    if negating:
+        for amt, dtype, _ in defended:
+            if amt > 0 and dtype.lower() in negating:
+                target._regeneration_negated = True
+                break
+
     old_hp = target.current_hit_points if target.current_hit_points is not None else 0
 
     # 2. Absorb with temp HP first (across all packets)
