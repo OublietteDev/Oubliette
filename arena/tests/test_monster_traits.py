@@ -80,6 +80,48 @@ def test_fey_ancestry_grants_advantage_vs_charmed():
     assert event.details["trait_advantage"] == "Fey Ancestry"
 
 
+# ── Magic Resistance / traits on RECURRING saves (not just the opening one) ──
+
+def _spell_condition(cond, dc=15, spell_level=2):
+    from arena.models.conditions import AppliedCondition
+    return AppliedCondition(condition=cond, source="Hold Person",
+                            duration_type="end_of_turn", save_to_end="wisdom",
+                            save_dc=dc, spell_level=spell_level)
+
+
+def _resave_event(creature, dc):
+    from arena.combat.conditions import process_end_of_turn
+    events = process_end_of_turn(creature, "m1")
+    return next(e for e in events if e.details.get("dc") == dc)
+
+
+def test_magic_resistance_applies_to_recurring_condition_resave():
+    m = _resistant()
+    m.active_conditions.append(_spell_condition(Condition.PARALYZED))
+    ev = _resave_event(m, 15)
+    assert ev.details["advantage"] == 1
+    assert ev.details["trait_advantage"] == "Magic Resistance"
+
+
+def test_no_magic_resistance_on_nonspell_condition_resave():
+    m = _resistant()
+    m.active_conditions.append(_spell_condition(Condition.PARALYZED, spell_level=None))
+    ev = _resave_event(m, 15)
+    assert ev.details["advantage"] == 0
+    assert ev.details["trait_advantage"] is None
+
+
+def test_brave_applies_to_recurring_frightened_resave():
+    m = Monster(name="Knight", max_hit_points=52, ability_scores=AbilityScores(),
+                special_abilities=[_feat("Brave", save_advantage_vs_conditions=["frightened"])])
+    ac = _spell_condition(Condition.FRIGHTENED, dc=14, spell_level=3)
+    ac.source = "Fear"
+    m.active_conditions.append(ac)
+    ev = _resave_event(m, 14)
+    assert ev.details["advantage"] == 1
+    assert ev.details["trait_advantage"] == "Brave"
+
+
 # ── Pack Tactics (advantage when an ally flanks the target) ──────────────────
 
 def _wolf(name, pack=True):

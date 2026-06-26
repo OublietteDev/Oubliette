@@ -123,7 +123,11 @@ def check_domination_on_damage(
     dc = int(data.get("save_dc", 10))
 
     from arena.combat.actions import resolve_saving_throw  # local: avoid cycle
-    success, save_event = resolve_saving_throw(target, target_id, "wisdom", dc)
+    # Dominate is a charm spell → Magic Resistance and Fey Ancestry apply.
+    success, save_event = resolve_saving_throw(
+        target, target_id, "wisdom", dc,
+        is_spell_save=True, imposes_conditions=["charmed"],
+    )
     save_event.message = f"Domination check: {save_event.message}"
     save_event.details["domination_check"] = True
     events: list[CombatEvent] = [save_event]

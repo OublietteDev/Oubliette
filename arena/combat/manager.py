@@ -3143,6 +3143,7 @@ class CombatManager:
             condition_on_fail=(save.conditions_on_fail[0]
                                if save.conditions_on_fail else None),
             obscures_vision=action.zone_obscures,
+            spell_level=action.spell_level or 0,
         )
         # Remove any existing zone from this caster first
         self.active_zones = [z for z in self.active_zones if z.caster_id != combatant.creature_id]

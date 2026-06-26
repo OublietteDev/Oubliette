@@ -224,9 +224,13 @@ def _resolve_zone_damage(
         details={"zone_damage": zone.zone_id},
     ))
 
-    # Saving throw
+    # Saving throw — a spell zone (Spirit Guardians, Web, Cloudkill) is a save
+    # against a spell, so Magic Resistance / Brave / Fey Ancestry apply.
     success, save_event = resolve_saving_throw(
         target, creature_id, zone.saving_throw_ability, zone.saving_throw_dc,
+        is_spell_save=getattr(zone, "spell_level", 0) > 0,
+        imposes_conditions=([zone.condition_on_fail]
+                            if getattr(zone, "condition_on_fail", None) else None),
     )
     events.append(save_event)
 

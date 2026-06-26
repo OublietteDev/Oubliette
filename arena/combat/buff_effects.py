@@ -476,6 +476,7 @@ def process_buff_end_of_turn(
         success, save_event = resolve_saving_throw(
             creature, creature_id,
             buff.save_to_end, buff.save_dc,
+            is_spell_save=buff.spell_level is not None,
         )
         save_event.message = (
             f"{buff.name} save: {save_event.message}"

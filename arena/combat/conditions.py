@@ -186,7 +186,9 @@ def process_start_of_turn(
             from arena.combat.actions import resolve_saving_throw
 
             success, save_event = resolve_saving_throw(
-                creature, creature_id, ac.save_to_end, ac.save_dc
+                creature, creature_id, ac.save_to_end, ac.save_dc,
+                is_spell_save=ac.spell_level is not None,
+                imposes_conditions=[ac.condition.value],
             )
             events.append(save_event)
             if success:
@@ -229,7 +231,9 @@ def process_end_of_turn(
             from arena.combat.actions import resolve_saving_throw
 
             success, save_event = resolve_saving_throw(
-                creature, creature_id, ac.save_to_end, ac.save_dc
+                creature, creature_id, ac.save_to_end, ac.save_dc,
+                is_spell_save=ac.spell_level is not None,
+                imposes_conditions=[ac.condition.value],
             )
             events.append(save_event)
             if success:
