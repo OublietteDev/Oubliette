@@ -10,6 +10,7 @@ import pytest
 
 from arena.grid.aoe_shapes import (
     aoe_hexes, hexes_in_sphere, hexes_in_cube, hexes_in_line, hexes_in_cone,
+    is_emanating,
 )
 from arena.grid.coordinates import HexCoord
 from arena.grid.hexgrid import HexGrid
@@ -119,6 +120,26 @@ class TestDispatcher:
         hexes = aoe_hexes(a, HexCoord(2, 10), HexCoord(15, 10), g)
         assert HexCoord(15, 10) in hexes      # centered on the aim, not the caster
         assert HexCoord(2, 10) not in hexes
+
+
+# ── Emanating vs placed (the range-0 aiming contract) ─────────────────
+
+
+class TestEmanating:
+    def test_line_and_cone_emanate(self):
+        assert is_emanating(Action(name="LB", description="x", target_type=TargetType.AREA_LINE))
+        assert is_emanating(Action(name="CC", description="x", target_type=TargetType.AREA_CONE))
+
+    def test_sphere_and_cube_are_placed(self):
+        assert not is_emanating(Action(name="FB", description="x", target_type=TargetType.AREA_SPHERE))
+        assert not is_emanating(Action(name="TW", description="x", target_type=TargetType.AREA_CUBE))
+
+    def test_self_centered_emanating_collapses_to_nothing(self):
+        """Why the GUI must AIM line/cone instead of casting them caster-centered:
+        with aim == origin a line/cone covers no hexes (the old range-0 bug)."""
+        g = _grid()
+        line = Action(name="LB", description="x", target_type=TargetType.AREA_LINE, area_size=100)
+        assert aoe_hexes(line, HexCoord(5, 5), HexCoord(5, 5), g) == set()
 
 
 # ── End-to-end: Lightning Bolt is a line, not a sphere ────────────────

@@ -131,6 +131,18 @@ def hexes_in_cone(
     return out
 
 
+def is_emanating(action: "Action") -> bool:
+    """Whether an AoE EMANATES from the caster in a chosen direction (line/cone)
+    rather than being PLACED on a target hex (sphere/cube/cylinder).
+
+    The GUI uses this to decide aiming: a placed shape is dropped on a clicked
+    hex (gated by range); an emanating shape — even at range 0, as most are —
+    must be aimed by direction (gated by its length), never auto-cast centered
+    on the caster (which would collapse a line/cone to nothing).
+    """
+    return action.target_type in (TargetType.AREA_LINE, TargetType.AREA_CONE)
+
+
 # ── Dispatcher ────────────────────────────────────────────────────────
 
 

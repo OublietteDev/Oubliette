@@ -26,6 +26,7 @@ from arena.gui.legendary_popup import LegendaryActionPopup
 from arena.gui.lair_action_popup import LairActionPopup
 from arena.gui.passenger_popup import PassengerPopup
 from arena.combat.stat_modifiers import get_effective_armor_class, get_effective_speed
+from arena.grid.aoe_shapes import is_emanating
 from arena.grid.coordinates import HexCoord
 from arena.grid.footprint import get_footprint_center_pixel, get_footprint_hex_count
 from arena.gui.grid_view import GridView
@@ -832,7 +833,12 @@ class CombatScreen(Screen):
                     combatant.position, combatant.creature.size,
                     clicked_hex, 1,
                 ) * 5
-                if dist_feet <= selected.range:
+                # Line/cone aim by DIRECTION: the click points the shape and is
+                # gated by its length (area_size), not a placement range (these
+                # are usually range 0). Placed shapes gate by range as before.
+                reach = ((selected.area_size or selected.range)
+                         if is_emanating(selected) else selected.range)
+                if dist_feet <= reach:
                     cell = self.combat.grid.get_cell(clicked_hex)
                     clicked_id = cell.occupant_id if cell else None
                     self.combat.execute_effect_at_hex(clicked_hex, clicked_target_id=clicked_id)
@@ -1509,13 +1515,16 @@ class CombatScreen(Screen):
                         elif (
                             (action.range == 0 or action.zone_follows_caster)
                             and action.target_type.value.startswith("area_")
+                            and not is_emanating(action)
                             and not action.attack
                             and active.position is not None
                         ):
                             # Self-centered area effect (Spirit Guardians aura,
-                            # Turn Undead burst): centered on the caster — a
-                            # zero range or a caster-following zone — so cast
-                            # immediately, no hex to pick.
+                            # Turn Undead burst): a sphere/cube/cylinder centered
+                            # on the caster — zero range or a caster-following
+                            # zone — so cast immediately, no hex to pick. Lines
+                            # and cones are excluded: they EMANATE in a chosen
+                            # direction, so they need the aim step below.
                             self.combat.select_action(action)
                             self.combat.execute_effect_at_hex(
                                 active.position,
@@ -2947,8 +2956,7 @@ class CombatScreen(Screen):
         # Emanating shapes (cone/line) aim by direction and self-limit to their
         # length; placed shapes (sphere/cube) must land within range.
         action = None if self._pending_zone_move else self.combat.selected_action
-        emanating = (action is not None
-                     and action.target_type.value in ("area_cone", "area_line"))
+        emanating = action is not None and is_emanating(action)
         if not emanating:
             dist_feet = min_distance_between(
                 combatant.position, combatant.creature.size,
