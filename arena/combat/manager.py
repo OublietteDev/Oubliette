@@ -5701,18 +5701,29 @@ class CombatManager:
                 t.creature, tid, burst.save_ability, burst.save_dc,
             )
             self.log.add(save_ev)
-            dmg, _ = roll_expression(burst.damage_dice)
-            if success:
-                dmg = dmg // 2 if burst.half_on_save else 0
-            if dmg > 0:
-                dmg_ev, extra = apply_damage(
-                    t.creature, dmg, burst.damage_type, tid,
+            if burst.damage_dice:
+                dmg, _ = roll_expression(burst.damage_dice)
+                if success:
+                    dmg = dmg // 2 if burst.half_on_save else 0
+                if dmg > 0:
+                    dmg_ev, extra = apply_damage(
+                        t.creature, dmg, burst.damage_type, tid,
+                    )
+                    dmg_ev.target_id = tid
+                    dmg_ev.message = f"{t.creature.name} " + dmg_ev.message
+                    self.log.add(dmg_ev)
+                    for e in extra:
+                        self.log.add(e)
+            if burst.condition_on_fail and not success:
+                from arena.combat.conditions import apply_condition
+                cond_ev = apply_condition(
+                    t.creature, tid, Condition(burst.condition_on_fail),
+                    source=combatant.creature.name,
+                    save_to_end=burst.save_ability, save_dc=burst.save_dc,
+                    duration_type="end_of_turn",
                 )
-                dmg_ev.target_id = tid
-                dmg_ev.message = f"{t.creature.name} " + dmg_ev.message
-                self.log.add(dmg_ev)
-                for e in extra:
-                    self.log.add(e)
+                if cond_ev is not None:
+                    self.log.add(cond_ev)
 
     def _banished_for_good(self, creature_id: str, combatant) -> bool:
         """True if this creature is banished with no path back to the fight.

@@ -108,8 +108,8 @@
     "radius_ft": 5,
     "save_ability": "dexterity",
     "save_dc": 11,
+    "half_on_save": true,
     "damage_dice": "2d6",
-    "damage_type": "fire",
-    "half_on_save": true
+    "damage_type": "fire"
   }
 }

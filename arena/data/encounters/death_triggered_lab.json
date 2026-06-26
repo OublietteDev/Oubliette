@@ -1,6 +1,6 @@
 {
   "name": "Death-Triggered Lab — Undead Fortitude & Death Burst (D-MON-4b)",
-  "description": "Bench for traits that fire as a monster dies. Drop the zombie (or ogre zombie) to 0 HP with ordinary weapon damage and watch Undead Fortitude roll a CON save (DC 5 + the damage dealt) to lurch back up at 1 HP — then finish it with a critical or with radiant damage (Brother Aldric's spells), which the trait can't resist. Stand next to a mephit when it dies and watch its Death Burst force a DEX save on everyone within 5 ft (it hits friend and foe alike). Two mephits set side by side will chain-detonate.",
+  "description": "Bench for traits that fire as a monster dies. Drop the zombie (or ogre zombie) to 0 HP with ordinary weapon damage and watch Undead Fortitude roll a CON save (DC 5 + the damage dealt) to lurch back up at 1 HP — then finish it with a critical or with radiant damage (Brother Aldric's spells), which the trait can't resist. Stand next to a mephit when it dies and watch its Death Burst force a save on everyone within range (it hits friend and foe alike): the steam/magma mephits deal damage, while the dust mephit's burst blinds instead (with a save each turn to recover). Two mephits set side by side will chain-detonate.",
   "grid_width": 18,
   "grid_height": 14,
   "terrain": [],
@@ -10,7 +10,8 @@
     {"creature_id": "monsters/srd/zombie.json", "creature_data": null, "team": "enemy", "starting_position": [13, 5], "count": 1, "name_override": null},
     {"creature_id": "monsters/srd/ogre_zombie.json", "creature_data": null, "team": "enemy", "starting_position": [14, 8], "count": 1, "name_override": null},
     {"creature_id": "monsters/srd/steam_mephit.json", "creature_data": null, "team": "enemy", "starting_position": [12, 10], "count": 1, "name_override": null},
-    {"creature_id": "monsters/srd/magma_mephit.json", "creature_data": null, "team": "enemy", "starting_position": [13, 10], "count": 1, "name_override": null}
+    {"creature_id": "monsters/srd/magma_mephit.json", "creature_data": null, "team": "enemy", "starting_position": [13, 10], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/dust_mephit.json", "creature_data": null, "team": "enemy", "starting_position": [12, 12], "count": 1, "name_override": null}
   ],
   "use_ai_for_enemies": true,
   "use_ai_for_allies": false,

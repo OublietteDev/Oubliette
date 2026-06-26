@@ -411,30 +411,37 @@ _BURST_DICE_RE = re.compile(r"\((\d+d\d+)\)")
 
 
 def _death_burst(specials: list) -> dict | None:
-    """Death Burst trait → structured burst (radius, save, dice, type, half).
-    Parses the SRD prose: '... within 5 ft. ... DC 10 Dexterity saving throw
-    ... take 4 (1d8) fire damage ...[ or half as much ...]'."""
+    """Death Burst trait → structured burst. Parses the SRD prose for a damage
+    burst ('... DC 10 Dexterity saving throw ... take 4 (1d8) fire damage ...
+    [or half as much ...]') and/or a condition burst (dust mephit: '... DC 10
+    Constitution saving throw or be blinded ...')."""
     for sa in specials:
         if sa["name"].lower().strip() != "death burst":
             continue
         desc = sa.get("desc", "")
         low = desc.lower()
         dc_m = _BURST_DC_RE.search(desc)
+        if not dc_m:
+            continue
         dice_m = _BURST_DICE_RE.search(desc)
-        if not dc_m or not dice_m:
+        cond_m = re.search(r"or be (\w+)", low)
+        if not dice_m and not cond_m:
             continue
         radius_m = _BURST_RADIUS_RE.search(desc)
         ability = dc_m.group(2).lower()
-        dtype = next((t for t in _DMG_TYPES
-                      if re.search(rf"\b{t}\b\s+damage", low)), "force")
-        return {
+        out = {
             "radius_ft": int(radius_m.group(1)) if radius_m else 5,
             "save_ability": ability if ability in _ABILS else "dexterity",
             "save_dc": int(dc_m.group(1)),
-            "damage_dice": dice_m.group(1),
-            "damage_type": dtype,
             "half_on_save": "half as much" in low,
         }
+        if dice_m:
+            out["damage_dice"] = dice_m.group(1)
+            out["damage_type"] = next((t for t in _DMG_TYPES
+                                       if re.search(rf"\b{t}\b\s+damage", low)), "force")
+        if cond_m:
+            out["condition_on_fail"] = cond_m.group(1)
+        return out
     return None
 
 

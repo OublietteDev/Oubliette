@@ -9,14 +9,17 @@ from .actions import Action
 class DeathBurst(BaseModel):
     """Death Burst (D-MON-4b): when the creature dies it detonates, forcing a
     save on every creature within `radius_ft` (mephits, magmin). Indiscriminate
-    per RAW — allies and enemies alike."""
+    per RAW — allies and enemies alike. A burst deals damage (`damage_dice`),
+    applies a condition on a failed save (`condition_on_fail`, e.g. dust mephit's
+    blindness, which carries a per-turn re-save), or both."""
 
     radius_ft: int = 5
     save_ability: str = "dexterity"
     save_dc: int = 10
-    damage_dice: str = "1d8"
+    damage_dice: str | None = None
     damage_type: str = "fire"
     half_on_save: bool = False
+    condition_on_fail: str | None = None
 
 
 class Monster(Creature):

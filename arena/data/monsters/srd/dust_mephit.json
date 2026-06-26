@@ -89,5 +89,12 @@
   ],
   "challenge_rating": 0.5,
   "experience_points": 100,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "death_burst": {
+    "radius_ft": 5,
+    "save_ability": "constitution",
+    "save_dc": 10,
+    "half_on_save": false,
+    "condition_on_fail": "blinded"
+  }
 }

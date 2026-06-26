@@ -148,3 +148,35 @@ def test_death_burst_fires_only_once():
             cm._check_victory()
             cm._check_victory()  # second check must not re-burst
     assert cm.combatants[hero_id].creature.current_hit_points == 30 - 5
+
+
+def test_condition_death_burst_blinds_on_failed_save():
+    """Dust mephit's burst applies a condition (blinded) rather than damage."""
+    from arena.combat.conditions import has_condition
+    from arena.models.conditions import Condition
+
+    mephit = Monster(
+        name="Dust Mephit", max_hit_points=17, current_hit_points=17,
+        ability_scores=AbilityScores(),
+        death_burst=DeathBurst(radius_ft=5, save_ability="constitution", save_dc=10,
+                               condition_on_fail="blinded"))
+    target = Creature(name="Hero", max_hit_points=30, current_hit_points=30,
+                      ability_scores=AbilityScores(), is_player_controlled=True)
+    enc = Encounter(name="dust", grid_width=12, grid_height=12, combatants=[
+        CombatantEntry(creature_id="hero", creature_data=target, team="player",
+                       starting_position=(5, 6)),
+        CombatantEntry(creature_id="mephit", creature_data=mephit, team="enemy",
+                       starting_position=(5, 5)),
+    ])
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("."))
+    with patch("arena.combat.manager.roll_die", side_effect=[20, 10]):
+        cm.roll_initiative()
+    cm.begin_combat()
+    hero_id = next(k for k, v in cm.combatants.items() if v.team == "player")
+    mephit_id = next(k for k, v in cm.combatants.items() if v.team == "enemy")
+    cm.combatants[mephit_id].creature.current_hit_points = 0
+    with patch("arena.combat.actions.roll_die", return_value=1):  # save fails
+        cm._check_victory()
+    assert has_condition(cm.combatants[hero_id].creature, Condition.BLINDED)
+    assert cm.combatants[hero_id].creature.current_hit_points == 30  # no damage
