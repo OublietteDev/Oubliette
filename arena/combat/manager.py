@@ -2977,6 +2977,26 @@ class CombatManager:
 
         return ActionResult(events=events, success=wall is not None)
 
+    def wall_line_hexes(self, start: HexCoord, end: HexCoord, action: Action) -> list:
+        """The hex line a wall would occupy from ``start``→``end``, capped at the
+        spell's length.
+
+        Single source of truth for wall geometry so the GUI preview matches the
+        cast exactly. The cap is on the hex COUNT (each hex = 5 ft of wall), not
+        the gap count: a 100-ft Wall of Force is at most 20 hexes (= 100 ft),
+        never 21 (= 105 ft).
+        """
+        from arena.grid.line_of_sight import hex_line
+        from arena.grid.aoe_shapes import _extend_to_length
+
+        length_ft = action.wall_length or action.area_size or 30
+        length_hexes = max(1, round(length_ft / 5))
+        max_dist = max(0, length_hexes - 1)  # N hexes span N-1 steps
+        if start.distance_to(end) > max_dist:
+            end = _extend_to_length(start, end, max_dist)
+        return [h for h in hex_line(start, end)
+                if self.grid is None or self.grid.is_valid(h)]
+
     def execute_wall_line(self, start: HexCoord, end: HexCoord) -> ActionResult | None:
         """Cast the selected wall spell as a line segment from ``start``→``end``.
 
@@ -2992,14 +3012,7 @@ class CombatManager:
         if not action.is_wall:
             return None
 
-        from arena.grid.line_of_sight import hex_line
-        from arena.grid.aoe_shapes import _extend_to_length
-
-        length_ft = action.wall_length or action.area_size or 30
-        length_hexes = max(1, round(length_ft / 5))
-        if start.distance_to(end) > length_hexes:
-            end = _extend_to_length(start, end, length_hexes)
-        wall_hexes = [h for h in hex_line(start, end) if self.grid.is_valid(h)]
+        wall_hexes = self.wall_line_hexes(start, end, action)
         if not wall_hexes:
             return None
         return self._execute_wall_spell(action, combatant, wall_hexes)

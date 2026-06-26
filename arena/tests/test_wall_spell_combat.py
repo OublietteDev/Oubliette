@@ -92,13 +92,27 @@ def test_execute_wall_line_creates_active_wall():
 
 
 def test_execute_wall_line_caps_at_length():
-    """A wall is capped at the spell's wall_length even if the two clicks are
-    farther apart (Wall of Thorns = 60 ft = 12 hexes)."""
-    cm, wid, _ = _combat(["wall_of_thorns"])
-    _cast_wall(cm, wid, "Wall of Thorns", HexCoord(5, 5), HexCoord(5, 30))
+    """A wall is capped at the spell's wall_length (hex COUNT = length/5), even
+    when the two clicks are farther apart. Wall of Force = 100 ft = 20 hexes,
+    NOT 21 (the off-by-one fencepost OublietteDev caught as '105 ft')."""
+    cm, wid, _ = _combat(["wall_of_force"])
+    # Clicks 21 hexes apart on a 22-wide grid; cap must clip to 20 hexes.
+    _cast_wall(cm, wid, "Wall of Force", HexCoord(0, 5), HexCoord(21, 5))
     wall = cm.active_walls[0]
-    # 60 ft / 5 = 12 hexes long → 13 hexes inclusive, but clipped to the grid.
-    assert len(wall.get_wall_hexes()) <= 13
+    assert len(wall.get_wall_hexes()) == 20  # 20 * 5 ft = 100 ft, RAW
+
+
+def test_wall_line_hexes_caps_count_not_gaps():
+    """The shared geometry helper caps the hex COUNT at length/5."""
+    cm, wid, _ = _combat(["wall_of_force"])
+    action = next(a for a in cm.combatants[wid].creature.actions
+                  if a.name == "Wall of Force")
+    # Far apart → exactly 20 hexes (100 ft).
+    hexes = cm.wall_line_hexes(HexCoord(0, 5), HexCoord(21, 5), action)
+    assert len(hexes) == 20
+    # A short drag stays short (you can make a smaller wall).
+    short = cm.wall_line_hexes(HexCoord(5, 5), HexCoord(8, 5), action)
+    assert len(short) == 4
 
 
 # ── Blocking ───────────────────────────────────────────────────────────
@@ -182,6 +196,27 @@ def test_pure_barrier_deals_no_entry_damage():
             break
         cm.end_turn()
     assert foe.creature.current_hit_points == hp0
+
+
+# ── Render style mapping (so a rename can't silently lose a wall's color) ──
+
+def test_each_wall_has_a_distinct_render_style():
+    import os
+    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+    os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+    from arena.gui.screens.combat import CombatScreen
+    from arena.combat.wall_spells import create_wall
+
+    spell_ids = ["wall_of_force", "wall_of_stone", "wall_of_fire",
+                 "wall_of_ice", "wall_of_thorns", "blade_barrier"]
+    colors = []
+    for sid in spell_ids:
+        wall = create_wall(_spell(sid), "c", [HexCoord(0, 0)])
+        color, alpha = CombatScreen._wall_render_style(wall)
+        assert len(color) == 3 and 0 < alpha <= 200
+        colors.append(color)
+    # Every named wall maps to its own color (no two walls look identical).
+    assert len(set(colors)) == len(spell_ids)
 
 
 # ── Concentration cleanup (routing-level) ──────────────────────────────

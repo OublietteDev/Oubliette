@@ -1948,6 +1948,10 @@ class CombatScreen(Screen):
             # Persistent AoE zone overlays (below movement/attack range overlays)
             self._render_aoe_zones(surface)
 
+            # Placed wall spells (Wall of Force/Fire/Stone/...) — a barrier you
+            # can't see is confusing even when it's narratively invisible.
+            self._render_active_walls(surface)
+
             # Movement range overlay
             self._render_movement_range(surface)
 
@@ -2730,6 +2734,57 @@ class CombatScreen(Screen):
             k: v for k, v in self._zone_shimmer_states.items() if k in active_ids
         }
 
+    # Per-wall display style: (RGB, base alpha). Damaging walls glow brighter;
+    # Wall of Force is a faint shimmer (narratively invisible, but it must read).
+    _WALL_STYLES = {
+        "Wall of Force": ((120, 150, 230), 60),
+        "Wall of Stone": ((140, 130, 120), 150),
+        "Wall of Fire": ((235, 95, 30), 135),
+        "Wall of Ice": ((150, 210, 235), 140),
+        "Wall of Thorns": ((85, 145, 70), 140),
+        "Blade Barrier": ((205, 205, 220), 140),
+    }
+    _WALL_DMG_COLORS = {
+        "fire": (235, 95, 30), "cold": (150, 210, 235),
+        "piercing": (85, 145, 70), "slashing": (205, 205, 220),
+    }
+
+    @classmethod
+    def _wall_render_style(cls, wall) -> tuple:
+        """(color, base_alpha) for a placed wall, by name then damage type."""
+        if wall.name in cls._WALL_STYLES:
+            return cls._WALL_STYLES[wall.name]
+        color = cls._WALL_DMG_COLORS.get(
+            (wall.damage_type or "").lower(), (150, 150, 160))
+        return color, (130 if wall.damage_on_enter else 90)
+
+    def _render_active_walls(self, surface: pygame.Surface) -> None:
+        """Render placed wall spells so the barrier is visible on the field.
+
+        A wall blocks movement/LOS even when it's narratively invisible (Wall of
+        Force), so it must read on the grid — otherwise enemies just stop at thin
+        air. A gentle global pulse gives the overlay life (and makes a faint
+        force wall catch the eye)."""
+        if self.combat.state != CombatState.IN_COMBAT:
+            return
+        if not self.combat.active_walls or self.grid_view is None:
+            return
+
+        import math
+        scaled_size = get_settings().display.default_hex_size * self.grid_view.camera.zoom
+        ox, oy = self.grid_view.origin
+        pulse = 0.5 + 0.5 * math.sin(pygame.time.get_ticks() / 400.0)
+
+        for wall in self.combat.active_walls:
+            color, base_alpha = self._wall_render_style(wall)
+            alpha = min(255, int(base_alpha + 30 * pulse))
+            for coord in wall.get_wall_hexes():
+                wx, wy = coord.to_pixel(get_settings().display.default_hex_size)
+                lx, ly = self.grid_view.camera.world_to_screen(wx, wy)
+                draw_hex_highlight(
+                    surface, (lx + ox, ly + oy), scaled_size, color, alpha=alpha,
+                )
+
     def _render_movement_range(self, surface: pygame.Surface) -> None:
         """Highlight hexes the active creature can move to."""
         if self.combat.state != CombatState.IN_COMBAT:
@@ -3001,16 +3056,12 @@ class CombatScreen(Screen):
             action = self.combat.selected_action
             if action is None or not action.is_wall:
                 return
-            from arena.grid.line_of_sight import hex_line as _hex_line
-            from arena.grid.aoe_shapes import _extend_to_length as _ext
             anchor = self._wall_anchor or combatant.position
-            end = center_hex
-            length_hexes = max(1, round(
-                (action.wall_length or action.area_size or 30) / 5))
-            if anchor.distance_to(end) > length_hexes:
-                end = _ext(anchor, end, length_hexes)
-            wall_shape = {(h.q, h.r) for h in _hex_line(anchor, end)
-                          if grid.is_valid(h)}
+            # Same geometry + length cap as the cast — preview can't lie.
+            wall_shape = {
+                (h.q, h.r)
+                for h in self.combat.wall_line_hexes(anchor, center_hex, action)
+            }
             preview_color = parse_color(COLORS["hex_aoe_preview"])
             scaled_size = (get_settings().display.default_hex_size
                            * self.grid_view.camera.zoom)
