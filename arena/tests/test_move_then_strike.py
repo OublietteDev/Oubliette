@@ -128,6 +128,49 @@ def test_charge_rider_applies_damage_and_prone_on_failed_save():
     assert rr.save_dc == 11  # fixed DC from the block
 
 
+def test_complete_attack_applies_charge_prone_on_failed_save():
+    """End-to-end through complete_attack: a charge hit whose save fails leaves
+    the target prone. Guards the rider condition-application fix (the old code
+    passed a bool as save_to_end and an AppliedCondition where a Condition was
+    expected, so no rider ever applied its condition)."""
+    from arena.combat.actions import resolve_attack_hit
+    from arena.combat.conditions import has_condition
+    from arena.combat.riders import resolve_rider
+    from arena.models.conditions import Condition
+
+    boar = _boar()
+    hero = Creature(name="Hero", max_hit_points=40, current_hit_points=40,
+                    armor_class=1, ability_scores=AbilityScores(strength=6),
+                    is_player_controlled=False)
+    enc = Encounter(name="adj", grid_width=10, grid_height=10, combatants=[
+        CombatantEntry(creature_id="hero", creature_data=hero, team="player",
+                       starting_position=(0, 0)),
+        CombatantEntry(creature_id="boar", creature_data=boar, team="enemy",
+                       starting_position=(1, 0)),
+    ])
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("."))
+    with patch("arena.combat.manager.roll_die", side_effect=[20, 10]):
+        cm.roll_initiative()
+    cm.begin_combat()
+    boar_id = next(k for k, v in cm.combatants.items() if v.team == "enemy")
+    hero_id = next(k for k, v in cm.combatants.items() if v.team == "player")
+
+    with patch("arena.combat.actions.roll_die", return_value=20):  # guaranteed hit
+        hr = resolve_attack_hit(
+            boar, boar_id, cm.combatants[hero_id].creature, hero_id,
+            boar.actions[0], cm.grid, combatants=cm.combatants,
+            attacker_pos=cm.combatants[boar_id].position,
+            target_pos=cm.combatants[hero_id].position)
+    assert hr.hit
+    feat = boar.special_abilities[0]
+    with patch("arena.combat.riders.roll_die", return_value=1):  # save fails
+        rr = resolve_rider(feat, feat.on_hit_rider, boar,
+                           cm.combatants[hero_id].creature)
+    cm.complete_attack(hr, rider_results=[rr])
+    assert has_condition(cm.combatants[hero_id].creature, Condition.PRONE)
+
+
 def test_charge_rider_no_prone_on_successful_save():
     boar = _boar()
     target = Creature(name="Hero", max_hit_points=30, ability_scores=AbilityScores())

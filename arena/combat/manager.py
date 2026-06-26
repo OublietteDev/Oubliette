@@ -2318,25 +2318,26 @@ class CombatManager:
         # Apply rider conditions (e.g., Stunning Strike's stunned)
         if rider_results:
             from arena.combat.conditions import apply_condition
-            from arena.models.conditions import AppliedCondition
+            from arena.models.conditions import Condition
 
             for rr in rider_results:
                 if rr.used and rr.condition_to_apply:
                     target_c = self.combatants.get(hit_result.target_id)
                     if target_c:
-                        cond = AppliedCondition(
-                            condition=rr.condition_to_apply,
+                        # save_to_end is the ABILITY to re-save with (a string),
+                        # supplied only when the condition allows a recurring save.
+                        cond_event = apply_condition(
+                            target_c.creature, hit_result.target_id,
+                            Condition(rr.condition_to_apply),
                             source=hit_result.attacker_id,
                             duration_type=rr.condition_duration,
-                            save_to_end=rr.condition_save_to_end,
+                            save_to_end=(rr.save_ability
+                                         if rr.condition_save_to_end else None),
                             save_dc=rr.save_dc,
                         )
-                        events = apply_condition(
-                            target_c.creature, hit_result.target_id, cond,
-                        )
-                        for event in events:
-                            self.log.add(event)
-                            result.events.append(event)
+                        if cond_event is not None:
+                            self.log.add(cond_event)
+                            result.events.append(cond_event)
 
                 # Log rider messages
                 if rr.used and rr.log_message:

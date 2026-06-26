@@ -5,11 +5,11 @@
   "grid_height": 14,
   "terrain": [],
   "combatants": [
-    {"creature_id": "characters/valeria.json", "creature_data": null, "team": "player", "starting_position": [3, 6], "count": 1, "name_override": null},
-    {"creature_id": "characters/thorin.json", "creature_data": null, "team": "player", "starting_position": [3, 8], "count": 1, "name_override": null},
-    {"creature_id": "monsters/srd/boar.json", "creature_data": null, "team": "enemy", "starting_position": [21, 5], "count": 1, "name_override": null},
-    {"creature_id": "monsters/srd/lion.json", "creature_data": null, "team": "enemy", "starting_position": [22, 8], "count": 1, "name_override": null},
-    {"creature_id": "monsters/srd/triceratops.json", "creature_data": null, "team": "enemy", "starting_position": [22, 11], "count": 1, "name_override": null}
+    {"creature_id": "characters/valeria.json", "creature_data": null, "team": "player", "starting_position": [2, 2], "count": 1, "name_override": null},
+    {"creature_id": "characters/thorin.json", "creature_data": null, "team": "player", "starting_position": [2, 11], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/boar.json", "creature_data": null, "team": "enemy", "starting_position": [8, 2], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/triceratops.json", "creature_data": null, "team": "enemy", "starting_position": [9, 6], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/lion.json", "creature_data": null, "team": "enemy", "starting_position": [8, 11], "count": 1, "name_override": null}
   ],
   "use_ai_for_enemies": true,
   "use_ai_for_allies": false,
