@@ -240,9 +240,29 @@ files regen'd; `test_death_triggered.py` (11) + `death_triggered_lab` bench. **R
 = no-op** (0 SRD monsters; it's a half-orc PC trait the death-prevention framework already serves —
 `get_death_prevention_features` now also reads monster `special_abilities`). **Dust mephit's
 condition-only burst** (blinded, no damage dice) is intentionally not modeled yet — `DeathBurst`
-covers damage bursts; a `condition_on_fail` variant is a small follow-up. Next: the rest of D-MON-4
-(move-then-strike — Charge/Pounce/Trampling Charge/Rampage; on-hit aura saves — Stench/Heated Body;
-Reckless/Blood Frenzy/Surprise Attack advantage riders) and D-MON-5 monster reactions (Parry).
+covers damage bursts; a `condition_on_fail` variant is a small follow-up.
+
+**Magic Resistance — full lifecycle (commit 96e1ae2) + a legacy-data gotcha (commit 5549773).**
+4a only added the advantage on a spell's OPENING save; RAW it applies to *every* save against the
+spell. Wired the recurring sites (each effect carrier already records its spell origin):
+condition re-saves (`conditions.py` start/end-of-turn — shake Hold Person via `ac.spell_level`/
+`ac.condition`), debuff shake-offs (`buff_effects.py`, Bane), zone saves (`zones.py` — Spirit
+Guardians/Web/Cloudkill; also fixed the main `ActiveZone` creation at `manager.py:3126` to carry
+`spell_level`, it had defaulted to 0), and the dominate damage re-save. MR stays advantage-only
+(never immunity); concentration CON saves stay correctly excluded; one narrowing kept — it triggers
+on *spells*, not the broader "spells and other magical effects" (no clean flag for non-spell magical
+saves). **GOTCHA (bit OublietteDev's playtest):** the pre-bridge **legacy lab caster files**
+(`elara.json`, `brother_aldric.json`, also Shade) baked their spell actions with **`spell_level: None`**,
+which silently disables Magic Resistance / upcasting / Dispel / spell-origin detection for those
+labbed casters — Hold Person on the bearded devil rolled flat. **Real play was always fine** (the
+shipped `arena/data/spells/srd` library carries correct `spell_level`, and lab chars bypass the
+bridge that would bake it). Fixed by backfilling `spell_level` from the library; added a regression
+test that loads the REAL bearded_devil + elara Hold Person. First thing to check if a *lab* spell
+misbehaves: is `spell_level` None on that legacy character's baked action? Suite 2685 green.
+
+Next: the rest of D-MON-4 (move-then-strike — Charge/Pounce/Trampling Charge/Rampage; on-hit aura
+saves — Stench/Heated Body; Reckless/Blood Frenzy/Surprise Attack advantage riders) and D-MON-5
+monster reactions (Parry).
 
 ---
 
