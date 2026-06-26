@@ -289,9 +289,19 @@ for future labs: high-AC targets make charge attacks miss, hiding the rider (gat
 melee swing — it wants its own run-in/impact animation so the bonus-damage+prone hit isn't mistaken
 for an ordinary attack. Logged in [[oubliette-arena-ui-cleanup]] (animation backlog).
 
-Next (remaining D-MON): on-hit aura saves (Stench poison aura, Heated Body), the advantage riders
-(Reckless both-directions, Blood Frenzy vs damaged, Surprise Attack first-round), and D-MON-5
-monster reactions (Parry — +AC reaction, 12 monsters).
+**D-MON-5 — monster Parry reaction (commit fb289c6, suite 2703 green).** The generator dropped the
+source `reactions` array; now it parses Parry → a +AC reaction Action (Shield's shape) on 6 SRD
+monsters (knight +2, gladiator +3, erinyes +4, bandit_captain, ...). `complete_attack` calls
+`_evaluate_monster_parry` on a hit vs a non-player target: if the creature's Parry AC bonus would
+drop the attack roll below its AC, it spends its reaction and the hit becomes a miss. Melee-only,
+never on a nat-20 crit, once/round; players still choose via the reaction popup (this is the monster
+auto path, mirroring `_evaluate_ai_damage_reduction`). RAW "must see attacker / wield a melee weapon"
+not checked. `test_monster_reactions.py` (8) + `parry_lab`; verified live (knight parried 6/40
+marginal hits). Other reactions (Split, Unnerving Mask) left out.
+
+Next (remaining D-MON): on-hit aura saves (Stench poison aura, Heated Body) and the advantage riders
+(Reckless both-directions, Blood Frenzy vs damaged, Surprise Attack first-round). After those,
+Package D-MON is essentially closed (Rampage + the charge follow-ups stay with the AI rework).
 
 ---
 
