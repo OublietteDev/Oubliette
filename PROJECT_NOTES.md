@@ -238,9 +238,12 @@ damage within radius via a new `_reconcile_death_bursts` pass in `_check_victory
 `Monster.undead_fortitude` flag + `DeathBurst` submodel, generator parses both from prose, 6 srd
 files regen'd; `test_death_triggered.py` (11) + `death_triggered_lab` bench. **Relentless Endurance
 = no-op** (0 SRD monsters; it's a half-orc PC trait the death-prevention framework already serves —
-`get_death_prevention_features` now also reads monster `special_abilities`). **Dust mephit's
-condition-only burst** (blinded, no damage dice) is intentionally not modeled yet — `DeathBurst`
-covers damage bursts; a `condition_on_fail` variant is a small follow-up.
+`get_death_prevention_features` now also reads monster `special_abilities`). **Death Burst covers
+all 5 SRD monsters** — the dust mephit's condition-only burst (blinded, per-turn re-save) is now
+modeled too (commit 417bc45): `DeathBurst` gained `condition_on_fail` (and `damage_dice` is now
+optional), the generator parses the "or be <condition>" prose, and `_fire_death_burst` applies
+damage and/or the condition on a failed save (the condition rides `apply_condition` with
+`duration_type=end_of_turn` so the existing re-roll handles recovery).
 
 **Magic Resistance — full lifecycle (commit 96e1ae2) + a legacy-data gotcha (commit 5549773).**
 4a only added the advantage on a spell's OPENING save; RAW it applies to *every* save against the
