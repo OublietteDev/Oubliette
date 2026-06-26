@@ -400,6 +400,44 @@ def _regeneration(specials: list) -> tuple[int, list[str]]:
     return 0, []
 
 
+def _undead_fortitude(specials: list) -> bool:
+    """Whether the creature has Undead Fortitude (zombies)."""
+    return any(sa["name"].lower().strip() == "undead fortitude" for sa in specials)
+
+
+_BURST_DC_RE = re.compile(r"dc\s+(\d+)\s+(\w+)\s+saving throw", re.IGNORECASE)
+_BURST_RADIUS_RE = re.compile(r"within\s+(\d+)\s*ft", re.IGNORECASE)
+_BURST_DICE_RE = re.compile(r"\((\d+d\d+)\)")
+
+
+def _death_burst(specials: list) -> dict | None:
+    """Death Burst trait → structured burst (radius, save, dice, type, half).
+    Parses the SRD prose: '... within 5 ft. ... DC 10 Dexterity saving throw
+    ... take 4 (1d8) fire damage ...[ or half as much ...]'."""
+    for sa in specials:
+        if sa["name"].lower().strip() != "death burst":
+            continue
+        desc = sa.get("desc", "")
+        low = desc.lower()
+        dc_m = _BURST_DC_RE.search(desc)
+        dice_m = _BURST_DICE_RE.search(desc)
+        if not dc_m or not dice_m:
+            continue
+        radius_m = _BURST_RADIUS_RE.search(desc)
+        ability = dc_m.group(2).lower()
+        dtype = next((t for t in _DMG_TYPES
+                      if re.search(rf"\b{t}\b\s+damage", low)), "force")
+        return {
+            "radius_ft": int(radius_m.group(1)) if radius_m else 5,
+            "save_ability": ability if ability in _ABILS else "dexterity",
+            "save_dc": int(dc_m.group(1)),
+            "damage_dice": dice_m.group(1),
+            "damage_type": dtype,
+            "half_on_save": "half as much" in low,
+        }
+    return None
+
+
 def _legendary_resistance_count(specials: list) -> int:
     """Legendary Resistance pool size, parsed from '(3/Day)' in the trait name."""
     for sa in specials:
@@ -438,6 +476,8 @@ def build_monster(m: dict) -> dict:
     specials_raw = m.get("special_abilities", [])
     lr_count = _legendary_resistance_count(specials_raw)
     regen_amount, regen_negated = _regeneration(specials_raw)
+    undead_fort = _undead_fortitude(specials_raw)
+    death_burst = _death_burst(specials_raw)
 
     size = m.get("size", "Medium").lower()
     ctype = m.get("type", "humanoid").lower()
@@ -474,6 +514,10 @@ def build_monster(m: dict) -> dict:
     if regen_amount:
         mon["regeneration_amount"] = regen_amount
         mon["regeneration_negated_by"] = regen_negated
+    if undead_fort:
+        mon["undead_fortitude"] = True
+    if death_burst:
+        mon["death_burst"] = death_burst
     return mon
 
 

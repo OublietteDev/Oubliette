@@ -279,6 +279,7 @@ def apply_damage(
     damage: "int | list[DamagePacket]",
     damage_type: str | None = None,
     creature_id: str = "",
+    is_critical: bool = False,
 ) -> tuple[CombatEvent, list[CombatEvent]]:
     """Apply damage to a creature, accounting for per-type defenses and temp HP.
 
@@ -366,6 +367,22 @@ def apply_damage(
                 is_now_unconscious = False
                 death_prevented = True
                 break
+
+    # Undead Fortitude (D-MON-4b): a CON save (DC 5 + damage) drags a zombie
+    # back up to 1 HP, unless the blow was radiant or a critical hit.
+    if (was_conscious and is_now_unconscious and not death_prevented
+            and getattr(target, "undead_fortitude", False)):
+        from arena.combat.death_prevention import check_undead_fortitude
+        took_radiant = any(amt > 0 and dt.lower() == "radiant"
+                           for amt, dt, _ in defended)
+        uf_success, uf_events = check_undead_fortitude(
+            target, creature_id, modified_damage, took_radiant, is_critical,
+        )
+        extra_events.extend(uf_events)
+        if uf_success:
+            new_hp = target.current_hit_points
+            is_now_unconscious = False
+            death_prevented = True
 
     # Build the damage-type label + modifier text for the message
     if len(defended) == 1:

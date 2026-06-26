@@ -5655,6 +5655,64 @@ class CombatManager:
                     if rm:
                         self.log.add(rm)
 
+    def _reconcile_death_bursts(self) -> None:
+        """Fire the Death Burst of any creature that has just died (D-MON-4b).
+
+        Loops so a burst that kills another bursting creature cascades. Each
+        creature bursts at most once (the `_death_burst_fired` flag)."""
+        fired_any = True
+        while fired_any:
+            fired_any = False
+            for cid, c in list(self.combatants.items()):
+                burst = getattr(c.creature, "death_burst", None)
+                if burst is None or getattr(c.creature, "_death_burst_fired", False):
+                    continue
+                if c.creature.is_conscious:
+                    continue  # not dead yet
+                c.creature._death_burst_fired = True
+                self._fire_death_burst(cid, c, burst)
+                fired_any = True
+
+    def _fire_death_burst(self, cid: str, combatant, burst) -> None:
+        """Resolve one creature's Death Burst: every other living creature within
+        the radius makes a save or takes damage (indiscriminate, RAW)."""
+        origin = combatant.position
+        if origin is None:
+            return
+        from arena.grid.footprint import min_distance_between
+        from arena.combat.actions import resolve_saving_throw, apply_damage
+        from arena.util.dice import roll_expression
+
+        radius_hexes = max(1, burst.radius_ft // 5)
+        self.log.add(CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=f"{combatant.creature.name} dies and bursts!",
+            source_id=cid,
+            details={"death_burst": True},
+        ))
+        for tid, t in list(self.combatants.items()):
+            if tid == cid or not t.creature.is_conscious or t.position is None:
+                continue
+            if min_distance_between(origin, combatant.creature.size,
+                                    t.position, t.creature.size) > radius_hexes:
+                continue
+            success, save_ev = resolve_saving_throw(
+                t.creature, tid, burst.save_ability, burst.save_dc,
+            )
+            self.log.add(save_ev)
+            dmg, _ = roll_expression(burst.damage_dice)
+            if success:
+                dmg = dmg // 2 if burst.half_on_save else 0
+            if dmg > 0:
+                dmg_ev, extra = apply_damage(
+                    t.creature, dmg, burst.damage_type, tid,
+                )
+                dmg_ev.target_id = tid
+                dmg_ev.message = f"{t.creature.name} " + dmg_ev.message
+                self.log.add(dmg_ev)
+                for e in extra:
+                    self.log.add(e)
+
     def _banished_for_good(self, creature_id: str, combatant) -> bool:
         """True if this creature is banished with no path back to the fight.
 
@@ -5699,6 +5757,9 @@ class CombatManager:
 
         # A downed/incapacitated grappler releases its hold (RAW).
         self._reconcile_grapples()
+
+        # A creature that just died detonates its Death Burst (D-MON-4b).
+        self._reconcile_death_bursts()
 
         # Clean up downed summons before checking victory
         downed_summons = [

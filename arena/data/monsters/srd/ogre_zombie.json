@@ -65,5 +65,6 @@
   ],
   "challenge_rating": 2.0,
   "experience_points": 450,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "undead_fortitude": true
 }

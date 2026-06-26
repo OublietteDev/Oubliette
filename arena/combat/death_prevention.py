@@ -10,10 +10,49 @@ from arena.combat.events import CombatEvent, CombatEventType
 
 
 def get_death_prevention_features(creature: Creature) -> list[Feature]:
-    """Get all features that can prevent dropping to 0 HP."""
-    if not hasattr(creature, 'features'):
-        return []
-    return [f for f in creature.features if f.death_prevention]
+    """Get all features that can prevent dropping to 0 HP — across both PC
+    `features` and monster `special_abilities` (e.g. a Relentless Endurance foe)."""
+    feats = list(getattr(creature, 'features', []) or [])
+    feats += list(getattr(creature, 'special_abilities', []) or [])
+    return [f for f in feats if f.death_prevention]
+
+
+def check_undead_fortitude(
+    creature: Creature,
+    creature_id: str,
+    damage_taken: int,
+    took_radiant: bool,
+    is_critical: bool,
+) -> tuple[bool, list[CombatEvent]]:
+    """Undead Fortitude (D-MON-4b): a zombie reduced to 0 HP makes a CON save
+    (DC 5 + damage taken); on a success it drops to 1 HP instead. The trait does
+    not apply when the killing damage was radiant or from a critical hit."""
+    if took_radiant or is_critical:
+        reason = "radiant damage" if took_radiant else "a critical hit"
+        return False, [CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=f"{creature.name}'s Undead Fortitude fails — {reason} destroys it!",
+            source_id=creature_id,
+            details={"undead_fortitude": True, "negated": reason},
+        )]
+    dc = 5 + max(0, damage_taken)
+    mod = get_effective_ability_modifier(creature, "constitution")
+    natural_roll = roll_die(20)
+    total = natural_roll + mod
+    success = total >= dc
+    if success:
+        creature.current_hit_points = 1
+        msg = (f"{creature.name}'s Undead Fortitude: CON save {total} "
+               f"({natural_roll}+{mod}) vs DC {dc} — SUCCESS! It lurches back up at 1 HP!")
+    else:
+        msg = (f"{creature.name}'s Undead Fortitude: CON save {total} "
+               f"({natural_roll}+{mod}) vs DC {dc} — FAILURE! It finally falls.")
+    return success, [CombatEvent(
+        event_type=CombatEventType.INFO,
+        message=msg,
+        source_id=creature_id,
+        details={"undead_fortitude": True, "success": success, "roll": total, "dc": dc},
+    )]
 
 
 def can_use_death_prevention(creature: Creature, feature: Feature) -> bool:

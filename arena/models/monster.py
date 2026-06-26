@@ -1,9 +1,22 @@
 """Monster and NPC stat blocks."""
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from .character import Creature, Feature
 from .actions import Action
+
+
+class DeathBurst(BaseModel):
+    """Death Burst (D-MON-4b): when the creature dies it detonates, forcing a
+    save on every creature within `radius_ft` (mephits, magmin). Indiscriminate
+    per RAW — allies and enemies alike."""
+
+    radius_ft: int = 5
+    save_ability: str = "dexterity"
+    save_dc: int = 10
+    damage_dice: str = "1d8"
+    damage_type: str = "fire"
+    half_on_save: bool = False
 
 
 class Monster(Creature):
@@ -28,6 +41,15 @@ class Monster(Creature):
     # last turn. 0 = no regeneration. (D-MON-3 wires the start-of-turn heal.)
     regeneration_amount: int = 0
     regeneration_negated_by: list[str] = Field(default_factory=list)
+
+    # Undead Fortitude (D-MON-4b): on dropping to 0 HP, a CON save (DC 5 + the
+    # damage taken) unless the blow was radiant or a critical — on a success the
+    # creature drops to 1 HP instead. False = lacks the trait. Wired in apply_damage.
+    undead_fortitude: bool = False
+
+    # Death Burst (D-MON-4b): detonates on death. None = no burst. The manager's
+    # _reconcile_death_bursts fires it when the creature dies.
+    death_burst: "DeathBurst | None" = None
 
     # Special Abilities (passive)
     special_abilities: list[Feature] = Field(default_factory=list)

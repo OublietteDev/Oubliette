@@ -969,6 +969,7 @@ def resolve_attack_damage(
         dmg_event, dp_events = apply_damage(
             hit_result.target, packets,
             creature_id=hit_result.target_id,
+            is_critical=hit_result.critical,
         )
         dmg_event.source_id = hit_result.attacker_id
         dmg_event.target_id = hit_result.target_id

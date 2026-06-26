@@ -103,5 +103,13 @@
   ],
   "challenge_rating": 0.5,
   "experience_points": 100,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "death_burst": {
+    "radius_ft": 5,
+    "save_ability": "dexterity",
+    "save_dc": 11,
+    "damage_dice": "2d6",
+    "damage_type": "fire",
+    "half_on_save": true
+  }
 }
