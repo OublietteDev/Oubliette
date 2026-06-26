@@ -643,6 +643,25 @@ class RadialMenu:
 
     # ── Slot Building ────────────────────────────────────────────────
 
+    def _slot_used_for(self, action) -> bool:
+        """Whether the action-economy slot *action* consumes is already spent
+        this turn.
+
+        Mirrors ``ItemsPopup._is_disabled`` so a BONUS_ACTION-typed entry that
+        lives in ``creature.actions`` rather than ``creature.bonus_actions``
+        (e.g. a forced-movement bonus like Practiced Shove, or a bridged/homebrew
+        bonus ability) is gated on the bonus slot — not the action slot. The old
+        utility-slot gating hardcoded the action slot, so casting a spell greyed
+        out such a bonus action for the rest of the turn even though its slot was
+        untouched.
+        """
+        from arena.models.actions import ActionType
+        if action.action_type == ActionType.BONUS_ACTION:
+            return self.combat.turn_resources.has_used_bonus_action
+        if action.action_type == ActionType.REACTION:
+            return self.combat.turn_resources.has_used_reaction
+        return self.combat.has_used_action
+
     def _rebuild_slots(self) -> None:
         """Build the full slot list from the active creature's actions."""
         self.all_slots = self._build_slots()
@@ -758,17 +777,19 @@ class RadialMenu:
                     action=a,
                     icon_text=self._make_icon(a.name),
                     tooltip_lines=tip,
-                    is_disabled=action_used or uses_disabled or not res_ok,
+                    is_disabled=self._slot_used_for(a) or uses_disabled or not res_ok,
                 ))
             else:
-                # Multiple: group slot
+                # Multiple: group slot — only greyed once EVERY contained
+                # action's economy slot is spent (a group can mix action- and
+                # bonus-typed entries; the popup gates each one individually).
                 slots.append(RadialSlot(
                     label=group_label,
                     slot_type=slot_type,
                     action=None,
                     icon_text=icon,
                     tooltip_lines=[f"{len(group_actions)} available"],
-                    is_disabled=action_used,
+                    is_disabled=all(self._slot_used_for(a) for a in group_actions),
                 ))
 
         # 6. Creature's bonus_actions — individual slots
