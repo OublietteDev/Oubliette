@@ -993,6 +993,7 @@ class CombatManager:
                 dc = save.dc or 10
                 save_success, save_event = resolve_saving_throw(
                     target.creature, tid, save.ability, dc,
+                    legendary_resistance_eligible=bool(save.conditions_on_fail),
                 )
                 all_events.append(save_event)
 

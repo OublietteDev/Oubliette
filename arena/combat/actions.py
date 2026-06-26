@@ -1052,6 +1052,36 @@ def resolve_attack(
     return resolve_attack_damage(hit_result, damage_reduction=damage_reduction)
 
 
+def _legendary_resistance_event(
+    creature: Creature, creature_id: str,
+    total: int, natural_roll: int, modifier: int, dc: int,
+) -> CombatEvent | None:
+    """If the creature has a Legendary Resistance charge, spend one and return an
+    event announcing the failed save was turned into a success (D-MON-1). Returns
+    None when the creature has no charges (or isn't legendary). The remaining pool
+    lives on `legendary_resistance_count`, which decrements here and resets when
+    the monster is reloaded for a new encounter."""
+    remaining = getattr(creature, "legendary_resistance_count", 0)
+    if remaining <= 0:
+        return None
+    creature.legendary_resistance_count = remaining - 1
+    left = remaining - 1
+    return CombatEvent(
+        event_type=CombatEventType.SAVING_THROW,
+        message=(
+            f"{creature.name} fails the save ({total} vs DC {dc}) but invokes "
+            f"LEGENDARY RESISTANCE to succeed! "
+            f"({left} use{'s' if left != 1 else ''} left)"
+        ),
+        source_id=creature_id,
+        details={
+            "ability": None, "roll": total, "natural": natural_roll,
+            "modifier": modifier, "dc": dc, "success": True, "advantage": 0,
+            "legendary_resistance": True, "legendary_resistance_remaining": left,
+        },
+    )
+
+
 def resolve_saving_throw(
     creature: Creature,
     creature_id: str,
@@ -1060,6 +1090,7 @@ def resolve_saving_throw(
     advantage: int = 0,
     combatants: dict | None = None,
     positions: dict | None = None,
+    legendary_resistance_eligible: bool = False,
 ) -> tuple[bool, CombatEvent]:
     """Roll a saving throw for a creature.
 
@@ -1069,6 +1100,10 @@ def resolve_saving_throw(
         ability: The ability to save with (e.g., "dexterity").
         dc: The difficulty class to beat.
         advantage: > 0 = advantage, < 0 = disadvantage, 0 = normal.
+        legendary_resistance_eligible: when True, a legendary creature that fails
+            may spend a Legendary Resistance charge to succeed instead. Callers set
+            this ONLY for save-or-lose effects (a condition/control on failure), so
+            the pool is never wasted on a plain damage save.
 
     Returns:
         (success, event) tuple. success is True if the save passed.
@@ -1172,6 +1207,16 @@ def resolve_saving_throw(
             "advantage": effective_advantage,
         },
     )
+
+    # Legendary Resistance (D-MON-1): on a failed save-or-lose, a legendary
+    # creature may turn the failure into a success. The single LR event replaces
+    # the failure event (its message narrates the fail-then-resist).
+    if not success and legendary_resistance_eligible:
+        lr_event = _legendary_resistance_event(
+            creature, creature_id, total, natural_roll, modifier, dc,
+        )
+        if lr_event is not None:
+            return True, lr_event
 
     return success, event
 
@@ -1433,6 +1478,8 @@ def resolve_effect(
         dc = save.dc or 10
         save_success, save_event = resolve_saving_throw(
             target, target_id, save.ability, dc,
+            legendary_resistance_eligible=bool(save.conditions_on_fail)
+            or action.control_effect or action.compulsion_effect,
         )
         events.append(save_event)
 
