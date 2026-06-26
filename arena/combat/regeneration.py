@@ -29,15 +29,17 @@ def process_regeneration_start_of_turn(creature, creature_id: str) -> list[Comba
             details={"regeneration_suppressed": True},
         )]
 
-    if current >= creature.max_hit_points:
+    from arena.combat.condition_effects import effective_max_hp
+    cap = effective_max_hp(creature)  # exhaustion 4+ halves the max (D-COND-2)
+    if current >= cap:
         return []  # already at full HP
 
-    healed = min(amount, creature.max_hit_points - current)
+    healed = min(amount, cap - current)
     creature.current_hit_points = current + healed
     return [CombatEvent(
         event_type=CombatEventType.INFO,
         message=(f"{creature.name} regenerates {healed} HP "
-                 f"({creature.current_hit_points}/{creature.max_hit_points})."),
+                 f"({creature.current_hit_points}/{cap})."),
         source_id=creature_id,
         details={"regeneration": True, "healed": healed},
     )]

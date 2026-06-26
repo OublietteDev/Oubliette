@@ -1529,6 +1529,10 @@ class CombatManager:
         if target_combatant is None:
             return None
 
+        # Charmed (D-COND-1): a charmed creature can't attack its charmer.
+        if self._charm_forbids_target(combatant.creature, target_id):
+            return None
+
         action = self.selected_action
 
         # ── Counterspell check (before spell resolves) ─────────────────
@@ -1763,6 +1767,12 @@ class CombatManager:
 
         target_combatant = self.combatants.get(target_id)
         if target_combatant is None:
+            return None
+
+        # Charmed (D-COND-1): a charmed creature can't attack its charmer. This
+        # is the GUI's single-attack path (execute_attack is only volleys/AI), so
+        # the guard must live here too.
+        if self._charm_forbids_target(combatant.creature, target_id):
             return None
 
         action = self.selected_action
@@ -2783,6 +2793,13 @@ class CombatManager:
             return None
 
         action = self.selected_action
+
+        # Charmed (D-COND-1): can't target the charmer with a harmful effect
+        # (buffs/heals on the charmer are still allowed).
+        if self._action_is_harmful(action) and self._charm_forbids_target(
+            combatant.creature, target_id
+        ):
+            return None
 
         # ── Counterspell check (before spell resolves) ─────────────────
         if action.spell_level is not None:
@@ -5882,6 +5899,64 @@ class CombatManager:
                     if rm:
                         self.log.add(rm)
 
+    def _reconcile_concentration(self) -> None:
+        """RAW (D-COND-3): concentration ends the moment a creature becomes
+        incapacitated or drops to 0 HP.
+
+        A sweep — like _reconcile_grapples — keeps this correct no matter which
+        of the many condition/damage paths caused the incapacitation, and runs
+        with full combatant context so end_concentration can strip the spell's
+        linked conditions/buffs off their targets (a bare apply_condition hook
+        can't, since most call sites don't thread `combatants`). BANISHED is
+        deliberately excluded: a banished creature is off-plane, not
+        incapacitated in the concentration sense, and P-BANISH keeps its links.
+        """
+        from arena.combat.concentration import end_concentration
+
+        breaking = (
+            Condition.INCAPACITATED, Condition.STUNNED, Condition.PARALYZED,
+            Condition.PETRIFIED, Condition.UNCONSCIOUS,
+        )
+        for cid, c in list(self.combatants.items()):
+            cr = c.creature
+            if not any(ac.condition == Condition.CONCENTRATING
+                       for ac in cr.active_conditions):
+                continue
+            if cr.is_conscious and not any(
+                ac.condition in breaking for ac in cr.active_conditions
+            ):
+                continue
+            for ev in end_concentration(cr, cid, self.combatants):
+                self.log.add(ev)
+
+    def _charmer_names(self, creature) -> set[str]:
+        """Names of creatures this one is CHARMED by (D-COND-1). A charmed
+        creature can't attack its charmer or target it with harmful effects.
+        Source is the charmer's name — same convention as FRIGHTENED — so
+        repeated names are treated conservatively (all instances off-limits)."""
+        return {
+            ac.source for ac in creature.active_conditions
+            if ac.condition == Condition.CHARMED and ac.source
+        }
+
+    def _charm_forbids_target(self, attacker, target_id: str) -> bool:
+        """True if `attacker` is charmed by the creature at `target_id`."""
+        charmers = self._charmer_names(attacker)
+        if not charmers:
+            return False
+        target_c = self.combatants.get(target_id)
+        return target_c is not None and target_c.creature.name in charmers
+
+    @staticmethod
+    def _action_is_harmful(action) -> bool:
+        """A charmed creature may still buff/heal its charmer — only attacks
+        and harmful abilities are forbidden. Treat an action as harmful if it
+        attacks, forces a save, imposes conditions, controls, or dispels."""
+        return bool(
+            action.attack or action.saving_throw or action.conditions_applied
+            or action.control_effect or action.compulsion_effect or action.dispel
+        )
+
     def _reconcile_death_bursts(self) -> None:
         """Fire the Death Burst of any creature that has just died (D-MON-4b).
 
@@ -5998,6 +6073,11 @@ class CombatManager:
 
         # A creature that just died detonates its Death Burst (D-MON-4b).
         self._reconcile_death_bursts()
+
+        # A downed/incapacitated concentrator drops its concentration (D-COND-3),
+        # cleaning the spell's linked conditions/buffs off their targets. Runs
+        # after death bursts, which can incapacitate fresh concentrators.
+        self._reconcile_concentration()
 
         # Clean up downed summons before checking victory
         downed_summons = [

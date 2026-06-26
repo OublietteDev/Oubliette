@@ -1,0 +1,25 @@
+{
+  "name": "D-COND Lab — Charmed, Exhaustion & Concentration",
+  "description": "Bench for the final condition fixes. CHARMED (D-COND-1): drive the Charmed Knight — he is charmed by the Dryad, so try to attack or target her with a harmful effect and the game refuses (the click does nothing); the Ogre is a perfectly legal target, and you can still buff/heal the Dryad if you like. The enemy AI obeys the same rule in reverse — a charmed creature never picks its charmer. EXHAUSTION (D-COND-2): march Thorin up to the Ogre and hit it with [Poisoned Fang] over and over — each hit stacks a level of exhaustion. Watch the Ogre's turn budget halve at level 2, its attack/save rolls go to disadvantage at level 3, its hit-point maximum halve at level 4, its speed hit 0 at level 5, and it collapse at level 6. CONCENTRATION (D-COND-3): have Brother Aldric cast Spirit Guardians (concentration), then let the Ogre focus him down — the instant he drops to 0 the aura winks out, because an incapacitated creature can't concentrate (a stun or paralysis would do the same; those are covered by tests since no SRD monster here applies them).",
+  "grid_width": 20,
+  "grid_height": 15,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/thorin.json", "creature_data": null, "team": "player", "starting_position": [4, 6], "count": 1, "name_override": null},
+    {"creature_id": "characters/brother_aldric.json", "creature_data": null, "team": "player", "starting_position": [3, 9], "count": 1, "name_override": null},
+    {"creature_id": "characters/cond_charmed_knight.json", "creature_data": null, "team": "player", "starting_position": [4, 12], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/dryad.json", "creature_data": null, "team": "enemy", "starting_position": [15, 12], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/ogre.json", "creature_data": null, "team": "enemy", "starting_position": [14, 7], "count": 1, "name_override": null}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

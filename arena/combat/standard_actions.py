@@ -40,8 +40,14 @@ def execute_dash(
     if consume_action and manager.turn_resources.has_used_action:
         return None
 
+    # Dash grants extra movement equal to the creature's CURRENT speed, so it
+    # honours the same condition multiplier the turn budget uses — halved by
+    # exhaustion 2-4 (D-COND-2), zero when speed is 0 (exhaustion 5+, grappled,
+    # restrained). int() floors, matching the turn-start budget calc.
+    from arena.combat.condition_effects import get_movement_multiplier
     base_speed = get_effective_speed(combatant.creature)
-    manager.movement.remaining_movement += base_speed
+    dash_bonus = int(base_speed * get_movement_multiplier(combatant.creature))
+    manager.movement.remaining_movement += dash_bonus
     if consume_action:
         manager.turn_resources.has_used_action = True
 
@@ -52,7 +58,7 @@ def execute_dash(
             f"Movement: {manager.movement.remaining_movement} ft"
         ),
         source_id=combatant.creature_id,
-        details={"action": "dash", "extra_movement": base_speed},
+        details={"action": "dash", "extra_movement": dash_bonus},
     )
 
 

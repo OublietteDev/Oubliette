@@ -99,6 +99,15 @@ def build_context(manager: CombatManager) -> CombatContext | None:
 
     me_view = _make_creature_view(combatant)
 
+    # Charmed (D-COND-1): the active creature can't target its charmer with
+    # attacks or harmful effects, so the charmer is dropped from `enemies`
+    # entirely — the AI never scores it as a target. Source is the charmer's
+    # name, the same convention FRIGHTENED uses for its fear source.
+    charmer_names = {
+        ac.source for ac in combatant.creature.active_conditions
+        if ac.condition == Condition.CHARMED and ac.source
+    }
+
     allies: list[CreatureView] = []
     enemies: list[CreatureView] = []
     all_views: list[CreatureView] = [me_view]
@@ -115,6 +124,8 @@ def build_context(manager: CombatManager) -> CombatContext | None:
 
         if c.team == combatant.team:
             allies.append(view)
+        elif c.creature.name in charmer_names:
+            continue  # off-limits to its charmed victim — not an enemy to it
         else:
             enemies.append(view)
 

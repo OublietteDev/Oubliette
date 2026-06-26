@@ -1,0 +1,191 @@
+{
+  "name": "Charmed Knight",
+  "size": "medium",
+  "creature_type": "humanoid",
+  "ability_scores": {
+    "strength": 18,
+    "dexterity": 10,
+    "constitution": 16,
+    "intelligence": 8,
+    "wisdom": 12,
+    "charisma": 14
+  },
+  "armor_class": 18,
+  "max_hit_points": 44,
+  "speed": {
+    "walk": 30
+  },
+  "proficiency_bonus": 3,
+  "saving_throw_proficiencies": [
+    "strength",
+    "constitution"
+  ],
+  "passive_perception": 11,
+  "actions": [
+    {
+      "name": "Longsword +1",
+      "description": "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 1d8 + 5 slashing damage.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Longsword +1",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "slashing",
+            "bonus": 1,
+            "ability_modifier": "strength"
+          }
+        ]
+      },
+      "ai_priority": 7
+    },
+    {
+      "name": "Handaxe",
+      "description": "Melee or Ranged Weapon Attack: +7 to hit, reach 5 ft. or range 20/60 ft., one target.",
+      "action_type": "action",
+      "target_type": "one_creature",
+      "range": 5,
+      "attack": {
+        "name": "Handaxe",
+        "attack_type": "melee_weapon",
+        "ability": "strength",
+        "reach": 5,
+        "range_normal": 20,
+        "range_long": 60,
+        "damage": [
+          {
+            "dice": "1d6",
+            "damage_type": "slashing",
+            "ability_modifier": "strength"
+          }
+        ]
+      },
+      "ai_priority": 5
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Second Wind",
+      "description": "Regain 1d10 + 5 hit points.",
+      "action_type": "bonus_action",
+      "target_type": "self",
+      "range": 5,
+      "healing": "1d10+5",
+      "uses_per_rest": 1,
+      "rest_type": "short",
+      "ai_priority": 8,
+      "ai_use_condition": "self.hp_percent < 50"
+    }
+  ],
+  "reactions": [],
+  "active_conditions": [
+    {
+      "condition": "charmed",
+      "source": "Dryad",
+      "duration_type": "indefinite",
+      "duration_rounds": null,
+      "save_to_end": null,
+      "save_dc": null,
+      "level": 1,
+      "extra_data": {},
+      "spell_level": null
+    }
+  ],
+  "token_color": "#C0C0C0",
+  "equipment": [
+    {
+      "name": "Plate Armor",
+      "item_type": "armor",
+      "equipment_slot": "armor",
+      "armor_class": 18,
+      "armor_type": "heavy",
+      "stealth_disadvantage": true,
+      "strength_requirement": 15
+    },
+    {
+      "name": "Shield",
+      "item_type": "shield",
+      "equipment_slot": "off_hand",
+      "bonus_ac": 2
+    },
+    {
+      "name": "Longsword +1",
+      "item_type": "weapon",
+      "equipment_slot": "main_hand",
+      "magic_bonus": 1,
+      "is_magical": true,
+      "damage_dice": "1d8",
+      "damage_type": "slashing",
+      "weapon_properties": [
+        "versatile"
+      ],
+      "versatile_dice": "1d10"
+    },
+    {
+      "name": "Ring of Protection",
+      "item_type": "wondrous",
+      "equipment_slot": "ring_1",
+      "is_magical": true,
+      "requires_attunement": true,
+      "bonus_ac": 1
+    }
+  ],
+  "is_player_controlled": true,
+  "character_class": "Fighter",
+  "subclass": "Champion",
+  "level": 5,
+  "background": "Soldier",
+  "race": "Human",
+  "class_resources": {
+    "action_surge": 1,
+    "second_wind": 1
+  },
+  "spell_slots": {},
+  "skill_proficiencies": [
+    "athletics",
+    "intimidation",
+    "perception",
+    "survival"
+  ],
+  "feats": [
+    {
+      "name": "Alert",
+      "description": "Always on the lookout for danger. +5 to initiative, can't be surprised.",
+      "bonus_initiative": 5
+    }
+  ],
+  "features": [
+    {
+      "name": "Fighting Style: Defense",
+      "description": "+1 AC while wearing armor",
+      "source": "Fighter 1"
+    },
+    {
+      "name": "Second Wind",
+      "description": "Bonus action to regain 1d10 + fighter level HP, once per short rest",
+      "source": "Fighter 1"
+    },
+    {
+      "name": "Action Surge",
+      "description": "Take an additional action on your turn, once per short rest",
+      "source": "Fighter 2"
+    },
+    {
+      "name": "Extra Attack",
+      "description": "Attack twice when taking the Attack action",
+      "source": "Fighter 5"
+    },
+    {
+      "name": "Improved Critical",
+      "description": "Critical hit on 19-20",
+      "source": "Champion 3"
+    }
+  ],
+  "death_save_successes": 0,
+  "death_save_failures": 0
+}

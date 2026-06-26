@@ -15,6 +15,29 @@ def _has(creature: Creature, condition: Condition) -> bool:
     return any(ac.condition == condition for ac in creature.active_conditions)
 
 
+# ── Exhaustion (D-COND-2) ────────────────────────────────────────────
+# RAW cumulative tiers: L1 disadvantage on ability checks, L2 speed halved,
+# L3 disadvantage on attacks AND saves, L4 hit-point maximum halved,
+# L5 speed 0, L6 death. L1 (ability checks) is intentionally not wired —
+# the Arena's ability-check surface (shove/grapple/hide contests) is scattered
+# with no central roller, and the audit scopes L2-L6.
+
+def exhaustion_level(creature: Creature) -> int:
+    """The creature's exhaustion level (0 if not exhausted, otherwise 1-6)."""
+    for ac in creature.active_conditions:
+        if ac.condition == Condition.EXHAUSTION:
+            return ac.level
+    return 0
+
+
+def effective_max_hp(creature: Creature) -> int:
+    """Hit-point maximum after exhaustion — halved at level 4+ (RAW)."""
+    mx = creature.max_hit_points or 0
+    if exhaustion_level(creature) >= 4:
+        return mx // 2
+    return mx
+
+
 def _has_blood_frenzy(creature: Creature) -> bool:
     """Whether the creature has the Blood Frenzy trait (D-MON)."""
     feats = list(getattr(creature, "special_abilities", []) or [])
@@ -129,6 +152,10 @@ def get_attack_advantage(
 
     # ── Sources of DISADVANTAGE ──
 
+    # Exhaustion level 3+ (D-COND-2): disadvantage on attack rolls.
+    if exhaustion_level(attacker) >= 3:
+        has_dis = True
+
     # Attacker cannot see the target (target in fog/darkness): attacking a
     # target you can't see is at disadvantage.
     if not attacker_sees_target:
@@ -196,6 +223,10 @@ def get_save_advantage(creature: Creature, ability: str) -> int:
     """
     has_adv = False
     has_dis = False
+
+    # Exhaustion level 3+ (D-COND-2): disadvantage on all saving throws.
+    if exhaustion_level(creature) >= 3:
+        has_dis = True
 
     # Restrained: disadvantage on DEX saves
     if _has(creature, Condition.RESTRAINED) and ability.lower() == "dexterity":
@@ -311,6 +342,13 @@ def get_movement_multiplier(creature: Creature) -> float:
         return 0.0
     if _has(creature, Condition.UNCONSCIOUS):
         return 0.0
+
+    # Exhaustion (D-COND-2): level 5+ drops speed to 0; levels 2-4 halve it.
+    exh = exhaustion_level(creature)
+    if exh >= 5:
+        return 0.0
+    if exh >= 2:
+        return 0.5
 
     return 1.0
 

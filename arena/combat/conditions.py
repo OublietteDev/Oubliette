@@ -79,11 +79,12 @@ def apply_condition(
         existing = _find_condition(creature, condition)
         if existing:
             existing.level = min(6, existing.level + 1)
+            extra = _exhaustion_side_effects(creature, existing.level)
             return CombatEvent(
                 event_type=CombatEventType.CONDITION_APPLIED,
                 message=(
                     f"{creature.name} gains a level of exhaustion "
-                    f"(now level {existing.level})"
+                    f"(now level {existing.level}){extra}"
                 ),
                 source_id=creature_id,
                 details={
@@ -248,6 +249,30 @@ def process_end_of_turn(
 
 
 # ── Internal helpers ─────────────────────────────────────────────────
+
+def _exhaustion_side_effects(creature: Creature, level: int) -> str:
+    """Apply the HP consequences of crossing an exhaustion tier (D-COND-2) and
+    return a message suffix. Levels 1-3 (ability-check / speed / attack-save
+    penalties) are pure queries handled in condition_effects; only the HP-side
+    tiers mutate state here.
+
+    - Level 4: hit-point maximum is halved, so current HP is capped to it.
+    - Level 6: death. The Arena renders this as dropping to 0 HP — a monster is
+      then defeated; a downed PC stays under the engine's usual 0-HP mercy
+      (consistent with Phase D leaving downed-PC RAW out of scope).
+    """
+    if level >= 6:
+        creature.current_hit_points = 0
+        return " — level 6 exhaustion: it collapses!"
+    if level >= 4:
+        from arena.combat.condition_effects import effective_max_hp
+        cap = effective_max_hp(creature)
+        cur = creature.current_hit_points if creature.current_hit_points is not None else 0
+        if cur > cap:
+            creature.current_hit_points = cap
+        return f" — its hit-point maximum is halved (now {cap})"
+    return ""
+
 
 def _find_condition(
     creature: Creature, condition: Condition

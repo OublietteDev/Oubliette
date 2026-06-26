@@ -438,14 +438,18 @@ def apply_healing(target: Creature, amount: int) -> CombatEvent:
     Returns:
         A CombatEvent describing the healing.
     """
+    from arena.combat.condition_effects import effective_max_hp
+
     old_hp = target.current_hit_points if target.current_hit_points is not None else 0
-    new_hp = min(target.max_hit_points, old_hp + amount)
+    # Exhaustion 4+ halves the hit-point maximum (D-COND-2).
+    cap = effective_max_hp(target)
+    new_hp = min(cap, old_hp + amount)
     target.current_hit_points = new_hp
 
     was_unconscious = old_hp <= 0
     healed_amount = new_hp - old_hp
 
-    msg = f"heals for {healed_amount} HP ({new_hp}/{target.max_hit_points} HP)"
+    msg = f"heals for {healed_amount} HP ({new_hp}/{cap} HP)"
     if was_unconscious and new_hp > 0:
         msg += " and regains consciousness!"
 
