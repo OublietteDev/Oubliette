@@ -101,7 +101,8 @@
     },
     {
       "name": "Magic Resistance",
-      "description": "The glabrezu has advantage on saving throws against spells and other magical effects."
+      "description": "The glabrezu has advantage on saving throws against spells and other magical effects.",
+      "save_advantage_vs_spells": true
     }
   ],
   "challenge_rating": 9.0,

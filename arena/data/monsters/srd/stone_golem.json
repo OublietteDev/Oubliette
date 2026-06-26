@@ -74,11 +74,13 @@
     },
     {
       "name": "Magic Resistance",
-      "description": "The golem has advantage on saving throws against spells and other magical effects."
+      "description": "The golem has advantage on saving throws against spells and other magical effects.",
+      "save_advantage_vs_spells": true
     },
     {
       "name": "Magic Weapons",
-      "description": "The golem's weapon attacks are magical."
+      "description": "The golem's weapon attacks are magical.",
+      "attacks_are_magical": true
     }
   ],
   "challenge_rating": 10.0,

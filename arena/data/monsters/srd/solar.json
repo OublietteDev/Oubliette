@@ -160,7 +160,8 @@
     },
     {
       "name": "Magic Resistance",
-      "description": "The solar has advantage on saving throws against spells and other magical effects."
+      "description": "The solar has advantage on saving throws against spells and other magical effects.",
+      "save_advantage_vs_spells": true
     }
   ],
   "challenge_rating": 21.0,

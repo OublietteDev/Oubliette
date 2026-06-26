@@ -81,5 +81,7 @@
   ],
   "challenge_rating": 7.0,
   "experience_points": 2900,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "regeneration_amount": 10,
+  "regeneration_negated_by": []
 }

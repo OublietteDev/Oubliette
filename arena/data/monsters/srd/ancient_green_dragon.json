@@ -140,6 +140,7 @@
         "conditions_on_fail": []
       },
       "area_size": 90,
+      "recharge_min": 5,
       "uses_per_rest": 2,
       "rest_type": "short",
       "current_uses": 2
@@ -209,5 +210,6 @@
   ],
   "challenge_rating": 22.0,
   "experience_points": 41000,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "legendary_resistance_count": 3
 }

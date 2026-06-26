@@ -174,5 +174,6 @@
   ],
   "challenge_rating": 16.0,
   "experience_points": 15000,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "legendary_resistance_count": 3
 }

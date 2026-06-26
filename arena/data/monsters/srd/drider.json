@@ -90,7 +90,10 @@
     },
     {
       "name": "Fey Ancestry",
-      "description": "The drider has advantage on saving throws against being charmed, and magic can't put the drider to sleep."
+      "description": "The drider has advantage on saving throws against being charmed, and magic can't put the drider to sleep.",
+      "save_advantage_vs_conditions": [
+        "charmed"
+      ]
     },
     {
       "name": "Innate Spellcasting",

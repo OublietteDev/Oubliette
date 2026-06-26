@@ -77,6 +77,7 @@
         "damage_on_success": "half",
         "conditions_on_fail": []
       },
+      "recharge_min": 6,
       "uses_per_rest": 2,
       "rest_type": "short",
       "current_uses": 2

@@ -88,7 +88,8 @@
     },
     {
       "name": "Magic Resistance",
-      "description": "The planetar has advantage on saving throws against spells and other magical effects."
+      "description": "The planetar has advantage on saving throws against spells and other magical effects.",
+      "save_advantage_vs_spells": true
     }
   ],
   "challenge_rating": 16.0,

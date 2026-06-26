@@ -52,7 +52,10 @@
   "special_abilities": [
     {
       "name": "Dark Devotion",
-      "description": "The cultist has advantage on saving throws against being charmed or frightened."
+      "description": "The cultist has advantage on saving throws against being charmed or frightened.",
+      "save_advantage_vs_conditions": [
+        "frightened"
+      ]
     }
   ],
   "challenge_rating": 0.125,

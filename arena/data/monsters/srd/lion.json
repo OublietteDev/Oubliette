@@ -76,7 +76,8 @@
     },
     {
       "name": "Pack Tactics",
-      "description": "The lion has advantage on an attack roll against a creature if at least one of the lion's allies is within 5 ft. of the creature and the ally isn't incapacitated."
+      "description": "The lion has advantage on an attack roll against a creature if at least one of the lion's allies is within 5 ft. of the creature and the ally isn't incapacitated.",
+      "attack_advantage_when_ally_adjacent": true
     },
     {
       "name": "Pounce",

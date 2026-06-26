@@ -131,7 +131,8 @@
     },
     {
       "name": "Magic Resistance",
-      "description": "The devil has advantage on saving throws against spells and other magical effects."
+      "description": "The devil has advantage on saving throws against spells and other magical effects.",
+      "save_advantage_vs_spells": true
     }
   ],
   "challenge_rating": 14.0,

@@ -279,9 +279,15 @@ def _action(a: dict, abils: dict, prof: int) -> dict | None:
         }
         if size:
             out["area_size"] = size
-        usage = (a.get("usage") or {}).get("type", "")
-        if usage.startswith("recharge"):
-            # The Arena has no recharge timer; cap it as a balance approximation.
+        usage = (a.get("usage") or {})
+        if str(usage.get("type", "")).startswith("recharge"):
+            # Capture the recharge threshold ("recharge on roll" carries min_value,
+            # e.g. 5 for "Recharge 5-6"). Keep the uses_per_rest cap riding alongside
+            # as the interim limiter until the start-of-turn recharge roll lands
+            # (D-MON-2); the wiring step drops the cap in favour of the d6 roll.
+            rmin = usage.get("min_value")
+            if rmin:
+                out["recharge_min"] = int(rmin)
             out["uses_per_rest"] = 2
             out["rest_type"] = "short"
             out["current_uses"] = 2
@@ -351,6 +357,54 @@ def _multiattack(actions: list) -> dict | None:
     return None
 
 
+# ── Monster trait hydration (D-MON-1/3/4) ──────────────────────────────────
+# Map known SRD trait NAMES onto structured fields. Only the flag-shaped traits
+# land here; conditional ones (Reckless, Blood Frenzy, Surprise Attack, the
+# move-then-strike family) and death-prevention traits (Undead Fortitude,
+# Relentless Endurance) are a deliberate later wave.
+
+def _trait_flags(name: str) -> dict:
+    """Inert Feature-flag fields for a known trait name (consumed in D-MON-4)."""
+    n = name.lower()
+    if n == "magic resistance":
+        return {"save_advantage_vs_spells": True}
+    if n == "magic weapons":
+        return {"attacks_are_magical": True}
+    if n == "pack tactics":
+        return {"attack_advantage_when_ally_adjacent": True}
+    if n in ("brave", "dark devotion"):
+        return {"save_advantage_vs_conditions": ["frightened"]}
+    if n == "fey ancestry":
+        return {"save_advantage_vs_conditions": ["charmed"]}
+    return {}
+
+
+_REGEN_RE = re.compile(r"regains (\d+) hit points", re.IGNORECASE)
+
+
+def _regeneration(specials: list) -> tuple[int, list[str]]:
+    """Regeneration trait → (amount, negating damage types). Negating types are
+    whatever damage types the trait names (Troll: 'acid or fire')."""
+    for sa in specials:
+        if sa["name"].lower().startswith("regeneration"):
+            desc = sa.get("desc", "")
+            m = _REGEN_RE.search(desc)
+            if not m:
+                continue
+            negated = [t for t in _DMG_TYPES if re.search(rf"\b{t}\b", desc.lower())]
+            return int(m.group(1)), negated
+    return 0, []
+
+
+def _legendary_resistance_count(specials: list) -> int:
+    """Legendary Resistance pool size, parsed from '(3/Day)' in the trait name."""
+    for sa in specials:
+        if sa["name"].lower().startswith("legendary resistance"):
+            m = re.search(r"\((\d+)\s*/\s*day\)", sa["name"].lower())
+            return int(m.group(1)) if m else 3
+    return 0
+
+
 def build_monster(m: dict) -> dict:
     abils = {a: m[a] for a in _ABILS}
     prof = m.get("proficiency_bonus") or 2
@@ -373,7 +427,13 @@ def build_monster(m: dict) -> dict:
     if ma:
         special.append(ma)
     for sa in m.get("special_abilities", []):
-        special.append({"name": sa["name"], "description": sa.get("desc", "")})
+        feat = {"name": sa["name"], "description": sa.get("desc", "")}
+        feat.update(_trait_flags(sa["name"]))
+        special.append(feat)
+
+    specials_raw = m.get("special_abilities", [])
+    lr_count = _legendary_resistance_count(specials_raw)
+    regen_amount, regen_negated = _regeneration(specials_raw)
 
     size = m.get("size", "Medium").lower()
     ctype = m.get("type", "humanoid").lower()
@@ -403,6 +463,13 @@ def build_monster(m: dict) -> dict:
         "experience_points": int(m.get("xp", 0)),
         "is_player_controlled": False,
     }
+    # Emit the new monster-trait fields only when non-default (keeps the JSON
+    # minimal + human-readable; the model supplies the defaults otherwise).
+    if lr_count:
+        mon["legendary_resistance_count"] = lr_count
+    if regen_amount:
+        mon["regeneration_amount"] = regen_amount
+        mon["regeneration_negated_by"] = regen_negated
     return mon
 
 

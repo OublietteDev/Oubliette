@@ -83,7 +83,8 @@
     },
     {
       "name": "Magic Resistance",
-      "description": "The deva has advantage on saving throws against spells and other magical effects."
+      "description": "The deva has advantage on saving throws against spells and other magical effects.",
+      "save_advantage_vs_spells": true
     }
   ],
   "challenge_rating": 10.0,

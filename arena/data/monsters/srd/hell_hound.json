@@ -74,6 +74,7 @@
         "conditions_on_fail": []
       },
       "area_size": 15,
+      "recharge_min": 5,
       "uses_per_rest": 2,
       "rest_type": "short",
       "current_uses": 2
@@ -88,7 +89,8 @@
     },
     {
       "name": "Pack Tactics",
-      "description": "The hound has advantage on an attack roll against a creature if at least one of the hound's allies is within 5 ft. of the creature and the ally isn't incapacitated."
+      "description": "The hound has advantage on an attack roll against a creature if at least one of the hound's allies is within 5 ft. of the creature and the ally isn't incapacitated.",
+      "attack_advantage_when_ally_adjacent": true
     }
   ],
   "challenge_rating": 3.0,

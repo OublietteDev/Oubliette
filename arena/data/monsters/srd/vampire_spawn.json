@@ -103,5 +103,9 @@
   ],
   "challenge_rating": 5.0,
   "experience_points": 1800,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "regeneration_amount": 10,
+  "regeneration_negated_by": [
+    "radiant"
+  ]
 }

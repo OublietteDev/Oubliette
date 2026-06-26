@@ -57,7 +57,10 @@
     },
     {
       "name": "Dark Devotion",
-      "description": "The fanatic has advantage on saving throws against being charmed or frightened."
+      "description": "The fanatic has advantage on saving throws against being charmed or frightened.",
+      "save_advantage_vs_conditions": [
+        "frightened"
+      ]
     },
     {
       "name": "Spellcasting",

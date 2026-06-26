@@ -80,7 +80,10 @@
     },
     {
       "name": "Brave",
-      "description": "The knight has advantage on saving throws against being frightened."
+      "description": "The knight has advantage on saving throws against being frightened.",
+      "save_advantage_vs_conditions": [
+        "frightened"
+      ]
     }
   ],
   "challenge_rating": 3.0,

@@ -78,7 +78,8 @@
     },
     {
       "name": "Pack Tactics",
-      "description": "The kobold has advantage on an attack roll against a creature if at least one of the kobold's allies is within 5 ft. of the creature and the ally isn't incapacitated."
+      "description": "The kobold has advantage on an attack roll against a creature if at least one of the kobold's allies is within 5 ft. of the creature and the ally isn't incapacitated.",
+      "attack_advantage_when_ally_adjacent": true
     }
   ],
   "challenge_rating": 0.125,

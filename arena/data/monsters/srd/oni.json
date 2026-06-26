@@ -89,7 +89,8 @@
     },
     {
       "name": "Magic Weapons",
-      "description": "The oni's weapon attacks are magical."
+      "description": "The oni's weapon attacks are magical.",
+      "attacks_are_magical": true
     },
     {
       "name": "Regeneration",
@@ -98,5 +99,7 @@
   ],
   "challenge_rating": 7.0,
   "experience_points": 2900,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "regeneration_amount": 10,
+  "regeneration_negated_by": []
 }

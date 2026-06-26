@@ -73,7 +73,8 @@
     },
     {
       "name": "Magic Resistance",
-      "description": "The dryad has advantage on saving throws against spells and other magical effects."
+      "description": "The dryad has advantage on saving throws against spells and other magical effects.",
+      "save_advantage_vs_spells": true
     },
     {
       "name": "Speak with Beasts and Plants",

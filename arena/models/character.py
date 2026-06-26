@@ -150,6 +150,13 @@ class Feature(BaseModel):
     death_prevention_dc_increment: int = 0  # DC increase per use (5 for Relentless Rage, 0 for one-shot)
     death_prevention_resource: str | None = None  # Resource to spend, None = free / uses_per_rest on feature
 
+    # Monster trait flags (hydrated from stat-block special abilities; consumed
+    # by the combat hooks wired in D-MON-4). Inert until those hooks land.
+    save_advantage_vs_spells: bool = False  # Magic Resistance: advantage on saves vs spells
+    save_advantage_vs_conditions: list[str] = Field(default_factory=list)  # Brave/Dark Devotion (frightened), Fey Ancestry (charmed)
+    attack_advantage_when_ally_adjacent: bool = False  # Pack Tactics
+    attacks_are_magical: bool = False  # Magic Weapons: weapon attacks count as magical (beat nonmagical resistance)
+
     # On-hit rider (Divine Smite, Sneak Attack, Stunning Strike, etc.)
     on_hit_rider: OnHitRider | None = None
 

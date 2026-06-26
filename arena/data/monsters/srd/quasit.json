@@ -89,7 +89,8 @@
     },
     {
       "name": "Magic Resistance",
-      "description": "The quasit has advantage on saving throws against spells and other magical effects."
+      "description": "The quasit has advantage on saving throws against spells and other magical effects.",
+      "save_advantage_vs_spells": true
     }
   ],
   "challenge_rating": 1.0,

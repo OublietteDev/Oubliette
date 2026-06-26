@@ -68,7 +68,10 @@
     },
     {
       "name": "Brave",
-      "description": "The gladiator has advantage on saving throws against being frightened."
+      "description": "The gladiator has advantage on saving throws against being frightened.",
+      "save_advantage_vs_conditions": [
+        "frightened"
+      ]
     },
     {
       "name": "Brute",

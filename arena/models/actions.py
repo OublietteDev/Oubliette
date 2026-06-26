@@ -126,6 +126,11 @@ class Action(BaseModel):
     uses_per_rest: int | None = None  # None = unlimited
     rest_type: str | None = None  # "short" or "long"
     current_uses: int | None = None
+    # Recharge (monster breath weapons etc.): the ability is spent when used and,
+    # at the start of each of the user's turns, rolls a d6 — on >= recharge_min it
+    # recharges. None = not a recharge ability. (D-MON-2 wires the turn-start roll;
+    # until then a uses_per_rest cap rides alongside as the interim limiter.)
+    recharge_min: int | None = None
     resource_cost: dict[str, int] = Field(default_factory=dict)  # e.g., {"ki_points": 2}
     legendary_action_cost: int = 1  # For legendary actions
 

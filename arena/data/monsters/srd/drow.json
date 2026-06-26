@@ -81,7 +81,10 @@
   "special_abilities": [
     {
       "name": "Fey Ancestry",
-      "description": "The drow has advantage on saving throws against being charmed, and magic can't put the drow to sleep."
+      "description": "The drow has advantage on saving throws against being charmed, and magic can't put the drow to sleep.",
+      "save_advantage_vs_conditions": [
+        "charmed"
+      ]
     },
     {
       "name": "Innate Spellcasting",

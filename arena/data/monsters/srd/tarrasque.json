@@ -209,7 +209,8 @@
     },
     {
       "name": "Magic Resistance",
-      "description": "The tarrasque has advantage on saving throws against spells and other magical effects."
+      "description": "The tarrasque has advantage on saving throws against spells and other magical effects.",
+      "save_advantage_vs_spells": true
     },
     {
       "name": "Reflective Carapace",
@@ -222,5 +223,6 @@
   ],
   "challenge_rating": 30.0,
   "experience_points": 155000,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "legendary_resistance_count": 3
 }

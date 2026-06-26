@@ -93,7 +93,8 @@
     },
     {
       "name": "Magic Weapons",
-      "description": "The sphinx's weapon attacks are magical."
+      "description": "The sphinx's weapon attacks are magical.",
+      "attacks_are_magical": true
     },
     {
       "name": "Spellcasting",

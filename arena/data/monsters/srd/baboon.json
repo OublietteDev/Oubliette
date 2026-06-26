@@ -53,7 +53,8 @@
   "special_abilities": [
     {
       "name": "Pack Tactics",
-      "description": "The baboon has advantage on an attack roll against a creature if at least one of the baboon's allies is within 5 ft. of the creature and the ally isn't incapacitated."
+      "description": "The baboon has advantage on an attack roll against a creature if at least one of the baboon's allies is within 5 ft. of the creature and the ally isn't incapacitated.",
+      "attack_advantage_when_ally_adjacent": true
     }
   ],
   "challenge_rating": 0.0,
