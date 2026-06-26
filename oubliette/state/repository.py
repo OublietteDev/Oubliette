@@ -38,6 +38,7 @@ class Repository(Protocol):
     def set_max_hp(self, char_id: str, value: int) -> None: ...
     def set_level(self, char_id: str, value: int) -> None: ...
     def set_portrait(self, char_id: str, filename: str | None) -> None: ...
+    def set_spells_prepared(self, char_id: str, spells: list[str]) -> None: ...
 
     # --- protected mutators (dispatcher- and combat-boundary-only) ---
     def adjust_gold(self, char_id: str, delta: int) -> None: ...
@@ -229,3 +230,12 @@ class InMemoryRepository:
         """Attach (or clear, with None) a PC's portrait token. Event-sourced via
         PORTRAIT_SET so the reference survives replay; the image bytes live on disk."""
         self.get_character(char_id).portrait = filename
+
+    def set_spells_prepared(self, char_id: str, spells: list[str]) -> None:
+        """Absolute write of a prepared caster's prepared spell list (C5). Event-
+        sourced via SPELLS_PREPARED so a re-prepare survives replay. Validation
+        (count + pool) happens on the live path before the op is produced (D6)."""
+        c = self.get_character(char_id)
+        if c.sheet is None:
+            raise StateError(f"{c.name} has no character sheet to prepare spells on")
+        c.sheet.spells_prepared = list(spells)

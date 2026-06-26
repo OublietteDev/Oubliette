@@ -39,6 +39,7 @@ class EventKind(str, Enum):
     CHARACTER_LEVELED = "character_leveled"  # level-up output: the rebuilt PC (CS5)
     REST_TAKEN = "rest_taken"           # short/long rest: ops restoring hp/slots/hit-dice/resources
     PORTRAIT_SET = "portrait_set"       # player attached/changed a PC portrait (bounded player action)
+    SPELLS_PREPARED = "spells_prepared" # prepared caster re-prepared its spells after a long rest (CS5/C5)
 
 
 class StateOp(BaseModel):
@@ -47,7 +48,7 @@ class StateOp(BaseModel):
 
     op: Literal["gold", "item", "hp_set", "xp", "conditions", "equip",
                 "slots_used", "hit_dice_used", "resources_used", "max_hp", "level",
-                "portrait"]
+                "portrait", "spells_prepared"]
     char: str
     item_id: str | None = None
     delta: int | None = None
@@ -58,6 +59,7 @@ class StateOp(BaseModel):
     text: str | None = None                 # for the 'portrait' op (filename; None clears it)
     spell: str | None = None                # for the 'item' op: a scroll's inscribed spell (rider)
     spell_level: int | None = None          # for the 'item' op: a scroll's cast level (upcast rider)
+    spells: list[str] | None = None         # for the 'spells_prepared' op (absolute prepared list)
 
     # --- typed constructors ---------------------------------------------------
     @classmethod
@@ -110,6 +112,10 @@ class StateOp(BaseModel):
     def portrait(cls, char: str, filename: str | None) -> "StateOp":
         return cls(op="portrait", char=char, text=filename)
 
+    @classmethod
+    def spells_prepared(cls, char: str, spells: list[str]) -> "StateOp":
+        return cls(op="spells_prepared", char=char, spells=list(spells))
+
     def apply(self, repo: "Repository") -> None:
         if self.op == "gold":
             repo.adjust_gold(self.char, self.delta or 0)
@@ -139,6 +145,8 @@ class StateOp(BaseModel):
             repo.set_level(self.char, self.value or 1)
         elif self.op == "portrait":
             repo.set_portrait(self.char, self.text)
+        elif self.op == "spells_prepared":
+            repo.set_spells_prepared(self.char, self.spells or [])
 
 
 def apply_ops(ops: list[StateOp], repo: "Repository", strict: bool = True) -> None:

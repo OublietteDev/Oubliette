@@ -187,6 +187,55 @@ def prepared_spell_count(char: Character, ruleset: Ruleset) -> int | None:
     return max(1, char.ability_mod(_akey(cc.spellcasting.ability)) + caster_level)
 
 
+def prepare_pool(char: Character, ruleset: Ruleset) -> list[str] | None:
+    """The spell ids a prepared caster may choose from when re-preparing (C5).
+
+    Faithful split: a wizard prepares from its spellbook (the spells it has
+    learned, ``spells_known``); cleric/druid/paladin prepare from their WHOLE
+    class spell list. Either way the pool is the leveled spells (cantrips are
+    never prepared) of a level the caster can actually cast. Returns None for
+    non-prepared casters. Sorted by (level, name)."""
+    cc = _class(char, ruleset)
+    if cc is None or not cc.spellcasting or cc.spellcasting.preparation != "prepared":
+        return None
+    slots = spell_slots(char, ruleset)
+    max_lv = max(slots) if slots else 0
+    if max_lv == 0:                              # e.g. paladin before slots kick in
+        return []
+    if getattr(cc.spellcasting, "prepares_from_spellbook", False):
+        candidate_ids = list(char.sheet.spells_known) if char.sheet else []
+    else:
+        candidate_ids = [s.id for s in ruleset.spells_for(cc.id)]
+    pool = []
+    for sid in candidate_ids:
+        sp = ruleset.spells.get(sid)
+        if sp is not None and 1 <= sp.level <= max_lv:
+            pool.append(sid)
+    pool = sorted(set(pool), key=lambda i: (ruleset.spells[i].level, ruleset.spells[i].name))
+    return pool
+
+
+def validate_prepared_choice(char: Character, ruleset: Ruleset,
+                             chosen: list[str]) -> str | None:
+    """Firewall for re-preparation: return an error message, or None if valid.
+
+    A valid choice has no duplicates, holds exactly ``prepared_spell_count``
+    spells, and draws only from ``prepare_pool``."""
+    count = prepared_spell_count(char, ruleset)
+    if count is None:
+        return "this character does not prepare spells"
+    pool = set(prepare_pool(char, ruleset) or [])
+    chosen = list(chosen)
+    if len(set(chosen)) != len(chosen):
+        return "the prepared list has duplicate spells"
+    if len(chosen) != count:
+        return f"must prepare exactly {count} spell(s), got {len(chosen)}"
+    bad = [s for s in chosen if s not in pool]
+    if bad:
+        return f"not available to prepare: {', '.join(bad)}"
+    return None
+
+
 def spells_known_count(char: Character, ruleset: Ruleset) -> int | None:
     """How many leveled spells the caster has access to at its current level —
     the count chargen enforces. 'Prepared' casters → prepared_spell_count (mod +

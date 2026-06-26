@@ -171,6 +171,11 @@ class SpellcastingProfile(_Strict):
     caster_type: CasterType = "full"
     preparation: Literal["known", "prepared"] = "known"
     ritual: bool = False
+    # A "prepared" caster re-prepares from its WHOLE class spell list each long
+    # rest (cleric/druid/paladin know their full list). A spellbook caster
+    # (wizard) instead prepares only from spells it has learned (spells_known).
+    # Ignored for "known"/pact casters. (C5: re-prepare on long rest.)
+    prepares_from_spellbook: bool = False
 
 
 class SpellProgressionRow(_Strict):

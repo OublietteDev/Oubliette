@@ -30,7 +30,7 @@ from ..record.rng import Rng
 from ..rules import derive
 from ..rules.chargen import (POINT_BUY_BUDGET, POINT_BUY_COST, STANDARD_ARRAY,
                              CharacterBuild, ChargenError, build_character)
-from ..rules.rest import long_rest_ops, short_rest_ops
+from ..rules.rest import long_rest_ops, short_rest_ops, reprepare_window_open
 from ..rules.levelup import (LevelUpChoice, LevelUpError, level_up, level_up_plan,
                             xp_progress)
 from ..runtime.loop import TurnLoop
@@ -1066,6 +1066,9 @@ def _sheet_member(char: Character, rs: Ruleset) -> dict:
     out["features"] = [{"source": src, "items": groups[src]}
                        for src in order + [s for s in groups if s not in order] if src in groups]
     if sheet.spellcasting_ability is not None:
+        preparation = cc.spellcasting.preparation if (cc and cc.spellcasting) else "known"
+        pool = derive.prepare_pool(char, rs)     # None for non-prepared casters
+        window_open = reprepare_window_open(GAME.session.store.read_all())
         out["spellcasting"] = {
             "ability": sheet.spellcasting_ability.value,
             "save_dc": d["spell_save_dc"], "attack_bonus": d["spell_attack_bonus"],
@@ -1073,6 +1076,13 @@ def _sheet_member(char: Character, rs: Ruleset) -> dict:
             "cantrips_known": d["cantrips_known"], "prepared_count": d["prepared_count"],
             "cantrips": [_spell_view(rs, s) for s in sheet.cantrips_known],
             "spells": [_spell_view(rs, s) for s in (sheet.spells_prepared or sheet.spells_known)],
+            # Re-prepare on long rest (C5): the chooser only lights up for a
+            # prepared caster while the post-long-rest window is open.
+            "preparation": preparation,
+            "can_reprepare": bool(pool) and window_open,
+            "reprepare_window_open": window_open,
+            "prepared_ids": list(sheet.spells_prepared),
+            "prepare_pool": [_spell_view(rs, s) for s in (pool or [])],
         }
     out["resources"] = d["class_resources"]
     out["flavor"] = {"personality_traits": list(sheet.personality_traits),
@@ -1178,6 +1188,39 @@ async def post_rest(body: RestIn) -> JSONResponse:
                     hd = max(0, body.hit_dice) if char.id == body.char_id else 0
                 ops += short_rest_ops(char, rs, spend_hit_dice=hd, rng=GAME.rng)
         GAME.session.emit_state(EventKind.REST_TAKEN, ops, rest=body.kind)
+        return JSONResponse({"ok": True, "party": [_sheet_member(c, rs) for c in GAME.session.repo.party()],
+                             "state": _snapshot()})
+
+
+class PrepareSpellsIn(BaseModel):
+    char_id: str
+    spells: list[str]
+
+
+@app.post("/api/prepare_spells")
+async def post_prepare_spells(body: PrepareSpellsIn) -> JSONResponse:
+    """Re-prepare a prepared caster's spell list (C5). Allowed only inside the
+    post-long-rest window (before the party acts). The firewall validates the
+    pick (exact count + drawn from the class pool / spellbook) before recording
+    one SPELLS_PREPARED event; replay reproduces the list byte-identically."""
+    async with GAME.lock:
+        rs = _ruleset()
+        if not reprepare_window_open(GAME.session.store.read_all()):
+            return JSONResponse(
+                {"ok": False, "error": "Spells can only be re-prepared after a long "
+                 "rest, before the party acts."}, status_code=400)
+        try:
+            char = GAME.session.repo.get_character(body.char_id)
+        except StateError as e:
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+        err = derive.validate_prepared_choice(char, rs, body.spells)
+        if err:
+            return JSONResponse({"ok": False, "error": err}, status_code=400)
+        GAME.session.emit_state(
+            EventKind.SPELLS_PREPARED,
+            [StateOp.spells_prepared(body.char_id, body.spells)],
+            char_id=body.char_id,
+        )
         return JSONResponse({"ok": True, "party": [_sheet_member(c, rs) for c in GAME.session.repo.party()],
                              "state": _snapshot()})
 

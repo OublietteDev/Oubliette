@@ -238,7 +238,8 @@
       "ability": "int",
       "caster_type": "full",
       "preparation": "prepared",
-      "ritual": true
+      "ritual": true,
+      "prepares_from_spellbook": true
     },
     "features": [
       {

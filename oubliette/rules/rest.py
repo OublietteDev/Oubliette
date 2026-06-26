@@ -16,8 +16,26 @@ What a rest touches (SRD):
 from __future__ import annotations
 
 from ..enums import Ability
-from ..record.events import StateOp
+from ..record.events import StateOp, EventKind
 from . import derive
+
+
+def reprepare_window_open(events) -> bool:
+    """Whether prepared casters may currently re-prepare their spells (C5).
+
+    The window opens on a LONG rest and closes once the party acts: a pure,
+    replay-stable derivation — true iff the most recent long rest is more
+    recent (higher seq) than the most recent in-character player message.
+    Short rests don't open it; re-preparing doesn't close it (you can keep
+    swapping until you take your first turn of the day)."""
+    last_long = -1
+    last_msg = -1
+    for e in events:
+        if e.kind == EventKind.REST_TAKEN.value and e.payload.get("rest") == "long":
+            last_long = max(last_long, e.seq)
+        elif e.kind == EventKind.PLAYER_MESSAGE.value:
+            last_msg = max(last_msg, e.seq)
+    return last_long > last_msg
 
 
 def _class_hit_die(char, ruleset) -> int:

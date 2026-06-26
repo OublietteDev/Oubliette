@@ -783,6 +783,20 @@
   </div>
 </div>
 
+<div id="prepare-overlay" class="overlay hidden">
+  <div class="sr-modal">
+    <div class="sr-head"><h2 id="prepare-title">Prepare Spells</h2><div class="spacer"></div></div>
+    <div class="sr-note" id="prepare-note"></div>
+    <div class="sr-body" id="prepare-body"></div>
+    <div class="sr-foot">
+      <button class="act" id="prepare-cancel">Cancel</button>
+      <div class="spacer"></div>
+      <span id="prepare-count" class="sr-note" style="margin-right:10px"></span>
+      <button class="act primary" id="prepare-confirm">Save preparation</button>
+    </div>
+  </div>
+</div>
+
 <div id="bestiary-overlay" class="overlay hidden">
   <div class="inv-modal bestiary-modal">
     <div class="inv-head">
@@ -2640,7 +2654,7 @@ function renderSheetMember(m) {
   root.appendChild(cols);
 
   // spellcasting
-  if (m.spellcasting) root.appendChild(renderSpellcasting(m.spellcasting, m.slots_used || {}));
+  if (m.spellcasting) root.appendChild(renderSpellcasting(m.spellcasting, m.slots_used || {}, m.id));
 
   // class resources (rage, sorcery points, …)
   if (m.resources && Object.keys(m.resources).length) {
@@ -2781,9 +2795,21 @@ function featRow(it) {
   row.appendChild(nm); if (it.text) row.appendChild(txt);
   return row;
 }
-function renderSpellcasting(sc, slotsUsed) {
+function renderSpellcasting(sc, slotsUsed, charId) {
   const sec = el("div", "sh-sec");
   sec.appendChild(el("h3", null, "Spellcasting"));
+  // Re-prepare on long rest (C5): a prepared caster may swap its readied spells
+  // while the post-long-rest window is open.
+  if (sc.preparation === "prepared") {
+    if (sc.can_reprepare) {
+      const btn = el("button", "act primary", "Prepare Spells");
+      btn.style.margin = "4px 0 8px";
+      btn.addEventListener("click", () => openPrepare(charId, sc));
+      sec.appendChild(btn);
+    } else if (sc.prepare_pool && sc.prepare_pool.length) {
+      sec.appendChild(el("div", "sh-flavor", "Prepared spells can be changed after a long rest."));
+    }
+  }
   const top = el("div", "sh-flavor"); top.style.marginBottom = "8px";
   top.innerHTML = `<b>Ability:</b> ${sc.ability.toUpperCase()} &nbsp; <b>Save DC:</b> ${sc.save_dc} &nbsp; <b>Attack:</b> ${shSigned(sc.attack_bonus)}`;
   sec.appendChild(top);
@@ -2818,6 +2844,61 @@ function spellRow(s) {
   wrap.appendChild(hd); if (s.description || s.casting_time) wrap.appendChild(bodyEl);
   return wrap;
 }
+// --- prepare spells on long rest (C5) -------------------------------------
+let prep = null;   // { charId, count, pool: [...], chosen: Set<string> }
+function openPrepare(charId, sc) {
+  prep = { charId, count: sc.prepared_count || 0, pool: sc.prepare_pool || [],
+           chosen: new Set(sc.prepared_ids || []) };
+  $("prepare-title").textContent = "Prepare Spells";
+  $("prepare-note").textContent =
+    `Choose exactly ${prep.count} spell${prep.count === 1 ? "" : "s"} to ready until your next long rest.`;
+  renderPrepareBody();
+  $("prepare-overlay").classList.remove("hidden");
+}
+function renderPrepareBody() {
+  const body = $("prepare-body"); body.innerHTML = "";
+  const byLevel = {};
+  prep.pool.forEach(s => { (byLevel[s.level] = byLevel[s.level] || []).push(s); });
+  Object.keys(byLevel).sort((a, b) => a - b).forEach(lv => {
+    body.appendChild(el("div", "sh-src", `Level ${lv}`));
+    byLevel[lv].forEach(s => body.appendChild(prepCheck(s)));
+  });
+  updatePrepCount();
+}
+function prepCheck(s) {
+  const lab = el("label", "cg-check");
+  const cb = el("input"); cb.type = "checkbox"; cb.checked = prep.chosen.has(s.id);
+  cb.addEventListener("change", () => {
+    if (cb.checked) {
+      if (prep.chosen.size >= prep.count) { cb.checked = false; return; }  // cap at the limit
+      prep.chosen.add(s.id);
+    } else prep.chosen.delete(s.id);
+    updatePrepCount();
+  });
+  lab.appendChild(cb); lab.appendChild(el("span", null, s.name));
+  return lab;
+}
+function updatePrepCount() {
+  $("prepare-count").textContent = `${prep.chosen.size}/${prep.count}`;
+  $("prepare-confirm").disabled = prep.chosen.size !== prep.count;
+}
+async function confirmPrepare() {
+  let data;
+  try {
+    data = await (await fetch("/api/prepare_spells", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ char_id: prep.charId, spells: [...prep.chosen] }),
+    })).json();
+  } catch (e) { data = { ok: false, error: "request failed" }; }
+  if (!data.ok) { alert(data.error || "could not prepare spells"); return; }
+  closePrepare();
+  openSheet();   // re-fetch so the readied list (and window state) refresh
+}
+function closePrepare() { $("prepare-overlay").classList.add("hidden"); }
+$("prepare-cancel").addEventListener("click", closePrepare);
+$("prepare-confirm").addEventListener("click", confirmPrepare);
+$("prepare-overlay").addEventListener("click", (e) => { if (e.target.id === "prepare-overlay") closePrepare(); });
+
 $("sheet-close").addEventListener("click", closeSheet);
 $("sheet-overlay").addEventListener("click", (e) => { if (e.target.id === "sheet-overlay") closeSheet(); });
 $("shortrest-cancel").addEventListener("click", closeShortRest);
