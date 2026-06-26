@@ -280,17 +280,21 @@ def _action(a: dict, abils: dict, prof: int) -> dict | None:
         if size:
             out["area_size"] = size
         usage = (a.get("usage") or {})
-        if str(usage.get("type", "")).startswith("recharge"):
-            # Capture the recharge threshold ("recharge on roll" carries min_value,
-            # e.g. 5 for "Recharge 5-6"). Keep the uses_per_rest cap riding alongside
-            # as the interim limiter until the start-of-turn recharge roll lands
-            # (D-MON-2); the wiring step drops the cap in favour of the d6 roll.
+        usage_type = str(usage.get("type", ""))
+        if usage_type.startswith("recharge"):
             rmin = usage.get("min_value")
             if rmin:
+                # "Recharge 5-6": one charge, refreshed by the start-of-turn d6
+                # roll (D-MON-2). The uses_per_rest=1 gate doubles as the
+                # spent/available flag the recharge roll resets.
                 out["recharge_min"] = int(rmin)
-            out["uses_per_rest"] = 2
-            out["rest_type"] = "short"
-            out["current_uses"] = 2
+                out["uses_per_rest"] = 1
+                out["current_uses"] = 1
+            else:
+                # "Recharge after a rest": no roll — model as a short-rest ability.
+                out["uses_per_rest"] = 2
+                out["rest_type"] = "short"
+                out["current_uses"] = 2
         return out
     return None
 

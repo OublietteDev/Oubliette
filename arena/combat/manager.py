@@ -557,6 +557,14 @@ class CombatManager:
         for e in buff_events:
             self.log.add(e)
 
+        # Recharge abilities (D-MON-2): a spent breath weapon etc. rolls a d6 to
+        # come back at the start of the creature's turn.
+        from arena.combat.recharge import process_recharge_start_of_turn
+        for re_ev in process_recharge_start_of_turn(
+            combatant.creature, combatant.creature_id,
+        ):
+            self.log.add(re_ev)
+
         # Banishment may have just expired (Blink's one-round trip ends at
         # the start of this creature's own turn) — return creatures BEFORE
         # zones tick and before the skip checks, so they act normally.

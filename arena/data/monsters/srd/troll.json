@@ -91,7 +91,7 @@
   "is_player_controlled": false,
   "regeneration_amount": 10,
   "regeneration_negated_by": [
-    "acid",
-    "fire"
+    "fire",
+    "acid"
   ]
 }

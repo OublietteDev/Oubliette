@@ -258,7 +258,9 @@ def test_condition_riders_un_inert_the_signature_abilities():
     gorgon = arena_monster_file("gorgon")
     breath = next(a for a in gorgon.actions if "Breath" in a.name)
     assert breath.saving_throw.conditions_on_fail == ["restrained"]
-    assert breath.uses_per_rest == 2                    # recharge approximation
+    # D-MON-2: a real recharge ability — one charge, refreshed by the d6 roll.
+    assert breath.recharge_min == 5
+    assert breath.uses_per_rest == 1 and breath.current_uses == 1
 
     dragon = arena_monster_file("adult_red_dragon")
     fp = next(a for a in dragon.actions if "Frightful" in a.name)
