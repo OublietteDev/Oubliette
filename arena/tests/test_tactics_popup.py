@@ -16,8 +16,8 @@ class TestTacticsPopup:
         yield
         pygame.quit()
 
-    def test_all_six_tactics_present(self):
-        """All six standard tactical actions should be listed."""
+    def test_all_tactics_present(self):
+        """All standard tactical actions should be listed."""
         names = [name for name, _ in _TACTICS]
         assert "Dash" in names
         assert "Disengage" in names
@@ -25,7 +25,9 @@ class TestTacticsPopup:
         assert "Help" in names
         assert "Hide" in names
         assert "Shove" in names
-        assert len(names) == 6
+        assert "Grapple" in names
+        assert "Ready" in names
+        assert len(names) == 8
 
     def test_popup_creation(self):
         popup = TacticsPopup(action_used=False)

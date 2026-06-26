@@ -21,6 +21,8 @@ _TACTICS = [
     ("Help", "Give an adjacent ally advantage on their next attack"),
     ("Hide", "Attempt to become hidden from enemies"),
     ("Shove", "Push a creature 5ft or knock it prone"),
+    ("Grapple", "Seize a creature, reducing its speed to 0"),
+    ("Ready", "Hold an action to release when a trigger occurs"),
 ]
 
 # Shown only while grappled (C5): the escape check is its own action.
@@ -117,9 +119,13 @@ class TacticsPopup:
                     return None
                 from arena.audio.manager import get_sound_manager
                 get_sound_manager().play_sfx("button_click")
-                # Shove needs target selection, not immediate execution
+                # Shove/Grapple/Ready open their own flow, not immediate exec
                 if name == "shove":
                     return "shove"
+                if name == "grapple":
+                    return "grapple"
+                if name == "ready":
+                    return "ready"
                 return f"standard:{name.replace(' ', '_')}"
 
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:

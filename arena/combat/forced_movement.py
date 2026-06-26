@@ -410,6 +410,7 @@ def resolve_shove_contest(
     target: Creature,
     target_id: str,
     combatants: dict | None = None,
+    verb: str = "shove",
 ) -> tuple[bool, list[CombatEvent]]:
     """Resolve a contested Athletics check for the Shove action.
 
@@ -421,6 +422,9 @@ def resolve_shove_contest(
     With ``combatants``, bard dice may swing the contest from the shover's side
     (their own Bardic Inspiration, or the target-side Cutting Words against a
     winning shove).
+
+    ``verb`` only flavours the log line ("shove" vs "grapple") — Grapple uses
+    the identical contest (RAW: Athletics vs the target's Athletics/Acrobatics).
 
     Returns:
         (success, events) where success means the shove worked.
@@ -458,7 +462,7 @@ def resolve_shove_contest(
     events.append(CombatEvent(
         event_type=CombatEventType.SAVING_THROW,
         message=(
-            f"{attacker.name} attempts to shove {target.name}: "
+            f"{attacker.name} attempts to {verb} {target.name}: "
             f"Athletics {atk_total} ({atk_roll}+{atk_mod}) vs "
             f"{def_skill} {def_total} ({def_roll}+{def_mod}) "
             f"- {result_text}"

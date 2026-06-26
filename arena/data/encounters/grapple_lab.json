@@ -1,0 +1,25 @@
+{
+  "name": "Grapple Lab — player-initiated Grapple (D-ACT-2)",
+  "description": "Bench for the new player Grapple action. Thorin (Fighter, strong Athletics) and Valeria step up to grapple. Open the radial Tactics popup and pick Grapple, then click an adjacent enemy: a contested Athletics check vs the target's Athletics/Acrobatics. On success the target is GRAPPLED (speed 0) until it spends its action to Escape (contesting Thorin's Athletics) or Thorin is downed. Grab a Goblin to hold it; try the Ogre too — it's only Large (one size up), so still grappleable. To see the size cap, a grapple needs a target >1 size larger than the grappler (none here is that big vs a Medium hero — that branch is covered by tests).",
+  "grid_width": 20,
+  "grid_height": 15,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/thorin.json", "creature_data": null, "team": "player", "starting_position": [4, 6], "count": 1, "name_override": null},
+    {"creature_id": "characters/valeria.json", "creature_data": null, "team": "player", "starting_position": [4, 9], "count": 1, "name_override": null},
+    {"creature_id": "monsters/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [6, 6], "count": 1, "name_override": null},
+    {"creature_id": "monsters/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [6, 9], "count": 1, "name_override": "Goblin 2"},
+    {"creature_id": "monsters/ogre.json", "creature_data": null, "team": "enemy", "starting_position": [8, 7], "count": 1, "name_override": null}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

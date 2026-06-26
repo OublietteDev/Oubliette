@@ -1,0 +1,25 @@
+{
+  "name": "Ready Lab — hold an action for a trigger (D-ACT-1)",
+  "description": "Bench for the Ready action. Open the radial Tactics popup and pick Ready: stage 1 chooses which action to hold (an attack or a single-target save spell), stage 2 chooses the trigger. Then end your turn and watch it release. Best tests: with Thorin, Ready his attack 'When an enemy enters my reach' and let a goblin charge in (the spear-brace) — or 'When an enemy attacks' and counterpunch the first goblin that swings. With Elara, Ready Fire Bolt or a save spell on the same triggers. Enemies start a few hexes out so they approach (MOVES / ENTERS_RANGE) then attack (ATTACKS). Note: enemy AI rarely casts, so the 'casts a spell' trigger is hard to see live — it's covered by tests. Readied spells spend their slot only when they actually release.",
+  "grid_width": 20,
+  "grid_height": 15,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/thorin.json", "creature_data": null, "team": "player", "starting_position": [4, 6], "count": 1, "name_override": null},
+    {"creature_id": "characters/elara.json", "creature_data": null, "team": "player", "starting_position": [4, 9], "count": 1, "name_override": null},
+    {"creature_id": "monsters/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [9, 6], "count": 1, "name_override": null},
+    {"creature_id": "monsters/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [10, 8], "count": 1, "name_override": "Goblin 2"},
+    {"creature_id": "monsters/hobgoblin.json", "creature_data": null, "team": "enemy", "starting_position": [11, 7], "count": 1, "name_override": null}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

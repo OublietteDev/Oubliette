@@ -126,70 +126,121 @@ def check_ready_triggers(
     events: list[CombatEvent] = []
     to_remove: list[str] = []
 
-    for cid, readied in manager.readied_actions.items():
-        # Skip if creature already used reaction
-        if manager.reaction_used.get(cid, False):
-            continue
+    # Re-entrancy guard: resolving a readied action (an attack/spell) must not
+    # itself fire more readied actions mid-resolution. The low-level resolvers
+    # don't call back here, but this is cheap insurance against cascades.
+    if getattr(manager, "_resolving_ready", False):
+        return events
+    manager._resolving_ready = True
+    try:
+        for cid, readied in manager.readied_actions.items():
+            # Skip if creature already used reaction
+            if manager.reaction_used.get(cid, False):
+                continue
 
-        # Check trigger match
-        if readied.trigger_type != trigger_type:
-            continue
+            # Check trigger match
+            if readied.trigger_type != trigger_type:
+                continue
 
-        # If trigger has a specific target, check it
-        if readied.trigger_target_id and readied.trigger_target_id != trigger_creature_id:
-            continue
+            # A creature never reacts to its own action
+            if cid == trigger_creature_id:
+                continue
 
-        # Trigger matched! Execute the readied action as a reaction
-        combatant = manager.combatants.get(cid)
-        if combatant is None or not combatant.creature.is_conscious:
+            # If trigger has a specific target, check it
+            if (readied.trigger_target_id
+                    and readied.trigger_target_id != trigger_creature_id):
+                continue
+
+            combatant = manager.combatants.get(cid)
+            if combatant is None or not combatant.creature.is_conscious:
+                to_remove.append(cid)
+                continue
+
+            # CREATURE_ENTERS_RANGE only fires when the mover is now within the
+            # readied action's reach/range of the holder (a spear brace, a held
+            # bowshot). Other triggers don't gate on distance.
+            if readied.trigger_type == TriggerType.CREATURE_ENTERS_RANGE:
+                if not _trigger_in_range(manager, combatant, readied,
+                                         trigger_creature_id):
+                    continue
+
+            # Trigger matched! Execute the readied action as a reaction
+            manager.reaction_used[cid] = True
             to_remove.append(cid)
-            continue
 
-        # Mark reaction as used
-        manager.reaction_used[cid] = True
-        to_remove.append(cid)
-
-        # Announce the triggered action
-        events.append(
-            CombatEvent(
-                event_type=CombatEventType.REACTION,
-                message=(
-                    f"{combatant.creature.name}'s readied action triggers! "
-                    f"Using {readied.action.name} as a reaction."
-                ),
-                source_id=cid,
-                details={
-                    "reaction_type": "readied_action",
-                    "action_name": readied.action.name,
-                    "trigger_type": trigger_type.value,
-                },
-            )
-        )
-
-        # If the action has an attack and there's a valid target, resolve it
-        if readied.action.attack and trigger_creature_id:
-            target = manager.combatants.get(trigger_creature_id)
-            if target and manager.grid:
-                from arena.combat.actions import resolve_attack
-
-                result = resolve_attack(
-                    attacker=combatant.creature,
-                    attacker_id=cid,
-                    target=target.creature,
-                    target_id=trigger_creature_id,
-                    action=readied.action,
-                    grid=manager.grid,
-                    combatants=manager.combatants,
-                    attacker_pos=combatant.position,
-                    target_pos=target.position,
+            events.append(
+                CombatEvent(
+                    event_type=CombatEventType.REACTION,
+                    message=(
+                        f"{combatant.creature.name}'s readied action triggers! "
+                        f"Using {readied.action.name} as a reaction."
+                    ),
+                    source_id=cid,
+                    details={
+                        "reaction_type": "readied_action",
+                        "action_name": readied.action.name,
+                        "trigger_type": trigger_type.value,
+                    },
                 )
-                events.extend(result.events)
+            )
+
+            target = (manager.combatants.get(trigger_creature_id)
+                      if trigger_creature_id else None)
+            if target is None or manager.grid is None:
+                continue
+
+            # Release the readied action against the triggering creature. The
+            # manager handles every readyable shape — a placed AoE burst does
+            # its full area, a multi-ray spell loops, a save spell resolves and
+            # starts concentration itself. resolve_effect spends the slot at
+            # release (a mild, player-friendly deviation from RAW's
+            # spend-at-ready).
+            events.extend(manager.resolve_readied_action(
+                combatant, readied.action, trigger_creature_id))
+    finally:
+        manager._resolving_ready = False
 
     # Clean up triggered/expired readied actions
     for cid in to_remove:
         manager.readied_actions.pop(cid, None)
 
     return events
+
+
+def _trigger_in_range(
+    manager: CombatManager,
+    holder,
+    readied: ReadiedAction,
+    trigger_creature_id: str | None,
+) -> bool:
+    """Whether the triggering creature is within the readied action's reach.
+
+    Reach in feet = the attack's reach (melee) / normal range (ranged or spell
+    attack), or the effect spell's range. Converted to hexes (÷5) and compared
+    via the footprint-aware ``min_distance_between``.
+    """
+    if trigger_creature_id is None:
+        return False
+    target = manager.combatants.get(trigger_creature_id)
+    if (target is None or target.position is None
+            or holder.position is None):
+        return False
+
+    action = readied.action
+    if action.attack is not None:
+        atk = action.attack
+        is_ranged = "ranged" in (atk.attack_type or "")
+        reach_ft = atk.range_normal if is_ranged else atk.reach
+    else:
+        reach_ft = action.range
+    reach_hexes = max(1, int((reach_ft or 5) / 5))
+
+    from arena.grid.footprint import min_distance_between
+    dist = min_distance_between(
+        holder.position, holder.creature.size,
+        target.position, target.creature.size,
+    )
+    return dist <= reach_hexes
 
 
 def expire_readied_actions(manager: CombatManager, creature_id: str) -> list[CombatEvent]:

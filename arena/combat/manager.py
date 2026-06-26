@@ -1321,6 +1321,15 @@ class CombatManager:
         else:
             self.turn_resources.has_used_action = True
 
+        # CREATURE_CASTS readied trigger (D-ACT-1): this is the universal
+        # action-completion chokepoint and runs after the spell has resolved in
+        # every cast path, so it's the single place "a creature cast a spell"
+        # can be observed. No-op unless someone readied a cast-watch.
+        if action.spell_level is not None and self.active_combatant is not None:
+            self._fire_ready_triggers(
+                TriggerType.CREATURE_CASTS, self.active_combatant.creature_id,
+            )
+
     def _handle_extra_attack_tracking(
         self, action: Action, creature: Creature | None,
     ) -> None:
@@ -1743,6 +1752,14 @@ class CombatManager:
 
         # Check if combat has ended
         self._check_victory()
+
+        # CREATURE_ATTACKS readied trigger (D-ACT-1): the AI/convenience attack
+        # path doesn't route through complete_attack, so fire it here too.
+        result.events.extend(
+            self._fire_ready_triggers(
+                TriggerType.CREATURE_ATTACKS, combatant.creature_id,
+            )
+        )
 
         return result
 
@@ -2582,6 +2599,16 @@ class CombatManager:
         self._cleanup_orphaned_recurring_actions()
 
         self._check_victory()
+
+        # CREATURE_ATTACKS readied trigger (D-ACT-1): a creature that readied an
+        # action "when an enemy attacks" releases it now. No-op unless someone
+        # readied an attack-watch.
+        if hit_result.attacker_id is not None:
+            result.events.extend(
+                self._fire_ready_triggers(
+                    TriggerType.CREATURE_ATTACKS, hit_result.attacker_id,
+                )
+            )
 
         return result
 
@@ -4247,6 +4274,15 @@ class CombatManager:
         if from_pos is None:
             return False
 
+        # A creature whose speed has been zeroed by a condition (paralyzed,
+        # stunned, grappled, restrained, …) can't move voluntarily. This guard
+        # also stops the AI's hex-by-hex path walk dead in its tracks if a
+        # readied reaction (e.g. a held Hold Person) paralyzes the mover
+        # mid-move — the executor loop checks consciousness but not speed.
+        from arena.combat.condition_effects import get_movement_multiplier
+        if get_movement_multiplier(combatant.creature) <= 0:
+            return False
+
         # Check for opportunity attacks before moving
         oa_attackers = check_opportunity_attacks(
             mover_id=combatant.creature_id,
@@ -4312,12 +4348,17 @@ class CombatManager:
             self.log.add(event)
             combatant.position = target
 
-            # Check if any readied actions trigger on movement
+            # Check if any readied actions trigger on movement (D-ACT-1:
+            # both a plain "when it moves" watch and a range-gated "when it
+            # enters my reach" watch).
             ready_events = check_ready_triggers(
                 self, TriggerType.CREATURE_MOVES, combatant.creature_id
             )
             for re in ready_events:
                 self.log.add(re)
+            self._fire_ready_triggers(
+                TriggerType.CREATURE_ENTERS_RANGE, combatant.creature_id,
+            )
 
             # Check zone entry damage (e.g., walking into Spirit Guardians)
             if self.active_zones:
@@ -4585,6 +4626,118 @@ class CombatManager:
 
         return ActionResult(events=events, success=success)
 
+    def execute_grapple(self, target_id: str) -> ActionResult | None:
+        """Execute a Grapple action (contested Athletics check).
+
+        Every creature can grapple as a standard action (RAW: a special melee
+        attack; the Arena models it as its own action). On success the target
+        gains GRAPPLED — speed 0 (``condition_effects``) — held by name until
+        it escapes (``execute_escape_grapple``, contested vs this grappler's
+        Athletics since no fixed DC is stored) or the grappler goes down
+        (``_reconcile_grapples``).
+
+        RAW constraints honoured: melee reach, and the target may be no more
+        than one size larger than the grappler. (The free-hand requirement and
+        drag-the-grappled movement nuance are not modelled — consistent with
+        the rest of the Arena's grapple simplifications.)
+
+        Args:
+            target_id: Creature to grapple.
+
+        Returns:
+            ActionResult with events, or None if invalid.
+        """
+        from arena.combat.forced_movement import resolve_shove_contest
+        from arena.combat.actions import ActionResult
+        from arena.grid.footprint import min_distance_between
+        from arena.combat.conditions import apply_condition
+        from arena.models.conditions import Condition
+
+        combatant = self.active_combatant
+        if combatant is None or self.grid is None:
+            return None
+        if not can_take_actions(combatant.creature):
+            return None
+
+        # Grapple uses the action
+        if self.turn_resources.has_used_action:
+            return None
+
+        target_c = self.combatants.get(target_id)
+        if target_c is None or target_c.position is None:
+            return None
+        if combatant.position is None:
+            return None
+        if target_id == combatant.creature_id:
+            return None
+
+        # Range check: grapple is melee (5ft / adjacent)
+        dist = min_distance_between(
+            combatant.position, combatant.creature.size,
+            target_c.position, target_c.creature.size,
+        )
+        if dist > 1:
+            return None
+
+        # Size check: target no more than one size larger than the grappler.
+        _SIZE_ORDER = ["tiny", "small", "medium", "large", "huge", "gargantuan"]
+        try:
+            g_idx = _SIZE_ORDER.index(combatant.creature.size.value)
+            t_idx = _SIZE_ORDER.index(target_c.creature.size.value)
+        except (ValueError, AttributeError):
+            g_idx = t_idx = 0
+        if t_idx - g_idx > 1:
+            events = [CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=(
+                    f"{target_c.creature.name} is too large for "
+                    f"{combatant.creature.name} to grapple."
+                ),
+                source_id=combatant.creature_id,
+                target_id=target_id,
+                details={"is_effect_use": True, "action_name": "Grapple"},
+            )]
+            for e in events:
+                self.log.add(e)
+            return ActionResult(events=events, success=False)
+
+        events: list[CombatEvent] = []
+        events.append(CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=f"{combatant.creature.name} attempts to grapple "
+                    f"{target_c.creature.name}.",
+            source_id=combatant.creature_id,
+            target_id=target_id,
+            details={"is_effect_use": True, "action_name": "Grapple"},
+        ))
+
+        # Contested check (identical to Shove: Athletics vs Athletics/Acrobatics)
+        success, contest_events = resolve_shove_contest(
+            combatant.creature, combatant.creature_id,
+            target_c.creature, target_id, self.combatants,
+            verb="grapple",
+        )
+        events.extend(contest_events)
+
+        if success:
+            # No fixed escape DC: escaping contests this grappler's Athletics.
+            cond_event = apply_condition(
+                target_c.creature, target_id, Condition.GRAPPLED,
+                source=combatant.creature.name,
+            )
+            if cond_event:
+                events.append(cond_event)
+
+        # Mark action as used
+        self.turn_resources.has_used_action = True
+
+        for e in events:
+            self.log.add(e)
+
+        self._check_victory()
+
+        return ActionResult(events=events, success=success)
+
     def execute_escape_grapple(self) -> ActionResult | None:
         """Use the action to escape a grapple (C5).
 
@@ -4714,6 +4867,107 @@ class CombatManager:
         if event:
             self.log.add(event)
         return event
+
+    def _fire_ready_triggers(
+        self, trigger_type: TriggerType, creature_id: str | None,
+    ) -> list[CombatEvent]:
+        """Check readied actions against an event and resolve any that match.
+
+        A cheap no-op when nobody has readied an action watching for this
+        trigger type, so it's safe to call from hot paths (attacks, casts,
+        movement). Resolved events are logged and returned.
+        """
+        if not self.readied_actions:
+            return []
+        if not any(r.trigger_type == trigger_type
+                   for r in self.readied_actions.values()):
+            return []
+        ready_events = check_ready_triggers(self, trigger_type, creature_id)
+        for re in ready_events:
+            self.log.add(re)
+        if ready_events:
+            self._check_victory()
+        return ready_events
+
+    def resolve_readied_action(
+        self, holder, action: Action, trigger_creature_id: str | None,
+    ) -> list[CombatEvent]:
+        """Resolve a released readied action against the triggering creature.
+
+        Handles the three readyable shapes (see ready_popup.is_readyable):
+        - a placed radius burst (Fireball) — its full AoE, centered on the
+          triggering creature's hex (friendly fire and all);
+        - an attack, looped for a multi-ray/dart spell (Scorching Ray, Magic
+          Missile) but a single swing for a plain weapon (Ready grants ONE
+          attack, never the whole Extra-Attack action);
+        - a single-target save spell (Hold Person).
+        """
+        from arena.combat.actions import resolve_attack
+
+        events: list[CombatEvent] = []
+        if self.grid is None or not trigger_creature_id:
+            return events
+        target = self.combatants.get(trigger_creature_id)
+        if target is None or target.position is None:
+            return events
+
+        # Placed radius-burst AoE (Fireball): expand around the trigger hex.
+        if (action.target_type.value.startswith("area_")
+                and not self._is_zone_creating_spell(action)):
+            target_ids = self._resolve_effect_targets_at_hex(
+                action, holder, target.position)
+            return self._resolve_readied_effect_each(
+                holder, action, target_ids, effect_origin=target.position)
+
+        # Attack — a SINGLE resolve_attack. Multi-projectile spells (Scorching
+        # Ray, Magic Missile) bundle all their rays/darts into the attack's
+        # damage list, so one resolve_attack already applies them all; looping
+        # by target_count would multiply the whole bundle. (Ready also grants
+        # only one attack, never the full Extra-Attack action.)
+        if action.attack is not None:
+            res = resolve_attack(
+                attacker=holder.creature, attacker_id=holder.creature_id,
+                target=target.creature, target_id=trigger_creature_id,
+                action=action, grid=self.grid, combatants=self.combatants,
+                attacker_pos=holder.position, target_pos=target.position,
+            )
+            return list(res.events)
+
+        # Single-target save spell (Hold Person).
+        return self._resolve_readied_effect_each(
+            holder, action, [trigger_creature_id])
+
+    def _resolve_readied_effect_each(
+        self, holder, action: Action, target_ids: list[str],
+        effect_origin: HexCoord | None = None,
+    ) -> list[CombatEvent]:
+        """resolve_effect against each target, charging the spell's cost/use
+        only once (mirrors execute_effect's save/restore of cost + uses)."""
+        from arena.combat.actions import resolve_effect
+
+        events: list[CombatEvent] = []
+        saved_cost = dict(action.resource_cost)
+        saved_uses = action.uses_per_rest
+        try:
+            for i, tid in enumerate(target_ids):
+                tc = self.combatants.get(tid)
+                if tc is None:
+                    continue
+                if i > 0:
+                    action.resource_cost = {}
+                    action.uses_per_rest = None
+                res = resolve_effect(
+                    user=holder.creature, user_id=holder.creature_id,
+                    target=tc.creature, target_id=tid, action=action,
+                    grid=self.grid, combatants=self.combatants,
+                    user_pos=holder.position, target_pos=tc.position,
+                    effect_origin=effect_origin,
+                )
+                events.extend(res.events)
+        finally:
+            action.resource_cost = saved_cost
+            action.uses_per_rest = saved_uses
+        return events
 
     # ------------------------------------------------------------------
     # Dead Creature Helpers

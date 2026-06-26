@@ -400,6 +400,7 @@ class CombatScreen(Screen):
         self._pending_summon: bool = False  # True when placing a summoned creature
         self._pending_teleport: bool = False  # True when selecting teleport destination
         self._pending_shove: bool = False  # True when selecting enemy for Shove
+        self._pending_grapple: bool = False  # True when selecting enemy for Grapple
 
         # Multi-dart volley aiming (RAW Magic Missile: one click per dart,
         # repeats allowed; fires once every dart has a target)
@@ -422,6 +423,9 @@ class CombatScreen(Screen):
         # Shove choice popup state
         self._shove_popup = None  # ShoveChoicePopup | None
         self._shove_target_id: str | None = None
+
+        # Ready action popup state (D-ACT-1)
+        self._ready_popup = None  # ReadyPopup | None
 
         # Legendary action popup state
         self._legendary_popup: LegendaryActionPopup | None = None
@@ -599,6 +603,20 @@ class CombatScreen(Screen):
                     if target_id:
                         self.combat.execute_shove(target_id, shove_choice=result)
                     self.combat.turn_phase = TurnPhase.AWAITING_ACTION
+            return
+
+        # --- Ready action popup intercepts ALL input when open ---
+        if self._ready_popup is not None:
+            result = self._ready_popup.handle_event(event)
+            if result == "__close__":
+                self._ready_popup = None
+            elif result == "__ready__":
+                action = self._ready_popup.selected_action
+                trigger = self._ready_popup.selected_trigger
+                self._ready_popup = None
+                if action is not None and trigger is not None:
+                    self.combat.execute_ready_action(
+                        action, trigger, None, "")
             return
 
         # --- Passenger selection popup intercepts ALL input when open ---
@@ -871,6 +889,25 @@ class CombatScreen(Screen):
                             self._pending_shove = False
                     return
 
+                # Grapple — click an adjacent enemy to seize it (no popup)
+                if self._pending_grapple:
+                    target_c = self.combat.combatants.get(target_id)
+                    if (
+                        target_c
+                        and target_c.team != combatant.team
+                        and target_id != combatant.creature_id
+                    ):
+                        from arena.grid.footprint import min_distance_between
+                        dist = min_distance_between(
+                            combatant.position, combatant.creature.size,
+                            target_c.position, target_c.creature.size,
+                        )
+                        if dist <= 1:
+                            self._pending_grapple = False
+                            self.combat.turn_phase = TurnPhase.AWAITING_ACTION
+                            self.combat.execute_grapple(target_id)
+                    return
+
                 if selected and selected.attack is not None:
                     # Attack action — cannot target self
                     if target_id != combatant.creature_id:
@@ -890,6 +927,8 @@ class CombatScreen(Screen):
                 self._pending_stabilize = False
             if self._pending_shove:
                 self._pending_shove = False
+            if self._pending_grapple:
+                self._pending_grapple = False
             self._pending_teleport = False
             self._pending_passenger_id = None
             self._passenger_popup = None
@@ -1394,6 +1433,7 @@ class CombatScreen(Screen):
             self._pending_help = False
             self._pending_stabilize = False
             self._pending_shove = False
+            self._pending_grapple = False
             self._pending_teleport = False
             self._pending_passenger_id = None
             self._passenger_popup = None
@@ -1521,6 +1561,26 @@ class CombatScreen(Screen):
             self._pending_shove = True
             self.combat.turn_phase = TurnPhase.SELECTING_TARGET
 
+        elif result == "grapple":
+            # Grapple requires selecting an adjacent enemy (no choice popup)
+            self._pending_grapple = True
+            self.combat.turn_phase = TurnPhase.SELECTING_TARGET
+
+        elif result == "ready":
+            # Ready opens a two-stage popup (pick action, pick trigger)
+            active = self.combat.active_combatant
+            if active is not None and not self.combat.turn_resources.has_used_action:
+                from arena.gui.ready_popup import ReadyPopup, readyable_actions
+                actions = readyable_actions(active.creature)
+                if actions:
+                    self._ready_popup = ReadyPopup(
+                        actions,
+                        screen_width=self.screen_width,
+                        screen_height=self.screen_height,
+                    )
+                    self._ready_popup.reposition(
+                        (self.screen_width // 2, self.screen_height // 2))
+
         elif result.startswith("standard:"):
             action_name = result[9:]
             if action_name == "help":
@@ -1645,6 +1705,7 @@ class CombatScreen(Screen):
                 self._pending_help = False
                 self._pending_stabilize = False
                 self._pending_shove = False
+                self._pending_grapple = False
                 self._pending_teleport = False
                 self._pending_passenger_id = None
                 self._passenger_popup = None
@@ -1883,6 +1944,10 @@ class CombatScreen(Screen):
         # Shove choice popup
         if self._shove_popup is not None:
             self._shove_popup.render(surface)
+
+        # Ready action popup (D-ACT-1)
+        if self._ready_popup is not None:
+            self._ready_popup.render(surface)
 
         # Passenger selection popup (teleport)
         if self._passenger_popup is not None:
