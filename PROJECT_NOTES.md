@@ -321,7 +321,46 @@ marginal hits). Other reactions (Split, Unnerving Mask) left out.
 - **Playtest round 1 (OublietteDev):** D-ZONE-1 ✅ and D-ACT-4 ✅ live-verified (zone hits allies; ranged disadvantage fires for both long-range AND a foe within 5 ft of the shooter, whichever target he picks). D-ACT-3 **looked broken but isn't** — cover is measured from the blast's CENTRE (RAW), so centring the Fireball on the cultist gives it no cover (a creature at ground zero is fully exposed). Confirmed working end-to-end through the real `execute_effect_at_hex` path: with the wall between the blast centre and the target the save logs `[cover: +5]`. Reworked the lab to a two-cultist line (Exposed at the centre, Covered behind the wall at the blast edge) so the bonus shows up on the natural aim — Fireball the Exposed Cultist, watch the Covered one get +5. **OublietteDev re-tested with the new lab — D-ACT-3 confirmed working. Cheap cluster committed `f9b665e`; all three live-verified.**
 - **RAW note from OublietteDev (→ D-CTRL-1, not this batch):** Spike Growth in the Arena uses a one-time DEX save; RAW it deals 2d4 per 5 ft *travelled* through it (voluntary or forced), no save. That's exactly the D-CTRL-1 "Spike Growth single hit, not per-5ft no-save" item in the heavy tail — already queued, deferred to that work.
 
-**REMAINING in D-SPELL/COND/ACT (closes the audit):** the heavier items — D-WALL-1 (walls as real barriers), D-CTRL-1 (control-spell signatures: Slow/Confusion/Spirit Guardians slow/Spike Growth per-5ft/Chain Lightning), D-ACT-1 (Ready), D-ACT-2 (player Grapple), D-AOE-1 (AoE cone/line/cube geometry). See `docs/roadmap/oubliette-phase-d-plan-v0.1.md`.
+**D-ACT-2 (player Grapple) + D-ACT-1 (Ready) — DONE & live-verified, committed `c442151` (suite 2321 green).**
+- **D-ACT-2 — player Grapple.** `execute_grapple` mirrors `execute_shove` (contested Athletics vs the
+  target's Athletics/Acrobatics; bard dice can swing it). Success → GRAPPLED (speed 0), held until the
+  target spends its action to **Escape** (which contests *the grappler's* Athletics — a hero grab stores
+  no fixed `escape_dc`, so `execute_escape_grapple`'s no-DC branch handles it) or the grappler is
+  downed (`_reconcile_grapples` already frees it). RAW size cap honored (no target >1 size larger; the
+  too-large path doesn't consume the action). Tactics-popup entry + click-an-adjacent-enemy flow (no
+  sub-popup); `grapple_lab`. **OublietteDev confirmed:** grab works, ogre (Large) grabbable, grappler-death frees
+  the target. No-escape/no-flee = AI behavior, correctly deferred to the AI rework.
+- **D-ACT-1 — Ready.** The engine existed but was **unreachable + half-wired**. Added a two-stage
+  `ReadyPopup` (pick action → pick trigger) to the Tactics popup. **All four triggers now fire** (only
+  CREATURE_MOVES did): enters-reach (range-gated via `_trigger_in_range`), moves, **attacks** (fired at
+  BOTH `execute_attack` and `complete_attack` — the AI/convenience path doesn't route through
+  complete_attack), **casts** (at the universal `_mark_action_type_used` chokepoint, gated on
+  `spell_level`, after the spell resolves). Each fire is a no-op unless someone readied that trigger, and
+  a `_resolving_ready` re-entrancy guard prevents cascades. **Readied actions resolve by shape**
+  (`manager.resolve_readied_action`): a placed radius burst (Fireball) does its **full AoE centered on
+  the trigger creature's hex** (reuses `_resolve_effect_targets_at_hex`); a save spell (Hold Person)
+  resolves via `resolve_effect` (which deducts the slot + starts concentration itself — do NOT also call
+  `start_concentrating`, that double-call ends the first instance and strips the linked condition); an
+  attack resolves as **exactly one** `resolve_attack` — multi-ray/dart spells (Scorching Ray, Magic
+  Missile) bundle all rays into the damage list, so looping by `target_count` would multiply the whole
+  bundle (the Magic-Missile-9-darts bug OublietteDev's question surfaced). Filter (`ready_popup.is_readyable`):
+  attacks + single-target save spells (one_creature/ally/**enemy** — Hold Person is `one_enemy`, my first
+  filter wrongly excluded it) + placed sphere/cylinder bursts; excludes self, zones, and the directional
+  cone/line/cube shapes (those wait on D-AOE-1). **Slot spent on release**, not at ready — a deliberate
+  player-friendly deviation from RAW (OublietteDev explicitly preferred it). `ready_lab`.
+- **Latent bug fixed en route:** `try_move` now refuses voluntary movement when a condition has zeroed
+  the mover's speed (paralyzed/stunned/grappled/restrained/petrified/unconscious). The AI walks a path
+  **hex-by-hex** and its loop only broke on death — so a readied Hold Person that paralyzed a mover
+  mid-path used to let it keep strolling. One central guard fixes both the AI walk and the GUI. **OublietteDev
+  confirmed Hold Person now freezes the target; Magic Missile dealt one cast (12 force, 3 darts).**
+- GOTCHA reaffirmed: the GUI's normal single attack is `execute_attack_hit_check`→`complete_attack`;
+  `execute_attack` is the AI/volley/convenience path and resolves via `resolve_attack_*` directly (never
+  through complete_attack) — anything that must fire on "a creature attacked" has to hook BOTH.
+
+**REMAINING in D-SPELL/COND/ACT (closes the audit):** the three heaviest — D-CTRL-1 (control-spell
+signatures: Slow/Confusion/Spirit Guardians slow/Spike Growth per-5ft/Chain Lightning), D-WALL-1 (walls
+as real barriers), D-AOE-1 (AoE cone/line/cube geometry). D-WALL-1 + D-AOE-1 share line/shape geometry —
+plan to build that once for both. See `docs/roadmap/oubliette-phase-d-plan-v0.1.md`.
 
 ---
 
