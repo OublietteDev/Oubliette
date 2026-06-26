@@ -32,6 +32,10 @@ class MovementTracker:
     dead_creature_ids: set[str] = field(default_factory=set)
     blocked_hexes: set[tuple[int, int]] = field(default_factory=set)
     cost_multiplier: int = 1
+    # Hexes that are difficult terrain on top of the grid (e.g. inside a
+    # Spirit Guardians aura). Set per-turn by the manager; not cleared by
+    # reset() — the manager refreshes it alongside blocked_hexes.
+    difficult_hexes: set[tuple[int, int]] = field(default_factory=set)
     turn_start_position: HexCoord | None = None  # for move-then-strike riders (Charge)
 
     def reset(self, creature_id: str, speed: int,
@@ -82,6 +86,7 @@ class MovementTracker:
             dead_creature_ids=self.dead_creature_ids,
             blocked_hexes=self.blocked_hexes,
             cost_multiplier=self.cost_multiplier,
+            difficult_hexes=self.difficult_hexes,
         )
 
     def try_move(

@@ -12,6 +12,7 @@
   "target_type": "area_sphere",
   "area_size": 15,
   "zone_follows_caster": true,
+  "zone_slows": true,
   "saving_throw": {
     "ability": "wisdom",
     "dc": null,

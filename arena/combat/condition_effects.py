@@ -295,6 +295,20 @@ def is_auto_fail_save(creature: Creature, ability: str) -> bool:
     return False
 
 
+# ── Slow (D-CTRL-1) ──────────────────────────────────────────────────
+
+def is_slowed(creature: Creature) -> bool:
+    """Whether the creature is under the Slow spell (D-CTRL-1).
+
+    Slow is modeled as a debuff buff named "Slow" (it already carries the
+    speed/AC/DEX-save penalties). Its signature action-economy limit — no
+    reactions, and only an action OR a bonus action (not both) on a turn —
+    keys off that buff's presence, so the whole effect (penalties + economy
+    limit) ends as one unit on the spell's end-of-turn re-save.
+    """
+    return any(b.name == "Slow" for b in getattr(creature, "active_buffs", []))
+
+
 # ── Action Capability ────────────────────────────────────────────────
 
 def can_take_actions(creature: Creature) -> bool:

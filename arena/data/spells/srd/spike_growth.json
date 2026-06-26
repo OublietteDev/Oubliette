@@ -11,6 +11,7 @@
   },
   "target_type": "area_sphere",
   "area_size": 20,
+  "movement_hazard": true,
   "saving_throw": {
     "ability": "dexterity",
     "dc": null,
@@ -21,7 +22,7 @@
         "bonus": 0
       }
     ],
-    "damage_on_success": "half"
+    "damage_on_success": "none"
   },
   "terrain_modification": "difficult"
 }

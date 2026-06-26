@@ -10,6 +10,8 @@
     "spell_slot_6": 1
   },
   "target_type": "one_creature",
+  "chain_target_count": 3,
+  "chain_range": 30,
   "saving_throw": {
     "ability": "dexterity",
     "dc": null,

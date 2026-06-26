@@ -37,6 +37,11 @@ class Condition(str, Enum):
     BANISHED = "banished"  # Removed from the battlefield (Banishment, Maze, Blink);
     # the manager stashes the creature's position and takes it off-grid while
     # this is active, returning it when the condition ends (P-BANISH)
+    CONFUSED = "confused"  # Confusion (D-CTRL-1): can't take reactions and rolls a
+    # d10 at the start of each turn for its behavior (wander / freeze / lash out /
+    # act normally). Lifecycle: applied on a failed save with an end-of-turn
+    # Wisdom re-save (the Hold Person pattern); the d10 is rolled by the manager's
+    # start-of-turn hook.
 
 
 class AppliedCondition(BaseModel):

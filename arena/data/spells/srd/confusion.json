@@ -15,7 +15,7 @@
     "ability": "wisdom",
     "dc": null,
     "conditions_on_fail": [
-      "incapacitated"
+      "confused"
     ]
   }
 }

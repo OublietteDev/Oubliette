@@ -1,0 +1,27 @@
+{
+  "name": "Control Lab — Slow, Confusion, Spirit Guardians, Spike Growth, Chain Lightning (D-CTRL-1)",
+  "description": "Bench for the five control-spell signatures. Cassia the Confounder (your only hero — drive her) carries all five. CHAIN LIGHTNING: blast the Ogre in the clustered pack on the right; three bolts arc to the goblins around it (each rolls its own save). SLOW: catch a knot of enemies in the cube — a slowed creature can't take reactions and gets an action OR a bonus action, not both (watch its turn). CONFUSION: drop it on the pack; at the start of each victim's turn it rolls a d10 — wander / freeze / lash out at a neighbour (friend or foe!) / act normally — and re-saves at end of turn. SPIRIT GUARDIANS: cast it (centred on Cassia, follows her) then let an enemy try to close — the aura is difficult terrain for them, so they crawl in at half speed AND take the radiant save damage; your side is unaffected. SPIKE GROWTH: drop it on the open lane the enemies must cross, then watch them take 2d4 per 5 ft they travel through it (no save) on top of the difficult terrain — and you can do the same by walking an ally through. The lone Bruiser starts next to Cassia so a Confusion 'lash out' has an easy neighbour to hit.",
+  "grid_width": 40,
+  "grid_height": 18,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/control_warden.json", "creature_data": null, "team": "player", "starting_position": [5, 9], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/ogre.json", "creature_data": null, "team": "enemy", "starting_position": [28, 9], "count": 1, "name_override": "Pack Ogre"},
+    {"creature_id": "monsters/srd/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [24, 9], "count": 1, "name_override": "Goblin A"},
+    {"creature_id": "monsters/srd/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [32, 9], "count": 1, "name_override": "Goblin B"},
+    {"creature_id": "monsters/srd/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [28, 5], "count": 1, "name_override": "Goblin C"},
+    {"creature_id": "monsters/srd/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [28, 13], "count": 1, "name_override": "Goblin D"},
+    {"creature_id": "monsters/srd/orc.json", "creature_data": null, "team": "enemy", "starting_position": [6, 9], "count": 1, "name_override": "Bruiser (Confusion target)"}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

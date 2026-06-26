@@ -71,6 +71,17 @@ class ActiveZone:
     condition_on_fail: str | None = None
     condition_duration_type: str = "end_of_turn"
 
+    # D-CTRL-1: Spike Growth. When set, this zone is a MOVEMENT HAZARD: it
+    # deals these dice per 5 ft a creature travels through it (each hex step),
+    # NO save — resolved on movement, not at start-of-turn/entry. Such zones
+    # are skipped by the normal start-of-turn/entry save-damage processing.
+    movement_hazard_dice: str | None = None
+    movement_hazard_type: str = "piercing"
+
+    # D-CTRL-1: Spirit Guardians. When True, the zone's area is difficult
+    # terrain for the creatures it affects (enemies of the caster).
+    slows_movement: bool = False
+
 
 # ------------------------------------------------------------------
 # Geometry helpers
@@ -309,6 +320,10 @@ def process_zone_start_of_turn(
         return events
 
     for zone in zones:
+        # Movement hazards (Spike Growth) deal damage per 5 ft TRAVELLED, not
+        # for starting a turn here — handled by process_zone_movement_step.
+        if zone.movement_hazard_dice:
+            continue
         # Don't damage the zone's own caster
         if creature_id == zone.caster_id:
             continue
@@ -343,6 +358,9 @@ def process_zone_entry(
         return events
 
     for zone in zones:
+        # Movement hazards are resolved per step, not on one-time entry.
+        if zone.movement_hazard_dice:
+            continue
         if creature_id == zone.caster_id:
             continue
         if zone.affects_enemies_only and creature_comb.team == zone.team:
@@ -351,6 +369,64 @@ def process_zone_entry(
             continue
         if is_in_zone(creature_id, zone, combatants, grid):
             events.extend(_resolve_zone_damage(zone, creature_id, combatants))
+
+    return events
+
+
+def process_zone_movement_step(
+    zones: list[ActiveZone],
+    creature_id: str,
+    combatants: dict[str, Combatant],
+    grid: HexGrid | None,
+) -> list[CombatEvent]:
+    """Resolve movement-hazard damage for a single 5-ft step (D-CTRL-1).
+
+    Called after each successful movement step (voluntary or forced). For every
+    movement-hazard zone (Spike Growth) whose area now contains the creature,
+    deal the hazard dice with NO save — 2d4 piercing per 5 ft travelled. Unlike
+    save zones there is no ``already_damaged`` guard: every step that lands in
+    the spikes hurts, including the step that first enters them.
+    """
+    from arena.combat.actions import apply_damage
+    from arena.combat.concentration import check_concentration
+    from arena.combat.damage import DamagePacket
+    from arena.util.dice import roll_expression
+
+    events: list[CombatEvent] = []
+    creature_comb = combatants.get(creature_id)
+    if creature_comb is None:
+        return events
+
+    for zone in zones:
+        if not zone.movement_hazard_dice:
+            continue
+        # The caster of Spike Growth still takes damage moving through it RAW,
+        # but the established zone convention spares the caster; keep that.
+        if creature_id == zone.caster_id:
+            continue
+        if not is_in_zone(creature_id, zone, combatants, grid):
+            continue
+
+        target = creature_comb.creature
+        total_dmg, _rolls = roll_expression(zone.movement_hazard_dice)
+        if total_dmg <= 0:
+            continue
+        packet = DamagePacket(
+            amount=total_dmg, dtype=zone.movement_hazard_type,
+            source=zone.name, tags={"magical"},
+        )
+        dmg_event, dp_events = apply_damage(target, [packet], creature_id=creature_id)
+        dmg_event.source_id = zone.caster_id
+        dmg_event.target_id = creature_id
+        dmg_event.message = f"{target.name} {dmg_event.message}"
+        events.append(dmg_event)
+        events.extend(dp_events)
+
+        conc_events = check_concentration(
+            target, creature_id, dmg_event.details.get("damage", total_dmg),
+            combatants=combatants,
+        )
+        events.extend(conc_events)
 
     return events
 

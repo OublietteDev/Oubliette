@@ -29,6 +29,7 @@ from arena.combat.condition_effects import (
     can_take_actions,
     get_movement_multiplier,
     get_movement_cost_multiplier,
+    is_slowed,
 )
 from arena.combat.stat_modifiers import (
     get_effective_speed,
@@ -309,16 +310,48 @@ class CombatManager:
         """
         from arena.models.actions import ActionType
 
+        # Slow (D-CTRL-1): the active creature gets no reactions, and may use
+        # an action OR a bonus action — not both. So either slot is available
+        # only while NEITHER has been spent yet this turn.
+        active = self.active_combatant
+        slowed = active is not None and is_slowed(active.creature)
+        no_reactions = active is not None and (
+            slowed or has_condition(active.creature, Condition.CONFUSED)
+        )
+
         if action_type == ActionType.ACTION.value or action_type == ActionType.ACTION:
+            if slowed and self.turn_resources.has_used_bonus_action:
+                return False
             return not self.turn_resources.has_used_action
         elif action_type == ActionType.BONUS_ACTION.value or action_type == ActionType.BONUS_ACTION:
+            if slowed and self.turn_resources.has_used_action:
+                return False
             return not self.turn_resources.has_used_bonus_action
         elif action_type == ActionType.REACTION.value or action_type == ActionType.REACTION:
+            if no_reactions:
+                return False
             return not self.turn_resources.has_used_reaction
         elif action_type == ActionType.FREE.value or action_type == ActionType.FREE:
             return self.turn_resources.free_actions_used < self.turn_resources.free_action_limit
         # LEGENDARY and LAIR always allowed for now
         return True
+
+    def _reaction_blocked(self, creature_id: str) -> bool:
+        """Whether *creature_id* cannot take a reaction right now.
+
+        True if it already spent its reaction this round, or it is under Slow
+        (D-CTRL-1: a slowed creature can't take reactions). Used at every
+        reaction-eligibility site (opportunity attacks, Shield, Parry,
+        Counterspell, Uncanny Dodge)."""
+        if self.reaction_used.get(creature_id, False):
+            return True
+        c = self.combatants.get(creature_id)
+        if c is not None and (
+            is_slowed(c.creature)
+            or has_condition(c.creature, Condition.CONFUSED)
+        ):
+            return True
+        return False
 
     # ------------------------------------------------------------------
     # Setup
@@ -548,6 +581,7 @@ class CombatManager:
         self.movement.cost_multiplier = get_movement_cost_multiplier(combatant.creature)
         self.movement.dead_creature_ids = self._get_dead_creature_ids()
         self.movement.blocked_hexes = self._get_wall_blocked_hexes()
+        self.movement.difficult_hexes = self._get_zone_difficult_hexes(combatant.creature_id)
 
         # Process start-of-turn effects (condition ticks + buff duration ticks)
         events = process_start_of_turn(combatant.creature, combatant.creature_id)
@@ -654,6 +688,7 @@ class CombatManager:
                     self.movement.cost_multiplier = get_movement_cost_multiplier(combatant.creature)
                     self.movement.dead_creature_ids = self._get_dead_creature_ids()
                     self.movement.blocked_hexes = self._get_wall_blocked_hexes()
+                    self.movement.difficult_hexes = self._get_zone_difficult_hexes(combatant.creature_id)
                     self.turn_phase = TurnPhase.AWAITING_ACTION
                     return
 
@@ -712,7 +747,141 @@ class CombatManager:
             self.end_turn()
             return
 
+        # Confusion (D-CTRL-1): roll the d10 behavior table. On a "wander",
+        # "freeze", or "lash out" result the turn is auto-resolved and ended;
+        # only a 9-10 ("act normally") falls through to a normal turn.
+        if has_condition(combatant.creature, Condition.CONFUSED):
+            if self._process_confusion_turn(combatant):
+                self.end_turn()
+                return
+
         self.turn_phase = TurnPhase.AWAITING_ACTION
+
+    def _process_confusion_turn(self, combatant) -> bool:
+        """Resolve a confused creature's start-of-turn d10 behavior (D-CTRL-1).
+
+        Returns True if the turn is consumed (the caller ends the turn), or
+        False to let the creature take a normal turn (rolled 9-10).
+
+        RAW d10 table: 1 = use all movement in a random direction, no action;
+        2-6 = no move, no action; 7-8 = melee-attack a random creature in reach;
+        9-10 = act normally. (Simplifications: the random walk doesn't provoke
+        opportunity attacks, and "in reach" is treated as 5 ft / adjacent.)
+        """
+        name = combatant.creature.name
+        roll = roll_die(10)
+
+        if roll >= 9:
+            self.log.add(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=f"{name} resists the confusion this turn and acts normally.",
+                source_id=combatant.creature_id,
+                details={"confusion_roll": roll},
+            ))
+            return False
+
+        if roll == 1:
+            self.log.add(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=f"{name} stumbles off in a random direction, confused!",
+                source_id=combatant.creature_id,
+                details={"confusion_roll": roll},
+            ))
+            self._confused_random_move(combatant)
+            return True
+
+        if roll >= 7:  # 7-8: lash out at a random creature in reach
+            self.log.add(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=f"{name} lashes out wildly, confused!",
+                source_id=combatant.creature_id,
+                details={"confusion_roll": roll},
+            ))
+            self._confused_attack(combatant)
+            return True
+
+        # 2-6: frozen in confusion, does nothing.
+        self.log.add(CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=f"{name} is lost in confusion and does nothing this turn.",
+            source_id=combatant.creature_id,
+            details={"confusion_roll": roll},
+        ))
+        return True
+
+    def _confused_random_move(self, combatant) -> None:
+        """Move a confused creature its full movement in one random direction."""
+        if self.grid is None or combatant.position is None:
+            return
+        direction = roll_die(6) - 1  # one of the six hex directions
+        guard = 0
+        while guard < 60:
+            guard += 1
+            target = combatant.position.neighbors()[direction]
+            success, event = self.movement.try_move(
+                target, self.grid, combatant.creature.size,
+                anchor_position=combatant.position,
+            )
+            if not success or event is None:
+                break
+            event.message = f"{combatant.creature.name} " + event.message
+            self.log.add(event)
+            combatant.position = target
+
+    def _confused_attack(self, combatant) -> None:
+        """A confused creature makes one melee attack against a random adjacent
+        creature (friend or foe), per the d10 table's 7-8 result."""
+        from arena.grid.footprint import min_distance_between
+
+        if combatant.position is None:
+            return
+        in_reach: list[tuple[str, "Combatant"]] = []
+        for cid, other in self.combatants.items():
+            if cid == combatant.creature_id or other.position is None:
+                continue
+            if not other.creature.is_conscious:
+                continue
+            dist = min_distance_between(
+                combatant.position, combatant.creature.size,
+                other.position, other.creature.size,
+            )
+            if dist <= 1:  # within 5 ft
+                in_reach.append((cid, other))
+
+        if not in_reach:
+            self.log.add(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=f"{combatant.creature.name} flails, but nothing is within reach.",
+                source_id=combatant.creature_id,
+            ))
+            return
+
+        target_id, target_c = in_reach[roll_die(len(in_reach)) - 1]
+        melee = next(
+            (a for a in combatant.creature.actions
+             if a.attack and a.attack.attack_type.startswith("melee")),
+            None,
+        )
+        if melee is None:
+            self.log.add(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=f"{combatant.creature.name} has no melee attack to make.",
+                source_id=combatant.creature_id,
+            ))
+            return
+
+        from arena.combat.actions import resolve_attack
+        result = resolve_attack(
+            combatant.creature, combatant.creature_id,
+            target_c.creature, target_id, melee, self.grid,
+            combatants=self.combatants,
+            attacker_pos=combatant.position, target_pos=target_c.position,
+        )
+        for e in result.events:
+            self.log.add(e)
+        self._cleanup_orphaned_zones()
+        if not target_c.creature.is_conscious:
+            self._check_victory()
 
     def end_turn(self) -> None:
         """End the current creature's turn, then check legendary action opportunities.
@@ -1390,7 +1559,7 @@ class CombatManager:
                 continue
             if combatant.team == caster.team:
                 continue
-            if self.reaction_used.get(cid, False):
+            if self._reaction_blocked(cid):
                 continue
             cs_action = None
             for a in combatant.creature.actions:
@@ -1920,8 +2089,8 @@ class CombatManager:
         if target_c is None:
             return []
 
-        # Reaction already used this round?
-        if self.reaction_used.get(target_id, False):
+        # Reaction already used this round (or barred by Slow)?
+        if self._reaction_blocked(target_id):
             return []
 
         # Target must be alive
@@ -1971,7 +2140,7 @@ class CombatManager:
         target_c = self.combatants.get(target_id)
         if target_c is None:
             return []
-        if self.reaction_used.get(target_id, False):
+        if self._reaction_blocked(target_id):
             return []
         creature = target_c.creature
         if (creature.current_hit_points or 0) <= 0:
@@ -2004,7 +2173,7 @@ class CombatManager:
         tc = self.combatants.get(target_id)
         if tc is None or getattr(tc.creature, "is_player_controlled", False):
             return False  # players choose via the reaction popup, not auto
-        if self.reaction_used.get(target_id, False):
+        if self._reaction_blocked(target_id):
             return False
         creature = tc.creature
         if (creature.current_hit_points or 0) <= 0:
@@ -2766,6 +2935,33 @@ class CombatManager:
                     blocked.add((h.q, h.r))
         return blocked
 
+    def _get_zone_difficult_hexes(self, creature_id: str) -> set[tuple[int, int]]:
+        """(q, r) hexes that are difficult terrain for *creature_id* because of a
+        slowing zone (Spirit Guardians, D-CTRL-1).
+
+        A slowing zone affects a creature when it is not the caster and — for the
+        usual caster-selective aura (affects_enemies_only) — is on the opposing
+        team. The zone is static during this creature's turn (its caster doesn't
+        move), so the manager computes this once per turn alongside blocked_hexes.
+        """
+        result: set[tuple[int, int]] = set()
+        if not self.active_zones or self.grid is None:
+            return result
+        comb = self.combatants.get(creature_id)
+        if comb is None:
+            return result
+        from arena.combat.zones import get_zone_hexes
+        for zone in self.active_zones:
+            if not zone.slows_movement:
+                continue
+            if creature_id == zone.caster_id:
+                continue
+            if zone.affects_enemies_only and comb.team == zone.team:
+                continue
+            for h in get_zone_hexes(zone, self.combatants, self.grid):
+                result.add((h.q, h.r))
+        return result
+
     def _get_wall_los_blocked_hexes(self) -> set[tuple[int, int]]:
         """Compute the set of (q, r) tuples that block line of sight.
 
@@ -3423,6 +3619,14 @@ class CombatManager:
                                if save.conditions_on_fail else None),
             obscures_vision=action.zone_obscures,
             spell_level=action.spell_level or 0,
+            # D-CTRL-1: Spike Growth deals its dice per 5 ft travelled, no save.
+            movement_hazard_dice=(zone_dice if action.movement_hazard else None),
+            movement_hazard_type=(
+                save.damage_on_fail[0].damage_type.value
+                if save.damage_on_fail else "piercing"
+            ),
+            # D-CTRL-1: Spirit Guardians makes its area difficult terrain.
+            slows_movement=action.zone_slows,
         )
         # Remove any existing zone from this caster first
         self.active_zones = [z for z in self.active_zones if z.caster_id != combatant.creature_id]
@@ -4362,14 +4566,24 @@ class CombatManager:
 
             # Check zone entry damage (e.g., walking into Spirit Guardians)
             if self.active_zones:
-                from arena.combat.zones import process_zone_entry
+                from arena.combat.zones import (
+                    process_zone_entry, process_zone_movement_step,
+                )
                 zone_entry_events = process_zone_entry(
                     self.active_zones, combatant.creature_id,
                     self.combatants, self.grid,
                 )
                 for ze in zone_entry_events:
                     self.log.add(ze)
-                # Zone entry damage may break concentration — clean up
+                # Movement hazards (Spike Growth): 2d4 per 5 ft, no save, every
+                # step that lands in the spikes — including this one.
+                hazard_events = process_zone_movement_step(
+                    self.active_zones, combatant.creature_id,
+                    self.combatants, self.grid,
+                )
+                for he in hazard_events:
+                    self.log.add(he)
+                # Zone/hazard damage may break concentration — clean up
                 self._cleanup_orphaned_zones()
                 # If knocked out by zone damage, stop moving
                 if not combatant.creature.is_conscious:

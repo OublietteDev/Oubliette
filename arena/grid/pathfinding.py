@@ -176,6 +176,7 @@ def get_reachable_hexes(
     dead_creature_ids: set[str] | None = None,
     blocked_hexes: set[tuple[int, int]] | None = None,
     cost_multiplier: int = 1,
+    difficult_hexes: set[tuple[int, int]] | None = None,
 ) -> dict[tuple[int, int], int]:
     """Get all hexes reachable within a movement budget.
 
@@ -191,6 +192,9 @@ def get_reachable_hexes(
             (e.g., wall spell hexes).
         cost_multiplier: Per-hex cost multiplier (2 while prone-crawling, so
             every foot of movement costs double per 5e RAW). Defaults to 1.
+        difficult_hexes: Set of (q, r) tuples that are difficult terrain on
+            top of the grid's own terrain (e.g. inside a Spirit Guardians
+            aura). Each such hex costs at least 10 ft to enter.
 
     Returns:
         Dict mapping (q, r) to movement cost to reach that hex.
@@ -200,6 +204,7 @@ def get_reachable_hexes(
     single_hex = get_footprint_hex_count(creature_size) == 1
     dead_ids = dead_creature_ids or set()
     _blocked = blocked_hexes or set()
+    _difficult = difficult_hexes or set()
 
     reachable: dict[tuple[int, int], int] = {(start.q, start.r): 0}
     frontier: list[ReachNode] = [ReachNode(0, start)]
@@ -241,6 +246,10 @@ def get_reachable_hexes(
                 move_cost = _get_footprint_movement_cost(
                     neighbor, creature_size, grid
                 )
+
+            # Zone difficult terrain (Spirit Guardians): at least 10 ft to enter.
+            if (neighbor.q, neighbor.r) in _difficult and move_cost < 10:
+                move_cost = 10
 
             new_cost = current_cost + move_cost * cost_multiplier
 

@@ -177,6 +177,16 @@ class Action(BaseModel):
     # Terrain modification (terrain-altering spells: Wall of Stone, Spike Growth, Mold Earth)
     terrain_modification: str | None = None  # TerrainType value: "wall", "difficult", "normal", etc.
 
+    # Movement hazard (D-CTRL-1: Spike Growth). The zone deals its damage per
+    # 5 ft a creature TRAVELS through it (voluntary or forced) with NO save, rather
+    # than a one-time save on entry/start-of-turn. Damage dice/type are taken from
+    # the action's saving_throw.damage_on_fail (e.g. Spike Growth's 2d4 piercing).
+    movement_hazard: bool = False
+
+    # Zone slow (D-CTRL-1: Spirit Guardians). When True, the created zone's area
+    # is difficult terrain for the creatures it affects (enemies of the caster).
+    zone_slows: bool = False
+
     # Summoning (path to creature JSON relative to data dir)
     summon_creature: str | None = None  # e.g., "monsters/wolf.json"
     is_wild_shape: bool = False  # If True, 0 HP removes summon and restores original
