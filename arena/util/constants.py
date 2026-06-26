@@ -196,6 +196,7 @@ CONDITION_DISPLAY: dict[str, tuple[str, str]] = {
     "banished": ("BA", "condition_debuff"),
     "dominated": ("DM", "condition_debuff"),
     "compelled": ("CP", "condition_debuff"),
+    "reckless": ("RK", "condition_neutral"),  # double-edged: adv on its melee, but attackers gain adv vs it
 }
 
 PROFICIENCY_BY_LEVEL = {

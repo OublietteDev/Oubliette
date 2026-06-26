@@ -30,6 +30,10 @@ class Condition(str, Enum):
     HIDDEN = "hidden"  # Creature is hidden via stealth
     DOMINATED = "dominated"  # controlled by the caster (Dominate Person/Beast/Monster)
     COMPELLED = "compelled"  # drawn toward the caster + no reactions (Compulsion)
+    RECKLESS = "reckless"  # D-MON: attacked recklessly this turn — advantage on
+    # its own melee attacks; attack rolls against it have advantage until the
+    # start of its next turn (Reckless Attack). Lifecycle owned by the manager's
+    # start-of-turn hook (re-applied each turn for AI monsters that have it).
     BANISHED = "banished"  # Removed from the battlefield (Banishment, Maze, Blink);
     # the manager stashes the creature's position and takes it off-grid while
     # this is active, returning it when the condition ends (P-BANISH)

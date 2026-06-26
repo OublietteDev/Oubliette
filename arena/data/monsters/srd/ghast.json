@@ -89,7 +89,11 @@
   "special_abilities": [
     {
       "name": "Stench",
-      "description": "Any creature that starts its turn within 5 ft. of the ghast must succeed on a DC 10 Constitution saving throw or be poisoned until the start of its next turn. On a successful saving throw, the creature is immune to the ghast's Stench for 24 hours."
+      "description": "Any creature that starts its turn within 5 ft. of the ghast must succeed on a DC 10 Constitution saving throw or be poisoned until the start of its next turn. On a successful saving throw, the creature is immune to the ghast's Stench for 24 hours.",
+      "aura_range": 5,
+      "aura_save_condition": "poisoned",
+      "aura_save_ability": "constitution",
+      "aura_save_dc": 10
     },
     {
       "name": "Turn Defiance",

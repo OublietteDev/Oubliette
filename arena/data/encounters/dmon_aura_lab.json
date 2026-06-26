@@ -1,0 +1,26 @@
+{
+  "name": "D-MON Aura Lab — Stench, Heated Body, Reckless & Blood Frenzy",
+  "description": "Bench for the final D-MON traits. Walk Valeria into the Salamander and swing: each melee hit comes back with a [Heated Body] fire packet on her, no save. Let the Ghast stand next to a hero — at the START of that hero's turn watch the [Stench] DC 10 CON save; a failure poisons them until their next turn, a success makes them immune to that ghast for the rest of the fight. The Minotaur announces [Reckless] at the start of its turn: its Gore rolls come up with advantage, but every attack the party makes back at it also has advantage (watch the RK badge). Once any hero drops below max HP, the Sahuagin's bites against them roll with [Blood Frenzy] advantage.",
+  "grid_width": 20,
+  "grid_height": 15,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/valeria.json", "creature_data": null, "team": "player", "starting_position": [4, 7], "count": 1, "name_override": null},
+    {"creature_id": "characters/elara.json", "creature_data": null, "team": "player", "starting_position": [3, 10], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/salamander.json", "creature_data": null, "team": "enemy", "starting_position": [6, 7], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/ghast.json", "creature_data": null, "team": "enemy", "starting_position": [6, 10], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/minotaur.json", "creature_data": null, "team": "enemy", "starting_position": [16, 6], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/sahuagin.json", "creature_data": null, "team": "enemy", "starting_position": [15, 10], "count": 1, "name_override": null}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

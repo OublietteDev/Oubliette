@@ -80,7 +80,8 @@
     },
     {
       "name": "Blood Frenzy",
-      "description": "The sahuagin has advantage on melee attack rolls against any creature that doesn't have all its hit points."
+      "description": "The sahuagin has advantage on melee attack rolls against any creature that doesn't have all its hit points.",
+      "attack_advantage_vs_damaged": true
     },
     {
       "name": "Limited Amphibiousness",

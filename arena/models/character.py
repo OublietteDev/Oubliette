@@ -164,6 +164,33 @@ class Feature(BaseModel):
     attack_advantage_when_ally_adjacent: bool = False  # Pack Tactics
     attacks_are_magical: bool = False  # Magic Weapons: weapon attacks count as magical (beat nonmagical resistance)
 
+    # Blood Frenzy (D-MON): advantage on MELEE attack rolls against any creature
+    # that doesn't have all its hit points (Sahuagin, Hunter Shark, quippers).
+    attack_advantage_vs_damaged: bool = False
+
+    # Reckless Attack (D-MON): at the start of its turn the creature can gain
+    # advantage on its melee weapon attacks, but attack rolls against it have
+    # advantage until the start of its next turn. Auto-activated for AI monsters
+    # (Minotaur, Berserker) via the RECKLESS pseudo-condition.
+    reckless_attacker: bool = False
+
+    # Stench (D-MON): a hostile start-of-turn aura. A creature that starts its
+    # turn within ``aura_range`` ft must make a save (``aura_save_ability`` vs
+    # ``aura_save_dc``) or gain ``aura_save_condition`` until the start of its
+    # next turn. On a success it is immune to THIS creature's aura for the rest
+    # of the fight (RAW: 24h). ``aura_save_condition`` being set is what marks a
+    # feature as a Stench-style aura (distinct from the beneficial Paladin auras
+    # above, which key off aura_save_bonus_ability / aura_condition_immunity).
+    aura_save_condition: str | None = None  # e.g. "poisoned"
+    aura_save_ability: str = "constitution"
+    aura_save_dc: int = 10
+
+    # Heated Body (D-MON): a creature that hits this creature with a melee attack
+    # (or touches it) takes ``retaliate_damage_dice`` of ``retaliate_damage_type``
+    # damage — no save (Azer, Salamander, Remorhaz).
+    retaliate_damage_dice: str | None = None  # e.g. "1d10"
+    retaliate_damage_type: str = "fire"
+
     # On-hit rider (Divine Smite, Sneak Attack, Stunning Strike, etc.)
     on_hit_rider: OnHitRider | None = None
 

@@ -97,7 +97,11 @@
     },
     {
       "name": "Stench",
-      "description": "Any creature that starts its turn within 10 feet of the hezrou must succeed on a DC 14 Constitution saving throw or be poisoned until the start of its next turn. On a successful saving throw, the creature is immune to the hezrou's stench for 24 hours."
+      "description": "Any creature that starts its turn within 10 feet of the hezrou must succeed on a DC 14 Constitution saving throw or be poisoned until the start of its next turn. On a successful saving throw, the creature is immune to the hezrou's stench for 24 hours.",
+      "aura_range": 10,
+      "aura_save_condition": "poisoned",
+      "aura_save_ability": "constitution",
+      "aura_save_dc": 14
     }
   ],
   "challenge_rating": 8.0,

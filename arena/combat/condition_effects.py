@@ -15,6 +15,23 @@ def _has(creature: Creature, condition: Condition) -> bool:
     return any(ac.condition == condition for ac in creature.active_conditions)
 
 
+def _has_blood_frenzy(creature: Creature) -> bool:
+    """Whether the creature has the Blood Frenzy trait (D-MON)."""
+    feats = list(getattr(creature, "special_abilities", []) or [])
+    feats += list(getattr(creature, "features", []) or [])
+    return any(getattr(f, "attack_advantage_vs_damaged", False) for f in feats)
+
+
+def _is_damaged(creature: Creature) -> bool:
+    """Whether the creature is below its hit-point maximum (Blood Frenzy)."""
+    cur = creature.current_hit_points
+    mx = creature.max_hit_points
+    # current_hit_points is None when the creature is at full (un-instantiated).
+    if cur is None or mx is None:
+        return False
+    return cur < mx
+
+
 # ── Attack Advantage/Disadvantage ────────────────────────────────────
 
 def get_attack_advantage(
@@ -92,6 +109,22 @@ def get_attack_advantage(
     # Target cannot see the attacker (concealment/obscurement): unseen
     # attacker strikes with advantage.
     if not target_sees_attacker:
+        has_adv = True
+
+    # Reckless Attack (D-MON): the attacker chose to attack recklessly this
+    # turn — advantage on its own melee weapon attacks.
+    if _has(attacker, Condition.RECKLESS) and is_melee:
+        has_adv = True
+
+    # Reckless Attack (D-MON), the downside: attack rolls against a creature
+    # that attacked recklessly have advantage until the start of its next turn
+    # (any attack — melee or ranged).
+    if _has(target, Condition.RECKLESS):
+        has_adv = True
+
+    # Blood Frenzy (D-MON): advantage on melee attacks against a target that
+    # doesn't have all its hit points.
+    if is_melee and _has_blood_frenzy(attacker) and _is_damaged(target):
         has_adv = True
 
     # ── Sources of DISADVANTAGE ──

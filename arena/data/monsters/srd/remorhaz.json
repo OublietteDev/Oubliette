@@ -68,7 +68,9 @@
   "special_abilities": [
     {
       "name": "Heated Body",
-      "description": "A creature that touches the remorhaz or hits it with a melee attack while within 5 feet of it takes 10 (3d6) fire damage."
+      "description": "A creature that touches the remorhaz or hits it with a melee attack while within 5 feet of it takes 10 (3d6) fire damage.",
+      "retaliate_damage_dice": "3d6",
+      "retaliate_damage_type": "fire"
     }
   ],
   "challenge_rating": 11.0,

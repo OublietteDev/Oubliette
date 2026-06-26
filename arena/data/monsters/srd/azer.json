@@ -64,7 +64,9 @@
   "special_abilities": [
     {
       "name": "Heated Body",
-      "description": "A creature that touches the azer or hits it with a melee attack while within 5 ft. of it takes 5 (1d10) fire damage."
+      "description": "A creature that touches the azer or hits it with a melee attack while within 5 ft. of it takes 5 (1d10) fire damage.",
+      "retaliate_damage_dice": "1d10",
+      "retaliate_damage_type": "fire"
     },
     {
       "name": "Heated Weapons",

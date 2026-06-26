@@ -20,7 +20,7 @@ from arena.combat.chain_effects import has_chain_effect, get_chain_targets
 from arena.models.actions import DamageRoll
 from arena.combat.conditions import (
     process_start_of_turn, process_end_of_turn, has_condition,
-    remove_condition,
+    remove_condition, apply_condition,
 )
 from arena.models.conditions import Condition
 from arena.combat.buff_effects import process_buff_start_of_turn, process_buff_end_of_turn
@@ -584,6 +584,18 @@ class CombatManager:
         from arena.combat.compulsion import process_compulsion_start_of_turn
         for ce in process_compulsion_start_of_turn(self, combatant):
             self.log.add(ce)
+
+        # Stench (D-MON): a creature starting its turn inside a Stench aura saves
+        # or is poisoned until its next turn. Runs after banishment reconcile so
+        # positions are settled, and after the condition tick (line ~553) so last
+        # turn's stench-poison has already expired before this fresh save.
+        for se in self._process_stench_start_of_turn(combatant):
+            self.log.add(se)
+
+        # Reckless Attack (D-MON): AI monsters with the trait re-enter the
+        # reckless stance at the start of each of their turns.
+        for rk in self._process_reckless_start_of_turn(combatant):
+            self.log.add(rk)
 
         # Tick recurring action durations and remove expired ones
         self._tick_recurring_actions(combatant.creature_id)
@@ -1990,6 +2002,141 @@ class CombatManager:
                 return True
         return False
 
+    # ------------------------------------------------------------------
+    # Reckless Attack / Stench / Heated Body (D-MON aura & retaliation traits)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _feature_with(creature, attr: str):
+        """First special-ability/feature on the creature for which ``attr`` is
+        set (truthy). Monsters carry traits on special_abilities; PCs on
+        features — check both."""
+        feats = (getattr(creature, "special_abilities", []) or []) + (
+            getattr(creature, "features", []) or []
+        )
+        for f in feats:
+            if getattr(f, attr, None):
+                return f
+        return None
+
+    def _process_reckless_start_of_turn(self, combatant) -> list[CombatEvent]:
+        """AI monsters with Reckless Attack (D-MON) re-enter the reckless stance
+        at the start of each of their turns: advantage on their own melee
+        attacks, and attacks against them gain advantage until their next turn.
+
+        The RECKLESS pseudo-condition is re-applied each turn (the previous
+        turn's instance is cleared first by the round-duration tick). Fires only
+        for a conscious, action-capable AI monster that actually has a melee
+        attack to benefit from — a purely-ranged or incapacitated creature gains
+        nothing from going reckless and shouldn't hand attackers free advantage.
+        """
+        from arena.combat.condition_effects import can_take_actions
+
+        creature = combatant.creature
+        if creature is None or getattr(creature, "is_player_controlled", False):
+            return []
+        if not creature.is_conscious or not can_take_actions(creature):
+            return []
+        if self._feature_with(creature, "reckless_attacker") is None:
+            return []
+        has_melee = any(
+            getattr(a, "attack", None) is not None
+            and str(getattr(a.attack, "attack_type", "")).startswith("melee")
+            for a in (getattr(creature, "actions", []) or [])
+        )
+        if not has_melee:
+            return []
+        ev = apply_condition(
+            creature, combatant.creature_id, Condition.RECKLESS,
+            source=creature.name, duration_type="rounds", duration_rounds=1,
+        )
+        return [ev] if ev is not None else []
+
+    def _process_stench_start_of_turn(self, combatant) -> list[CombatEvent]:
+        """A creature starting its turn within a Stench aura (D-MON) must save or
+        be poisoned until the start of its next turn; on a success it's immune to
+        that source's aura for the rest of the fight (RAW: 24h). Indiscriminate —
+        the aura doesn't care about teams (matches Death Burst). Immunity is
+        tracked per (victim, source) pair on the manager for this fight only."""
+        victim = combatant.creature
+        vid = combatant.creature_id
+        if victim is None or not victim.is_conscious or combatant.position is None:
+            return []
+        from arena.grid.footprint import min_distance_between
+        from arena.combat.actions import resolve_saving_throw
+
+        if not hasattr(self, "_stench_immune"):
+            self._stench_immune: set[tuple[str, str]] = set()
+
+        events: list[CombatEvent] = []
+        for sid, s in self.combatants.items():
+            if sid == vid:
+                continue
+            src = s.creature
+            if src is None or not src.is_conscious or s.position is None:
+                continue
+            feat = self._feature_with(src, "aura_save_condition")
+            if feat is None or feat.aura_range <= 0:
+                continue
+            if (vid, sid) in self._stench_immune:
+                continue
+            range_hexes = max(1, feat.aura_range // 5)
+            if min_distance_between(
+                s.position, src.size, combatant.position, victim.size,
+            ) > range_hexes:
+                continue
+            success, save_ev = resolve_saving_throw(
+                victim, vid, feat.aura_save_ability, feat.aura_save_dc,
+            )
+            save_ev.message = f"{src.name}'s {feat.name}: {save_ev.message}"
+            events.append(save_ev)
+            if success:
+                # RAW: immune to THIS creature's stench for 24h — i.e. the fight.
+                self._stench_immune.add((vid, sid))
+            else:
+                cond_ev = apply_condition(
+                    victim, vid, Condition(feat.aura_save_condition),
+                    source=src.name, duration_type="rounds", duration_rounds=1,
+                )
+                if cond_ev is not None:
+                    events.append(cond_ev)
+        return events
+
+    def _apply_heated_body(self, hit_result: AttackHitResult) -> None:
+        """A creature that hits a Heated Body monster (D-MON) with a melee attack
+        takes fire damage back — no save. Fires per hit, so each attack of a
+        multiattack retaliates; a parried/missed swing doesn't trigger it."""
+        if not hit_result.hit or hit_result.attack is None:
+            return
+        if not str(hit_result.attack.attack_type).startswith("melee"):
+            return
+        target_c = self.combatants.get(hit_result.target_id)   # the monster hit
+        attacker_c = self.combatants.get(hit_result.attacker_id)
+        if target_c is None or attacker_c is None:
+            return
+        monster = target_c.creature
+        attacker = attacker_c.creature
+        if monster is None or attacker is None or not attacker.is_conscious:
+            return
+        feat = self._feature_with(monster, "retaliate_damage_dice")
+        if feat is None or not feat.retaliate_damage_dice:
+            return
+        from arena.util.dice import roll_expression
+        from arena.combat.damage import apply_damage
+
+        dmg, _ = roll_expression(feat.retaliate_damage_dice)
+        if dmg <= 0:
+            return
+        dmg_ev, extra = apply_damage(
+            attacker, dmg, feat.retaliate_damage_type, hit_result.attacker_id,
+        )
+        dmg_ev.target_id = hit_result.attacker_id
+        dmg_ev.source_id = hit_result.target_id
+        dmg_ev.message = f"{monster.name}'s {feat.name}: {dmg_ev.message}"
+        self.log.add(dmg_ev)
+        for e in extra:
+            self.log.add(e)
+
     def _hit_reaction_options(
         self, target_id: str, attack_type: str,
     ) -> list[tuple]:
@@ -2362,6 +2509,11 @@ class CombatManager:
         new_events = result.events[len(hit_result.events):]
         for event in new_events:
             self.log.add(event)
+
+        # Heated Body (D-MON): if this was a melee hit on a creature with the
+        # trait, the attacker takes fire damage back (no save). A parried swing
+        # set hit_result.hit = False above, so it won't retaliate.
+        self._apply_heated_body(hit_result)
 
         # Apply rider conditions (e.g., Stunning Strike's stunned)
         if rider_results:
