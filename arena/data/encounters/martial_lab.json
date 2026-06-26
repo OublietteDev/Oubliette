@@ -1,0 +1,27 @@
+{
+  "name": "Martial Lab — smites, sneak attack, action surge, multiattack, reactions",
+  "description": "Ship-readiness bench for the martial/weapon systems (C6). Valeria (Paladin) tests Divine Smite + Lay on Hands + Extra Attack; Shade (Rogue) tests Sneak Attack + Cunning Action + Uncanny Dodge; Thorin (Fighter) tests Action Surge + Second Wind + Extra Attack. The Ogre's multiattack and opportunity attacks round it out. Wade the melee in, then watch the on-hit math.",
+  "grid_width": 20,
+  "grid_height": 15,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/valeria.json", "creature_data": null, "team": "player", "starting_position": [2, 7], "count": 1, "name_override": null},
+    {"creature_id": "characters/shade.json", "creature_data": null, "team": "player", "starting_position": [2, 10], "count": 1, "name_override": null},
+    {"creature_id": "characters/thorin.json", "creature_data": null, "team": "player", "starting_position": [3, 5], "count": 1, "name_override": null},
+    {"creature_id": "monsters/ogre.json", "creature_data": null, "team": "enemy", "starting_position": [15, 7], "count": 1, "name_override": null},
+    {"creature_id": "monsters/hobgoblin.json", "creature_data": null, "team": "enemy", "starting_position": [16, 4], "count": 1, "name_override": null},
+    {"creature_id": "monsters/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [16, 9], "count": 1, "name_override": null},
+    {"creature_id": "monsters/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [17, 6], "count": 1, "name_override": "Goblin 2"}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

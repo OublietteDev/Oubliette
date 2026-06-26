@@ -1,0 +1,25 @@
+{
+  "name": "Downed Lab — death saves, healing pickup, stabilize, auto-crit",
+  "description": "Ship-readiness bench for the dying/healing rules (C6). Lyric (a squishy level-1 bard, ~9 HP) is meant to drop fast to the Ogre — then watch the death-save rolls, pick them back up with Willow's Healing Word or Brother Aldric's Cure Wounds, and confirm a hit on a downed creature auto-crits. Stabilize (a successful third save / a heal) should end the dying state.",
+  "grid_width": 18,
+  "grid_height": 14,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/lyric.json", "creature_data": null, "team": "player", "starting_position": [6, 7], "count": 1, "name_override": null},
+    {"creature_id": "characters/willow.json", "creature_data": null, "team": "player", "starting_position": [2, 6], "count": 1, "name_override": null},
+    {"creature_id": "characters/brother_aldric.json", "creature_data": null, "team": "player", "starting_position": [2, 9], "count": 1, "name_override": null},
+    {"creature_id": "monsters/ogre.json", "creature_data": null, "team": "enemy", "starting_position": [12, 7], "count": 1, "name_override": null},
+    {"creature_id": "monsters/goblin.json", "creature_data": null, "team": "enemy", "starting_position": [13, 4], "count": 1, "name_override": null}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

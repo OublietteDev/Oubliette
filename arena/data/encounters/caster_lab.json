@@ -1,0 +1,28 @@
+{
+  "name": "Caster Lab — concentration, control, AoE, Sculpt Spells, Turn Undead, healing",
+  "description": "Ship-readiness bench for the spell systems (C6). Elara (Evoker) tests Magic Missile dart-aiming, Hold Person, Web (a restraining zone), and Fireball with Sculpt Spells — cast it with Brother Aldric standing in the blast and he takes 0 while the undead burn. Aldric (Cleric) tests Spirit Guardians' aura, Cure Wounds, and Channel Divinity: Turn Undead — the skeletons/zombies start within 30 ft so Turn Undead reaches them turn one. A lone Orc gives a living target for Hold Person. Watch concentration drop when a caster takes a hit.",
+  "grid_width": 20,
+  "grid_height": 16,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/elara.json", "creature_data": null, "team": "player", "starting_position": [7, 7], "count": 1, "name_override": null},
+    {"creature_id": "characters/brother_aldric.json", "creature_data": null, "team": "player", "starting_position": [7, 10], "count": 1, "name_override": null},
+    {"creature_id": "monsters/skeleton.json", "creature_data": null, "team": "enemy", "starting_position": [12, 6], "count": 1, "name_override": null},
+    {"creature_id": "monsters/skeleton.json", "creature_data": null, "team": "enemy", "starting_position": [13, 8], "count": 1, "name_override": "Skeleton 2"},
+    {"creature_id": "monsters/skeleton.json", "creature_data": null, "team": "enemy", "starting_position": [12, 10], "count": 1, "name_override": "Skeleton 3"},
+    {"creature_id": "monsters/zombie.json", "creature_data": null, "team": "enemy", "starting_position": [13, 7], "count": 1, "name_override": null},
+    {"creature_id": "monsters/zombie.json", "creature_data": null, "team": "enemy", "starting_position": [13, 9], "count": 1, "name_override": "Zombie 2"},
+    {"creature_id": "monsters/orc.json", "creature_data": null, "team": "enemy", "starting_position": [14, 8], "count": 1, "name_override": null}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}
