@@ -810,23 +810,32 @@ class CombatManager:
         return True
 
     def _confused_random_move(self, combatant) -> None:
-        """Move a confused creature its full movement in one random direction."""
+        """Move a confused creature its full movement in one random direction.
+
+        Routes each step through ``try_move`` so the wander provokes opportunity
+        attacks and triggers zone/hazard entry, just like ordinary movement. OAs
+        are auto-resolved (prompts disabled) since this runs inside the creature's
+        own start-of-turn auto-resolution — a player reactor doesn't get an
+        Attack/Skip popup mid-stumble."""
         if self.grid is None or combatant.position is None:
             return
         direction = roll_die(6) - 1  # one of the six hex directions
-        guard = 0
-        while guard < 60:
-            guard += 1
-            target = combatant.position.neighbors()[direction]
-            success, event = self.movement.try_move(
-                target, self.grid, combatant.creature.size,
-                anchor_position=combatant.position,
-            )
-            if not success or event is None:
-                break
-            event.message = f"{combatant.creature.name} " + event.message
-            self.log.add(event)
-            combatant.position = target
+        saved_prompts = self._oa_prompts_enabled
+        self._oa_prompts_enabled = False
+        try:
+            guard = 0
+            while guard < 60:
+                guard += 1
+                if not combatant.creature.is_conscious:
+                    break
+                target = combatant.position.neighbors()[direction]
+                if not (self.grid.is_valid(target) and self.grid.is_passable(target)):
+                    break
+                before = combatant.position
+                if not self.try_move(target) or combatant.position == before:
+                    break
+        finally:
+            self._oa_prompts_enabled = saved_prompts
 
     def _confused_attack(self, combatant) -> None:
         """A confused creature makes one melee attack against a random adjacent
@@ -2787,10 +2796,15 @@ class CombatManager:
         Zone spells are concentration AoE spells with saving throw damage.
         Per 5e, these don't deal damage on cast — only when creatures start
         their turn in the zone or enter it.
+
+        A spell flagged ``aoe_condition_once`` (Confusion, Slow) is excluded: it
+        applies its effect once at cast and that effect rides the creature, so it
+        must resolve as a one-time burst rather than a lingering cloud.
         """
         return (
             action.requires_concentration
             and action.target_type.value.startswith("area_")
+            and not action.aoe_condition_once
             and action.saving_throw is not None
             and bool(action.saving_throw.damage_on_fail
                      or action.saving_throw.conditions_on_fail)

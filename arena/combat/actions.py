@@ -101,6 +101,34 @@ def _compute_condition_save_dc(user: Creature, action: Action) -> int | None:
     return None
 
 
+def _resolve_save_dc(user: Creature, action: Action) -> int:
+    """The DC for an action's saving throw.
+
+    Priority: an explicit ``saving_throw.dc`` (e.g. injected by the Oubliette
+    bridge or a monster stat block) wins. Otherwise compute it: a monster
+    ability with ``dc_ability`` uses 8 + prof + that ability's mod; a spell
+    caster uses 8 + prof + spellcasting mod. Falls back to 10 only when nothing
+    else is determinable.
+
+    (Historically this was just ``save.dc or 10``, so every Arena-native spell —
+    81/87 SRD spell JSONs carry ``dc: null`` — saved against DC 10 regardless of
+    the caster. This is the fix.)
+    """
+    save = action.saving_throw
+    if save is not None and save.dc is not None:
+        return save.dc
+    if save is not None and save.dc_ability:
+        return 8 + user.proficiency_bonus + get_effective_ability_modifier(
+            user, save.dc_ability,
+        )
+    ability = getattr(user, "spellcasting_ability", None)
+    if ability:
+        return 8 + user.proficiency_bonus + get_effective_ability_modifier(
+            user, ability,
+        )
+    return 10
+
+
 def _scale_cantrip_damage_rolls(
     damage_rolls: list[DamageRoll], caster_level: int,
 ) -> list[DamageRoll]:
@@ -1615,7 +1643,7 @@ def resolve_effect(
     save_success = None  # Track for forced movement integration
     if action.saving_throw:
         save = action.saving_throw
-        dc = save.dc or 10
+        dc = _resolve_save_dc(user, action)
         # Cover bonus to a DEX save (D-ACT-3): measured from the effect's origin
         # (the blast center for a placed AoE, else the caster) to the target.
         cover_bonus = 0
@@ -1852,11 +1880,12 @@ def resolve_effect(
                 charges=action.buff_charges,
                 spell_level=effect_spell_level,
             )
-            # For save-based debuffs with save-to-end (Bane, Slow)
+            # For save-based debuffs with save-to-end (Bane, Slow): re-save at the
+            # caster's actual spell DC, not a hardcoded 10.
             if action.saving_throw and not save_success:
                 buff.duration_type = "end_of_turn"
                 buff.save_to_end = action.saving_throw.ability
-                buff.save_dc = action.saving_throw.dc or 10
+                buff.save_dc = _resolve_save_dc(user, action)
             buff_event = apply_buff(target, target_id, buff)
             events.append(buff_event)
             applied_buffs.append((target_id, action.name))

@@ -26,10 +26,10 @@ from arena.combat.condition_effects import is_slowed
 from arena.combat.conditions import has_condition
 from arena.combat.events import CombatEventType
 from arena.models.actions import (
-    Action, ActionType, Attack, DamageRoll, DamageType,
+    Action, ActionType, Attack, DamageRoll, DamageType, SavingThrowEffect,
 )
 from arena.models.character import Creature
-from arena.models.conditions import ActiveBuff, AppliedCondition, Condition
+from arena.models.conditions import AppliedCondition, Condition
 from arena.models.encounter import CombatantEntry, Encounter
 
 
@@ -151,8 +151,11 @@ class TestChainLightning:
 
 
 def _slow(creature: Creature) -> None:
-    """Mark a creature as under the Slow spell (the debuff the spell applies)."""
-    creature.active_buffs.append(ActiveBuff(name="Slow", source_id="caster"))
+    """Mark a creature as under the Slow spell (the SLOWED condition the spell
+    applies — the source of the action-economy limit and the visible badge)."""
+    creature.active_conditions.append(
+        AppliedCondition(condition=Condition.SLOWED, source="Slow")
+    )
 
 
 class TestSlow:
@@ -202,6 +205,23 @@ class TestSlow:
         # No Slow: spending the action leaves the bonus action available.
         cm.turn_resources.has_used_action = True
         assert cm.can_use_action_type(ActionType.BONUS_ACTION)
+
+    def test_cast_applies_visible_condition_and_no_zone(self):
+        """Slow resolves as a one-time burst (not a lingering cloud): the SLOWED
+        condition (the visible badge) lands on a failed save and no zone is made."""
+        from arena.grid.coordinates import HexCoord
+
+        mage = _creature("Mage")
+        mage.actions = [_load_spell("slow")]
+        cm, pid = _setup_combat(mage, [("Gob", _creature("Gob"), (8, 4))])
+        gid = _id_by_name(cm, "Gob")
+        cm.select_action(cm.combatants[pid].creature.actions[0])
+        with patch("arena.combat.actions.roll_die", return_value=1):  # target fails
+            cm.execute_effect_at_hex(cm.combatants[gid].position)
+        gc = cm.combatants[gid].creature
+        assert cm.active_zones == []  # NOT a persistent zone
+        assert is_slowed(gc)
+        assert has_condition(gc, Condition.SLOWED)  # the badge-bearing condition
 
 
 # ==================================================================
@@ -421,6 +441,46 @@ class TestSpiritGuardians:
 
 
 # ==================================================================
+# Spell save DC — caster's DC, not a hardcoded 10
+# ==================================================================
+
+
+class TestSaveDC:
+    def test_null_dc_uses_caster_spell_dc(self):
+        """A spell whose JSON leaves dc:null saves against the caster's spell DC
+        (8 + prof + spellcasting mod), not the old hardcoded 10."""
+        from arena.combat.actions import _resolve_save_dc
+        from arena.models.abilities import AbilityScores
+        from arena.models.character import PlayerCharacter
+
+        caster = PlayerCharacter(
+            name="Archmage", max_hit_points=60, proficiency_bonus=4,
+            character_class="Wizard", spellcasting_ability="intelligence",
+            ability_scores=AbilityScores(intelligence=20),  # +5
+        )
+        slow = _load_spell("slow")
+        assert slow.saving_throw.dc is None
+        assert _resolve_save_dc(caster, slow) == 8 + 4 + 5  # 17
+
+    def test_explicit_dc_wins(self):
+        from arena.combat.actions import _resolve_save_dc
+
+        caster = Creature(name="Goblin Boss", max_hit_points=20)
+        action = Action(
+            name="Trick", description="x",
+            saving_throw=SavingThrowEffect(ability="wisdom", dc=13),
+        )
+        assert _resolve_save_dc(caster, action) == 13
+
+    def test_no_spellcaster_falls_back_to_10(self):
+        from arena.combat.actions import _resolve_save_dc
+
+        brute = Creature(name="Brute", max_hit_points=30)
+        slow = _load_spell("slow")
+        assert _resolve_save_dc(brute, slow) == 10
+
+
+# ==================================================================
 # Confusion — d10 random-behavior table
 # ==================================================================
 
@@ -453,6 +513,24 @@ class TestConfusion:
                 action=spell, grid=None, combatants={},
             )
         assert has_condition(victim, Condition.CONFUSED)
+
+    def test_cast_confuses_at_cast_not_as_a_cloud(self):
+        """Confusion resolves once at cast (no lingering zone): a creature in the
+        area is confused immediately, with a real end-of-turn re-save."""
+        mage = _creature("Mage")
+        mage.actions = [_load_spell("confusion")]
+        cm, pid = _setup_combat(mage, [("Gob", _creature("Gob"), (8, 4))])
+        gid = _id_by_name(cm, "Gob")
+        cm.select_action(cm.combatants[pid].creature.actions[0])
+        with patch("arena.combat.actions.roll_die", return_value=1):  # target fails
+            cm.execute_effect_at_hex(cm.combatants[gid].position)
+        gc = cm.combatants[gid].creature
+        assert cm.active_zones == []  # NOT a persistent cloud
+        assert has_condition(gc, Condition.CONFUSED)
+        # The applied condition carries an end-of-turn Wisdom re-save (not None).
+        ac = next(c for c in gc.active_conditions if c.condition == Condition.CONFUSED)
+        assert ac.save_to_end == "wisdom"
+        assert ac.save_dc is not None
 
     def test_confused_creature_cannot_react(self):
         cm, pid = _setup_combat(_creature("Hero"), [("Gob", _creature("Gob"), (6, 4))])
@@ -487,6 +565,26 @@ class TestConfusion:
         with patch("arena.combat.manager.roll_die", side_effect=[1, 1]):
             assert cm._process_confusion_turn(combatant) is True
         assert combatant.position != pos_before  # wandered off
+
+    def test_wander_provokes_opportunity_attack(self):
+        """A confused creature's random move provokes OAs (routes through try_move)."""
+        mover = _creature("Confused", hp=60)
+        foe = _creature("Guard", hp=30)
+        foe.actions = [_melee_action()]
+        # Mover at (10,9); guard adjacent at the +q neighbour (11,9).
+        cm, pid = _setup_combat(mover, [("Guard", foe, (11, 9))], caster_pos=(10, 9))
+        cm.active_combatant.creature.active_conditions.append(
+            AppliedCondition(condition=Condition.CONFUSED, source="Confusion")
+        )
+        foe_id = _id_by_name(cm, "Guard")
+        hp_before = cm.combatants[pid].creature.current_hit_points
+        # d10=1 (wander); d6=4 -> direction index 3 = (-1,0), away from the guard.
+        with patch("arena.combat.manager.roll_die", side_effect=[1, 4]), \
+             patch("arena.combat.actions.roll_die", return_value=20):
+            cm._process_confusion_turn(cm.combatants[pid])
+        # Leaving the guard's reach drew an opportunity attack.
+        assert (cm.reaction_used.get(foe_id)
+                or cm.combatants[pid].creature.current_hit_points < hp_before)
 
     def test_d10_lash_out_attacks_adjacent_creature(self):
         """A 7-8 makes the creature melee-attack a random creature in reach."""

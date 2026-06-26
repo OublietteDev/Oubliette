@@ -1139,9 +1139,13 @@
       },
       "target_type": "area_cube",
       "area_size": 40,
+      "aoe_condition_once": true,
       "saving_throw": {
         "ability": "wisdom",
-        "dc": null
+        "dc": null,
+        "conditions_on_fail": [
+          "slowed"
+        ]
       },
       "buff_effects": [
         {
@@ -1175,6 +1179,7 @@
       },
       "target_type": "area_sphere",
       "area_size": 10,
+      "aoe_condition_once": true,
       "saving_throw": {
         "ability": "wisdom",
         "dc": null,

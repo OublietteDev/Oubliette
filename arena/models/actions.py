@@ -187,6 +187,13 @@ class Action(BaseModel):
     # is difficult terrain for the creatures it affects (enemies of the caster).
     zone_slows: bool = False
 
+    # AoE condition applied ONCE at cast, riding the creature (D-CTRL-1: Confusion,
+    # Slow). Distinguishes "save once when cast, the effect persists on you with an
+    # end-of-turn re-save" spells from lingering condition-CLOUDS (Stinking Cloud,
+    # Sleet Storm) that re-test every creature standing in them each turn. When True
+    # the spell is NOT routed as a persistent zone — it resolves as a one-time burst.
+    aoe_condition_once: bool = False
+
     # Summoning (path to creature JSON relative to data dir)
     summon_creature: str | None = None  # e.g., "monsters/wolf.json"
     is_wild_shape: bool = False  # If True, 0 HP removes summon and restores original

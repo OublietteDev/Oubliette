@@ -37,6 +37,9 @@ class Condition(str, Enum):
     BANISHED = "banished"  # Removed from the battlefield (Banishment, Maze, Blink);
     # the manager stashes the creature's position and takes it off-grid while
     # this is active, returning it when the condition ends (P-BANISH)
+    SLOWED = "slowed"  # Slow (D-CTRL-1): the visible marker for the Slow spell.
+    # Carries the badge + is the is_slowed() source (no reactions, action XOR
+    # bonus); the speed/AC/DEX-save penalties ride alongside on the "Slow" buff.
     CONFUSED = "confused"  # Confusion (D-CTRL-1): can't take reactions and rolls a
     # d10 at the start of each turn for its behavior (wander / freeze / lash out /
     # act normally). Lifecycle: applied on a failed save with an end-of-turn
