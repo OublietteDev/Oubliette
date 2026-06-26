@@ -1234,6 +1234,16 @@
         "damage_on_success": "none"
       },
       "terrain_modification": "difficult"
+    },
+    {
+      "name": "Practiced Shove",
+      "description": "A testing convenience: a bonus-action telekinetic shove that reliably knocks a creature 10 ft directly away from Vesper (no save).",
+      "action_type": "bonus_action",
+      "target_type": "one_enemy",
+      "range": 60,
+      "forced_movement_type": "push",
+      "forced_movement_distance": 10,
+      "ai_priority": 1
     }
   ],
   "bonus_actions": [

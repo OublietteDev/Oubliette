@@ -223,3 +223,50 @@ class TestForcedSpikeGrowth:
         with patch("arena.util.dice.roll_expression", return_value=(2, [2])):
             process_zone_movement_path([zone], "v", from_hex, to_hex, combatants, g)
         assert victim.current_hit_points == 80 - 2 * expected
+
+    def test_no_save_push_through_spikes_via_manager(self):
+        """End-to-end: cast Spike Growth, then a no-save push shoves a target
+        east through it and it takes spike damage (the lab's Practiced Shove)."""
+        from arena.models.actions import TargetType
+
+        caster = Creature(name="Pusher", max_hit_points=60)
+        caster.actions = [_load_spell("spike_growth")]
+        # A no-save forced-push effect (forced movement always applies).
+        caster.actions.append(Action(
+            name="Shove", description="push", action_type="bonus_action",
+            target_type=TargetType.ONE_ENEMY, range=60,
+            forced_movement_type="push", forced_movement_distance=10,
+        ))
+        entries = [
+            CombatantEntry(creature_id="p", creature_data=caster,
+                           team="player", starting_position=(4, 9)),
+            CombatantEntry(creature_id="t", creature_data=Creature(name="Target", max_hit_points=200),
+                           team="enemy", starting_position=(7, 9)),
+        ]
+        enc = Encounter(name="PushSpikes", grid_width=24, grid_height=16, combatants=entries)
+        cm = CombatManager()
+        cm.load_encounter(enc, Path("."))
+        with patch("arena.combat.manager.roll_die", side_effect=[20, 1]):
+            cm.roll_initiative()
+        cm.begin_combat()
+        pid = next(i for i, c in cm.combatants.items() if c.team == "player")
+        tid = next(i for i, c in cm.combatants.items() if c.team == "enemy")
+        while cm.active_combatant.creature_id != pid:
+            cm.end_turn()
+
+        sg = next(a for a in cm.combatants[pid].creature.actions if a.name == "Spike Growth")
+        cm.select_action(sg)
+        cm.execute_effect_at_hex(HexCoord(10, 9))  # spikes east of the target
+
+        target_hp_before = cm.combatants[tid].creature.current_hit_points
+        shove = next(a for a in cm.combatants[pid].creature.actions if a.name == "Shove")
+        cm.select_action(shove)
+        res = cm.execute_effect(tid)
+        pierced = any(
+            e.event_type == CombatEventType.DAMAGE and "piercing" in e.message
+            for e in (res.events if res else [])
+        )
+        # Pushed east into the spikes, and took piercing damage for it.
+        assert cm.combatants[tid].position.q > 7
+        assert pierced
+        assert cm.combatants[tid].creature.current_hit_points < target_hp_before

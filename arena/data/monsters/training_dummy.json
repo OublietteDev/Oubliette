@@ -1,0 +1,35 @@
+{
+  "name": "Training Dummy",
+  "size": "medium",
+  "creature_type": "construct",
+  "alignment": "unaligned",
+  "ability_scores": {
+    "strength": 6,
+    "dexterity": 6,
+    "constitution": 20,
+    "intelligence": 1,
+    "wisdom": 6,
+    "charisma": 1
+  },
+  "armor_class": 5,
+  "max_hit_points": 400,
+  "hit_dice": "40d8",
+  "speed": {
+    "walk": 0
+  },
+  "proficiency_bonus": 2,
+  "saving_throw_proficiencies": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "damage_vulnerabilities": [],
+  "condition_immunities": [],
+  "senses": {},
+  "passive_perception": 6,
+  "actions": [],
+  "legendary_actions": [],
+  "legendary_action_count": 0,
+  "special_abilities": [],
+  "challenge_rating": 0,
+  "experience_points": 0,
+  "is_player_controlled": false
+}

@@ -1397,8 +1397,31 @@ class CombatScreen(Screen):
         # Now enter destination-click mode
         self._pending_teleport = True
 
+    def _is_targeting(self) -> bool:
+        """Whether the player is mid-aim: placing/aiming a spell or picking a
+        hex for a shove/teleport/summon/zone-move."""
+        return (
+            self.combat.turn_phase == TurnPhase.SELECTING_TARGET
+            or self._pending_summon
+            or self._pending_teleport
+            or self._pending_zone_move
+        )
+
+    def _cancel_targeting(self) -> None:
+        """Abort any in-progress spell aim / hex placement, back to AWAITING_ACTION."""
+        self._pending_help = False
+        self._pending_stabilize = False
+        self._pending_shove = False
+        self._pending_grapple = False
+        self._pending_teleport = False
+        self._pending_summon = False
+        self._pending_zone_move = False
+        self._pending_passenger_id = None
+        self._passenger_popup = None
+        self.combat.cancel_action()
+
     def _handle_right_click(self, event: pygame.event.Event) -> None:
-        """Toggle the radial menu on right-click near active creature."""
+        """Right-click: cancel an in-progress aim, or toggle the radial menu."""
         if self.combat.turn_phase not in (
             TurnPhase.AWAITING_ACTION, TurnPhase.SELECTING_TARGET
         ):
@@ -1413,10 +1436,10 @@ class CombatScreen(Screen):
             self.radial_menu.close()
             return
 
-        # Require click near the active creature's token (any footprint hex)
         if active.position is None or self.grid_view is None:
             return
 
+        # Is the click near the active creature's token (any footprint hex)?
         hex_size = get_settings().display.default_hex_size
         ox, oy = self.grid_view.origin
         token_r = get_settings().display.token_radius * self.grid_view.camera.zoom
@@ -1430,20 +1453,18 @@ class CombatScreen(Screen):
             hsy = int(hly) + oy
             d2 = (event.pos[0] - hsx) ** 2 + (event.pos[1] - hsy) ** 2
             min_dist_sq = min(min_dist_sq, d2)
+        near_token = min_dist_sq ** 0.5 <= token_r + 10
 
-        if min_dist_sq ** 0.5 > token_r + 10:
+        # Right-click while aiming a spell / placing an effect cancels it — from
+        # ANYWHERE on the field, not just on your own token. If the click also
+        # landed on the token, fall through and reopen the menu (a handy combo).
+        if self._is_targeting():
+            self._cancel_targeting()
+            if not near_token:
+                return
+
+        if not near_token:
             return
-
-        # Cancel target selection if active, then open menu
-        if self.combat.turn_phase == TurnPhase.SELECTING_TARGET:
-            self._pending_help = False
-            self._pending_stabilize = False
-            self._pending_shove = False
-            self._pending_grapple = False
-            self._pending_teleport = False
-            self._pending_passenger_id = None
-            self._passenger_popup = None
-            self.combat.cancel_action()
 
         self.radial_menu.open(active.creature_id)
         # Immediately compute position
