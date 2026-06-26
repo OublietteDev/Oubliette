@@ -5,6 +5,15 @@ from arena.combat.events import CombatEvent, CombatEventType
 from arena.util.dice import roll_die
 
 
+def stabilize_creature(creature: Creature) -> None:
+    """Stabilize a dying creature: clear its death saves and mark it stable so
+    it stops rolling (stays at 0 HP, unconscious). Same end-state the third
+    death-save success produces."""
+    reset_death_saves(creature)
+    if hasattr(creature, "is_stabilized"):
+        creature.is_stabilized = True
+
+
 def process_death_save(creature: Creature, creature_id: str) -> list[CombatEvent]:
     """Roll a death saving throw for a creature at 0 HP.
 

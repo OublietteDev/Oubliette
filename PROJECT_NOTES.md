@@ -372,19 +372,130 @@ pops the prompt, plus Lyric for the grant + auto Cutting Words demo).
 - **Arena UI/UX cleanup pass (someday, BIG)** — OublietteDev's call (2026-06-25): the Arena was never
   optimized for looks on its first pass; it's functional but ugly. A dedicated visual/UX overhaul is
   wanted eventually — not scheduled yet. See [[oubliette-arena-ui-cleanup]].
-- **C5 stragglers:** prone movement penalty; re-prepare-spells-on-long-rest. **C6:** the final
-  "ship-readiness" combat playtest (use the labs as a starting battery).
+- **C5 stragglers — DONE (2026-06-25, unit-tested, not yet live-played):** (1) **prone movement
+  penalty** — a "Stand Up" Tactics entry (shown only while prone, like Escape-when-grappled) spends
+  half your speed and clears prone; it's *movement, not an action*, so it stays available after you
+  attack and even when the action is spent. Crawling now costs double per hex via a `cost_multiplier`
+  on the movement tracker + a `cost_multiplier` arg on `get_reachable_hexes` (the old blanket 0.5
+  budget-halving was replaced so standing composes correctly — `get_movement_cost_multiplier()` in
+  `condition_effects.py` returns 2 while prone). (2) **re-prepare spells on long rest** — a prepared
+  caster swaps its readied list inside a window that **opens on a long rest and closes once the party
+  acts** (`reprepare_window_open(events)` in `rules/rest.py` — pure log derivation: latest long-rest
+  seq > latest player_message seq). **Faithful split** (OublietteDev's call): cleric/druid/paladin prepare
+  from their WHOLE class list; wizard only from its spellbook (`spells_known`) — driven by a new
+  `prepares_from_spellbook` flag on `SpellcastingProfile` (set True on wizard in classes.json).
+  Event-sourced via a new `spells_prepared` StateOp + `EventKind.SPELLS_PREPARED` + `repo.set_spells_prepared`
+  (replay-stable). Firewall = `derive.validate_prepared_choice` (exact count, no dupes, drawn from
+  `derive.prepare_pool`). New `/api/prepare_spells` endpoint; sheet now carries `preparation` /
+  `can_reprepare` / `prepare_pool` / `prepared_ids`. UI: a "Prepare Spells" button + checkbox modal
+  on the character sheet (index.html), enabled only while the window is open. **C6:** the final
+  "ship-readiness" combat playtest — **lab battery now BUILT** (see below).
 - **The Forge creature/NPC editor** — currently the weakest authoring section; enriching it would
   also unblock the deferred Brightvale-creature cleanup.
 - **More portraits** — the ongoing art grind (OublietteDev). 56/334 as of this session.
 - **Possible later:** richer cross-turn "session memory" for the DM; non-gold coinage (a purist
   nicety, probably never).
 
-**Per-feature test beds:** standalone Arena encounters launched by name via `tools/lab.py <name>`
-(or a `.bat`) drop you straight into a fight to playtest one feature in isolation — `vision_lab`
-and `dominate_lab` exist. Author a focused encounter JSON (inline `creature_data`), no launcher
-code needed. Stockpiles encounters for the C6 playtest. Repo root was also tidied this session:
-loose design docs → `docs/{design,roadmap,feedback}/`; SRD source dumps → gitignored `tools/raw/`.
+**Per-feature test beds (the C6 battery):** standalone Arena encounters launched by name via
+`tools/lab.py <name>` (or a root `.bat`) drop you straight into a fight to playtest in isolation.
+A lab is `arena/data/encounters/<name>_lab.json`; combatants are **referenced** by `creature_id`
+(`characters/<pc>.json`, `monsters/<m>.json` — compact & robust) or **inlined** via `creature_data`
+(needed only when you must pre-apply a condition/HP — inline validates as base `Creature`, so it
+loses PlayerCharacter machinery like death saves; reference a real PC when you need those). Every
+entry still needs a `creature_id` label even when inlined (use `lab/<x>`). `tools/lab.py` auto-lists
+all encounters if the name is unknown. **`arena/tests/test_labs_load.py` guards the whole battery
+loads** (headless `CombatManager.load_encounter`). Benches now on hand:
+- `vision_lab`, `dominate_lab`, `terrain_lab`, `bard_lab` (C4 features).
+- **`prone_lab`** (C5) — inline prone Crawler (player-driven) + a 0-speed Prone Dummy (stays down) +
+  Valeria + goblins: Stand Up, crawl-doubling, melee-adv / ranged-dis vs prone, shove-to-prone.
+- **`martial_lab`** — Valeria (Pal) + Shade (Rogue) + Thorin (Ftr) vs ogre/hobgoblin/goblins:
+  Divine Smite, Sneak Attack, Action Surge, Second Wind, multiattack, opportunity attacks, Uncanny Dodge.
+- **`caster_lab`** — Elara (Wiz) + Brother Aldric (Cleric) vs skeletons/zombies/orc: concentration
+  + damage-saves, Hold Person, Web, Sculpt Spells, Magic Missile, Spirit Guardians, Turn/Destroy
+  Undead, Cure Wounds.
+- **`downed_lab`** — squishy Lyric (L1 bard) + Willow + Aldric vs ogre/goblin: death saves, Healing
+  Word pickup, Cure Wounds, stabilize, auto-crit on a downed creature.
+- Easy future adds if play wants them: a grapple/escape bench, a Shield/readied-action reaction bench,
+  Mirror Image / Banishment benches. Repo root tidied earlier: loose design docs →
+  `docs/{design,roadmap,feedback}/`; SRD source dumps → gitignored `tools/raw/`.
+
+**C6 playtest round 1 — OublietteDev's feedback + fixes (2026-06-25, 2628 green, unit-tested; not yet
+re-played).** From a detailed grind across all four benches:
+- *Confirmed working (no change):* prone Stand Up (the "15→15" he saw is correct — crawl is full
+  budget at double cost = 15 ft of travel, standing spends half = 15 ft left, also 15 ft); Smites;
+  Action Surge; Extra Attack/multiattack; concentration save-on-damage; auto-crit on a downed target;
+  healing-to-revive; **one-concentration-at-a-time** (`start_concentrating` drops the prior spell —
+  testable now with Web + Hold Person on Elara); **Sculpt Spells** (Elara HAS it — it's passive;
+  test by Fireballing with Aldric in the blast: he takes 0).
+- *RAW clarification, not a bug:* 3 death-save successes = **stabilized at 0 HP** (stops rolling),
+  NOT standing with 1 HP.
+- *Fixed (code):* (1) **Hidden now grants advantage** and attacking **reveals** you — `get_attack_advantage`
+  never checked `HIDDEN` (only INVISIBLE/fog); added the advantage source + a reveal (clear HIDDEN)
+  alongside the HELPED-clear in `actions.py`. (2) **Self-centered area spells auto-cast on the caster** —
+  a range-0 `area_*` non-attack spell (Spirit Guardians aura, Turn Undead burst) now casts immediately
+  instead of asking for a hex (`_handle_combat_action` in combat.py). (3) **Ally Stabilize** —
+  new "Stabilize" Tactics entry (shown only when a dying ally is adjacent): a DC 10 WIS (Medicine)
+  check on an adjacent unconscious PC → stabilized; the only non-healing way to stop a friend's death
+  saves. `execute_stabilize` + `death_saves.stabilize_creature` + radial/popup/combat-screen wiring.
+- *Fixed (data/lab):* (4) **Web** in Elara's char file was a stale single-target version → made it the
+  proper 20-ft-cube zone (matches the spell library + RAW), so it now starts concentration on cast
+  (visible badge) and restrains. (5) **Turn Undead** — Brother Aldric's file listed "Destroy Undead"
+  but not "Channel Divinity: Turn Undead" (the name the bridge keys on) AND lab characters bypass the
+  feature-bridge, so the action wasn't there at all → added the feature + baked the Turn Undead action
+  (DC 15, 30 ft, undead-only) + a `channel_divinity` resource. (6) **caster_lab spacing** was ~70 ft
+  caster-to-undead (Turn Undead is 30 ft / Spirit Guardians 15 ft) → tightened to ~25 ft so short-range
+  abilities reach from the start.
+- GOTCHA reminder: the re-prepare + any oubliette-side change needs the app-server restart; Arena
+  labs load fresh each launch (no restart), so these combat fixes show up on the next lab run.
+
+**C6 playtest round 2 — OublietteDev's second pass + fixes (2026-06-25, 2630 green).** The big lesson he
+spotted: most of these were **stale LEGACY lab character files** (Shade/Aldric/Elara were authored
+for the pre-bridge Arena), whose baked actions/features bypass the feature-bridge and so miss the
+modern wiring. Fixes:
+- **Cunning Action: Hide (Shade)** forced a click + didn't tag — his bonus actions had
+  `standard_effect=None`, so the radial routed them to `select_action` (target mode) instead of the
+  self-cast standard logic. Set `standard_effect` = dash/disengage/hide on all three Cunning Action
+  bonus actions in shade.json. ALSO: attacking an unseen target now gives the attacker **disadvantage**
+  — `get_attack_advantage` gained a HIDDEN-target case (mirrors INVISIBLE), so monsters swing at a
+  hidden hero at disadvantage.
+- **Spirit Guardians (Aldric) wouldn't auto-cast** — his legacy action had `range=15` (should be 0;
+  the 15 is the *radius*), so the range-0 autocast missed it. Set range→0 AND broadened the autocast
+  to fire on `range == 0 OR zone_follows_caster` (combat.py) so any caster-following aura self-casts.
+- **Web → Hold Person left the web on the ground + restrained stuck** — `_cleanup_orphaned_zones`
+  only checked "is the caster concentrating on ANYTHING," so switching Web→Hold Person (still
+  concentrating) kept the orphaned Web zone. Now it compares the caster's current concentration spell
+  name to the zone name, and when a zone fades it strips its condition (`source=zone.name`) off every
+  creature. Fixes the lingering animation AND the stuck restrained.
+- **Sculpt Spells (Elara) did nothing** — her feature had the *name* but `sculpt_spells=None` (the
+  engine flag the bridge would set). Set `sculpt_spells: true` on the feature. Now an ally in her
+  Fireball takes 0.
+- Tests: arena/tests/test_combat_fixes.py grew (HIDDEN target disadvantage, zone-switch teardown).
+- **Stabilize confirmed working live by OublietteDev.** ✅
+- All six confirmed working by OublietteDev on the next pass; only two follow-ups remained (now both DONE
+  below).
+
+**C6 playtest round 3 — the last two combat features (2026-06-25, 2634 green).**
+- **Frightened/turned creatures now flee.** A frightened creature's AI turn now moves it to maximize
+  distance from its fear source (RAW "can't move closer"); if cornered (can't increase the distance)
+  it falls through to a normal turn and attacks at disadvantage. `pathfinding.find_flee_destination`
+  (max distance from one point) + `AIController._frightened_flee_dest` (maps the FRIGHTENED condition's
+  `source` = caster name → that combatant's position) + an early branch in `plan_turn` before the
+  HP-retreat check. Makes Turn Undead actually push undead away.
+- **Opportunity-attack player prompt.** When an enemy's move provokes an OA from a PLAYER creature,
+  an Attack/Skip popup now appears (`OpportunityAttackPopup`); AI reactors still auto-fire. Mechanism:
+  `try_move` splits reactors — AI ones fire inline, player ones queue into `manager._pending_oa` and
+  the move DEFERS (extracted `_commit_move`); `resolve_opportunity_attack_choice(make)` fires/skips
+  each then completes the move. The GUI shows the popup + pauses the AI runner (mirrors the Shield/
+  bardic reaction-popup pattern); `_advance_move_substep` pauses-not-aborts when `_pending_oa` is set.
+  GATED by `manager._oa_prompts_enabled` (only the interactive CombatScreen sets it True) so headless/
+  AI-only contexts keep the synchronous auto-fire — important because `ai/executor.py` also calls
+  try_move and can't show a popup. Reaction economy was already correct (an OA consumes the one
+  reaction/round). Tests: arena/tests/test_combat_fixes.py (flee plan; OA defer→attack, skip, AI auto-fire).
+
+**The C6 audit-after-playtest open question (OublietteDev, 2026-06-25):** after the grind + straggler-bug
+pass, run an audit for the last missing combat pieces — **legendary actions** and **lair actions**
+are the suspected remaining gap (`Encounter` already has `has_lair`/`lair_actions` fields and the
+manager tracks `legendary_points`, so some scaffolding exists — verify depth during the audit).
 
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a
 repository abstraction; async edges / sync core; LLM-first routing behind the model seam;

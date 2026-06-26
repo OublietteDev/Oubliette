@@ -83,6 +83,12 @@ def get_attack_advantage(
     if _has(attacker, Condition.INVISIBLE) and not target_can_see_invisible:
         has_adv = True
 
+    # Attacker is hidden (unseen + unheard): attacking from hiding has
+    # advantage. The attack then reveals the attacker (handled by the caller,
+    # which clears HIDDEN after the advantage is locked in).
+    if _has(attacker, Condition.HIDDEN):
+        has_adv = True
+
     # Target cannot see the attacker (concealment/obscurement): unseen
     # attacker strikes with advantage.
     if not target_sees_attacker:
@@ -121,6 +127,10 @@ def get_attack_advantage(
 
     # Target is invisible: attacker has disadvantage (unless attacker sees invisible)
     if _has(target, Condition.INVISIBLE) and not attacker_can_see_invisible:
+        has_dis = True
+
+    # Target is hidden (unseen): attacking what you can't see is at disadvantage.
+    if _has(target, Condition.HIDDEN):
         has_dis = True
 
     # Target is prone but ranged: disadvantage
@@ -219,8 +229,12 @@ def get_movement_multiplier(creature: Creature) -> float:
 
     Returns:
         0.0 if speed is reduced to 0 (grappled, restrained, etc.)
-        0.5 if speed is halved (prone - costs double to move)
         1.0 if normal movement
+
+    Note: prone does NOT halve the budget here. Crawling's "costs double"
+    penalty lives in ``get_movement_cost_multiplier`` (a per-hex cost
+    doubling) so that it composes correctly with standing up — a creature
+    that spends half its speed to stand then moves the rest at full cost.
     """
     # Speed = 0
     if _has(creature, Condition.GRAPPLED):
@@ -236,11 +250,20 @@ def get_movement_multiplier(creature: Creature) -> float:
     if _has(creature, Condition.UNCONSCIOUS):
         return 0.0
 
-    # Half speed (prone costs extra movement to move)
-    if _has(creature, Condition.PRONE):
-        return 0.5
-
     return 1.0
+
+
+def get_movement_cost_multiplier(creature: Creature) -> int:
+    """Get the per-hex movement cost multiplier based on conditions.
+
+    A prone creature that crawls spends 1 extra foot for every foot of
+    movement (5e RAW) — i.e. each hex costs double. Returns 2 while prone,
+    1 otherwise. Standing up (which clears prone) resets this to 1 so the
+    rest of the turn's movement is at normal cost.
+    """
+    if _has(creature, Condition.PRONE):
+        return 2
+    return 1
 
 
 # ── Auto-Critical Hits ──────────────────────────────────────────────

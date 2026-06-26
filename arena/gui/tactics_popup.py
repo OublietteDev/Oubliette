@@ -26,6 +26,18 @@ _TACTICS = [
 # Shown only while grappled (C5): the escape check is its own action.
 _ESCAPE_ENTRY = ("Escape", "Athletics/Acrobatics check to escape the grapple")
 
+# Shown only while prone (C5): standing up is movement, not an action, so it
+# stays available even after the creature has spent its action this turn.
+_STAND_ENTRY = ("Stand Up", "Spend half your speed to rise from prone")
+
+# Shown only when an adjacent ally is dying (C6): a DC 10 Medicine check to
+# stabilize them (your action).
+_STABILIZE_ENTRY = ("Stabilize", "DC 10 Medicine check to stabilize a dying ally")
+
+# Entries that cost only movement (never the action slot) — clickable even
+# when the action has already been used.
+_MOVEMENT_ENTRIES = {"stand up"}
+
 
 class TacticsPopup:
     """Rectangular popup listing the standard tactical actions."""
@@ -41,6 +53,8 @@ class TacticsPopup:
         screen_width: int = 1280,
         screen_height: int = 720,
         grappled: bool = False,
+        prone: bool = False,
+        can_stabilize: bool = False,
     ) -> None:
         self.action_used = action_used
         self._screen_width = screen_width
@@ -48,6 +62,10 @@ class TacticsPopup:
         self._entries = list(_TACTICS)
         if grappled:
             self._entries.append(_ESCAPE_ENTRY)
+        if prone:
+            self._entries.append(_STAND_ENTRY)
+        if can_stabilize:
+            self._entries.append(_STABILIZE_ENTRY)
 
         self.hovered_index: int | None = None
         self._hovered_tooltip_lines: list[str] | None = None
@@ -93,14 +111,16 @@ class TacticsPopup:
             if not self.rect.collidepoint(event.pos):
                 return "__close__"
             idx = self._entry_at(event.pos)
-            if idx is not None and not self.action_used:
+            if idx is not None:
+                name = self._entries[idx][0].lower()
+                if not self._entry_enabled(name):
+                    return None
                 from arena.audio.manager import get_sound_manager
                 get_sound_manager().play_sfx("button_click")
-                name = self._entries[idx][0].lower()
                 # Shove needs target selection, not immediate execution
                 if name == "shove":
                     return "shove"
-                return f"standard:{name}"
+                return f"standard:{name.replace(' ', '_')}"
 
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             return "__close__"
@@ -134,6 +154,7 @@ class TacticsPopup:
         entry_font = get_font(13)
         y = self.rect.y + self.TITLE_HEIGHT
         for i, (name, _desc) in enumerate(self._entries):
+            enabled = self._entry_enabled(name.lower())
             entry_rect = pygame.Rect(
                 self.rect.x + 2,
                 y,
@@ -142,7 +163,7 @@ class TacticsPopup:
             )
 
             # Hover highlight
-            if i == self.hovered_index and not self.action_used:
+            if i == self.hovered_index and enabled:
                 pygame.draw.rect(
                     surface,
                     parse_color(COLORS["hex_hover"]),
@@ -157,10 +178,10 @@ class TacticsPopup:
                 surface.blit(icon_surf, (entry_rect.x + 6, icon_y))
                 text_x = entry_rect.x + 28
 
-            if self.action_used:
-                text_color = (100, 100, 100)
-            else:
+            if enabled:
                 text_color = parse_color(COLORS["text_primary"])
+            else:
+                text_color = (100, 100, 100)
             text_surf = entry_font.render(name, True, text_color)
             surface.blit(text_surf, (text_x, entry_rect.y + 5))
 
@@ -170,7 +191,8 @@ class TacticsPopup:
         """Render tooltip for the hovered entry."""
         if self.hovered_index is None or self._hovered_tooltip_lines is None:
             return
-        if self.action_used:
+        hovered_name = self._entries[self.hovered_index][0].lower()
+        if not self._entry_enabled(hovered_name):
             return
 
         lines = self._hovered_tooltip_lines
@@ -215,6 +237,14 @@ class TacticsPopup:
             y += line_height
 
     # ── Helpers ──────────────────────────────────────────────────────
+
+    def _entry_enabled(self, name: str) -> bool:
+        """Whether the entry (lower-cased name) can be clicked right now.
+
+        Movement-only tactics (Stand Up) stay enabled after the action is
+        spent; everything else greys out once the action has been used.
+        """
+        return (not self.action_used) or (name in _MOVEMENT_ENTRIES)
 
     def _update_hover(self, pos: tuple[int, int]) -> None:
         """Update hover state."""

@@ -215,25 +215,53 @@ class RadialMenu:
 
         action_used = self.combat.has_used_action
 
-        # Escape entry appears only while the active creature is grappled (C5)
+        # Escape appears only while grappled; Stand Up only while prone (C5);
+        # Stabilize only when a dying ally is adjacent (C6).
         grappled = False
+        prone = False
+        can_stabilize = False
         active = self.combat.active_combatant
         if active is not None:
             from arena.combat.conditions import has_condition
             from arena.models.conditions import Condition
             grappled = has_condition(active.creature, Condition.GRAPPLED)
+            prone = has_condition(active.creature, Condition.PRONE)
+            can_stabilize = self._has_adjacent_dying_ally(active)
 
         self.tactics_popup = TacticsPopup(
             action_used=action_used,
             screen_width=self._screen_width,
             screen_height=self._screen_height,
             grappled=grappled,
+            prone=prone,
+            can_stabilize=can_stabilize,
         )
         self.tactics_popup.reposition(
             self._center_screen,
             self._outer_radius + self._slot_radius,
         )
         self.state = RadialMenuState.TACTICS_POPUP
+
+    def _has_adjacent_dying_ally(self, active) -> bool:
+        """True if a same-team creature within 5 ft is dying (at 0 HP, runs
+        death saves, not yet stabilized) — gates the Stabilize tactic (C6)."""
+        if self.combat is None or self.combat.grid is None:
+            return False
+        my_pos = self.combat.grid.find_creature(active.creature_id)
+        if my_pos is None:
+            return False
+        for cid, c in self.combat.combatants.items():
+            if cid == active.creature_id or c.team != active.team:
+                continue
+            cr = c.creature
+            if cr.is_conscious or not hasattr(cr, "death_save_successes"):
+                continue
+            if getattr(cr, "is_stabilized", False):
+                continue
+            pos = self.combat.grid.find_creature(cid)
+            if pos is not None and my_pos.distance_to(pos) <= 1:
+                return True
+        return False
 
     def open_cantrip_popup(self) -> None:
         """Transition from OPEN to CANTRIP_POPUP."""
@@ -689,14 +717,18 @@ class RadialMenu:
                 is_disabled=action_used,
             ))
 
-        # 4. Tactics — always present
+        # 4. Tactics — always present. Stays reachable while prone even after
+        # the action is spent, since Stand Up is movement (not an action).
+        from arena.combat.conditions import has_condition as _has_cond
+        from arena.models.conditions import Condition as _Cond
+        _prone = _has_cond(creature, _Cond.PRONE)
         slots.append(RadialSlot(
             label="Tactics",
             slot_type="tactics",
             action=None,
             icon_text="TA",
             tooltip_lines=["Dash, Disengage, Dodge, Hide"],
-            is_disabled=action_used,
+            is_disabled=action_used and not _prone,
         ))
 
         # 5. Item + ability actions — uncategorized actions from

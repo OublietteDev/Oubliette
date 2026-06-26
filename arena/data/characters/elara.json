@@ -752,11 +752,11 @@
     },
     {
       "name": "Web",
-      "description": "One creature must succeed on a DC 15 Dexterity save or be restrained. Target repeats save at end of each turn. Concentration.",
+      "description": "You conjure a mass of thick, sticky webbing in a 20-foot cube. The webs are difficult terrain; a creature that starts its turn in them or enters them makes a DC 15 Dexterity save or is restrained. Concentration.",
       "action_type": "action",
-      "target_type": "one_enemy",
+      "target_type": "area_cube",
       "range": 60,
-      "area_size": null,
+      "area_size": 20,
       "attack": null,
       "saving_throw": {
         "ability": "dexterity",
@@ -792,7 +792,7 @@
       "forced_movement_type": null,
       "forced_movement_distance": 0,
       "forced_movement_prone": false,
-      "terrain_modification": null,
+      "terrain_modification": "difficult",
       "summon_creature": null,
       "is_wild_shape": false,
       "ai_priority": 6,
@@ -1571,7 +1571,8 @@
       "death_prevention_save_dc": 10,
       "death_prevention_dc_increment": 0,
       "death_prevention_resource": null,
-      "on_hit_rider": null
+      "on_hit_rider": null,
+      "sculpt_spells": true
     },
     {
       "name": "Fey Ancestry",

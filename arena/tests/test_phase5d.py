@@ -9,6 +9,7 @@ from arena.combat.condition_effects import (
     is_auto_fail_save,
     can_take_actions,
     get_movement_multiplier,
+    get_movement_cost_multiplier,
     is_auto_crit,
 )
 from arena.combat.actions import resolve_attack, resolve_saving_throw
@@ -244,9 +245,21 @@ class TestGetMovementMultiplier:
         c = _creature(conditions=[Condition.STUNNED])
         assert get_movement_multiplier(c) == 0.0
 
-    def test_prone_half(self):
+    def test_prone_does_not_halve_budget(self):
+        # Prone's crawl penalty now lives in the per-hex cost multiplier, not
+        # the turn-start budget — so standing up can spend half and move on.
         c = _creature(conditions=[Condition.PRONE])
-        assert get_movement_multiplier(c) == 0.5
+        assert get_movement_multiplier(c) == 1.0
+
+
+class TestGetMovementCostMultiplier:
+    def test_normal(self):
+        c = _creature()
+        assert get_movement_cost_multiplier(c) == 1
+
+    def test_prone_doubles_per_hex_cost(self):
+        c = _creature(conditions=[Condition.PRONE])
+        assert get_movement_cost_multiplier(c) == 2
 
 
 # ── is_auto_crit Tests ─────────────────────────────────────────────

@@ -280,6 +280,12 @@ class AITurnRunner:
         success = manager.try_move(hex_coord)
         self._move_path_index += 1
 
+        # Move deferred for a player opportunity-attack decision: pause here
+        # (the GUI shows the popup); the move for this hex completes when the
+        # player answers, and the walk resumes from the next hex.
+        if manager._pending_oa is not None:
+            return False
+
         if not success or not combatant.creature.is_conscious:
             # Move blocked or creature downed – abort remaining path
             self._move_path = None
@@ -315,6 +321,9 @@ class CombatScreen(Screen):
 
         # Combat state
         self.combat = CombatManager()
+        # Interactive play: a player creature's opportunity attacks prompt
+        # (Attack/Skip) instead of auto-firing.
+        self.combat._oa_prompts_enabled = True
 
         # Calculate layout rectangles
         grid_w = screen_width - SIDE_PANEL_WIDTH
@@ -383,6 +392,7 @@ class CombatScreen(Screen):
         self._music_track: str | None = None  # Encounter music track filename
         self._played_end_sound: bool = False  # Track if victory/defeat sound played
         self._pending_help: bool = False  # True when selecting ally for Help action
+        self._pending_stabilize: bool = False  # True when selecting dying ally to Stabilize
         self._pending_zone_move: bool = False  # True when selecting hex for zone move
         self._zone_move_cost: str | None = None  # "action" or "bonus_action"
         self._zone_move_range: int = 60  # Max range for zone move
@@ -425,6 +435,9 @@ class CombatScreen(Screen):
 
         # Bardic Inspiration spend popup state
         self._bardic_popup: BardicInspirationPopup | None = None
+
+        # Opportunity-attack prompt state (player reactor chooses Attack/Skip)
+        self._oa_popup = None
 
         # Counterspell popup state
         self._counterspell_popup: CounterspellPopup | None = None
@@ -533,6 +546,13 @@ class CombatScreen(Screen):
             choice = self._counterspell_popup.handle_event(event)
             if choice is not None:
                 self._resolve_counterspell_popup(choice)
+            return
+
+        # --- Opportunity-attack popup intercepts ALL input when open ---
+        if self._oa_popup is not None:
+            choice = self._oa_popup.handle_event(event)
+            if choice is not None:
+                self._resolve_oa_choice(choice)
             return
 
         # --- Reaction popup intercepts ALL input when open ---
@@ -806,6 +826,13 @@ class CombatScreen(Screen):
             if cell and cell.occupant_id:
                 target_id = cell.occupant_id
 
+                # Stabilize action — click an adjacent dying ally
+                if self._pending_stabilize:
+                    self._pending_stabilize = False
+                    self.combat.turn_phase = TurnPhase.AWAITING_ACTION
+                    self.combat.execute_standard_action("stabilize", target_id)
+                    return
+
                 # Help action — click an ally to grant advantage
                 if self._pending_help:
                     self._pending_help = False
@@ -859,6 +886,8 @@ class CombatScreen(Screen):
             # Clicking empty hex cancels target selection
             if self._pending_help:
                 self._pending_help = False
+            if self._pending_stabilize:
+                self._pending_stabilize = False
             if self._pending_shove:
                 self._pending_shove = False
             self._pending_teleport = False
@@ -1161,6 +1190,32 @@ class CombatScreen(Screen):
         self.combat.resolve_damage_reduction_choice(feature_name)
 
     # ------------------------------------------------------------------
+    # Opportunity-attack prompt
+    # ------------------------------------------------------------------
+
+    def _show_oa_popup(self) -> None:
+        """Show the Attack/Skip prompt for the front of the pending OA queue."""
+        from arena.gui.oa_popup import OpportunityAttackPopup
+        pending = self.combat._pending_oa
+        if pending is None or not pending["queue"]:
+            return
+        reactor_id, reactor, _action = pending["queue"][0]
+        mover = self.combat.combatants.get(pending["mover_id"])
+        self._oa_popup = OpportunityAttackPopup(
+            reactor_name=reactor.creature.name,
+            mover_name=mover.creature.name if mover else "the enemy",
+            screen_width=self.screen_width,
+            screen_height=self.screen_height,
+        )
+        self._oa_popup.reposition((self.screen_width // 2, self.screen_height // 2))
+
+    def _resolve_oa_choice(self, make_attack: bool) -> None:
+        """Apply the player's Attack/Skip choice and clear the popup. If more
+        reactors are queued, the next is shown on the following frame."""
+        self._oa_popup = None
+        self.combat.resolve_opportunity_attack_choice(make_attack)
+
+    # ------------------------------------------------------------------
     # Counterspell reaction popup
     # ------------------------------------------------------------------
 
@@ -1337,6 +1392,7 @@ class CombatScreen(Screen):
         # Cancel target selection if active, then open menu
         if self.combat.turn_phase == TurnPhase.SELECTING_TARGET:
             self._pending_help = False
+            self._pending_stabilize = False
             self._pending_shove = False
             self._pending_teleport = False
             self._pending_passenger_id = None
@@ -1410,6 +1466,22 @@ class CombatScreen(Screen):
                                 self._try_show_passenger_popup(action)
                             else:
                                 self._pending_teleport = True
+                        elif (
+                            (action.range == 0 or action.zone_follows_caster)
+                            and action.target_type.value.startswith("area_")
+                            and not action.attack
+                            and active.position is not None
+                        ):
+                            # Self-centered area effect (Spirit Guardians aura,
+                            # Turn Undead burst): centered on the caster — a
+                            # zero range or a caster-following zone — so cast
+                            # immediately, no hex to pick.
+                            self.combat.select_action(action)
+                            self.combat.execute_effect_at_hex(
+                                active.position,
+                                clicked_target_id=active.creature_id,
+                            )
+                            self._check_pending_counterspell()
                         else:
                             self.combat.select_action(action)
                         break
@@ -1454,6 +1526,10 @@ class CombatScreen(Screen):
             if action_name == "help":
                 # Help requires selecting an adjacent ally — enter target mode
                 self._pending_help = True
+                self.combat.turn_phase = TurnPhase.SELECTING_TARGET
+            elif action_name == "stabilize":
+                # Stabilize requires selecting an adjacent dying ally
+                self._pending_stabilize = True
                 self.combat.turn_phase = TurnPhase.SELECTING_TARGET
             else:
                 self.combat.execute_standard_action(action_name)
@@ -1567,6 +1643,7 @@ class CombatScreen(Screen):
         if key == pygame.K_BACKSPACE:
             if self.combat.turn_phase == TurnPhase.SELECTING_TARGET:
                 self._pending_help = False
+                self._pending_stabilize = False
                 self._pending_shove = False
                 self._pending_teleport = False
                 self._pending_passenger_id = None
@@ -1638,8 +1715,14 @@ class CombatScreen(Screen):
             get_sound_manager().play_sfx(sound_id)
             self._played_end_sound = True
 
-        # Drive AI turn runner (pause while reaction popup is showing)
-        if self.ai_runner.is_active and self._reaction_popup is None:
+        # Check for a pending opportunity-attack prompt (enemy provoked a
+        # player creature's OA mid-move) — show it before driving the AI.
+        if self._oa_popup is None and self.combat._pending_oa is not None:
+            self._show_oa_popup()
+
+        # Drive AI turn runner (pause while a reaction / OA popup is showing)
+        if (self.ai_runner.is_active and self._reaction_popup is None
+                and self._oa_popup is None):
             current_time = pygame.time.get_ticks()
             finished = self.ai_runner.update(self.combat, current_time)
             if finished:
@@ -1780,6 +1863,10 @@ class CombatScreen(Screen):
         # Rider popup (above panels, below end overlay)
         if self._rider_popup is not None:
             self._rider_popup.render(surface)
+
+        # Opportunity-attack prompt
+        if self._oa_popup is not None:
+            self._oa_popup.render(surface)
 
         # Damage reduction reaction popup
         if self._reaction_popup is not None:
@@ -2397,6 +2484,7 @@ class CombatScreen(Screen):
         begin_combat — the manager is already in a mid-combat state.
         """
         self.combat = cm
+        self.combat._oa_prompts_enabled = True  # interactive OA prompts (see __init__)
 
         # Create grid view from the loaded grid
         if cm.grid:

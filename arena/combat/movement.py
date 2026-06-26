@@ -31,6 +31,7 @@ class MovementTracker:
     has_moved: bool = False
     dead_creature_ids: set[str] = field(default_factory=set)
     blocked_hexes: set[tuple[int, int]] = field(default_factory=set)
+    cost_multiplier: int = 1
 
     def reset(self, creature_id: str, speed: int) -> None:
         """Reset for a new creature's turn.
@@ -43,6 +44,7 @@ class MovementTracker:
         self.max_movement = speed
         self.remaining_movement = speed
         self.has_moved = False
+        self.cost_multiplier = 1
 
     def get_reachable(
         self,
@@ -74,6 +76,7 @@ class MovementTracker:
             creature_id=self.creature_id,
             dead_creature_ids=self.dead_creature_ids,
             blocked_hexes=self.blocked_hexes,
+            cost_multiplier=self.cost_multiplier,
         )
 
     def try_move(

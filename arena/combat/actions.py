@@ -564,6 +564,10 @@ def resolve_attack_hit(
     )
     if has_condition(attacker, Condition.HELPED):
         remove_condition(attacker, attacker_id, Condition.HELPED)
+    # Attacking reveals a hidden creature (the advantage above is already
+    # locked in), whether the attack hits or misses.
+    if has_condition(attacker, Condition.HIDDEN):
+        remove_condition(attacker, attacker_id, Condition.HIDDEN)
 
     total_adv_sources = max(advantage, 0) + max(condition_adv, 0)
     total_dis_sources = abs(min(advantage, 0)) + abs(min(condition_adv, 0))

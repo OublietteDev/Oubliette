@@ -19,6 +19,7 @@ from arena.ai.evaluation import rank_targets
 from arena.ai.pathfinding import (
     find_best_movement,
     find_retreat_destination,
+    find_flee_destination,
 )
 from arena.ai.resources import should_use_limited_ability
 from arena.ai.scoring import (
@@ -135,6 +136,24 @@ class AIController:
             message=f"{combatant.creature.name} considers options...",
         ))
 
+        # ── Frightened: flee the fear source (RAW: can't move closer) ─
+        # Takes priority over normal planning — a turned/frightened creature
+        # spends its turn getting away. If it's cornered (can't increase the
+        # distance) this returns None and it falls through to a normal turn,
+        # where it'll attack at disadvantage.
+        flee_dest = self._frightened_flee_dest(context, manager)
+        if flee_dest is not None:
+            plan.steps.append(TurnStep(
+                step_type=TurnStepType.LOG_THINKING,
+                message=f"{combatant.creature.name} is frightened and flees!",
+            ))
+            plan.steps.append(TurnStep(
+                step_type=TurnStepType.MOVE,
+                target_hex=(flee_dest.q, flee_dest.r),
+            ))
+            plan.steps.append(TurnStep(step_type=TurnStepType.END_TURN))
+            return plan
+
         # ── Check tactical overrides ──────────────────────────────────
         retreat_decision = check_retreat(profile, context)
         if retreat_decision is not None:
@@ -169,6 +188,38 @@ class AIController:
                 insert_idx += 1
 
         return plan
+
+    def _frightened_flee_dest(self, context, manager):
+        """If the active creature is frightened, the hex it should flee to
+        (max distance from its fear source). None if not frightened, the source
+        isn't on the board, or it's cornered (can't increase the distance)."""
+        from arena.models.conditions import Condition
+        combatant = manager.active_combatant
+        if combatant is None or manager.grid is None or context.me.position is None:
+            return None
+        # The fear source is recorded as the condition's source (caster name).
+        fear_source = next(
+            (ac.source for ac in combatant.creature.active_conditions
+             if ac.condition == Condition.FRIGHTENED),
+            None,
+        )
+        if not fear_source:
+            return None
+        source_combatant = next(
+            (c for c in manager.combatants.values()
+             if c.creature.name == fear_source and c.position is not None),
+            None,
+        )
+        if source_combatant is None:
+            return None
+        return find_flee_destination(
+            manager.grid, context.me.position, source_combatant.position,
+            context.remaining_movement,
+            creature_size=context.me.size,
+            creature_id=context.me.creature_id,
+            dead_creature_ids=manager.movement.dead_creature_ids,
+            blocked_hexes=manager.movement.blocked_hexes,
+        )
 
     def _plan_retreat(
         self,

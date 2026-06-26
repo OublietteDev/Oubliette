@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from arena.combat.events import CombatEvent, CombatEventType
-from arena.combat.conditions import apply_condition
+from arena.combat.conditions import apply_condition, has_condition, remove_condition
 from arena.combat.stat_modifiers import (
     has_stealth_disadvantage,
     get_effective_speed,
@@ -226,6 +226,133 @@ def execute_action_surge(manager: CombatManager) -> CombatEvent | None:
         ),
         source_id=combatant.creature_id,
         details={"action": "action_surge"},
+    )
+
+
+def execute_stabilize(manager: CombatManager, target_id: str) -> CombatEvent | None:
+    """Administer first aid to an adjacent dying ally (5e RAW).
+
+    Uses the action to make a DC 10 Wisdom (Medicine) check on an unconscious,
+    dying creature within 5 ft. On success the ally is stabilized (stops rolling
+    death saves, stays at 0 HP). Returns None if the action is unavailable or
+    the target isn't a valid dying creature.
+
+    Args:
+        manager: The combat manager.
+        target_id: creature_id of the dying ally to stabilize.
+
+    Returns:
+        A combat event describing the result, or None if invalid.
+    """
+    combatant = manager.active_combatant
+    if combatant is None or manager.grid is None:
+        return None
+    if manager.turn_resources.has_used_action:
+        return None
+
+    target = manager.combatants.get(target_id)
+    if target is None:
+        return None
+    tc = target.creature
+    # Must be a dying creature: at 0 HP, runs death saves, not already stable.
+    if tc.is_conscious or not hasattr(tc, "death_save_successes"):
+        return None
+    if getattr(tc, "is_stabilized", False):
+        return CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=f"{tc.name} is already stable.",
+            source_id=combatant.creature_id,
+        )
+
+    combatant_pos = manager.grid.find_creature(combatant.creature_id)
+    target_pos = manager.grid.find_creature(target_id)
+    if combatant_pos is None or target_pos is None:
+        return None
+    if combatant_pos.distance_to(target_pos) * 5 > 5:
+        return CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=f"{tc.name} is too far to stabilize (must be within 5 ft).",
+            source_id=combatant.creature_id,
+        )
+
+    manager.turn_resources.has_used_action = True
+    wis_mod = get_effective_ability_modifier(combatant.creature, "wisdom")
+    roll = roll_die(20)
+    total = roll + wis_mod
+    success = total >= 10
+
+    if success:
+        from arena.combat.death_saves import stabilize_creature
+        stabilize_creature(tc)
+        msg = (f"{combatant.creature.name} stabilizes {tc.name}! "
+               f"(Medicine {total} vs DC 10)")
+    else:
+        msg = (f"{combatant.creature.name} fails to stabilize {tc.name}. "
+               f"(Medicine {total} vs DC 10)")
+
+    return CombatEvent(
+        event_type=CombatEventType.INFO,
+        message=msg,
+        source_id=combatant.creature_id,
+        target_id=target_id,
+        details={"action": "stabilize", "roll": total, "success": success},
+    )
+
+
+def execute_stand_up(manager: CombatManager) -> CombatEvent | None:
+    """Stand up from prone, spending half the creature's speed in movement.
+
+    Per 5e RAW, standing up costs an amount of movement equal to half the
+    creature's speed and removes the PRONE condition. It is part of movement,
+    NOT an action — so it does not touch the action/bonus-action economy and
+    remains available even after the creature has attacked this turn.
+
+    Fails (returns an info event, no state change) if the creature isn't
+    prone or doesn't have enough movement left to stand.
+
+    Returns:
+        A combat event describing the result, or None if invalid.
+    """
+    combatant = manager.active_combatant
+    if combatant is None:
+        return None
+    if not has_condition(combatant.creature, Condition.PRONE):
+        return None
+
+    base_speed = get_effective_speed(combatant.creature)
+    stand_cost = base_speed // 2
+
+    # A creature with no speed (0) can't stand up at all per RAW.
+    if base_speed <= 0:
+        return CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=f"{combatant.creature.name} has no speed and cannot stand up.",
+            source_id=combatant.creature_id,
+        )
+
+    if manager.movement.remaining_movement < stand_cost:
+        return CombatEvent(
+            event_type=CombatEventType.INFO,
+            message=(
+                f"{combatant.creature.name} needs {stand_cost} ft of movement to "
+                f"stand up (only {manager.movement.remaining_movement} ft left)."
+            ),
+            source_id=combatant.creature_id,
+        )
+
+    manager.movement.remaining_movement -= stand_cost
+    remove_condition(combatant.creature, combatant.creature_id, Condition.PRONE)
+    # Standing clears the crawl penalty for the rest of the turn.
+    manager.movement.cost_multiplier = 1
+
+    return CombatEvent(
+        event_type=CombatEventType.INFO,
+        message=(
+            f"{combatant.creature.name} stands up "
+            f"(spent {stand_cost} ft; {manager.movement.remaining_movement} ft left)."
+        ),
+        source_id=combatant.creature_id,
+        details={"action": "stand_up", "movement_cost": stand_cost},
     )
 
 

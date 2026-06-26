@@ -175,6 +175,7 @@ def get_reachable_hexes(
     creature_id: str | None = None,
     dead_creature_ids: set[str] | None = None,
     blocked_hexes: set[tuple[int, int]] | None = None,
+    cost_multiplier: int = 1,
 ) -> dict[tuple[int, int], int]:
     """Get all hexes reachable within a movement budget.
 
@@ -188,6 +189,8 @@ def get_reachable_hexes(
             difficult terrain (passable) rather than impassable.
         blocked_hexes: Set of (q, r) tuples that are completely impassable
             (e.g., wall spell hexes).
+        cost_multiplier: Per-hex cost multiplier (2 while prone-crawling, so
+            every foot of movement costs double per 5e RAW). Defaults to 1.
 
     Returns:
         Dict mapping (q, r) to movement cost to reach that hex.
@@ -239,7 +242,7 @@ def get_reachable_hexes(
                     neighbor, creature_size, grid
                 )
 
-            new_cost = current_cost + move_cost
+            new_cost = current_cost + move_cost * cost_multiplier
 
             if new_cost > max_cost:
                 continue

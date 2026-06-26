@@ -208,6 +208,37 @@ def find_retreat_destination(
     return best_hex
 
 
+def find_flee_destination(
+    grid: HexGrid,
+    current_pos: HexCoord,
+    flee_from: HexCoord,
+    remaining_movement: int,
+    creature_size: CreatureSize = CreatureSize.MEDIUM,
+    creature_id: str | None = None,
+    dead_creature_ids: set[str] | None = None,
+    blocked_hexes: set[tuple[int, int]] | None = None,
+) -> HexCoord | None:
+    """Find the reachable hex that maximizes distance from a single point — the
+    fear source a frightened creature flees. Returns None if no reachable hex is
+    farther than where it stands (cornered: it can't increase the distance).
+    """
+    reachable = get_reachable_hexes(
+        current_pos, grid, remaining_movement,
+        creature_size=creature_size, creature_id=creature_id,
+        dead_creature_ids=dead_creature_ids,
+        blocked_hexes=blocked_hexes,
+    )
+    best_hex: HexCoord | None = None
+    best_dist = current_pos.distance_to(flee_from)
+    for (q, r), _cost in reachable.items():
+        pos = HexCoord(q, r)
+        d = pos.distance_to(flee_from)
+        if d > best_dist:
+            best_dist = d
+            best_hex = pos
+    return best_hex
+
+
 def get_adjacent_hexes_to_target(
     target_pos: HexCoord,
     grid: HexGrid,

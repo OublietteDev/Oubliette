@@ -25,7 +25,11 @@ from arena.combat.conditions import (
 from arena.models.conditions import Condition
 from arena.combat.buff_effects import process_buff_start_of_turn, process_buff_end_of_turn
 from arena.combat.death_saves import process_death_save
-from arena.combat.condition_effects import can_take_actions, get_movement_multiplier
+from arena.combat.condition_effects import (
+    can_take_actions,
+    get_movement_multiplier,
+    get_movement_cost_multiplier,
+)
 from arena.combat.stat_modifiers import (
     get_effective_speed,
     get_effective_ability_modifier,
@@ -39,6 +43,8 @@ from arena.combat.standard_actions import (
     execute_dodge,
     execute_help,
     execute_hide,
+    execute_stabilize,
+    execute_stand_up,
 )
 from arena.combat.reactions import check_opportunity_attacks, execute_opportunity_attack
 from arena.combat.ready_action import (
@@ -212,6 +218,14 @@ class CombatManager:
 
         # Pending damage reduction reaction (for player-controlled targets)
         self._pending_damage_reduction: dict | None = None
+
+        # Pending opportunity-attack choice: an enemy's move provoked OAs from
+        # one or more PLAYER creatures; the GUI prompts each (Attack/Skip) and
+        # the move completes once the queue is resolved. Only the interactive
+        # GUI enables prompting (sets _oa_prompts_enabled); headless/AI-only
+        # contexts auto-fire OAs as before so try_move stays synchronous.
+        self._pending_oa: dict | None = None
+        self._oa_prompts_enabled: bool = False
 
         # Pending Bardic Inspiration choice: a player attacker missed but holds a
         # banked die that could flip the miss to a hit (GUI offers spend/skip).
@@ -531,6 +545,7 @@ class CombatManager:
         multiplier = get_movement_multiplier(combatant.creature)
         speed = int(base_speed * multiplier)
         self.movement.reset(combatant.creature_id, speed)
+        self.movement.cost_multiplier = get_movement_cost_multiplier(combatant.creature)
         self.movement.dead_creature_ids = self._get_dead_creature_ids()
         self.movement.blocked_hexes = self._get_wall_blocked_hexes()
 
@@ -608,6 +623,7 @@ class CombatManager:
                     multiplier = get_movement_multiplier(combatant.creature)
                     speed = int(base_speed * multiplier)
                     self.movement.reset(combatant.creature_id, speed)
+                    self.movement.cost_multiplier = get_movement_cost_multiplier(combatant.creature)
                     self.movement.dead_creature_ids = self._get_dead_creature_ids()
                     self.movement.blocked_hexes = self._get_wall_blocked_hexes()
                     self.turn_phase = TurnPhase.AWAITING_ACTION
@@ -3961,8 +3977,15 @@ class CombatManager:
             is_disengaging=self.turn_resources.is_disengaging,
         )
 
-        # Resolve opportunity attacks
+        # Resolve opportunity attacks. AI reactors fire automatically; a
+        # PLAYER reactor instead gets an Attack/Skip prompt — those are queued
+        # and the move completes once the player resolves them.
+        player_oas: list = []
         for reactor_id, reactor, melee_action in oa_attackers:
+            if (self._oa_prompts_enabled
+                    and getattr(reactor.creature, "is_player_controlled", False)):
+                player_oas.append((reactor_id, reactor, melee_action))
+                continue
             oa_result = execute_opportunity_attack(
                 reactor_id=reactor_id,
                 reactor=reactor,
@@ -3983,6 +4006,23 @@ class CombatManager:
                 self._check_victory()
                 return False
 
+        if player_oas:
+            # Defer the move: the GUI prompts each player reactor, then calls
+            # resolve_opportunity_attack_choice, which completes the move.
+            self._pending_oa = {
+                "queue": player_oas,
+                "mover_id": combatant.creature_id,
+                "move_target": target,
+                "from_pos": from_pos,
+            }
+            return False
+
+        return self._commit_move(combatant, target, from_pos)
+
+    def _commit_move(self, combatant, target, from_pos) -> bool:
+        """Actually move the creature to ``target`` (after any opportunity
+        attacks have been resolved). Updates the grid, fires readied-action
+        and zone-entry checks. Returns whether the move landed."""
         success, event = self.movement.try_move(
             target, self.grid, combatant.creature.size,
             anchor_position=from_pos,
@@ -4017,6 +4057,41 @@ class CombatManager:
 
         return success
 
+    def resolve_opportunity_attack_choice(self, make_attack: bool) -> None:
+        """Resolve the front of the pending player-OA queue (GUI Attack/Skip).
+        Fires the opportunity attack if chosen, then either prompts the next
+        queued reactor or completes the deferred move."""
+        pending = self._pending_oa
+        if pending is None:
+            return
+        mover = self.combatants.get(pending["mover_id"])
+        if mover is None:
+            self._pending_oa = None
+            return
+
+        reactor_id, reactor, action = pending["queue"].pop(0)
+        if make_attack:
+            oa_result = execute_opportunity_attack(
+                reactor_id=reactor_id, reactor=reactor,
+                target_id=pending["mover_id"], target=mover,
+                action=action, grid=self.grid,
+                reaction_used=self.reaction_used, combatants=self.combatants,
+            )
+            for e in oa_result.events:
+                self.log.add(e)
+            self._cleanup_orphaned_zones()
+            if not mover.creature.is_conscious:
+                # The mover dropped — cancel the move entirely.
+                self._pending_oa = None
+                self._check_victory()
+                return
+
+        if pending["queue"]:
+            return                      # more reactors to prompt
+        # All player OAs resolved → finish the move.
+        self._pending_oa = None
+        self._commit_move(mover, pending["move_target"], pending["from_pos"])
+
     def execute_standard_action(
         self, action_name: str, target_id: str | None = None
     ) -> CombatEvent | None:
@@ -4047,8 +4122,14 @@ class CombatManager:
             if target_id is None:
                 return None
             event = execute_help(self, target_id)
+        elif action_name_lower == "stabilize":
+            if target_id is None:
+                return None
+            event = execute_stabilize(self, target_id)
         elif action_name_lower == "hide":
             event = execute_hide(self)
+        elif action_name_lower in ("stand_up", "stand"):
+            event = execute_stand_up(self)
         elif action_name_lower == "escape":
             # Escape a grapple (C5) — logs its own events
             result = self.execute_escape_grapple()
@@ -5092,16 +5173,36 @@ class CombatManager:
 
         if self.active_zones:
             from arena.models.conditions import Condition
-            from arena.combat.conditions import has_condition
+            from arena.combat.conditions import remove_condition
             to_remove = []
             for zone in self.active_zones:
                 if not zone.concentration_linked:
                     continue
                 caster = self.combatants.get(zone.caster_id)
-                if caster is None or not has_condition(caster.creature, Condition.CONCENTRATING):
+                conc_spell = None
+                if caster is not None:
+                    for ac in caster.creature.active_conditions:
+                        if ac.condition == Condition.CONCENTRATING:
+                            conc_spell = ac.extra_data.get("spell")
+                            break
+                # Orphaned if the caster is gone, no longer concentrating, or has
+                # moved concentration to a DIFFERENT spell (e.g. cast Hold Person
+                # while Web was up — the Web zone must end).
+                if caster is None or conc_spell != zone.name:
                     to_remove.append(zone)
             for zone in to_remove:
                 self.active_zones.remove(zone)
+                # Strip the zone's lingering condition (Web's restrained, etc.)
+                # from every creature it was holding.
+                if zone.condition_on_fail:
+                    try:
+                        cond = Condition(zone.condition_on_fail)
+                    except ValueError:
+                        cond = None
+                    if cond is not None:
+                        for c in self.combatants.values():
+                            remove_condition(c.creature, c.creature_id, cond,
+                                             source=zone.name)
                 self.log.add(CombatEvent(
                     event_type=CombatEventType.INFO,
                     message=f"{zone.name} zone fades away.",
