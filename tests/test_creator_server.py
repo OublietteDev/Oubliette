@@ -158,6 +158,19 @@ def test_person_npc_roundtrip_build_save_load(tmp_path, monkeypatch):
     assert aldric.sheet is not None and aldric.sheet.char_class == "fighter"
 
 
+def test_chargen_sheet_renders_a_built_character():
+    """Phase 4b-4c: a stored Character renders to the same derived sheet the build
+    preview shows, so a person-NPC can be reviewed without rebuilding."""
+    from tests.test_chargen import _fighter
+
+    char = client.post("/api/chargen/build", json=_fighter().model_dump(mode="json")).json()["character"]
+    r = client.post("/api/chargen/sheet", json=char).json()
+    assert r["ok"] is True
+    assert r["preview"]["max_hp"] == 12
+    assert r["preview"]["derived"]["armor_class"] == 18
+    assert any(f["name"] == "Second Wind" for f in r["preview"]["features"])
+
+
 def test_save_person_character_rejects_invalid(tmp_path, monkeypatch):
     """The sidecar save validates against the engine Character model — a broken
     snapshot can't be written (it would hard-fail the pack at load)."""

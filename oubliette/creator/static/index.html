@@ -1969,10 +1969,11 @@ function renderCombatPanel() {
     box.innerHTML = `<div class="sftitle">Character</div>
       <div class="help">Build this NPC as a real character — race, class, equipment, the works — with the character creator (same engine the players use).</div>
       <div style="margin-top:6px">
-        <button class="btn mini" type="button" id="npcBuildChar">${built ? "✎ Edit character (rebuild)" : "+ Build character"}</button>
-        ${built ? '<span class="pill note" style="margin-left:8px">built ✓</span>' : ""}
+        <button class="btn mini" type="button" id="npcBuildChar">${built ? "✎ Rebuild character" : "+ Build character"}</button>
+        ${built ? '<button class="btn mini" type="button" id="npcViewSheet" style="margin-left:8px">View sheet</button><span class="pill note" style="margin-left:8px">built ✓</span>' : ""}
       </div>`;
     const b = gid("npcBuildChar"); if (b) b.addEventListener("click", () => npcBuildCharacter());
+    const vb = gid("npcViewSheet"); if (vb) vb.addEventListener("click", () => openSheetView(editorCtx.original.id));
     return;
   }
   if (kind === "creature") {
@@ -2556,11 +2557,16 @@ function renderPreview(data) {
     root.appendChild(ul);
     return;
   }
-  const p = data.preview, d = p.derived;
-  const r = cgRace(), cc = cgClass();
+  const r = cgRace();
+  const label = `Level ${cg.level || 1} ${r.name}${cg.subrace ? " (" + (cgSubrace() || {}).name + ")" : ""} ${cgClass().name}`;
+  renderSheetCard(root, data.preview, label);
+}
+
+// Render a derived sheet (build preview or a stored character's review) into `root`.
+function renderSheetCard(root, p, label) {
+  const d = p.derived;
   root.appendChild(el("h3", null, p.name || "Unnamed"));
-  root.appendChild(el("div", "cg-sub",
-    `Level ${cg.level || 1} ${r.name}${cg.subrace ? " (" + (cgSubrace() || {}).name + ")" : ""} ${cc.name}`));
+  root.appendChild(el("div", "cg-sub", label));
   const stats = el("div", "cg-stats");
   const stat = (lbl, val) => { const s = el("div", "cg-stat"); s.appendChild(el("b", null, String(val))); s.appendChild(el("span", null, lbl)); return s; };
   stats.appendChild(stat("AC", d.armor_class));
@@ -2590,6 +2596,26 @@ function renderPreview(data) {
     root.appendChild(el("div", "cg-hint", "Spells"));
     root.appendChild(el("div", "cg-sub", spells.join(", ")));
   }
+}
+
+// Review a built person-NPC's sheet read-only (no rebuild) — Phase 4b-4c.
+async function openSheetView(npcId) {
+  if (!cgOpt) { try { cgOpt = await (await fetch("/api/chargen/options")).json(); } catch (e) {} }
+  const sc = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/character/${encodeURIComponent(npcId)}`)).json();
+  if (!sc.ok) { toast("No character built yet."); return; }
+  const data = await _post("/api/chargen/sheet", sc.character);
+  if (!data.ok) { toast("Couldn't render the sheet."); return; }
+  const c = sc.character, sh = c.sheet || {};
+  const raceName = ((cgOpt.races || []).find(x => x.id === sh.race) || {}).name || sh.race || "—";
+  const className = ((cgOpt.classes || []).find(x => x.id === sh.char_class) || {}).name || sh.char_class || "—";
+  const modal = gid("modal");
+  modal.innerHTML = `
+    <div class="mhead">Character sheet</div>
+    <div class="mbody"><div class="cg-preview" id="cg-sheet"></div></div>
+    <div class="mfoot"><button class="btn" data-cancel>Close</button></div>`;
+  gid("scrim").classList.add("open");
+  modal.querySelector("[data-cancel]").addEventListener("click", closeEditor);
+  renderSheetCard(gid("cg-sheet"), data.preview, `Level ${c.level || 1} ${raceName} ${className}`);
 }
 
 async function cgSaveCharacter() {

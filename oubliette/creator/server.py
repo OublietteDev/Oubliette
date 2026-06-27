@@ -680,6 +680,14 @@ async def post_chargen_levelup(body: _ForgeLevelUpIn) -> JSONResponse:
                          "preview": preview_payload(leveled, _equipped_items(leveled, rs), rs)})
 
 
+@app.post("/api/chargen/sheet")
+async def post_chargen_sheet(character: Character) -> JSONResponse:
+    """Render an already-built Character into the same derived sheet the build
+    preview shows — so a person-NPC can be reviewed without rebuilding it."""
+    rs = _ruleset()
+    return JSONResponse({"ok": True, "preview": preview_payload(character, _equipped_items(character, rs), rs)})
+
+
 def _safe_leaf(name: str) -> bool:
     """A filename that can't escape its folder — looser than _SAFE_NAME so audio files
     can keep author-friendly names (spaces, &, parentheses), just no path separators."""
