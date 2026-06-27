@@ -917,7 +917,32 @@ prefers a rich file via `arena_monster_file`, so "clone an existing creature" = 
   (cone/CON/3d8/recharge); cloned an Adult White Dragon and its Cold Breath + Frightful Presence loaded
   as editable specials while Ice Walk + Legendary Resistance were preserved. Tests: +1 bridge guard
   (a breath action validates against the engine Action model with area/save/recharge intact). Pure
-  frontend (reused the 3b-3a endpoints). **NEXT: 3b-4 — advanced raw-data editor + `ai_use_condition`.**
+  frontend (reused the 3b-3a endpoints).
+
+- **Phase 3b-4 — Advanced raw-data editor + `ai_use_condition` (DONE, browser-verified 2026-06-27, 501
+  green). FORGE PHASE 3 COMPLETE.** The safe, data-only escape hatch (the decision was DATA not code).
+  Two parts: (1) **Raw-data editor** — a "⚙ Edit raw data…" door in the attacks-editor footer opens the
+  creature's full Arena `Monster` as pretty-printed JSON in a monospace textarea, for the exotic stuff
+  the friendly forms don't cover (spell lists, teleports, walls, summons). It first folds any unsaved
+  friendly edits in (`_collectMonster`, shared with Save), then saves via the 3b-1 PUT — validated
+  against the real engine model, so bad JSON ("not valid data") and an invalid Monster ("invalid combat
+  data: …") are friendly inline errors, never a crash or a broken fight. It is DATA, not code — nothing
+  executes. (2) **`ai_use_condition` presets** — special-move blocks gained an "AI uses it" dropdown of
+  safe presets (Always / When bloodied / When badly hurt / When foes clustered (2+) / In melee / At
+  range) → `ai_use_condition`. The engine's `check_use_condition` is a constrained mini-language that
+  FAILS OPEN (an unrecognised value just means "always usable"), so a custom value can never break a
+  fight; a loaded non-preset value shows as "(custom)" and is preserved. Pure frontend (reuses the PUT
+  endpoint, already tested for valid/invalid). Live-verified: a once-a-day "Howl" gated to "when
+  bloodied" wrote `ai_use_condition: "is_bloodied"`; raw-editing HP→99 persisted; both error paths
+  surfaced friendly messages.
+
+**→ FORGE PHASE 3 (the monster editor) IS COMPLETE.** The full authoring loop works end to end for a
+non-coder: clone an SRD/pack creature OR build one fresh → set identity & defenses with fat-finger-safe
+dropdowns → pick a portrait from disk → author real attacks + multiattack → author save-for-effect
+specials (breath/fear) with AI-use gating → drop to the raw-data escape hatch for anything exotic — and
+every bit of it actually fights correctly in the Arena (the bridge prefers the pack combat file). Shipped
+across 6 commits (3a, 3b-1, 3b-2, 3b-3a, 3b-3b, 3b-4). See `oubliette-ai-forge-arc` memory. NEXT arc is
+open (candidates: the UI-pass polish items in the plan doc; Brightvale content; the audio soundscape).
 
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a
 repository abstraction; async edges / sync core; LLM-first routing behind the model seam;

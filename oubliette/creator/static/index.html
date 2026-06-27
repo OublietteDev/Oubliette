@@ -202,6 +202,12 @@
   .spc-conds { margin-top: 8px; }
   .spc-cl { display: block; font-size: 11px; color: var(--faint); margin-bottom: 5px; }
   .spc-prev { font-size: 12px; color: var(--gold); opacity: .9; margin-top: 8px; }
+  .spc-when { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--faint); margin-top: 9px; }
+  .spc-when select { flex: 1; font-size: 13px; padding: 6px 7px; }
+  /* raw-data editor (the advanced escape hatch) */
+  .raw-json { width: 100%; min-height: 360px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 12.5px; line-height: 1.45; white-space: pre; tab-size: 2; }
+  .mfoot-spacer { flex: 1; }
   .invalid { color: var(--bad); font-size: 12px; margin-top: 6px; min-height: 16px; }
   /* illustration preview — mirrors the game's quest-card image frame so "fit" is honest */
   .illus-frame { width: 100%; height: 175px; background: var(--bg); border: 1px solid var(--line);
@@ -1424,10 +1430,13 @@ async function openAttacksEditor(index) {
       <div class="invalid" id="atk_err"></div>
     </div>
     <div class="mfoot"><button class="btn" data-cancel>Cancel</button>
+      <button class="btn" id="atkRaw" title="Edit the full combat data directly">⚙ Edit raw data…</button>
+      <span class="mfoot-spacer"></span>
       <button class="btn primary" id="atkSave">Save attacks</button></div>`;
   document.getElementById("scrim").classList.add("open");
   renderAttackRows();
   renderSpecialBlocks();
+  document.getElementById("atkRaw").addEventListener("click", openRawFromAttacks);
   document.getElementById("atkAdd").addEventListener("click", () => {
     attacksCtx.attacks.push({ name: "Attack", kind: "melee", dist: 5, dmg: "1d6", dtype: "bludgeoning" });
     renderAttackRows();
@@ -1495,6 +1504,13 @@ const ABILITIES_LONG = [["strength", "STR"], ["dexterity", "DEX"], ["constitutio
   ["intelligence", "INT"], ["wisdom", "WIS"], ["charisma", "CHA"]];
 const SAVE_FREQ = [["atwill", "At will"], ["r5", "Recharge 5–6"], ["r6", "Recharge 6"], ["once", "Once a day"]];
 const _FREQ_LABEL = { atwill: "at will", r5: "recharge 5–6", r6: "recharge 6", once: "once a day" };
+// Safe ai_use_condition presets — the AI gates the move on these. The engine
+// evaluates them in a constrained mini-language that FAILS OPEN (a value it doesn't
+// recognise just means "always usable"), so these can never break a fight.
+const USE_WHEN = [["", "Always"], ["is_bloodied", "When bloodied (under ½ HP)"],
+  ["hp_percent < 25", "When badly hurt (under ¼ HP)"], ["enemies_in_range >= 2", "When foes are clustered (2+)"],
+  ["is_in_melee", "When in melee"], ["not is_in_melee", "When at range"]];
+const _useWhenLabel = v => (USE_WHEN.find(([val]) => val === v) || [, v])[1];
 // Actions we can edit as a simple special move: a save effect with no attack and no
 // exotic machinery (spells/teleports/walls/summons stay preserved, edited later in 3b-4).
 const _EXOTIC_KEYS = ["teleport_range", "is_wall", "summon_creature", "control_effect",
@@ -1517,7 +1533,7 @@ function _specialFromAction(a) {
            save: sv.ability || "dexterity", dc: sv.dc || 13,
            dmg: d ? `${d.dice}${d.bonus ? (d.bonus > 0 ? "+" + d.bonus : d.bonus) : ""}` : "",
            dtype: d ? d.damage_type : "fire", onSave: sv.damage_on_success || "half",
-           conds: sv.conditions_on_fail || [], freq };
+           conds: sv.conditions_on_fail || [], freq, useWhen: a.ai_use_condition || "" };
 }
 function _specialToAction(s) {
   const p = s.dmg ? _parseDamage(s.dmg) : null;
@@ -1529,6 +1545,7 @@ function _specialToAction(s) {
   if (s.freq === "r5") { act.recharge_min = 5; act.ai_priority = 9; }
   else if (s.freq === "r6") { act.recharge_min = 6; act.ai_priority = 9; }
   else if (s.freq === "once") { act.uses_per_rest = 1; act.rest_type = "long"; act.ai_priority = 9; }
+  if (s.useWhen) act.ai_use_condition = s.useWhen;
   return act;
 }
 function _specialPreview(s) {
@@ -1537,6 +1554,7 @@ function _specialPreview(s) {
   if (s.dmg) bits.push(`${s.dmg} ${s.dtype}${s.onSave === "half" ? ", half on save" : ""}`);
   if ((s.conds || []).length) bits.push(s.conds.join(", "));
   bits.push(_FREQ_LABEL[s.freq] || s.freq);
+  if (s.useWhen) bits.push(_useWhenLabel(s.useWhen).toLowerCase());
   return bits.join(" · ");
 }
 function renderSpecialBlocks() {
@@ -1560,6 +1578,9 @@ function renderSpecialBlocks() {
         <label>How often ${sel("spc-freq", i, SAVE_FREQ, s.freq)}</label>
       </div>
       <div class="spc-conds"><span class="spc-cl">Conditions on a failed save:</span>${checklist("spc_cond_" + i, CONDITIONS, s.conds)}</div>
+      <label class="spc-when">AI uses it ${(() => { const has = USE_WHEN.some(([v]) => v === s.useWhen);
+        const opts = [...(has ? [] : [[s.useWhen, "(custom) " + s.useWhen]]), ...USE_WHEN];
+        return `<select data-spc-when="${i}">${opts.map(([v, l]) => `<option value="${esc(v)}"${v === s.useWhen ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`; })()}</label>
       <div class="spc-prev">${_specialPreview(s)}</div>
     </div>`).join("") || '<div class="nothing" style="margin:6px 0">No special moves.</div>';
   const refresh = i => { const b = box.querySelectorAll(".spc-block")[i]; if (b) b.querySelector(".spc-prev").textContent = _specialPreview(attacksCtx.specials[i]); };
@@ -1570,22 +1591,26 @@ function renderSpecialBlocks() {
   bind("spc-size", "size", "input", Number); bind("spc-dc", "dc", "input", Number);
   bind("spc-shape", "shape", "change"); bind("spc-save", "save", "change");
   bind("spc-dtype", "dtype", "change"); bind("spc-onsave", "onSave", "change"); bind("spc-freq", "freq", "change");
+  bind("spc-when", "useWhen", "change");
   attacksCtx.specials.forEach((s, i) => document.querySelectorAll(`#spc_cond_${i} input`).forEach(cb =>
     cb.addEventListener("change", () => { attacksCtx.specials[i].conds = readChecklist(`spc_cond_${i}`); refresh(i); })));
   box.querySelectorAll("[data-spc-del]").forEach(el =>
     el.addEventListener("click", e => { attacksCtx.specials.splice(+e.target.dataset.spcDel, 1); renderSpecialBlocks(); }));
 }
-async function saveAttacks() {
-  const err = document.getElementById("atk_err");
-  if (!attacksCtx.attacks.length) { err.textContent = "Give it at least one attack."; return; }
+// Validate the friendly inputs and fold them back into the combat file (in place),
+// returning the assembled Monster — or null (with an inline error) if invalid. Shared
+// by Save and the "edit raw data" door so both see the same up-to-date combat file.
+function _collectMonster() {
+  const err = document.getElementById("atk_err"); err.textContent = "";
+  if (!attacksCtx.attacks.length) { err.textContent = "Give it at least one attack."; return null; }
   for (const a of attacksCtx.attacks) {
-    if (!a.name.trim()) { err.textContent = "Every attack needs a name."; return; }
-    if (!_parseDamage(a.dmg)) { err.textContent = `“${a.name}”: damage must look like 2d6 or 1d8+2.`; return; }
+    if (!a.name.trim()) { err.textContent = "Every attack needs a name."; return null; }
+    if (!_parseDamage(a.dmg)) { err.textContent = `“${a.name}”: damage must look like 2d6 or 1d8+2.`; return null; }
   }
   for (const s of attacksCtx.specials) {
-    if (!s.name.trim()) { err.textContent = "Every special move needs a name."; return; }
-    if (s.dmg && !_parseDamage(s.dmg)) { err.textContent = `“${s.name}”: damage must look like 6d6 or 2d8+1 (or leave it blank).`; return; }
-    if (!s.dmg && !(s.conds || []).length) { err.textContent = `“${s.name}” needs damage, a condition, or both.`; return; }
+    if (!s.name.trim()) { err.textContent = "Every special move needs a name."; return null; }
+    if (s.dmg && !_parseDamage(s.dmg)) { err.textContent = `“${s.name}”: damage must look like 6d6 or 2d8+1 (or leave it blank).`; return null; }
+    if (!s.dmg && !(s.conds || []).length) { err.textContent = `“${s.name}” needs damage, a condition, or both.`; return null; }
   }
   const perTurn = Math.max(1, Math.min(6, Number(document.getElementById("atk_multi").value || 1)));
   const m = attacksCtx.monster;
@@ -1595,6 +1620,12 @@ async function saveAttacks() {
     m.special_abilities.push({ name: "Multiattack",
       description: `The ${attacksCtx.creature.name.toLowerCase()} makes ${_NUMWORD[perTurn] || perTurn} attacks.`,
       extra_attack_count: perTurn });
+  return m;
+}
+async function saveAttacks() {
+  const m = _collectMonster();
+  if (!m) return;
+  const err = document.getElementById("atk_err");
   try {
     const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/monster/${encodeURIComponent(attacksCtx.creature.id)}`, {
       method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ monster: m }) })).json();
@@ -1604,6 +1635,48 @@ async function saveAttacks() {
   closeEditor();
   render();
   toast(`Saved ${attacksCtx.creature.name}'s attacks.`);
+}
+
+// ---- advanced: raw combat-data editor (Phase 3b-4, the safe escape hatch) ----
+// The full Arena Monster as structured DATA (never code) — for the exotic stuff the
+// friendly forms don't cover (spell lists, teleports, walls). Validated against the
+// engine model on save, so a typo is a friendly error, not a broken fight.
+let rawCtx = null;
+function openRawFromAttacks() {
+  const m = _collectMonster();   // fold in any unsaved friendly edits first
+  if (!m) return;
+  openRawEditor(m);
+}
+function openRawEditor(monster) {
+  rawCtx = { creature: attacksCtx.creature };
+  const modal = document.getElementById("modal");
+  modal.innerHTML = `
+    <div class="mhead">⚙ Raw combat data — ${esc(rawCtx.creature.name)}</div>
+    <div class="mbody">
+      <div class="help">Advanced — the creature's full combat data as structured data (not code: it can't run anything). Edit carefully; it's checked against the engine when you save. Tip: give any action an <code>"ai_use_condition"</code> like <code>"is_bloodied"</code> or <code>"enemies_in_range &gt;= 2"</code> to gate when the AI uses it.</div>
+      <textarea id="rawJson" class="raw-json" spellcheck="false">${esc(JSON.stringify(monster, null, 2))}</textarea>
+      <div class="invalid" id="raw_err"></div>
+    </div>
+    <div class="mfoot"><button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" id="rawSave">Save raw data</button></div>`;
+  document.getElementById("scrim").classList.add("open");
+  modal.querySelector("[data-cancel]").addEventListener("click", closeEditor);
+  document.getElementById("rawSave").addEventListener("click", saveRawEditor);
+}
+async function saveRawEditor() {
+  const err = document.getElementById("raw_err");
+  let parsed;
+  try { parsed = JSON.parse(document.getElementById("rawJson").value); }
+  catch (e) { err.textContent = "That's not valid data (JSON): " + e.message; return; }
+  try {
+    const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/monster/${encodeURIComponent(rawCtx.creature.id)}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ monster: parsed }) })).json();
+    if (res.error) { err.textContent = res.error; return; }
+  } catch (e) { err.textContent = String(e.message || e); return; }
+  if (!(state.monsterFiles || []).includes(rawCtx.creature.id)) (state.monsterFiles = state.monsterFiles || []).push(rawCtx.creature.id);
+  closeEditor();
+  render();
+  toast(`Saved ${rawCtx.creature.name}'s combat data.`);
 }
 
 // ---- AI personality editor ----
