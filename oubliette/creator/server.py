@@ -454,6 +454,47 @@ async def delete_monster(pack_id: str, sb_id: str) -> JSONResponse:
     return JSONResponse({"ok": True, "deleted": existed})
 
 
+# --- SRD source catalog (Phase 3b-2: "start from an existing creature") --------
+# The global bestiary (identity + rich description) and the matching Arena combat
+# files are the clone sources the Forge offers alongside the current pack's own
+# creatures. Read-only; loaded once (static content).
+_SRD_BESTIARY_PATH = Path(__file__).parent.parent / "content" / "srd" / "bestiary.json"
+_srd_bestiary_cache: dict | None = None
+
+
+def _srd_bestiary() -> dict:
+    """{id: StatBlock-dict} for the SRD bestiary, loaded once."""
+    global _srd_bestiary_cache
+    if _srd_bestiary_cache is None:
+        data = _read_json(_SRD_BESTIARY_PATH) or []
+        _srd_bestiary_cache = {e["id"]: e for e in data if isinstance(e, dict) and e.get("id")}
+    return _srd_bestiary_cache
+
+
+@app.get("/api/srd/monsters")
+async def list_srd_monsters() -> JSONResponse:
+    """The SRD creatures you can clone from — a light list for the picker."""
+    out = [{"id": e["id"], "name": e.get("name") or e["id"],
+            "cr": e.get("cr"), "type": e.get("type")}
+           for e in _srd_bestiary().values()]
+    out.sort(key=lambda m: ((m["cr"] if m["cr"] is not None else 0), m["name"]))
+    return JSONResponse({"monsters": out})
+
+
+@app.get("/api/srd/monster/{srd_id}")
+async def get_srd_monster(srd_id: str) -> JSONResponse:
+    """One SRD creature's identity (its bestiary StatBlock) + its full Arena combat
+    file (or null). The Forge clones from these into the current pack."""
+    sb = _srd_bestiary().get(srd_id)
+    if sb is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    combat = None
+    if _SAFE_NAME.match(srd_id):
+        from arena.paths import DATA_DIR
+        combat = _read_json(DATA_DIR / "monsters" / "srd" / f"{srd_id}.json")
+    return JSONResponse({"ok": True, "statblock": sb, "combat": combat})
+
+
 def _safe_leaf(name: str) -> bool:
     """A filename that can't escape its folder — looser than _SAFE_NAME so audio files
     can keep author-friendly names (spaces, &, parentheses), just no path separators."""

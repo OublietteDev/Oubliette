@@ -176,6 +176,17 @@
   .portrait-prev.is-empty { border-style: dashed; }
   .portrait-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
   .portrait-actions label.btn { cursor: pointer; }
+  /* clone-from-existing picker */
+  .clone-list { max-height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .clone-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    padding: 9px 11px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+    color: var(--ink); cursor: pointer; font: inherit; font-size: 14px; }
+  .clone-row:hover { border-color: var(--accent); }
+  .clone-nm { font-weight: 600; white-space: nowrap; }
+  .clone-meta { color: var(--muted); font-size: 12px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .clone-src { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px;
+    border-radius: 99px; border: 1px solid var(--line); color: var(--faint); flex: none; }
+  .clone-src.srd { color: var(--gold); border-color: var(--gold); }
   .invalid { color: var(--bad); font-size: 12px; margin-top: 6px; min-height: 16px; }
   /* illustration preview — mirrors the game's quest-card image frame so "fit" is honest */
   .illus-frame { width: 100%; height: 175px; background: var(--bg); border: 1px solid var(--line);
@@ -340,7 +351,7 @@ async function openWorld(id) {
   const data = await (await fetch(`/api/pack/${encodeURIComponent(id)}`)).json();
   if (data.error) { toast(data.error); return; }
   state = { id, contents: data.contents, validation: data.validation, dirty: false,
-            audioFiles: data.audio_files || [] };
+            audioFiles: data.audio_files || [], monsterFiles: data.monster_files || [] };
   document.getElementById("dirty").style.display = "none";
   document.getElementById("saveBtn").disabled = true;
   render(); loadWorlds();
@@ -378,7 +389,8 @@ function describe(kind, e) {
     const crLab = e.cr == null ? "" : (CR_LABEL[String(e.cr)] || String(e.cr));
     const idy = [e.size, e.type].filter(Boolean).join(" ");
     const head = [idy, crLab ? `CR ${crLab}` : ""].filter(Boolean).join(" · ");
-    return `${head ? head + " · " : ""}${e.kind} · ${e.hp} HP · defense ${e.armor_class} · worth ${e.xp} XP${prof}`;
+    const combat = (state.monsterFiles || []).includes(e.id) ? " · ⚔ custom combat" : "";
+    return `${head ? head + " · " : ""}${e.kind} · ${e.hp} HP · defense ${e.armor_class} · worth ${e.xp} XP${prof}${combat}`;
   }
   if (kind === "ai_profiles") {
     const brave = e.aggression >= 1.5 ? "reckless" : e.will_flee ? "flees when hurt" : e.aggression <= 0.85 ? "cautious" : "steady";
@@ -553,7 +565,7 @@ function renderGroup(kind) {
         <span class="chev">▾</span><h3>${TITLES[kind]}</h3>
         <span class="count">(${entries.length})</span>${warn}
       </span><span class="gspacer"></span>
-      ${editable ? `<button class="btn mini" data-add="${kind}">+ Add ${SINGULAR[kind]}</button>`
+      ${editable ? `${kind === "statblocks" ? `<button class="btn mini" data-clone-src="1">Start from existing…</button>` : ""}<button class="btn mini" data-add="${kind}">+ Add ${SINGULAR[kind]}</button>`
                  : `<span class="readonly-note">editing coming soon</span>`}</div>`;
   return `<div class="group${collapsed.has(kind) ? " collapsed" : ""}">${head}<div class="gcards">${cards}</div></div>`;
 }
@@ -583,6 +595,8 @@ function render() {
     }));
   d.querySelectorAll("[data-add]").forEach(b =>
     b.addEventListener("click", () => openEditor(b.dataset.add, null)));
+  d.querySelectorAll("[data-clone-src]").forEach(b =>
+    b.addEventListener("click", openClonePicker));
   d.querySelectorAll("[data-toggle]").forEach(t =>
     t.addEventListener("click", () => {
       const kind = t.dataset.toggle;
@@ -1247,6 +1261,85 @@ function confirmStatblock(original) {
   const prof = document.getElementById("f_ai_profile").value;
   if (prof) base.ai_profile = prof; else delete base.ai_profile;
   commitEntry("statblocks", original, base);
+}
+
+// ---- clone an existing creature (Phase 3b-2) ----
+// "Start from an existing creature": copy any SRD or this-world creature's full
+// combat kit + stats under a new id, then open the editor to rename/tweak. The
+// source is never touched. The combat file (if any) is written immediately under
+// the new id (like portraits); statblocks.json stays client-owned (saved on Save).
+let cloneCtx = null;
+async function openClonePicker() {
+  let srd = [];
+  try { srd = (await (await fetch("/api/srd/monsters")).json()).monsters || []; }
+  catch (e) { toast("Couldn't load the SRD creatures."); }
+  const pack = listOf("statblocks").map(s => ({ id: s.id, name: s.name, cr: s.cr, type: s.type, src: "pack" }));
+  cloneCtx = { sources: [...pack, ...srd.map(m => ({ ...m, src: "srd" }))], shown: [] };
+  const modal = document.getElementById("modal");
+  modal.innerHTML = `
+    <div class="mhead">Start from an existing creature</div>
+    <div class="mbody">
+      <div class="help">Copy a creature to use as a starting point — you'll get its full combat kit (attacks, multiattack, breath) and stats, then rename and tweak. The original is never changed.</div>
+      ${field("Search", `<input id="cloneSearch" placeholder="owlbear, dragon, goblin…" autocomplete="off" />`)}
+      <div id="cloneList" class="clone-list"></div>
+    </div>
+    <div class="mfoot"><button class="btn" data-cancel>Cancel</button></div>`;
+  document.getElementById("scrim").classList.add("open");
+  renderCloneList("");
+  const s = document.getElementById("cloneSearch");
+  s.addEventListener("input", () => renderCloneList(s.value));
+  s.focus();
+  modal.querySelector("[data-cancel]").addEventListener("click", closeEditor);
+}
+function renderCloneList(q) {
+  const ql = (q || "").toLowerCase().trim();
+  cloneCtx.shown = cloneCtx.sources
+    .filter(s => !ql || (s.name || "").toLowerCase().includes(ql))
+    .slice(0, 200);
+  const box = document.getElementById("cloneList");
+  box.innerHTML = cloneCtx.shown.map((s, i) => `
+    <button class="clone-row" type="button" data-clone-i="${i}">
+      <span class="clone-nm">${esc(s.name)}</span>
+      <span class="clone-meta">${s.cr != null ? "CR " + (CR_LABEL[String(s.cr)] || s.cr) : ""}${s.type ? " · " + esc(s.type) : ""}</span>
+      <span class="clone-src ${s.src}">${s.src === "srd" ? "SRD" : "this world"}</span>
+    </button>`).join("") || '<div class="nothing" style="margin:8px 0">No matches.</div>';
+  box.querySelectorAll("[data-clone-i]").forEach(b =>
+    b.addEventListener("click", () => cloneFrom(cloneCtx.shown[+b.dataset.cloneI])));
+}
+async function cloneFrom(source) {
+  const newName = (prompt("Name your new creature:", "Copy of " + source.name) || "").trim();
+  if (!newName) return;
+  const newId = uniqueId(slugify(newName), new Set(listOf("statblocks").map(x => x.id)));
+  let statblock, combat = null;
+  try {
+    if (source.src === "srd") {
+      const data = await (await fetch(`/api/srd/monster/${encodeURIComponent(source.id)}`)).json();
+      if (data.error) { toast("Couldn't load that creature."); return; }
+      statblock = data.statblock; combat = data.combat;
+    } else {
+      statblock = JSON.parse(JSON.stringify(listOf("statblocks").find(x => x.id === source.id) || {}));
+      if ((state.monsterFiles || []).includes(source.id)) {
+        const data = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/monster/${encodeURIComponent(source.id)}`)).json();
+        if (!data.error) combat = data.monster;
+      }
+    }
+  } catch (e) { toast(String(e.message || e)); return; }
+  // fresh identity — no inherited SRD reference or portrait (author picks new art)
+  const sb = { ...statblock, id: newId, name: newName };
+  delete sb.srd_ref; delete sb.portrait;
+  if (combat) {
+    combat.name = newName;
+    const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/monster/${encodeURIComponent(newId)}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ monster: combat }) })).json();
+    if (res.error) { toast("Combat copy failed: " + res.error); return; }
+    if (!(state.monsterFiles || []).includes(newId)) (state.monsterFiles = state.monsterFiles || []).push(newId);
+  }
+  state.contents.statblocks = state.contents.statblocks || [];
+  state.contents.statblocks.push(sb);
+  markDirty();
+  openEditor("statblocks", state.contents.statblocks.length - 1);
+  toast(combat ? `Cloned ${source.name} with its full combat kit — now make it yours.`
+               : `Cloned ${source.name} — now make it yours.`);
 }
 
 // ---- AI personality editor ----

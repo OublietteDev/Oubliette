@@ -869,8 +869,24 @@ prefers a rich file via `arena_monster_file`, so "clone an existing creature" = 
   a combat file, for an editor badge). Content-save only writes the kind JSONs (never subdirs) and
   `_backup_pack` copies the whole tree, so `monsters/` is preserved + backed up for free. Tests: +5
   bridge (preferred / xp+profile override / missing→flat / malformed→flat / overrides-SRD-id), +4 server
-  (round-trip+listing / invalid rejected / delete reverts+idempotent / guards). **NEXT: 3b-2 clone an
-  existing creature** (copy an SRD/pack combat file + prefill the StatBlock), then 3b-3 ability builder.
+  (round-trip+listing / invalid rejected / delete reverts+idempotent / guards).
+
+- **Phase 3b-2 — "Start from an existing creature" / clone (DONE, browser-verified 2026-06-27, 497
+  green).** The fast on-ramp: copy ANY SRD monster (334) or this-world creature — its full combat kit
+  AND its stats/identity — under a new id, then land in the editor to rename/tweak. Source is never
+  touched. Server (read-only): `GET /api/srd/monsters` (picker list from `content/srd/bestiary.json`,
+  cached, sorted by CR) + `GET /api/srd/monster/{id}` ({statblock: the rich bestiary StatBlock incl.
+  description, combat: the matching `arena/data/monsters/srd/<id>.json` or null}). All 334 bestiary ids
+  align 1:1 with arena combat files. Client (`index.html`): a "Start from existing…" button on the
+  Creatures group → searchable picker modal (pack creatures + SRD, name/CR/type + source badge) →
+  `cloneFrom` mints a new id (`uniqueId(slugify(name))`), copies the StatBlock (drops `srd_ref` +
+  `portrait` for a fresh creature), and — if the source has a combat file — renames it and PUTs it to
+  `monsters/<new_id>.json` via the 3b-1 endpoint, then inserts the StatBlock + opens the editor.
+  statblocks.json stays client-owned (persists on Save); the combat file writes immediately (like
+  portraits). Cards now show a "⚔ custom combat" badge when a creature has a combat file
+  (`state.monsterFiles` from `read_pack`). Tests: +3 server (list / statblock+combat / 404).
+  **NEXT: 3b-3 — the ability builder** (compose attacks/multiattack/save-effects/recharge from the
+  engine primitives), then 3b-4 advanced raw-data editor.
 
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a
 repository abstraction; async edges / sync core; LLM-first routing behind the model seam;

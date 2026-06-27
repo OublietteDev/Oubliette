@@ -473,3 +473,27 @@ def test_monster_combat_file_guards_unknown_pack_and_traversal(tmp_path, monkeyp
     _temp_brightvale(tmp_path, monkeypatch)
     assert client.put("/api/pack/nope/monster/x", json={"monster": _valid_arena_monster()}).status_code == 404
     assert client.get("/api/pack/brightvale/monster/..%2F..%2Fpack").status_code == 404
+
+
+# --- SRD clone sources (Phase 3b-2) -----------------------------------------
+def test_srd_monsters_list_is_offered():
+    r = client.get("/api/srd/monsters")
+    assert r.status_code == 200
+    monsters = {m["id"]: m for m in r.json()["monsters"]}
+    assert "owlbear" in monsters and monsters["owlbear"]["name"] == "Owlbear"
+    assert len(monsters) > 300                      # the full SRD bestiary
+
+
+def test_srd_monster_returns_statblock_and_combat():
+    r = client.get("/api/srd/monster/owlbear")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["statblock"]["id"] == "owlbear"
+    assert data["statblock"].get("description")     # rich identity carried
+    # the full combat file rides too (two distinct attacks)
+    assert data["combat"]["name"] == "Owlbear"
+    assert len(data["combat"]["actions"]) == 2
+
+
+def test_srd_monster_unknown_is_404():
+    assert client.get("/api/srd/monster/not_a_monster").status_code == 404

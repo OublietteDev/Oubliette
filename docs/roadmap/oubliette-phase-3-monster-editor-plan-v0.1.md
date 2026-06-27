@@ -120,6 +120,9 @@ the real `arena/models/actions.py` primitives:
 - The defense pick-lists don't yet stop a damage type being ticked as BOTH a
   resistance and a vulnerability (nonsensical, but harmless — the engine resolves
   it predictably). Cross-disable in a later UI pass.
+- Portrait (and combat-file) uploads write to disk immediately (like the map
+  background), so picking a portrait then cancelling/not-saving leaves an orphan
+  file in portraits/. Minor junk; a later pass could GC unreferenced files on save.
 
 ## Open sub-questions (resolve as we build, not now)
 - Keeping `StatBlock` HP/AC/abilities in sync with the combat file when both exist
