@@ -2123,7 +2123,7 @@ async function openChargenView(npcId, npcName) {
 }
 
 function cgInit(name) {
-  cg = { name: name, race: "", subrace: null, char_class: "", subclass: null, background: "",
+  cg = { name: name, level: 1, race: "", subrace: null, char_class: "", subclass: null, background: "",
          ability_method: "standard_array", base_abilities: {}, skills: [], expertise: [],
          languages: [], race_ability_choices: [], race_skills: [], race_languages: [],
          race_cantrips: [], cantrips: [], spells: [], equipment_choices: [], alignment: "",
@@ -2175,7 +2175,14 @@ function rollPool() {
   cg.base_abilities = {};
   cgOpt.abilities.forEach((a, i) => cg.base_abilities[a] = cg._pool[i]);
 }
-function cgBuild() { const b = { ...cg }; delete b._pool; return b; }
+function cgBuild() {
+  const b = { ...cg }; delete b._pool; delete b.level;
+  // a subclass earned after level 1 (e.g. a Fighter's archetype at 3) isn't part of
+  // the level-1 build — it's applied during the level walk. Only classes that pick a
+  // subclass at level 1 (cleric, sorcerer, warlock) send it with the base build.
+  if (cgClass().subclass_level > 1) delete b.subclass;
+  return b;
+}
 
 function finalAbility(key) {
   let v = cg.base_abilities[key] || 10;
@@ -2211,6 +2218,10 @@ function renderCgForm() {
   const alignI = el("input"); alignI.type = "text"; alignI.value = cg.alignment; alignI.placeholder = "e.g. Neutral Good";
   alignI.addEventListener("input", () => { cg.alignment = alignI.value; cgPreview(); });
   alignF.appendChild(alignI); r1.appendChild(alignF);
+  const lvlF = el("label", "cg-field"); lvlF.appendChild(el("span", null, "Level"));
+  const lvlI = el("input"); lvlI.type = "number"; lvlI.min = 1; lvlI.max = 20; lvlI.value = cg.level || 1; lvlI.style.maxWidth = "70px";
+  lvlI.addEventListener("change", () => { cg.level = Math.max(1, Math.min(20, parseInt(lvlI.value || "1", 10))); renderCgForm(); cgPreview(); });
+  lvlF.appendChild(lvlI); r1.appendChild(lvlF);
   idn.appendChild(r1); root.appendChild(idn);
 
   // Origin
@@ -2236,8 +2247,17 @@ function renderCgForm() {
   org.appendChild(el("div", "cg-hint",
     `${cc.name}: d${cc.hit_die} hit die · saves ${cc.saving_throws.map(s => s.toUpperCase()).join(", ")}. ` +
     `${bg.name} grants: ${bg.skills.join(", ")}${bg.languages ? ` · ${bg.languages} language(s)` : ""}.`));
-  if (cc.subclass_level && cc.subclass_level > 1)
-    org.appendChild(el("div", "cg-hint", `${cc.subclass_label} is chosen at level ${cc.subclass_level} (this builds level 1).`));
+  if (cc.subclass_level && cc.subclasses.length) {
+    if (cc.subclass_level <= (cg.level || 1)) {
+      if (!cg.subclass) cg.subclass = cc.subclasses[0].id;     // a valid default
+      org.appendChild(selectField(cc.subclass_label || "Subclass", cg.subclass,
+        cc.subclasses.map(s => ({ value: s.id, label: s.name })),
+        v => { cg.subclass = v; cgPreview(); }));
+    } else {
+      org.appendChild(el("div", "cg-hint",
+        `${cc.subclass_label} is chosen at level ${cc.subclass_level} — raise the level to pick one.`));
+    }
+  }
   root.appendChild(org);
 
   root.appendChild(renderAbilities());
@@ -2460,21 +2480,62 @@ function renderLanguages() {
   sec.appendChild(row); return sec;
 }
 
+async function _post(url, body) {
+  return (await (await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify(body) })).json());
+}
+// Default per-level choices for the auto-walk: average HP, the chosen subclass,
+// ASI poured into the highest abilities, and the first N required spells. The one
+// choice that matters for an NPC (the subclass) is picked in the form; the rest
+// are sensible defaults so authoring a level isn't a chore.
+function cgAsiDefault(abilities) {
+  const order = Object.keys(abilities).sort((a, b) => abilities[b] - abilities[a]);
+  const inc = {}; let points = 2;
+  for (const a of order) {
+    while (points > 0 && (abilities[a] + (inc[a] || 0)) < 20) { inc[a] = (inc[a] || 0) + 1; points--; }
+    if (!points) break;
+  }
+  if (points && order.length) inc[order[0]] = (inc[order[0]] || 0) + points;   // all maxed: dump anywhere
+  return inc;
+}
+function cgDefaultChoice(plan, preview) {
+  const choice = { hp_method: "average", hp_roll: null, ability_increases: {}, feat: null,
+                   subclass: null, new_cantrips: [], new_spells: [] };
+  if (plan.needs_subclass) choice.subclass = cg.subclass || (plan.subclass_options[0] || {}).id || null;
+  if (plan.is_asi) choice.ability_increases = cgAsiDefault((preview && preview.abilities) || {});
+  const sp = plan.spellcasting;
+  if (sp) {
+    choice.new_cantrips = (sp.cantrip_options || []).slice(0, sp.cantrips_needed).map(o => o.id);
+    choice.new_spells = (sp.spell_options || []).slice(0, sp.spells_needed).map(o => o.id);
+  }
+  return choice;
+}
+// Build at level 1, then walk /levelup up to the target level. Returns the final
+// {ok, errors, character, preview} — used by both the live preview and save.
+async function cgEvaluate() {
+  const base = await _post("/api/chargen/build", cgBuild());
+  if (!base.ok) return { ok: false, errors: base.errors, character: null, preview: null };
+  let char = base.character, preview = base.preview, level = 1;
+  const target = Math.max(1, Math.min(20, cg.level || 1));
+  while (level < target) {
+    const plan = await _post("/api/chargen/levelup/plan", char);
+    if (!plan.can_level) return { ok: false, errors: [plan.reason || `can't reach level ${level + 1}`], character: char, preview };
+    const up = await _post("/api/chargen/levelup", { character: char, choice: cgDefaultChoice(plan, preview) });
+    if (!up.ok) return { ok: false, errors: up.errors, character: char, preview };
+    char = up.character; preview = up.preview; level++;
+  }
+  return { ok: true, errors: [], character: char, preview };
+}
 // --- live preview (the firewall, surfaced) ---
 function cgPreview() {
   clearTimeout(cgTimer);
   cgTimer = setTimeout(async () => {
     const seq = ++cgSeq;
     let data;
-    try {
-      data = await (await fetch("/api/chargen/preview", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cgBuild()),
-      })).json();
-    } catch (e) { return; }
+    try { data = await cgEvaluate(); } catch (e) { return; }
     if (seq !== cgSeq) return;            // a newer preview superseded this one
     renderPreview(data);
-  }, 200);
+  }, 250);
 }
 function renderPreview(data) {
   const root = gid("cg-preview"); if (!root) return;
@@ -2499,7 +2560,7 @@ function renderPreview(data) {
   const r = cgRace(), cc = cgClass();
   root.appendChild(el("h3", null, p.name || "Unnamed"));
   root.appendChild(el("div", "cg-sub",
-    `Level 1 ${r.name}${cg.subrace ? " (" + (cgSubrace() || {}).name + ")" : ""} ${cc.name}`));
+    `Level ${cg.level || 1} ${r.name}${cg.subrace ? " (" + (cgSubrace() || {}).name + ")" : ""} ${cc.name}`));
   const stats = el("div", "cg-stats");
   const stat = (lbl, val) => { const s = el("div", "cg-stat"); s.appendChild(el("b", null, String(val))); s.appendChild(el("span", null, lbl)); return s; };
   stats.appendChild(stat("AC", d.armor_class));
@@ -2532,10 +2593,7 @@ function renderPreview(data) {
 }
 
 async function cgSaveCharacter() {
-  const built = await (await fetch("/api/chargen/build", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(cgBuild()),
-  })).json();
+  const built = await cgEvaluate();      // build + walk to the target level
   if (!built.ok) { toast("Couldn't build: " + (built.errors || ["unknown error"])[0]); return; }
   const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/character/${encodeURIComponent(cgNpcId)}`, {
     method: "PUT", headers: { "Content-Type": "application/json" },
