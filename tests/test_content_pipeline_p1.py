@@ -171,6 +171,55 @@ def test_pack_accepts_explicit_combat_kind(tmp_path):
     assert any(c.id == "n" for c in world.repository.npcs())
 
 
+# --- Forge Phase 4b-3: person-NPC character sidecars -------------------------
+def test_person_npc_without_sidecar_fails(tmp_path):
+    """A combat_kind="person" NPC whose characters/<id>.json is missing is a load
+    error — combat comes from that file, so the pack can't load partially."""
+    files = _minimal_pack()
+    files["npcs.json"][0]["combat_kind"] = "person"
+    files["npcs.json"][0].pop("stat_block", None)      # a person has no stat block
+    root = _write_pack(tmp_path, files)
+    with pytest.raises(PackValidationError) as exc:
+        load_pack("t", packs_root=root)
+    assert any("characters/n.json is missing" in e for e in exc.value.errors)
+
+
+def test_person_npc_with_statblock_is_rejected(tmp_path):
+    """A person builds combat from its character, so also setting a stat_block is a
+    contradiction the linter rejects."""
+    files = _minimal_pack()
+    files["npcs.json"][0]["combat_kind"] = "person"    # the minimal NPC keeps stat_block "sb"
+    root = _write_pack(tmp_path, files)
+    with pytest.raises(PackValidationError) as exc:
+        load_pack("t", packs_root=root)
+    assert any("is a person" in e and "stat_block" in e for e in exc.value.errors)
+
+
+def test_person_npc_with_valid_sidecar_loads(tmp_path):
+    """A person NPC with a valid character snapshot loads, and its runtime Character
+    carries the snapshot's combat stats + the NPC's authored flavor."""
+    from oubliette.content.ruleset import load_ruleset
+    from oubliette.rules.chargen import build_character
+    from tests.test_chargen import _fighter
+
+    char, _ = build_character(_fighter(), load_ruleset())
+
+    files = _minimal_pack()
+    files["npcs.json"][0].update({"combat_kind": "person", "disposition": "stern"})
+    files["npcs.json"][0].pop("stat_block", None)
+    root = _write_pack(tmp_path, files)
+    (root / "t" / "characters").mkdir()
+    (root / "t" / "characters" / "n.json").write_text(
+        char.model_dump_json(), encoding="utf-8")
+
+    world = load_pack("t", packs_root=root)
+    n = next(c for c in world.repository.npcs() if c.id == "n")
+    assert n.kind == "npc" and n.name == "N"           # NPC identity wins over the build name
+    assert n.disposition == "stern"
+    assert n.max_hp == 12 and n.armor_class == 18      # the chargen snapshot's combat stats
+    assert n.sheet is not None and n.sheet.char_class == "fighter"
+
+
 def test_priced_but_unstocked(tmp_path):
     files = _minimal_pack()
     files["items.json"].append({"id": "shield", "name": "shield", "category": "armor"})

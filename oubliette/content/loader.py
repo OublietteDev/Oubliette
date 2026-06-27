@@ -166,6 +166,9 @@ def _lint(manifest: PackManifest | None, items: list[Item], statblocks: list[Sta
 
     # NPCs: stat block, home, stock, pricing.
     for n in npcs:
+        if n.combat_kind == "person" and n.stat_block is not None:
+            errors.append(f"npcs: {n.id} is a person (combat comes from its character) "
+                          f"but also sets stat_block {n.stat_block!r}")
         if n.stat_block is not None and n.stat_block not in statblock_ids:
             errors.append(f"npcs: {n.id}.stat_block references unknown stat block {n.stat_block!r}")
         need_place(n.home_location, f"npcs: {n.id}.home_location")
@@ -301,9 +304,52 @@ def _authored_canon(npcs: list[NPC], places: list[Place], lore: list[Lore]) -> l
     return records
 
 
-def _build_npc(n: NPC, statblocks: dict[str, StatBlock]) -> Character:
-    """Build a runtime npc Character. Combat stats come from the referenced stat
-    block (or Character defaults if none)."""
+def _load_person_characters(base: Path, npcs: list[NPC],
+                            errors: list[str]) -> dict[str, Character]:
+    """Read + validate the chargen snapshot sidecar for every combat_kind=="person"
+    NPC (`packs/<id>/characters/<npc_id>.json`, Forge Phase 4b). A person NPC whose
+    sidecar is missing or invalid is an aggregated load error — combat comes from
+    that file, so the pack can't load partially."""
+    out: dict[str, Character] = {}
+    for n in npcs:
+        if n.combat_kind != "person":
+            continue
+        path = base / "characters" / f"{n.id}.json"
+        raw = _read_json(path, f"characters/{n.id}.json", errors)
+        if raw is None:
+            if not path.exists():        # malformed JSON is already recorded by _read_json
+                errors.append(f"npcs: {n.id}.combat_kind is 'person' but "
+                              f"characters/{n.id}.json is missing")
+            continue
+        try:
+            out[n.id] = Character(**raw)
+        except (ValidationError, TypeError) as e:
+            for line in _format_errors(e):
+                errors.append(f"characters/{n.id}.json: {line}")
+    return out
+
+
+def _build_person_npc(n: NPC, char: Character) -> Character:
+    """A person-NPC's runtime Character: the chargen snapshot is authoritative for
+    combat (abilities, hp/ac/attack, the full sheet, equipped gear, belongings); the
+    NPC record supplies identity + authored flavor (name, disposition, description,
+    home). Editor-authored commerce for a person-NPC is a later refinement — for now
+    a person's belongings ride along from their character build."""
+    return char.model_copy(update={
+        "id": n.id, "name": n.name, "kind": "npc",
+        "disposition": n.disposition or char.disposition,
+        "description": n.description or char.description,
+        "home_location": n.home_location if n.home_location is not None else char.home_location,
+    })
+
+
+def _build_npc(n: NPC, statblocks: dict[str, StatBlock],
+               person_chars: dict[str, Character] | None = None) -> Character:
+    """Build a runtime npc Character. A "person" NPC runs on its chargen snapshot
+    (Phase 4b); otherwise combat stats come from the referenced stat block (or
+    Character defaults if none)."""
+    if n.combat_kind == "person" and person_chars and n.id in person_chars:
+        return _build_person_npc(n, person_chars[n.id])
     sb = statblocks.get(n.stat_block) if n.stat_block else None
     abilities = {Ability(k): v for k, v in (sb.abilities.items() if sb else {})}
     extra: dict = {}
@@ -374,6 +420,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     _lint(manifest, items, statblocks, npcs, places, scenarios, quests, errors)
     _dup_ids(lore, "lore", errors)        # subjects are free-form, so only ids are checked
     _dup_ids(ai_profiles, "ai_profiles", errors)
+    person_chars = _load_person_characters(base, npcs, errors)   # Phase 4b sidecars
 
     if errors:
         raise PackValidationError(pack_id, errors)
@@ -384,7 +431,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     statblock_by_id = {s.id: s for s in statblocks}
 
     party = [Character(**raw) for raw in scenario.default_party]
-    npc_chars = [_build_npc(n, statblock_by_id) for n in npcs]
+    npc_chars = [_build_npc(n, statblock_by_id, person_chars) for n in npcs]
     state_items = [_project_item(it) for it in items]
     pc_id = party[0].id if party else "pc"
 

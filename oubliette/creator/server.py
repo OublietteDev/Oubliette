@@ -278,8 +278,12 @@ async def read_pack(pack_id: str) -> JSONResponse:
     # which creatures carry a full combat file (Phase 3b) — so the editor can badge them
     monsters_dir = d / "monsters"
     monster_files = sorted(p.stem for p in monsters_dir.glob("*.json")) if monsters_dir.is_dir() else []
+    # which person-NPCs have a built character snapshot (Phase 4b) — same idea
+    chars_dir = d / "characters"
+    character_files = sorted(p.stem for p in chars_dir.glob("*.json")) if chars_dir.is_dir() else []
     return JSONResponse({"id": pack_id, "contents": contents, "validation": _validate(pack_id),
-                         "audio_files": audio_files, "monster_files": monster_files})
+                         "audio_files": audio_files, "monster_files": monster_files,
+                         "character_files": character_files})
 
 
 class SaveIn(BaseModel):
@@ -475,6 +479,61 @@ async def delete_monster(pack_id: str, sb_id: str) -> JSONResponse:
     if d is None or not _SAFE_NAME.match(sb_id):
         return JSONResponse({"error": "not found"}, status_code=404)
     path = d / "monsters" / f"{sb_id}.json"
+    existed = path.is_file()
+    if existed:
+        path.unlink()
+    return JSONResponse({"ok": True, "deleted": existed})
+
+
+# --- person-NPC character snapshots (Phase 4b) -------------------------------
+# A combat_kind="person" NPC fights as a real PC-style character; its chargen
+# snapshot lives at packs/<id>/characters/<npc_id>.json (keyed by NPC id, like a
+# creature's combat file is keyed by stat-block id). The loader reads it as the
+# NPC's runtime Character — so a broken snapshot would hard-fail the pack, which
+# is why the save endpoint validates against the engine model first.
+class CharacterIn(BaseModel):
+    character: dict        # a full state Character JSON (validated against the model)
+
+
+@app.get("/api/pack/{pack_id}/character/{npc_id}", response_model=None)
+async def get_person_character(pack_id: str, npc_id: str) -> JSONResponse:
+    """A person-NPC's chargen snapshot, or 404 if it hasn't been built yet."""
+    d = _pack_dir(pack_id)
+    if d is None or not _SAFE_NAME.match(npc_id):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    data = _read_json(d / "characters" / f"{npc_id}.json")
+    if data is None:
+        return JSONResponse({"error": "no character file"}, status_code=404)
+    return JSONResponse({"ok": True, "character": data})
+
+
+@app.put("/api/pack/{pack_id}/character/{npc_id}")
+async def save_person_character(pack_id: str, npc_id: str, body: CharacterIn) -> JSONResponse:
+    """Persist a person-NPC's chargen snapshot. Validated against the engine
+    `Character` model so a broken snapshot can't be saved (the loader would
+    otherwise hard-fail the whole pack at load time)."""
+    d = _pack_dir(pack_id)
+    if d is None:
+        return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
+    if not _SAFE_NAME.match(npc_id):
+        return JSONResponse({"error": "unsafe character id"}, status_code=400)
+    try:
+        Character.model_validate(body.character)
+    except Exception as e:
+        return JSONResponse({"error": f"invalid character: {str(e).splitlines()[0]}"}, status_code=400)
+    chars = d / "characters"
+    chars.mkdir(exist_ok=True)
+    _write_json(chars / f"{npc_id}.json", body.character)
+    return JSONResponse({"ok": True, "filename": f"{npc_id}.json"})
+
+
+@app.delete("/api/pack/{pack_id}/character/{npc_id}")
+async def delete_person_character(pack_id: str, npc_id: str) -> JSONResponse:
+    """Remove a person-NPC's chargen snapshot. Idempotent."""
+    d = _pack_dir(pack_id)
+    if d is None or not _SAFE_NAME.match(npc_id):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    path = d / "characters" / f"{npc_id}.json"
     existed = path.is_file()
     if existed:
         path.unlink()

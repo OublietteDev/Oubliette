@@ -125,6 +125,48 @@ def test_chargen_levelup_builds_a_higher_level_npc():
     assert char["max_hp"] > 12                                  # leveled HP > level-1 HP
 
 
+def test_person_npc_roundtrip_build_save_load(tmp_path, monkeypatch):
+    """Phase 4b-3: build a character, save it as a person-NPC's sidecar, add the NPC,
+    and confirm load_pack produces a runtime Character with the chargen combat stats
+    + the NPC's authored identity/flavor — the whole person-NPC loop end to end."""
+    from oubliette.content.loader import load_pack
+    from tests.test_chargen import _fighter
+
+    packs = _temp_brightvale(tmp_path, monkeypatch)             # temp copy; never the committed pack
+
+    char = client.post("/api/chargen/build",
+                       json=_fighter().model_dump(mode="json")).json()["character"]
+
+    # save the snapshot, then confirm the pack read badges the built person-NPC
+    assert client.put("/api/pack/brightvale/character/capt_aldric",
+                      json={"character": char}).json()["ok"] is True
+    assert "capt_aldric" in client.get("/api/pack/brightvale").json()["character_files"]
+
+    # add the person NPC to npcs.json on disk and load the pack for real
+    npcs_path = packs / "brightvale" / "npcs.json"
+    data = json.loads(npcs_path.read_text(encoding="utf-8"))
+    data.append({"id": "capt_aldric", "name": "Captain Aldric", "combat_kind": "person",
+                 "disposition": "stern but fair", "home_location": "brightvale_market"})
+    npcs_path.write_text(json.dumps(data), encoding="utf-8")
+
+    world = load_pack("brightvale", packs_root=packs)
+    aldric = next(c for c in world.repository.npcs() if c.id == "capt_aldric")
+    assert aldric.kind == "npc"
+    assert aldric.name == "Captain Aldric"                      # NPC identity wins
+    assert aldric.disposition == "stern but fair"              # flavor overlay
+    assert aldric.max_hp == 12 and aldric.armor_class == 18    # chargen combat stats survive
+    assert aldric.sheet is not None and aldric.sheet.char_class == "fighter"
+
+
+def test_save_person_character_rejects_invalid(tmp_path, monkeypatch):
+    """The sidecar save validates against the engine Character model — a broken
+    snapshot can't be written (it would hard-fail the pack at load)."""
+    _temp_brightvale(tmp_path, monkeypatch)
+    r = client.put("/api/pack/brightvale/character/whoever",
+                   json={"character": {"id": "x", "armor_class": "not a number"}})
+    assert r.status_code == 400 and "invalid character" in r.json()["error"]
+
+
 def test_path_traversal_is_refused():
     # an id that tries to climb out of the packs root must not resolve
     assert client.get("/api/pack/..").status_code == 404

@@ -119,11 +119,15 @@ never have to guess:
 {
   "id": "capt_aldric",
   "name": "Captain Aldric",
-  "combat_kind": "person",
-  "character_file": "capt_aldric.json",   // person: -> characters/capt_aldric.json
+  "combat_kind": "person",                // sidecar is by CONVENTION: characters/capt_aldric.json
   // ...existing flavor fields unchanged...
 }
 ```
+
+> **Deviation from the original draft (shipped 4b-3):** no `character_file` field —
+> the sidecar is keyed by the NPC id (`characters/<npc_id>.json`), exactly as a
+> creature's combat file is keyed by its stat-block id (`monsters/<sb_id>.json`).
+> One less field to keep in sync.
 
 - **`combat_kind`** defaults to `"none"` so every existing NPC is valid
   unchanged. **Legacy data stays `"none"` even when it carries a `stat_block`** —
@@ -285,11 +289,26 @@ Reuse the game's chargen front-end components/validation where possible rather
 than rebuilding the rules in JS — the server endpoints are the source of truth;
 the UI just collects a `CharacterBuild` / `LevelUpChoice` and shows errors.
 
-### 7.4 Loader
-`_build_npc` (`loader.py:299`): when `combat_kind=="person"` and a
-`characters/<id>.json` sidecar exists, load + validate it as the `Character`
-(kind forced to `"npc"`), then merge the `npcs.json` flavor/commerce fields on
-top. Cross-ref validation: a `person` NPC must have a readable, valid sidecar.
+### 7.4 Loader — SHIPPED (4b-3)
+`_build_npc` (`loader.py`): when `combat_kind=="person"`, the runtime Character is
+built from the validated `characters/<id>.json` snapshot (`_build_person_npc`),
+not from a stat block. The **merge rule**: the snapshot is authoritative for
+combat *and belongings* (abilities, hp/ac/attack, the full sheet, equipped gear,
+gold/inventory); the NPC record overlays identity + authored flavor (name,
+disposition, description, home_location). *(Editor-authored commerce for a
+person-NPC — a fighter who also runs a shop — is a deliberate later refinement;
+for now a person's belongings ride along from their build.)*
+
+Validation (all aggregated, pack loads whole-or-not): a `person` NPC must have a
+readable, valid sidecar (`_load_person_characters`), and may **not** also set a
+`stat_block` (combat comes from the character — the linter rejects the
+contradiction). Repo-parity with the old seed is preserved (Brightvale has no
+person NPCs, so the path is inert there).
+
+The creator side (4b-3) added `GET/PUT/DELETE /api/pack/<id>/character/<npc_id>`
+(PUT validates against the engine `Character` model so a broken snapshot can't be
+written) and `character_files` in the pack read, so the editor can badge which
+person-NPCs are built.
 
 ### 7.5 Bridge — adversary vs. ally
 - **Adversary (default).** The snapshot already gives honest numbers, so today's
