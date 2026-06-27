@@ -201,6 +201,14 @@ class InvEntry(_Strict):
 class NPC(_Strict):
     id: str
     name: str
+    # How this NPC fights (Forge Phase 4). "none" = today's behaviour: no combat,
+    # or a *generic* SRD stat block via `stat_block` (commoner, guard). "creature"
+    # = a fully Forge-authored monster (rich `monsters/<id>.json` kit; Seraphel the
+    # dragon) — still via `stat_block`, but the editor opens the Phase 3 monster
+    # editor. "person" = built with the player chargen/level-up engine, snapshot in
+    # `characters/<id>.json` (Phase 4b). The default keeps every legacy NPC valid &
+    # in the simple lane; "creature"/"person" are only ever set by explicit choice.
+    combat_kind: Literal["none", "creature", "person"] = "none"
     stat_block: str | None = None    # -> StatBlock id (combat stats live there)
     disposition: str = ""            # feeds the DM's DC-setting (D8)
     description: str = ""

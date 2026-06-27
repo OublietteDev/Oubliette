@@ -139,6 +139,38 @@ def test_duplicate_id(tmp_path):
     assert any("duplicate id 'sword'" in e for e in exc.value.errors)
 
 
+# --- Forge Phase 4a-1: the NPC combat_kind discriminator ---------------------
+def test_npc_combat_kind_defaults_to_none():
+    """Legacy NPCs (no combat_kind) stay in the simple lane — even when they carry
+    a *generic* stat block (merchant_thom -> commoner). "creature"/"person" are
+    only ever set by explicit authoring, so existing packs are untouched."""
+    from oubliette.content.schemas import NPC
+
+    assert NPC(id="n", name="N").combat_kind == "none"
+    assert NPC(id="n", name="N", stat_block="commoner").combat_kind == "none"
+
+
+def test_npc_combat_kind_explicit_and_validated():
+    from pydantic import ValidationError
+
+    from oubliette.content.schemas import NPC
+
+    assert NPC(id="n", name="N", combat_kind="creature",
+               stat_block="dragon").combat_kind == "creature"
+    assert NPC(id="n", name="N", combat_kind="person").combat_kind == "person"
+    with pytest.raises(ValidationError):
+        NPC(id="n", name="N", combat_kind="bogus")
+
+
+def test_pack_accepts_explicit_combat_kind(tmp_path):
+    """An authored creature-NPC round-trips through the whole pack pipeline."""
+    files = _minimal_pack()
+    files["npcs.json"][0]["combat_kind"] = "creature"
+    root = _write_pack(tmp_path, files)
+    world = load_pack("t", packs_root=root)             # does not raise
+    assert any(c.id == "n" for c in world.repository.npcs())
+
+
 def test_priced_but_unstocked(tmp_path):
     files = _minimal_pack()
     files["items.json"].append({"id": "shield", "name": "shield", "category": "armor"})
