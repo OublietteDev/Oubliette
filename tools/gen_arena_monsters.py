@@ -38,10 +38,16 @@ What it maps onto the Arena `Monster` model, with full combat fidelity:
     (= total attacks per Attack action) — LIVE: the engine's
     get_extra_attack_count reads monster special_abilities.
 
-DEFERRED (not mechanized): spellcasting (spells are listed by name, not as
-mechanical effects), lair actions (the 5e-db base set carries none), regeneration
-and other passive traits (Pack Tactics etc. are stored for display but stay
-inert). Generated monsters get the default AI profile.
+  - SPELLCASTING (Slice 2): a caster's prepared-spell prose ("3rd level (3
+    slots): fireball ...") is parsed and each named spell bound to a castable
+    spell Action from the shared spell library, stamped with the monster's save
+    DC (arena/util/monster_spells.hydrate_monster_spells). Spells absent from the
+    library — the non-combat utility ones — are skipped. So a Mage now casts
+    Fireball instead of stabbing with its dagger.
+
+DEFERRED (not mechanized): lair actions (the 5e-db base set carries none),
+regeneration and other passive traits (Pack Tactics etc. are stored for display
+but stay inert). Generated monsters get the default AI profile.
 
 Every output is validated against the Arena `Monster` model before writing.
 """
@@ -616,11 +622,17 @@ def main(argv: list[str]) -> int:
     out_dir = Path(argv[1])
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Spellcasting: bind each caster's prepared-spell prose to castable spell
+    # Actions from the shared spell library (no longer DEFERRED).
+    from arena.util.monster_spells import load_spell_library, hydrate_monster_spells
+    spell_library = load_spell_library()
+
     written, failed = 0, []
     for m in source:
         mid = m["index"].replace("-", "_")
         try:
             data = build_monster(m)
+            hydrate_monster_spells(data, spell_library)
             Monster.model_validate(data)  # structural gate — fail loud, never ship junk
         except Exception as e:  # noqa: BLE001
             failed.append((mid, str(e)[:140]))

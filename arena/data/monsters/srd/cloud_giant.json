@@ -69,6 +69,40 @@
           }
         ]
       }
+    },
+    {
+      "name": "Fog Cloud",
+      "description": "You create a 20-foot-radius sphere of fog centered on a point within range. The sphere spreads around corners, and its area is heavily obscured. It lasts for the duration or until a wind of moderate or greater speed (at least 10 miles per hour) disperses it.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": true,
+      "ai_priority": 5,
+      "spell_level": 1,
+      "target_type": "area_sphere",
+      "area_size": 20,
+      "obscuring_zone": "fog",
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Telekinesis",
+      "description": "You gain the ability to move or manipulate creatures or objects by thought. When you cast the spell, and as your action each round for the duration, you can exert your will on one creature or object that you can see within range, causing the appropriate effect below. You can affect the same target r",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 5,
+      "target_type": "one_creature",
+      "area_size": 30,
+      "saving_throw": {
+        "ability": "strength",
+        "dc": null,
+        "conditions_on_fail": [
+          "restrained"
+        ]
+      },
+      "forced_movement_type": "slide",
+      "forced_movement_distance": 30,
+      "uses_per_rest": 3
     }
   ],
   "legendary_actions": [],
@@ -90,5 +124,21 @@
   ],
   "challenge_rating": 9.0,
   "experience_points": 5000,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [
+    {
+      "name": "Misty Step",
+      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space that you can see.",
+      "action_type": "bonus_action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "self",
+      "teleport_range": 30,
+      "uses_per_rest": 3,
+      "ai_use_condition": "is_in_melee"
+    }
+  ],
+  "reactions": []
 }

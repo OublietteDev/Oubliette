@@ -73,6 +73,94 @@
           }
         ]
       }
+    },
+    {
+      "name": "Darkness",
+      "description": "Magical darkness spreads from a point you choose within range to fill a 15-foot-radius sphere for the duration. The darkness spreads around corners. A creature with darkvision can't see through this darkness, and nonmagical light can't illuminate it.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 5,
+      "spell_level": 2,
+      "target_type": "area_sphere",
+      "area_size": 15,
+      "obscuring_zone": "darkness",
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Invisibility",
+      "description": "A creature you touch becomes invisible until the spell ends. Anything the target is wearing or carrying is invisible as long as it is on the target's person. The spell ends for a target that attacks or casts a spell.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_ally",
+      "upcast_target_count": 1,
+      "conditions_applied": [
+        "invisible"
+      ]
+    },
+    {
+      "name": "Charm Person",
+      "description": "You attempt to charm a humanoid you can see within range. It must make a wisdom saving throw, and does so with advantage if you or your companions are fighting it. If it fails the saving throw, it is charmed by you until the spell ends or until you or your companions do anything harmful to it. The c",
+      "action_type": "action",
+      "range": 30,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 13,
+        "conditions_on_fail": [
+          "charmed"
+        ]
+      },
+      "uses_per_rest": 1
+    },
+    {
+      "name": "Cone of Cold",
+      "description": "A blast of cold air erupts from your hands. Each creature in a 60-foot cone must make a constitution saving throw. A creature takes 8d8 cold damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 5,
+      "target_type": "area_cone",
+      "area_size": 60,
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 13,
+        "damage_on_fail": [
+          {
+            "dice": "8d8",
+            "damage_type": "cold",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "upcast_damage_dice": "1d8",
+      "uses_per_rest": 1,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Sleep",
+      "description": "This spell sends creatures into a magical slumber. Roll 5d8; the total is how many hit points of creatures this spell can affect. Creatures within 20 feet of a point you choose within range are affected in ascending order of their current hit points (ignoring unconscious creatures).",
+      "action_type": "action",
+      "range": 90,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "area_sphere",
+      "area_size": 20,
+      "hp_threshold": 22,
+      "hp_threshold_effect": "condition",
+      "hp_threshold_condition": "unconscious",
+      "uses_per_rest": 1,
+      "ai_use_condition": "enemies_in_range >= 2"
     }
   ],
   "legendary_actions": [],
@@ -101,5 +189,7 @@
   "experience_points": 2900,
   "is_player_controlled": false,
   "regeneration_amount": 10,
-  "regeneration_negated_by": []
+  "regeneration_negated_by": [],
+  "bonus_actions": [],
+  "reactions": []
 }

@@ -25,7 +25,118 @@
   "condition_immunities": [],
   "senses": {},
   "passive_perception": 14,
-  "actions": [],
+  "actions": [
+    {
+      "name": "Produce Flame",
+      "description": "A flickering flame appears in your hand. The flame remains there for the duration and harms neither you nor your equipment. The flame sheds bright light in a 10-foot radius and dim light for an additional 10 feet. The spell ends if you dismiss it as an action or if you cast it again.",
+      "action_type": "action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 0,
+      "cantrip_scaling": true,
+      "target_type": "one_creature",
+      "attack": {
+        "name": "Produce Flame",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 0,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Entangle",
+      "description": "Grasping weeds and vines sprout from the ground in a 20-foot square starting form a point within range. For the duration, these plants turn the ground in the area into difficult terrain.",
+      "action_type": "action",
+      "range": 90,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "area_cube",
+      "area_size": 20,
+      "saving_throw": {
+        "ability": "strength",
+        "dc": 12,
+        "conditions_on_fail": [
+          "restrained"
+        ]
+      },
+      "terrain_modification": "difficult",
+      "uses_per_rest": 4,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Longstrider",
+      "description": "You touch a creature. The target's speed increases by 10 feet until the spell ends.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_ally",
+      "buff_effects": [
+        {
+          "stat": "speed",
+          "modifier_type": "flat_bonus",
+          "value": 10
+        }
+      ],
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Thunderwave",
+      "description": "A wave of thunderous force sweeps out from you. Each creature in a 15-foot cube originating from you must make a constitution saving throw. On a failed save, a creature takes 2d8 thunder damage and is pushed 10 feet away from you. On a successful save, the creature takes half as much damage and isn'",
+      "action_type": "action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "area_cube",
+      "area_size": 15,
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 12,
+        "damage_on_fail": [
+          {
+            "dice": "2d8",
+            "damage_type": "thunder",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "forced_movement_type": "push",
+      "forced_movement_distance": 10,
+      "upcast_damage_dice": "1d8",
+      "uses_per_rest": 4,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Barkskin",
+      "description": "You touch a willing creature. Until the spell ends, the target's skin has a rough, bark-like appearance, and the target's AC can't be less than 16, regardless of what kind of armor it is wearing.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_ally",
+      "buff_effects": [
+        {
+          "stat": "ac",
+          "modifier_type": "set",
+          "value": 16
+        }
+      ],
+      "uses_per_rest": 3
+    }
+  ],
   "legendary_actions": [],
   "legendary_action_count": 0,
   "special_abilities": [
@@ -36,5 +147,7 @@
   ],
   "challenge_rating": 2.0,
   "experience_points": 450,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [],
+  "reactions": []
 }

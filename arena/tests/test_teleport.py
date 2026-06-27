@@ -174,6 +174,57 @@ def _setup_combat(
 # Core mechanics
 # ------------------------------------------------------------------
 
+def _limited_teleport(uses=2) -> Action:
+    """A limited-use bonus-action teleport (no resource cost, so uses_per_rest
+    is the only limiter)."""
+    return Action(
+        name="Blink Step",
+        description="Teleport up to 30 feet, limited uses per rest.",
+        action_type=ActionType.BONUS_ACTION,
+        target_type=TargetType.SELF,
+        range=30,
+        teleport_range=30,
+        teleport_self=True,
+        uses_per_rest=uses,
+    )
+
+
+class TestTeleportUsesPerRest:
+    """A teleport with uses_per_rest must be capped (regression: execute_teleport
+    used to ignore uses_per_rest, so Misty Step was castable unlimited times)."""
+
+    def _next_caster_turn(self, cm):
+        cm.end_turn()
+        while cm.active_combatant and cm.active_combatant.creature_id != "caster":
+            cm.end_turn()
+
+    def test_limited_teleport_is_capped_across_turns(self):
+        cm = _setup_combat(player_bonus_actions=[_limited_teleport(2)])
+        bonus = cm.combatants["caster"].creature.bonus_actions[0]
+        dests = [HexCoord(4, 3), HexCoord(3, 3), HexCoord(4, 3)]
+
+        results = []
+        for dest in dests:
+            cm.select_action(bonus)
+            results.append(cm.execute_teleport(dest))
+            self._next_caster_turn(cm)
+
+        assert results[0].success                 # use 1 of 2
+        assert results[1].success                 # use 2 of 2
+        assert results[2] is not None and not results[2].success  # 3rd refused
+        assert bonus.current_uses == 0            # exhausted, not negative
+
+    def test_unlimited_teleport_never_caps(self):
+        """A teleport with no uses_per_rest stays usable every turn."""
+        cm = _setup_combat(player_bonus_actions=[_misty_step()])
+        bonus = cm.combatants["caster"].creature.bonus_actions[0]
+        for dest in (HexCoord(4, 3), HexCoord(3, 3), HexCoord(4, 3)):
+            cm.select_action(bonus)
+            result = cm.execute_teleport(dest)
+            assert result is not None and result.success
+            self._next_caster_turn(cm)
+
+
 class TestTeleportBasic:
     def test_teleport_moves_caster(self):
         """Caster position is updated to the destination."""

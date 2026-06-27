@@ -542,6 +542,11 @@ class AIController:
             plan.steps.append(TurnStep(
                 step_type=TurnStepType.EXECUTE_EFFECT,
                 target_id=best_action.target_id,
+                # Area bursts carry a center hex (placed on the enemy) so the
+                # executor routes them through execute_effect_at_hex instead of
+                # the caster-centered execute_effect. None for single-target
+                # effects and self-centered auras — unchanged.
+                target_hex=best_action.target_hex,
             ))
             plan.thinking_log.append(
                 f"Action: {best_action.description}"

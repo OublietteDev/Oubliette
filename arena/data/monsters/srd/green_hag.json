@@ -47,6 +47,29 @@
           }
         ]
       }
+    },
+    {
+      "name": "Vicious Mockery",
+      "description": "You unleash a string of insults laced with subtle enchantments at a creature you can see within range. If the target can hear you (though it need not understand you), it must succeed on a wisdom saving throw or take 1d4 psychic damage and have disadvantage on the next attack roll it makes before the",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 0,
+      "cantrip_scaling": true,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 12,
+        "damage_on_fail": [
+          {
+            "dice": "1d4",
+            "damage_type": "psychic",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "none"
+      }
     }
   ],
   "legendary_actions": [],
@@ -67,5 +90,7 @@
   ],
   "challenge_rating": 3.0,
   "experience_points": 700,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [],
+  "reactions": []
 }

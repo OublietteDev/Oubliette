@@ -48,6 +48,175 @@
           }
         ]
       }
+    },
+    {
+      "name": "Fire Bolt",
+      "description": "You hurl a mote of fire at a creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 fire damage. A flammable object hit by this spell ignites if it isn't being worn or carried.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 0,
+      "cantrip_scaling": true,
+      "target_type": "one_creature",
+      "attack": {
+        "name": "Fire Bolt",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 120,
+        "damage": [
+          {
+            "dice": "1d10",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Mage Armor",
+      "description": "You touch a willing creature who isn't wearing armor, and a protective magical force surrounds it until the spell ends. The target's base AC becomes 13 + its Dexterity modifier. The spell ends if the target dons armor or if you dismiss the spell as an action.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "self",
+      "buff_effects": [
+        {
+          "stat": "ac",
+          "modifier_type": "set",
+          "value": "13+DEX"
+        }
+      ],
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Magic Missile",
+      "description": "You create three glowing darts of magical force. Each dart hits a creature of your choice that you can see within range. A dart deals 1d4 + 1 force damage to its target. The darts all strike simultaneously, and you can direct them to hit one creature or several.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_creature",
+      "target_count": 3,
+      "upcast_target_count": 1,
+      "attack": {
+        "name": "Magic Missile",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 120,
+        "auto_hit": true,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "force",
+            "bonus": 1
+          }
+        ]
+      },
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Fireball",
+      "description": "A bright streak flashes from your pointing finger to a point you choose within range and then blossoms with a low roar into an explosion of flame. Each creature in a 20-foot-radius sphere centered on that point must make a dexterity saving throw. A target takes 8d6 fire damage on a failed save, or h",
+      "action_type": "action",
+      "range": 150,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 3,
+      "target_type": "area_sphere",
+      "area_size": 20,
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 14,
+        "damage_on_fail": [
+          {
+            "dice": "8d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "upcast_damage_dice": "1d6",
+      "uses_per_rest": 3,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Greater Invisibility",
+      "description": "You or a creature you touch becomes invisible until the spell ends. Anything the target is wearing or carrying is invisible as long as it is on the target's person.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "one_ally",
+      "conditions_applied": [
+        "invisible"
+      ],
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Ice Storm",
+      "description": "A hail of rock-hard ice pounds to the ground in a 20-foot-radius, 40-foot-high cylinder centered on a point within range. Each creature in the cylinder must make a dexterity saving throw. A creature takes 2d8 bludgeoning damage and 4d6 cold damage on a failed save, or half as much damage on a succes",
+      "action_type": "action",
+      "range": 300,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "area_sphere",
+      "area_size": 20,
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 14,
+        "damage_on_fail": [
+          {
+            "dice": "2d8",
+            "damage_type": "bludgeoning",
+            "bonus": 0
+          },
+          {
+            "dice": "4d6",
+            "damage_type": "cold",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "terrain_modification": "difficult",
+      "upcast_damage_dice": "1d8",
+      "uses_per_rest": 3,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Cone of Cold",
+      "description": "A blast of cold air erupts from your hands. Each creature in a 60-foot cone must make a constitution saving throw. A creature takes 8d8 cold damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 5,
+      "target_type": "area_cone",
+      "area_size": 60,
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 14,
+        "damage_on_fail": [
+          {
+            "dice": "8d8",
+            "damage_type": "cold",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "upcast_damage_dice": "1d8",
+      "uses_per_rest": 1,
+      "ai_use_condition": "enemies_in_range >= 2"
     }
   ],
   "legendary_actions": [],
@@ -60,5 +229,54 @@
   ],
   "challenge_rating": 6.0,
   "experience_points": 2300,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [
+    {
+      "name": "Misty Step",
+      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space that you can see.",
+      "action_type": "bonus_action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "self",
+      "teleport_range": 30,
+      "uses_per_rest": 3,
+      "ai_use_condition": "is_in_melee"
+    }
+  ],
+  "reactions": [
+    {
+      "name": "Shield",
+      "description": "An invisible barrier of magical force appears and protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from magic missile.",
+      "action_type": "reaction",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "self",
+      "buff_effects": [
+        {
+          "stat": "ac",
+          "modifier_type": "flat_bonus",
+          "value": 5
+        }
+      ],
+      "buff_duration_rounds": 1,
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Counterspell",
+      "description": "You attempt to interrupt a creature in the process of casting a spell. If the creature is casting a spell of 3rd level or lower, its spell fails and has no effect. If it is casting a spell of 4th level or higher, make an ability check using your spellcasting ability. The DC equals 10 + the spell's l",
+      "action_type": "reaction",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 3,
+      "target_type": "one_creature",
+      "is_counterspell": true,
+      "counterspell_auto_level": 3,
+      "uses_per_rest": 3
+    }
+  ]
 }

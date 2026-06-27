@@ -53,6 +53,91 @@
           }
         ]
       }
+    },
+    {
+      "name": "Magic Missile",
+      "description": "You create three glowing darts of magical force. Each dart hits a creature of your choice that you can see within range. A dart deals 1d4 + 1 force damage to its target. The darts all strike simultaneously, and you can direct them to hit one creature or several.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_creature",
+      "target_count": 3,
+      "upcast_target_count": 1,
+      "attack": {
+        "name": "Magic Missile",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 120,
+        "auto_hit": true,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "force",
+            "bonus": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "Plane Shift",
+      "description": "You and up to eight willing creatures who link hands in a circle are transported to a different plane of existence. You can specify a target destination in general terms, such as the City of Brass on the Elemental Plane of Fire or the palace of Dispater on the second level of the Nine Hells, and you",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 7,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "charisma",
+        "dc": 14,
+        "conditions_on_fail": [
+          "banished"
+        ],
+        "conditions_no_resave": true
+      },
+      "uses_per_rest": 2
+    },
+    {
+      "name": "Ray of Enfeeblement",
+      "description": "A black beam of enervating energy springs from your finger toward a creature within range. Make a ranged spell attack against the target. On a hit, the target deals only half damage with weapon attacks that use Strength until the spell ends.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 14
+      },
+      "buff_effects": [
+        {
+          "stat": "damage_rolls",
+          "modifier_type": "flat_bonus",
+          "value": -3,
+          "scope": "melee"
+        }
+      ],
+      "uses_per_rest": 2
+    },
+    {
+      "name": "Sleep",
+      "description": "This spell sends creatures into a magical slumber. Roll 5d8; the total is how many hit points of creatures this spell can affect. Creatures within 20 feet of a point you choose within range are affected in ascending order of their current hit points (ignoring unconscious creatures).",
+      "action_type": "action",
+      "range": 90,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "area_sphere",
+      "area_size": 20,
+      "hp_threshold": 22,
+      "hp_threshold_effect": "condition",
+      "hp_threshold_condition": "unconscious",
+      "uses_per_rest": 2,
+      "ai_use_condition": "enemies_in_range >= 2"
     }
   ],
   "legendary_actions": [],
@@ -74,5 +159,7 @@
   ],
   "challenge_rating": 5.0,
   "experience_points": 1800,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [],
+  "reactions": []
 }

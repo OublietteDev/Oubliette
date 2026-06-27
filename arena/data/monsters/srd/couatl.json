@@ -88,6 +88,94 @@
         "grappled"
       ],
       "grapple_escape_dc": 15
+    },
+    {
+      "name": "Bless",
+      "description": "You bless up to three creatures of your choice within range. Whenever a target makes an attack roll or a saving throw before the spell ends, the target can roll a d4 and add the number rolled to the attack roll or saving throw.",
+      "action_type": "action",
+      "range": 30,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "area_sphere",
+      "area_size": 30,
+      "buff_effects": [
+        {
+          "stat": "attack_rolls",
+          "modifier_type": "flat_bonus",
+          "value": "1d4"
+        },
+        {
+          "stat": "saving_throws",
+          "modifier_type": "flat_bonus",
+          "value": "1d4"
+        }
+      ],
+      "uses_per_rest": 3,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Cure Wounds",
+      "description": "A creature you touch regains a number of hit points equal to 1d8 + your spellcasting ability modifier. This spell has no effect on undead or constructs.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 7,
+      "spell_level": 1,
+      "healing": "1d8+MOD",
+      "target_type": "one_ally",
+      "upcast_healing_dice": "1d8",
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Lesser Restoration",
+      "description": "You touch a creature and can end either one disease or one condition afflicting it. The condition can be blinded, deafened, paralyzed, or poisoned.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_ally",
+      "conditions_removed": [
+        "blinded",
+        "deafened",
+        "paralyzed",
+        "poisoned"
+      ],
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Protection from Poison",
+      "description": "You touch a creature. If it is poisoned, you neutralize the poison. If more than one poison afflicts the target, you neutralize one poison that you know is present, or you neutralize one at random.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_ally",
+      "buff_effects": [
+        {
+          "stat": "damage_resistance",
+          "modifier_type": "resistance",
+          "value": "poison"
+        }
+      ],
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Greater Restoration",
+      "description": "You imbue a creature you touch with positive energy to undo a debilitating effect. You can reduce the target's exhaustion level by one, or end one of the following effects on the target:",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 5,
+      "target_type": "one_ally",
+      "conditions_removed": [
+        "charmed",
+        "petrified"
+      ],
+      "uses_per_rest": 1
     }
   ],
   "legendary_actions": [],
@@ -109,5 +197,47 @@
   ],
   "challenge_rating": 4.0,
   "experience_points": 1100,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [
+    {
+      "name": "Sanctuary",
+      "description": "You ward a creature within range against attack. Until the spell ends, any creature who targets the warded creature with an attack or a harmful spell must first make a wisdom saving throw. On a failed save, the creature must choose a new target or lose the attack or spell. This spell doesn't protect",
+      "action_type": "bonus_action",
+      "range": 30,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_ally",
+      "buff_effects": [
+        {
+          "stat": "sanctuary_ward",
+          "modifier_type": "flat_bonus",
+          "value": "DC"
+        }
+      ],
+      "buff_duration_rounds": 10,
+      "uses_per_rest": 3
+    }
+  ],
+  "reactions": [
+    {
+      "name": "Shield",
+      "description": "An invisible barrier of magical force appears and protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from magic missile.",
+      "action_type": "reaction",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "self",
+      "buff_effects": [
+        {
+          "stat": "ac",
+          "modifier_type": "flat_bonus",
+          "value": 5
+        }
+      ],
+      "buff_duration_rounds": 1,
+      "uses_per_rest": 3
+    }
+  ]
 }

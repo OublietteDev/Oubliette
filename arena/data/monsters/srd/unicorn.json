@@ -73,6 +73,62 @@
           }
         ]
       }
+    },
+    {
+      "name": "Calm Emotions",
+      "description": "You attempt to suppress strong emotions in a group of people. Each humanoid in a 20-foot-radius sphere centered on a point you choose within range must make a charisma saving throw; a creature can choose to fail this saving throw if it wishes. If a creature fails its saving throw, choose one of the ",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "area_sphere",
+      "area_size": 20,
+      "conditions_removed": [
+        "charmed",
+        "frightened"
+      ],
+      "uses_per_rest": 1,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Dispel Evil and Good",
+      "description": "Shimmering energy surrounds and protects you from fey, undead, and creatures originating from beyond the Material Plane. For the duration, celestials, elementals, fey, fiends, and undead have disadvantage on attack rolls against you.",
+      "action_type": "action",
+      "range": 0,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 5,
+      "target_type": "self",
+      "buff_effects": [
+        {
+          "stat": "attack_rolls",
+          "modifier_type": "disadvantage",
+          "target_grants_to_attacker": true
+        }
+      ],
+      "uses_per_rest": 1
+    },
+    {
+      "name": "Entangle",
+      "description": "Grasping weeds and vines sprout from the ground in a 20-foot square starting form a point within range. For the duration, these plants turn the ground in the area into difficult terrain.",
+      "action_type": "action",
+      "range": 90,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "area_cube",
+      "area_size": 20,
+      "saving_throw": {
+        "ability": "strength",
+        "dc": 14,
+        "conditions_on_fail": [
+          "restrained"
+        ]
+      },
+      "terrain_modification": "difficult",
+      "uses_per_rest": 1,
+      "ai_use_condition": "enemies_in_range >= 2"
     }
   ],
   "legendary_actions": [],
@@ -117,5 +173,7 @@
   ],
   "challenge_rating": 5.0,
   "experience_points": 1800,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [],
+  "reactions": []
 }

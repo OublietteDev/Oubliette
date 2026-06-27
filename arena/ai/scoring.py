@@ -518,9 +518,22 @@ def generate_scored_actions(
                     continue
 
                 s = score_effect_action(action, profile, context, enemy, dist)
+                # Area BURST spells (Fireball, Ice Storm, Cone of Cold) must be
+                # centered on the enemy, not the caster: execute_effect() expands
+                # an AoE around the CASTER, so without a target hex the blast
+                # lands on the caster's own square (and a damage+terrain spell
+                # like Ice Storm dumps its terrain there too). Self-centered
+                # auras (Spirit Guardians et al.) are concentration spells —
+                # they keep the caster-centered execute_effect path.
+                target_hex = None
+                tt = getattr(action.target_type, "value", action.target_type) or ""
+                if str(tt).startswith("area") and not action.requires_concentration \
+                        and enemy.position is not None:
+                    target_hex = (enemy.position.q, enemy.position.r)
                 scored.append(ScoredAction(
                     action_name=action.name,
                     target_id=enemy.creature_id,
+                    target_hex=target_hex,
                     score=s,
                     action_category="effect",
                     description=f"{action.name} -> {enemy.creature_id}",

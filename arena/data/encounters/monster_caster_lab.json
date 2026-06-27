@@ -1,0 +1,26 @@
+{
+  "name": "Monster Caster Lab — casters cast their spell list",
+  "description": "Brain Slice 2 bench: enemy casters now use the spells from their stat block instead of defaulting to a weapon. The Mage should open with Magic Missile / Fire Bolt and drop a Fireball or Hold Person when two heroes cluster (its AoE is gated to enemies_in_range >= 2); the Cult Fanatic and Priest should sling their spells too. The three heroes start bunched so the area spells light up. If you ever see a caster walk up and stab with a dagger, that's the old bug.",
+  "grid_width": 20,
+  "grid_height": 15,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/thorin.json", "creature_data": null, "team": "player", "starting_position": [6, 7], "count": 1, "name_override": null},
+    {"creature_id": "characters/valeria.json", "creature_data": null, "team": "player", "starting_position": [7, 7], "count": 1, "name_override": null},
+    {"creature_id": "characters/ser_marcus.json", "creature_data": null, "team": "player", "starting_position": [6, 8], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/mage.json", "creature_data": null, "team": "enemy", "starting_position": [14, 7], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/cult_fanatic.json", "creature_data": null, "team": "enemy", "starting_position": [15, 5], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/priest.json", "creature_data": null, "team": "enemy", "starting_position": [15, 9], "count": 1, "name_override": null}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

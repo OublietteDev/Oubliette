@@ -51,6 +51,102 @@
           }
         ]
       }
+    },
+    {
+      "name": "Charm Person",
+      "description": "You attempt to charm a humanoid you can see within range. It must make a wisdom saving throw, and does so with advantage if you or your companions are fighting it. If it fails the saving throw, it is charmed by you until the spell ends or until you or your companions do anything harmful to it. The c",
+      "action_type": "action",
+      "range": 30,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 18,
+        "conditions_on_fail": [
+          "charmed"
+        ]
+      },
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Invisibility",
+      "description": "A creature you touch becomes invisible until the spell ends. Anything the target is wearing or carrying is invisible as long as it is on the target's person. The spell ends for a target that attacks or casts a spell.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_ally",
+      "upcast_target_count": 1,
+      "conditions_applied": [
+        "invisible"
+      ],
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Dominate Person",
+      "description": "You attempt to beguile a humanoid that you can see within range. It must succeed on a wisdom saving throw or be charmed by you for the duration. If you or creatures that are friendly to you are fighting it, it has advantage on the saving throw.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 7,
+      "spell_level": 5,
+      "target_type": "one_creature",
+      "control_effect": true,
+      "target_creature_types": [
+        "humanoid"
+      ],
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 18
+      },
+      "uses_per_rest": 1
+    },
+    {
+      "name": "Plane Shift",
+      "description": "You and up to eight willing creatures who link hands in a circle are transported to a different plane of existence. You can specify a target destination in general terms, such as the City of Brass on the Elemental Plane of Fire or the palace of Dispater on the second level of the Nine Hells, and you",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 7,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "charisma",
+        "dc": 18,
+        "conditions_on_fail": [
+          "banished"
+        ],
+        "conditions_no_resave": true
+      },
+      "uses_per_rest": 1
+    },
+    {
+      "name": "True Seeing",
+      "description": "This spell gives the willing creature you touch the ability to see things as they actually are. For the duration, the creature has truesight, notices secret doors hidden by magic, and can see into the Ethereal Plane, all out to a range of 120 feet.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 4,
+      "spell_level": 6,
+      "target_type": "self",
+      "buff_effects": [
+        {
+          "stat": "see_invisible",
+          "modifier_type": "set",
+          "value": 1
+        },
+        {
+          "stat": "truesight",
+          "modifier_type": "set",
+          "value": 120
+        }
+      ],
+      "buff_duration_rounds": 600,
+      "uses_per_rest": 1
     }
   ],
   "legendary_actions": [],
@@ -72,5 +168,7 @@
   ],
   "challenge_rating": 13.0,
   "experience_points": 10000,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [],
+  "reactions": []
 }

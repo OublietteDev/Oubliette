@@ -5661,6 +5661,22 @@ class CombatManager:
                 self.log.add(e)
             return ActionResult(events=events, success=False)
 
+        # ── Uses-per-rest check ──────────────────────────────────────
+        # Teleports (Misty Step etc.) have a per-rest cap just like attacks and
+        # effects. Unlike those paths, execute_teleport doesn't go through
+        # resolve_attack/resolve_effect, so the cap must be enforced here or a
+        # limited teleport is castable an unlimited number of times.
+        if (action.uses_per_rest is not None and action.current_uses is not None
+                and action.current_uses <= 0):
+            events = [CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=f"No uses of {action.name} remaining.",
+                source_id=combatant.creature_id,
+            )]
+            for e in events:
+                self.log.add(e)
+            return ActionResult(events=events, success=False)
+
         # ── Resource cost ────────────────────────────────────────────
         can_use, reason = check_resource_cost(combatant.creature, action)
         if not can_use:
@@ -5827,6 +5843,12 @@ class CombatManager:
                 self._cleanup_orphaned_zones()
 
         # ── Finalize ─────────────────────────────────────────────────
+        # Spend one use of a limited teleport (mirrors resolve_effect).
+        if action.uses_per_rest is not None:
+            if action.current_uses is None:
+                action.current_uses = action.uses_per_rest
+            if action.current_uses > 0:
+                action.current_uses -= 1
         self._mark_action_type_used(action)
         self.selected_action = None
         self._cast_level = None

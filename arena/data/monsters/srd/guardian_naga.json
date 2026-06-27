@@ -58,6 +58,194 @@
           }
         ]
       }
+    },
+    {
+      "name": "Sacred Flame",
+      "description": "Flame-like radiance descends on a creature that you can see within range. The target must succeed on a dexterity saving throw or take 1d8 radiant damage. The target gains no benefit from cover for this saving throw.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 0,
+      "cantrip_scaling": true,
+      "ignores_cover": true,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 16,
+        "damage_on_fail": [
+          {
+            "dice": "1d8",
+            "damage_type": "radiant",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "none"
+      }
+    },
+    {
+      "name": "Command",
+      "description": "You speak a one-word command to a creature you can see within range. The target must succeed on a wisdom saving throw or follow the command on its next turn. The spell has no effect if the target is undead, if it doesn't understand your language, or if your command is directly harmful to it.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 16,
+        "conditions_on_fail": [
+          "prone"
+        ]
+      },
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Cure Wounds",
+      "description": "A creature you touch regains a number of hit points equal to 1d8 + your spellcasting ability modifier. This spell has no effect on undead or constructs.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 7,
+      "spell_level": 1,
+      "healing": "1d8+MOD",
+      "target_type": "one_ally",
+      "upcast_healing_dice": "1d8",
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Calm Emotions",
+      "description": "You attempt to suppress strong emotions in a group of people. Each humanoid in a 20-foot-radius sphere centered on a point you choose within range must make a charisma saving throw; a creature can choose to fail this saving throw if it wishes. If a creature fails its saving throw, choose one of the ",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "area_sphere",
+      "area_size": 20,
+      "conditions_removed": [
+        "charmed",
+        "frightened"
+      ],
+      "uses_per_rest": 3,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Hold Person",
+      "description": "Choose a humanoid that you can see within range. The target must succeed on a wisdom saving throw or be paralyzed for the duration. At the end of each of its turns, the target can make another wisdom saving throw. On a success, the spell ends on the target.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 16,
+        "conditions_on_fail": [
+          "paralyzed"
+        ]
+      },
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Bestow Curse",
+      "description": "You touch a creature, and that creature must succeed on a wisdom saving throw or become cursed for the duration of the spell. When you cast this spell, choose the nature of the curse from the following options:",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 3,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 16
+      },
+      "buff_effects": [
+        {
+          "stat": "attack_rolls",
+          "modifier_type": "disadvantage"
+        }
+      ],
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Banishment",
+      "description": "You attempt to send one creature that you can see within range to another plane of existence. The target must succeed on a charisma saving throw or be banished.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "charisma",
+        "dc": 16,
+        "conditions_on_fail": [
+          "banished"
+        ],
+        "conditions_no_resave": true
+      },
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Flame Strike",
+      "description": "A vertical column of divine fire roars down from the heavens in a location you specify. Each creature in a 10-foot-radius, 40-foot-high cylinder centered on a point within range must make a dexterity saving throw. A creature takes 4d6 fire damage and 4d6 radiant damage on a failed save, or half as m",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 5,
+      "target_type": "area_sphere",
+      "area_size": 10,
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 16,
+        "damage_on_fail": [
+          {
+            "dice": "4d6",
+            "damage_type": "fire",
+            "bonus": 0
+          },
+          {
+            "dice": "4d6",
+            "damage_type": "radiant",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "upcast_damage_dice": "1d6",
+      "uses_per_rest": 2,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "True Seeing",
+      "description": "This spell gives the willing creature you touch the ability to see things as they actually are. For the duration, the creature has truesight, notices secret doors hidden by magic, and can see into the Ethereal Plane, all out to a range of 120 feet.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 4,
+      "spell_level": 6,
+      "target_type": "self",
+      "buff_effects": [
+        {
+          "stat": "see_invisible",
+          "modifier_type": "set",
+          "value": 1
+        },
+        {
+          "stat": "truesight",
+          "modifier_type": "set",
+          "value": 120
+        }
+      ],
+      "buff_duration_rounds": 600,
+      "uses_per_rest": 1
     }
   ],
   "legendary_actions": [],
@@ -74,5 +262,26 @@
   ],
   "challenge_rating": 10.0,
   "experience_points": 5900,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [
+    {
+      "name": "Shield of Faith",
+      "description": "A shimmering field appears and surrounds a creature of your choice within range, granting it a +2 bonus to AC for the duration.",
+      "action_type": "bonus_action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_ally",
+      "buff_effects": [
+        {
+          "stat": "ac",
+          "modifier_type": "flat_bonus",
+          "value": 2
+        }
+      ],
+      "uses_per_rest": 4
+    }
+  ],
+  "reactions": []
 }

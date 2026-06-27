@@ -110,6 +110,10 @@ class Action(BaseModel):
     target_type: TargetType = TargetType.ONE_CREATURE
     range: int = 5  # In feet
     area_size: int | None = None  # Radius/length for area effects
+    # The target gains no benefit from cover (Sacred Flame: "The target gains no
+    # benefit from cover for this saving throw"). Suppresses the cover bonus a
+    # DEX save would otherwise get from intervening terrain/creatures.
+    ignores_cover: bool = False
 
     # Effects (one or more)
     attack: Attack | None = None

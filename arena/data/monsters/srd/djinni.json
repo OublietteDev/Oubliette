@@ -71,6 +71,67 @@
         ]
       },
       "area_size": 5
+    },
+    {
+      "name": "Thunderwave",
+      "description": "A wave of thunderous force sweeps out from you. Each creature in a 15-foot cube originating from you must make a constitution saving throw. On a failed save, a creature takes 2d8 thunder damage and is pushed 10 feet away from you. On a successful save, the creature takes half as much damage and isn'",
+      "action_type": "action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "area_cube",
+      "area_size": 15,
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 17,
+        "damage_on_fail": [
+          {
+            "dice": "2d8",
+            "damage_type": "thunder",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "forced_movement_type": "push",
+      "forced_movement_distance": 10,
+      "upcast_damage_dice": "1d8",
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Invisibility",
+      "description": "A creature you touch becomes invisible until the spell ends. Anything the target is wearing or carrying is invisible as long as it is on the target's person. The spell ends for a target that attacks or casts a spell.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_ally",
+      "upcast_target_count": 1,
+      "conditions_applied": [
+        "invisible"
+      ],
+      "uses_per_rest": 1
+    },
+    {
+      "name": "Plane Shift",
+      "description": "You and up to eight willing creatures who link hands in a circle are transported to a different plane of existence. You can specify a target destination in general terms, such as the City of Brass on the Elemental Plane of Fire or the palace of Dispater on the second level of the Nine Hells, and you",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 7,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "charisma",
+        "dc": 17,
+        "conditions_on_fail": [
+          "banished"
+        ],
+        "conditions_no_resave": true
+      },
+      "uses_per_rest": 1
     }
   ],
   "legendary_actions": [],
@@ -92,5 +153,7 @@
   ],
   "challenge_rating": 11.0,
   "experience_points": 7200,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [],
+  "reactions": []
 }

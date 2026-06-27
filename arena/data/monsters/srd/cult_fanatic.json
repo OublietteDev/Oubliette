@@ -45,6 +45,94 @@
           }
         ]
       }
+    },
+    {
+      "name": "Sacred Flame",
+      "description": "Flame-like radiance descends on a creature that you can see within range. The target must succeed on a dexterity saving throw or take 1d8 radiant damage. The target gains no benefit from cover for this saving throw.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 0,
+      "cantrip_scaling": true,
+      "ignores_cover": true,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 11,
+        "damage_on_fail": [
+          {
+            "dice": "1d8",
+            "damage_type": "radiant",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "none"
+      }
+    },
+    {
+      "name": "Command",
+      "description": "You speak a one-word command to a creature you can see within range. The target must succeed on a wisdom saving throw or follow the command on its next turn. The spell has no effect if the target is undead, if it doesn't understand your language, or if your command is directly harmful to it.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 11,
+        "conditions_on_fail": [
+          "prone"
+        ]
+      },
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Inflict Wounds",
+      "description": "Make a melee spell attack against a creature you can reach. On a hit, the target takes 3d10 necrotic damage.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_creature",
+      "attack": {
+        "name": "Inflict Wounds",
+        "attack_type": "melee_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": null,
+        "damage": [
+          {
+            "dice": "3d10",
+            "damage_type": "necrotic",
+            "bonus": 0
+          }
+        ]
+      },
+      "upcast_damage_dice": "1d10",
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Hold Person",
+      "description": "Choose a humanoid that you can see within range. The target must succeed on a wisdom saving throw or be paralyzed for the duration. At the end of each of its turns, the target can make another wisdom saving throw. On a success, the spell ends on the target.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 11,
+        "conditions_on_fail": [
+          "paralyzed"
+        ]
+      },
+      "uses_per_rest": 3
     }
   ],
   "legendary_actions": [],
@@ -69,5 +157,55 @@
   ],
   "challenge_rating": 2.0,
   "experience_points": 450,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [
+    {
+      "name": "Shield of Faith",
+      "description": "A shimmering field appears and surrounds a creature of your choice within range, granting it a +2 bonus to AC for the duration.",
+      "action_type": "bonus_action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_ally",
+      "buff_effects": [
+        {
+          "stat": "ac",
+          "modifier_type": "flat_bonus",
+          "value": 2
+        }
+      ],
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Spiritual Weapon",
+      "description": "You create a floating, spectral weapon within range that lasts for the duration or until you cast this spell again. When you cast the spell, you can make a melee spell attack against a creature within 5 feet of the weapon. On a hit, the target takes force damage equal to 1d8 + your spellcasting abil",
+      "action_type": "bonus_action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_creature",
+      "attack": {
+        "name": "Spiritual Weapon",
+        "attack_type": "melee_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "force",
+            "bonus": 0,
+            "ability_modifier": "intelligence"
+          }
+        ]
+      },
+      "recurring_action_type": "bonus_action",
+      "recurring_move_distance": 20,
+      "upcast_damage_dice": "1d8",
+      "upcast_damage_per_levels": 2,
+      "uses_per_rest": 3
+    }
+  ],
+  "reactions": []
 }

@@ -711,8 +711,40 @@ without competence, and building it reveals which knobs are real.
   (no flailing at corpses). Fidelity note: all swings use the creature's *best* attack (3 claws), not
   the literal "bite + 2 claws" split — consistent with how the player's Extra Attack already works;
   "fine unless the public complains." Tests: `arena/tests/test_ai_multiattack.py` (5). Bench:
-  `multiattack_lab` (dragon/troll=3, owlbear=2, lone wolf=1 control). NEXT: Slice 2 = monster
-  spellcasting (caster monsters stab with a dagger instead of casting their spell list).
+  `multiattack_lab` (dragon/troll=3, owlbear=2, lone wolf=1 control).
+
+- **Brain Slice 2 — Monster spellcasting (DONE, live-verified 2026-06-26).** Root cause: the casting
+  *machinery* already worked (the hand-authored `monsters/mage.json` casts fine), but the 36 SRD
+  caster stat blocks carry their spells as PROSE in a `special_abilities` "Spellcasting" Feature
+  ("3rd level (3 slots): fireball ..."), and the AI only scores `actions` — so a Mage saw only its
+  Dagger. Fix = a content binder, engine untouched: `arena/util/monster_spells.py` parses the prose,
+  binds each named spell to the shared spell library (`arena/data/spells/srd/`, ~158 spells),
+  stamps the monster's save DC, and emits a baked spell Action. Applied to the 30 effective casters
+  via `tools/bake_monster_spells.py` (idempotent, re-runnable) and wired into `gen_arena_monsters.py`
+  (no longer DEFERRED) so a regen reproduces it. Spells absent from the library (~54 utility:
+  detect magic, light, tongues, scrying…) are skipped + reported — a monster never casts them in a
+  fight anyway. Gates mirror the hand-authored casters: self-teleports → `is_in_melee` (escape only),
+  damaging area spells → `enemies_in_range >= 2`. Lich 19 spells, Archmage 12, Mage 10. Bench:
+  `monster_caster_lab`. Tests: `test_monster_spell_binding.py` (10).
+  THREE bugs surfaced + fixed in the same slice (all pre-existing, exposed by monsters casting):
+  - **AI area-burst self-centering** (`ai/scoring.py` + `ai/controller.py`): `execute_effect(target_id)`
+    expands an AoE around the CASTER, so AI bursts (Fireball/Ice Storm) landed on the caster's own
+    square (Ice Storm even dumped its terrain there) and only hit the lone "included" target. Fix:
+    non-concentration `area_*` spells now carry a `target_hex` on the enemy → routed through
+    `execute_effect_at_hex` (centers on the cluster). Concentration auras (Spirit Guardians) stay
+    caster-centered. Tests: `test_ai_aoe_targeting.py` (3). Note: `target_type` is a `TargetType`
+    enum — use `.value` for "area" prefix checks.
+  - **uses_per_rest not enforced on teleports** (`combat/manager.py` `execute_teleport`): only checked
+    spell-slot cost, never the per-rest cap, so a gated Misty Step was castable unlimited times (saw
+    377). Fix: added the check-and-decrement that `resolve_effect` already does. Fixes ALL limited
+    teleports, players included. Tests: `test_teleport.py` (+2).
+  - **Sacred Flame honored cover** (`models/actions.py` + `combat/actions.py`): cover correctly adds
+    +2 to DEX saves (incl. from any intervening creature — RAW), but Sacred Flame's text says it
+    ignores cover. Added an `ignores_cover` Action flag, set on `sacred_flame.json`. Tests:
+    `test_cover_dex_saves.py` (+1). NB: an attacker's own ally in the line granting the target cover
+    is RAW and intentional — left as-is.
+  Full suite 2407 green. NEXT: Slice 3 = signature abilities / smarter AoE-cluster aiming / charge
+  setup (audit-driven after playtest), then the Forge AI editor (Phase 2).
 
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a
 repository abstraction; async edges / sync core; LLM-first routing behind the model seam;

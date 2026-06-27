@@ -127,6 +127,73 @@
           }
         ]
       }
+    },
+    {
+      "name": "Fireball",
+      "description": "A bright streak flashes from your pointing finger to a point you choose within range and then blossoms with a low roar into an explosion of flame. Each creature in a 20-foot-radius sphere centered on that point must make a dexterity saving throw. A target takes 8d6 fire damage on a failed save, or h",
+      "action_type": "action",
+      "range": 150,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 3,
+      "target_type": "area_sphere",
+      "area_size": 20,
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 21,
+        "damage_on_fail": [
+          {
+            "dice": "8d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "upcast_damage_dice": "1d6",
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Hold Monster",
+      "description": "Choose a creature you can see and reach. The target must make a saving throw of Wisdom or be paralyzed for the duration of the spell. This spell has no effect against the undead. At the end of each round, the target can make a new saving throw of Wisdom. If successful, the spell ends for the creatur",
+      "action_type": "action",
+      "range": 90,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 5,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 21,
+        "conditions_on_fail": [
+          "paralyzed"
+        ]
+      },
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Wall of Fire",
+      "description": "You create a wall of fire on a solid surface within range. You can make the wall up to 60 feet long, 20 feet high, and 1 foot thick. The wall is opaque and lasts for the duration. One side of the wall deals 5d8 fire damage to each creature that ends its turn within 10 feet of that side or inside the wall; a creature takes the same damage when it enters the wall for the first time on a turn.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "area_line",
+      "area_size": 60,
+      "is_wall": true,
+      "wall_length": 60,
+      "wall_height": 20,
+      "wall_thickness": 1,
+      "wall_hp_per_panel": null,
+      "wall_blocks_movement": false,
+      "wall_blocks_los": true,
+      "wall_damage_on_enter": "5d8",
+      "wall_damage_type": "fire",
+      "wall_damage_side": "one_side",
+      "uses_per_rest": 3,
+      "ai_use_condition": "enemies_in_range >= 2"
     }
   ],
   "legendary_actions": [],
@@ -158,5 +225,7 @@
   ],
   "challenge_rating": 20.0,
   "experience_points": 25000,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [],
+  "reactions": []
 }

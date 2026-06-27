@@ -51,6 +51,242 @@
           }
         ]
       }
+    },
+    {
+      "name": "Fire Bolt",
+      "description": "You hurl a mote of fire at a creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 fire damage. A flammable object hit by this spell ignites if it isn't being worn or carried.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 0,
+      "cantrip_scaling": true,
+      "target_type": "one_creature",
+      "attack": {
+        "name": "Fire Bolt",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 120,
+        "damage": [
+          {
+            "dice": "1d10",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Shocking Grasp",
+      "description": "Lightning springs from your hand to deliver a shock to a creature you try to touch. Make a melee spell attack against the target. You have advantage on the attack roll if the target is wearing armor made of metal. On a hit, the target takes 1d8 lightning damage, and it can't take reactions until the",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 0,
+      "cantrip_scaling": true,
+      "target_type": "one_creature",
+      "attack": {
+        "name": "Shocking Grasp",
+        "attack_type": "melee_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": null,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "lightning",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Mage Armor",
+      "description": "You touch a willing creature who isn't wearing armor, and a protective magical force surrounds it until the spell ends. The target's base AC becomes 13 + its Dexterity modifier. The spell ends if the target dons armor or if you dismiss the spell as an action.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "self",
+      "buff_effects": [
+        {
+          "stat": "ac",
+          "modifier_type": "set",
+          "value": "13+DEX"
+        }
+      ],
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Magic Missile",
+      "description": "You create three glowing darts of magical force. Each dart hits a creature of your choice that you can see within range. A dart deals 1d4 + 1 force damage to its target. The darts all strike simultaneously, and you can direct them to hit one creature or several.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_creature",
+      "target_count": 3,
+      "upcast_target_count": 1,
+      "attack": {
+        "name": "Magic Missile",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 120,
+        "auto_hit": true,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "force",
+            "bonus": 1
+          }
+        ]
+      },
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Mirror Image",
+      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it's impossible to track which image is real. You can use your action to dismiss the illusory duplicates.",
+      "action_type": "action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "self",
+      "buff_effects": [
+        {
+          "stat": "decoy_images",
+          "modifier_type": "flat_bonus",
+          "value": 3
+        }
+      ],
+      "buff_charges": 3,
+      "buff_duration_rounds": 10,
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Lightning Bolt",
+      "description": "A stroke of lightning forming a line 100 feet long and 5 feet wide blasts out from you in a direction you choose. Each creature in the line must make a dexterity saving throw. A creature takes 8d6 lightning damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 3,
+      "target_type": "area_line",
+      "area_size": 100,
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 17,
+        "damage_on_fail": [
+          {
+            "dice": "8d6",
+            "damage_type": "lightning",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "upcast_damage_dice": "1d6",
+      "uses_per_rest": 3,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Banishment",
+      "description": "You attempt to send one creature that you can see within range to another plane of existence. The target must succeed on a charisma saving throw or be banished.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "charisma",
+        "dc": 17,
+        "conditions_on_fail": [
+          "banished"
+        ],
+        "conditions_no_resave": true
+      },
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Stoneskin",
+      "description": "This spell turns the flesh of a willing creature you touch as hard as stone. Until the spell ends, the target has resistance to nonmagical bludgeoning, piercing, and slashing damage.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "one_ally",
+      "buff_effects": [
+        {
+          "stat": "damage_resistance",
+          "modifier_type": "resistance",
+          "value": "bludgeoning"
+        },
+        {
+          "stat": "damage_resistance",
+          "modifier_type": "resistance",
+          "value": "piercing"
+        },
+        {
+          "stat": "damage_resistance",
+          "modifier_type": "resistance",
+          "value": "slashing"
+        }
+      ],
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Cone of Cold",
+      "description": "A blast of cold air erupts from your hands. Each creature in a 60-foot cone must make a constitution saving throw. A creature takes 8d8 cold damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 5,
+      "target_type": "area_cone",
+      "area_size": 60,
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 17,
+        "damage_on_fail": [
+          {
+            "dice": "8d8",
+            "damage_type": "cold",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "upcast_damage_dice": "1d8",
+      "uses_per_rest": 3,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Wall of Force",
+      "description": "An invisible wall of force springs into existence within range, up to 100 feet long and 1 foot thick. The wall is invisible and immune to damage; nothing can physically pass through it, and it blocks line of effect. The wall lasts for the duration while you concentrate.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 5,
+      "target_type": "area_line",
+      "area_size": 100,
+      "is_wall": true,
+      "wall_length": 100,
+      "wall_height": 10,
+      "wall_thickness": 1,
+      "wall_hp_per_panel": null,
+      "wall_blocks_movement": true,
+      "wall_blocks_los": true,
+      "uses_per_rest": 3,
+      "ai_use_condition": "enemies_in_range >= 2"
     }
   ],
   "legendary_actions": [],
@@ -68,5 +304,35 @@
   ],
   "challenge_rating": 12.0,
   "experience_points": 8400,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [
+    {
+      "name": "Misty Step",
+      "description": "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space that you can see.",
+      "action_type": "bonus_action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "self",
+      "teleport_range": 30,
+      "uses_per_rest": 3,
+      "ai_use_condition": "is_in_melee"
+    }
+  ],
+  "reactions": [
+    {
+      "name": "Counterspell",
+      "description": "You attempt to interrupt a creature in the process of casting a spell. If the creature is casting a spell of 3rd level or lower, its spell fails and has no effect. If it is casting a spell of 4th level or higher, make an ability check using your spellcasting ability. The DC equals 10 + the spell's l",
+      "action_type": "reaction",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 3,
+      "target_type": "one_creature",
+      "is_counterspell": true,
+      "counterspell_auto_level": 3,
+      "uses_per_rest": 3
+    }
+  ]
 }

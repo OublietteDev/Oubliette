@@ -55,6 +55,66 @@
           }
         ]
       }
+    },
+    {
+      "name": "Darkness",
+      "description": "Magical darkness spreads from a point you choose within range to fill a 15-foot-radius sphere for the duration. The darkness spreads around corners. A creature with darkvision can't see through this darkness, and nonmagical light can't illuminate it.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 5,
+      "spell_level": 2,
+      "target_type": "area_sphere",
+      "area_size": 15,
+      "obscuring_zone": "darkness",
+      "uses_per_rest": 3,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Dispel Magic",
+      "description": "Choose one creature, object, or magical effect within range. Any spell of 3rd level or lower on the target ends. For each spell of 4th level or higher on the target, make an ability check using your spellcasting ability. The DC equals 10 + the spell's level. On a successful check, the spell ends.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 3,
+      "target_type": "one_creature",
+      "dispel": true,
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Banishment",
+      "description": "You attempt to send one creature that you can see within range to another plane of existence. The target must succeed on a charisma saving throw or be banished.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "charisma",
+        "dc": 16,
+        "conditions_on_fail": [
+          "banished"
+        ],
+        "conditions_no_resave": true
+      },
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Greater Invisibility",
+      "description": "You or a creature you touch becomes invisible until the spell ends. Anything the target is wearing or carrying is invisible as long as it is on the target's person.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "one_ally",
+      "conditions_applied": [
+        "invisible"
+      ],
+      "uses_per_rest": 3
     }
   ],
   "legendary_actions": [
@@ -103,5 +163,27 @@
   ],
   "challenge_rating": 11.0,
   "experience_points": 7200,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [],
+  "reactions": [
+    {
+      "name": "Shield",
+      "description": "An invisible barrier of magical force appears and protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from magic missile.",
+      "action_type": "reaction",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "self",
+      "buff_effects": [
+        {
+          "stat": "ac",
+          "modifier_type": "flat_bonus",
+          "value": 5
+        }
+      ],
+      "buff_duration_rounds": 1,
+      "uses_per_rest": 4
+    }
+  ]
 }

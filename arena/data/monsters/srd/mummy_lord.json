@@ -84,6 +84,202 @@
           "frightened"
         ]
       }
+    },
+    {
+      "name": "Sacred Flame",
+      "description": "Flame-like radiance descends on a creature that you can see within range. The target must succeed on a dexterity saving throw or take 1d8 radiant damage. The target gains no benefit from cover for this saving throw.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 0,
+      "cantrip_scaling": true,
+      "ignores_cover": true,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 17,
+        "damage_on_fail": [
+          {
+            "dice": "1d8",
+            "damage_type": "radiant",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "none"
+      }
+    },
+    {
+      "name": "Command",
+      "description": "You speak a one-word command to a creature you can see within range. The target must succeed on a wisdom saving throw or follow the command on its next turn. The spell has no effect if the target is undead, if it doesn't understand your language, or if your command is directly harmful to it.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 17,
+        "conditions_on_fail": [
+          "prone"
+        ]
+      },
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Guiding Bolt",
+      "description": "A flash of light streaks toward a creature of your choice within range. Make a ranged spell attack against the target. On a hit, the target takes 4d6 radiant damage, and the next attack roll made against this target before the end of your next turn has advantage, thanks to the mystical dim light gli",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_creature",
+      "attack": {
+        "name": "Guiding Bolt",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 120,
+        "damage": [
+          {
+            "dice": "4d6",
+            "damage_type": "radiant",
+            "bonus": 0
+          }
+        ]
+      },
+      "upcast_damage_dice": "1d6",
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Hold Person",
+      "description": "Choose a humanoid that you can see within range. The target must succeed on a wisdom saving throw or be paralyzed for the duration. At the end of each of its turns, the target can make another wisdom saving throw. On a success, the spell ends on the target.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 17,
+        "conditions_on_fail": [
+          "paralyzed"
+        ]
+      },
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Dispel Magic",
+      "description": "Choose one creature, object, or magical effect within range. Any spell of 3rd level or lower on the target ends. For each spell of 4th level or higher on the target, make an ability check using your spellcasting ability. The DC equals 10 + the spell's level. On a successful check, the spell ends.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 3,
+      "target_type": "one_creature",
+      "dispel": true,
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Guardian of Faith",
+      "description": "A Large spectral guardian appears and hovers for the duration in an unoccupied space of your choice that you can see within range. The guardian occupies that space and is indistinct except for a gleaming sword and shield emblazoned with the symbol of your deity.",
+      "action_type": "action",
+      "range": 30,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "area_sphere",
+      "area_size": 10,
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 17,
+        "damage_on_fail": [
+          {
+            "dice": "20",
+            "damage_type": "radiant",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "uses_per_rest": 3,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Contagion",
+      "description": "Your touch inflicts disease. Make a melee spell attack against a creature within your reach. On a hit, you afflict the creature with a disease of your choice from any of the ones described below.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 5,
+      "target_type": "one_creature",
+      "attack": {
+        "name": "Contagion",
+        "attack_type": "melee_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "damage": []
+      },
+      "conditions_applied": [
+        "poisoned"
+      ],
+      "condition_save_to_end": "constitution",
+      "uses_per_rest": 2
+    },
+    {
+      "name": "Insect Plague",
+      "description": "Swarming, biting locusts fill a 20-foot-radius sphere centered on a point you choose within range. The sphere spreads around corners. The sphere remains for the duration, and its area is lightly obscured. The sphere's area is difficult terrain.",
+      "action_type": "action",
+      "range": 300,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 5,
+      "target_type": "area_sphere",
+      "area_size": 20,
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 17,
+        "damage_on_fail": [
+          {
+            "dice": "4d10",
+            "damage_type": "piercing",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "upcast_damage_dice": "1d10",
+      "uses_per_rest": 2,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Harm",
+      "description": "You unleash a virulent disease on a creature that you can see within range. The target must make a constitution saving throw. On a failed save, it takes 14d6 necrotic damage, or half as much damage on a successful save. The damage can't reduce the target's hit points below 1. If the target fails the",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 6,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 17,
+        "damage_on_fail": [
+          {
+            "dice": "14d6",
+            "damage_type": "necrotic",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "uses_per_rest": 1
     }
   ],
   "legendary_actions": [
@@ -144,5 +340,55 @@
   ],
   "challenge_rating": 15.0,
   "experience_points": 13000,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [
+    {
+      "name": "Shield of Faith",
+      "description": "A shimmering field appears and surrounds a creature of your choice within range, granting it a +2 bonus to AC for the duration.",
+      "action_type": "bonus_action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_ally",
+      "buff_effects": [
+        {
+          "stat": "ac",
+          "modifier_type": "flat_bonus",
+          "value": 2
+        }
+      ],
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Spiritual Weapon",
+      "description": "You create a floating, spectral weapon within range that lasts for the duration or until you cast this spell again. When you cast the spell, you can make a melee spell attack against a creature within 5 feet of the weapon. On a hit, the target takes force damage equal to 1d8 + your spellcasting abil",
+      "action_type": "bonus_action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_creature",
+      "attack": {
+        "name": "Spiritual Weapon",
+        "attack_type": "melee_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "force",
+            "bonus": 0,
+            "ability_modifier": "intelligence"
+          }
+        ]
+      },
+      "recurring_action_type": "bonus_action",
+      "recurring_move_distance": 20,
+      "upcast_damage_dice": "1d8",
+      "upcast_damage_per_levels": 2,
+      "uses_per_rest": 3
+    }
+  ],
+  "reactions": []
 }

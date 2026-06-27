@@ -57,6 +57,168 @@
           }
         ]
       }
+    },
+    {
+      "name": "Ray of Frost",
+      "description": "A frigid beam of blue-white light streaks toward a creature within range. Make a ranged spell attack against the target. On a hit, it takes 1d8 cold damage, and its speed is reduced by 10 feet until the start of your next turn.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 0,
+      "cantrip_scaling": true,
+      "target_type": "one_creature",
+      "attack": {
+        "name": "Ray of Frost",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 60,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "cold",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Charm Person",
+      "description": "You attempt to charm a humanoid you can see within range. It must make a wisdom saving throw, and does so with advantage if you or your companions are fighting it. If it fails the saving throw, it is charmed by you until the spell ends or until you or your companions do anything harmful to it. The c",
+      "action_type": "action",
+      "range": 30,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 14,
+        "conditions_on_fail": [
+          "charmed"
+        ]
+      },
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Sleep",
+      "description": "This spell sends creatures into a magical slumber. Roll 5d8; the total is how many hit points of creatures this spell can affect. Creatures within 20 feet of a point you choose within range are affected in ascending order of their current hit points (ignoring unconscious creatures).",
+      "action_type": "action",
+      "range": 90,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "area_sphere",
+      "area_size": 20,
+      "hp_threshold": 22,
+      "hp_threshold_effect": "condition",
+      "hp_threshold_condition": "unconscious",
+      "uses_per_rest": 4,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Hold Person",
+      "description": "Choose a humanoid that you can see within range. The target must succeed on a wisdom saving throw or be paralyzed for the duration. At the end of each of its turns, the target can make another wisdom saving throw. On a success, the spell ends on the target.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_creature",
+      "upcast_target_count": 1,
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 14,
+        "conditions_on_fail": [
+          "paralyzed"
+        ]
+      },
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Lightning Bolt",
+      "description": "A stroke of lightning forming a line 100 feet long and 5 feet wide blasts out from you in a direction you choose. Each creature in the line must make a dexterity saving throw. A creature takes 8d6 lightning damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 3,
+      "target_type": "area_line",
+      "area_size": 100,
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 14,
+        "damage_on_fail": [
+          {
+            "dice": "8d6",
+            "damage_type": "lightning",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "upcast_damage_dice": "1d6",
+      "uses_per_rest": 3,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Blight",
+      "description": "Necromantic energy washes over a creature of your choice that you can see within range, draining moisture and vitality from it. The target must make a constitution saving throw. The target takes 8d8 necrotic damage on a failed save, or half as much damage on a successful one. The spell has no effect",
+      "action_type": "action",
+      "range": 30,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 14,
+        "damage_on_fail": [
+          {
+            "dice": "8d8",
+            "damage_type": "necrotic",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "upcast_damage_dice": "1d8",
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Dimension Door",
+      "description": "You teleport yourself from your current location to any other spot within range. You arrive at exactly the spot desired. It can be a place you can see, one you can visualize, or one you can describe by stating distance and direction, such as \"200 feet straight downward\" or \"upward to the northwest a",
+      "action_type": "action",
+      "range": 500,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "self",
+      "teleport_range": 500,
+      "teleport_passenger": true,
+      "uses_per_rest": 3,
+      "ai_use_condition": "is_in_melee"
+    },
+    {
+      "name": "Dominate Person",
+      "description": "You attempt to beguile a humanoid that you can see within range. It must succeed on a wisdom saving throw or be charmed by you for the duration. If you or creatures that are friendly to you are fighting it, it has advantage on the saving throw.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 7,
+      "spell_level": 5,
+      "target_type": "one_creature",
+      "control_effect": true,
+      "target_creature_types": [
+        "humanoid"
+      ],
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 14
+      },
+      "uses_per_rest": 2
     }
   ],
   "legendary_actions": [],
@@ -73,5 +235,7 @@
   ],
   "challenge_rating": 8.0,
   "experience_points": 3900,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [],
+  "reactions": []
 }

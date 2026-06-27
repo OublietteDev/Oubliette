@@ -79,6 +79,63 @@
           }
         ]
       }
+    },
+    {
+      "name": "Invisibility",
+      "description": "A creature you touch becomes invisible until the spell ends. Anything the target is wearing or carrying is invisible as long as it is on the target's person. The spell ends for a target that attacks or casts a spell.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_ally",
+      "upcast_target_count": 1,
+      "conditions_applied": [
+        "invisible"
+      ],
+      "uses_per_rest": 1
+    },
+    {
+      "name": "Plane Shift",
+      "description": "You and up to eight willing creatures who link hands in a circle are transported to a different plane of existence. You can specify a target destination in general terms, such as the City of Brass on the Elemental Plane of Fire or the palace of Dispater on the second level of the Nine Hells, and you",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 7,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "charisma",
+        "dc": 15,
+        "conditions_on_fail": [
+          "banished"
+        ],
+        "conditions_no_resave": true
+      },
+      "uses_per_rest": 1
+    },
+    {
+      "name": "Wall of Fire",
+      "description": "You create a wall of fire on a solid surface within range. You can make the wall up to 60 feet long, 20 feet high, and 1 foot thick. The wall is opaque and lasts for the duration. One side of the wall deals 5d8 fire damage to each creature that ends its turn within 10 feet of that side or inside the wall; a creature takes the same damage when it enters the wall for the first time on a turn.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "area_line",
+      "area_size": 60,
+      "is_wall": true,
+      "wall_length": 60,
+      "wall_height": 20,
+      "wall_thickness": 1,
+      "wall_hp_per_panel": null,
+      "wall_blocks_movement": false,
+      "wall_blocks_los": true,
+      "wall_damage_on_enter": "5d8",
+      "wall_damage_type": "fire",
+      "wall_damage_side": "one_side",
+      "uses_per_rest": 1,
+      "ai_use_condition": "enemies_in_range >= 2"
     }
   ],
   "legendary_actions": [],
@@ -100,5 +157,7 @@
   ],
   "challenge_rating": 11.0,
   "experience_points": 7200,
-  "is_player_controlled": false
+  "is_player_controlled": false,
+  "bonus_actions": [],
+  "reactions": []
 }

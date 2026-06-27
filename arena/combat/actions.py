@@ -1647,7 +1647,8 @@ def resolve_effect(
         # Cover bonus to a DEX save (D-ACT-3): measured from the effect's origin
         # (the blast center for a placed AoE, else the caster) to the target.
         cover_bonus = 0
-        if save.ability.lower() == "dexterity" and grid is not None:
+        if (save.ability.lower() == "dexterity" and grid is not None
+                and not action.ignores_cover):
             origin = effect_origin or user_pos
             if origin is not None and target_pos is not None:
                 cover_bonus = _get_cover_multi(

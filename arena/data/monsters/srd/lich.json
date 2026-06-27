@@ -71,6 +71,362 @@
       "condition_save_to_end_dc": 18,
       "condition_duration_type": "rounds",
       "condition_duration_rounds": 10
+    },
+    {
+      "name": "Ray of Frost",
+      "description": "A frigid beam of blue-white light streaks toward a creature within range. Make a ranged spell attack against the target. On a hit, it takes 1d8 cold damage, and its speed is reduced by 10 feet until the start of your next turn.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 0,
+      "cantrip_scaling": true,
+      "target_type": "one_creature",
+      "attack": {
+        "name": "Ray of Frost",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 60,
+        "damage": [
+          {
+            "dice": "1d8",
+            "damage_type": "cold",
+            "bonus": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Magic Missile",
+      "description": "You create three glowing darts of magical force. Each dart hits a creature of your choice that you can see within range. A dart deals 1d4 + 1 force damage to its target. The darts all strike simultaneously, and you can direct them to hit one creature or several.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "one_creature",
+      "target_count": 3,
+      "upcast_target_count": 1,
+      "attack": {
+        "name": "Magic Missile",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 120,
+        "auto_hit": true,
+        "damage": [
+          {
+            "dice": "1d4",
+            "damage_type": "force",
+            "bonus": 1
+          }
+        ]
+      },
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Thunderwave",
+      "description": "A wave of thunderous force sweeps out from you. Each creature in a 15-foot cube originating from you must make a constitution saving throw. On a failed save, a creature takes 2d8 thunder damage and is pushed 10 feet away from you. On a successful save, the creature takes half as much damage and isn'",
+      "action_type": "action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "area_cube",
+      "area_size": 15,
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 20,
+        "damage_on_fail": [
+          {
+            "dice": "2d8",
+            "damage_type": "thunder",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "forced_movement_type": "push",
+      "forced_movement_distance": 10,
+      "upcast_damage_dice": "1d8",
+      "uses_per_rest": 4,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Acid Arrow",
+      "description": "A shimmering green arrow streaks toward a target within range and bursts in a spray of acid. Make a ranged spell attack against the target. On a hit, the target takes 4d4 acid damage immediately and 2d4 acid damage at the end of its next turn. On a miss, the arrow splashes the target with acid for h",
+      "action_type": "action",
+      "range": 90,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_creature",
+      "attack": {
+        "name": "Acid Arrow",
+        "attack_type": "ranged_spell",
+        "ability": "intelligence",
+        "reach": 5,
+        "range_normal": 90,
+        "damage": [
+          {
+            "dice": "4d4",
+            "damage_type": "acid",
+            "bonus": 0
+          }
+        ]
+      },
+      "upcast_damage_dice": "1d4",
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Invisibility",
+      "description": "A creature you touch becomes invisible until the spell ends. Anything the target is wearing or carrying is invisible as long as it is on the target's person. The spell ends for a target that attacks or casts a spell.",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "one_ally",
+      "upcast_target_count": 1,
+      "conditions_applied": [
+        "invisible"
+      ],
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Mirror Image",
+      "description": "Three illusory duplicates of yourself appear in your space. Until the spell ends, the duplicates move with you and mimic your actions, shifting position so it's impossible to track which image is real. You can use your action to dismiss the illusory duplicates.",
+      "action_type": "action",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 2,
+      "target_type": "self",
+      "buff_effects": [
+        {
+          "stat": "decoy_images",
+          "modifier_type": "flat_bonus",
+          "value": 3
+        }
+      ],
+      "buff_charges": 3,
+      "buff_duration_rounds": 10,
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Dispel Magic",
+      "description": "Choose one creature, object, or magical effect within range. Any spell of 3rd level or lower on the target ends. For each spell of 4th level or higher on the target, make an ability check using your spellcasting ability. The DC equals 10 + the spell's level. On a successful check, the spell ends.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 3,
+      "target_type": "one_creature",
+      "dispel": true,
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Fireball",
+      "description": "A bright streak flashes from your pointing finger to a point you choose within range and then blossoms with a low roar into an explosion of flame. Each creature in a 20-foot-radius sphere centered on that point must make a dexterity saving throw. A target takes 8d6 fire damage on a failed save, or h",
+      "action_type": "action",
+      "range": 150,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 3,
+      "target_type": "area_sphere",
+      "area_size": 20,
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 20,
+        "damage_on_fail": [
+          {
+            "dice": "8d6",
+            "damage_type": "fire",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "upcast_damage_dice": "1d6",
+      "uses_per_rest": 3,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Blight",
+      "description": "Necromantic energy washes over a creature of your choice that you can see within range, draining moisture and vitality from it. The target must make a constitution saving throw. The target takes 8d8 necrotic damage on a failed save, or half as much damage on a successful one. The spell has no effect",
+      "action_type": "action",
+      "range": 30,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 20,
+        "damage_on_fail": [
+          {
+            "dice": "8d8",
+            "damage_type": "necrotic",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "upcast_damage_dice": "1d8",
+      "uses_per_rest": 3
+    },
+    {
+      "name": "Dimension Door",
+      "description": "You teleport yourself from your current location to any other spot within range. You arrive at exactly the spot desired. It can be a place you can see, one you can visualize, or one you can describe by stating distance and direction, such as \"200 feet straight downward\" or \"upward to the northwest a",
+      "action_type": "action",
+      "range": 500,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 4,
+      "target_type": "self",
+      "teleport_range": 500,
+      "teleport_passenger": true,
+      "uses_per_rest": 3,
+      "ai_use_condition": "is_in_melee"
+    },
+    {
+      "name": "Cloudkill",
+      "description": "You create a 20-foot-radius sphere of poisonous, yellow-green fog centered on a point you choose within range. The fog spreads around corners. It lasts for the duration or until strong wind disperses the fog, ending the spell. Its area is heavily obscured.",
+      "action_type": "action",
+      "range": 120,
+      "requires_concentration": true,
+      "ai_priority": 6,
+      "spell_level": 5,
+      "target_type": "area_sphere",
+      "area_size": 20,
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 20,
+        "damage_on_fail": [
+          {
+            "dice": "5d8",
+            "damage_type": "poison",
+            "bonus": 0
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "upcast_damage_dice": "1d8",
+      "uses_per_rest": 3,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Disintegrate",
+      "description": "A thin green ray springs from your pointing finger to a target that you can see within range. The target can be a creature, an object, or a creation of magical force, such as the wall created by wall of force.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 6,
+      "target_type": "area_cube",
+      "area_size": 10,
+      "saving_throw": {
+        "ability": "dexterity",
+        "dc": 20,
+        "damage_on_fail": [
+          {
+            "dice": "10d6",
+            "damage_type": "force",
+            "bonus": 40
+          }
+        ],
+        "damage_on_success": "none"
+      },
+      "uses_per_rest": 1,
+      "ai_use_condition": "enemies_in_range >= 2"
+    },
+    {
+      "name": "Finger of Death",
+      "description": "You send negative energy coursing through a creature that you can see within range, causing it searing pain. The target must make a constitution saving throw. It takes 7d8 + 30 necrotic damage on a failed save, or half as much damage on a successful one.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 7,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "constitution",
+        "dc": 20,
+        "damage_on_fail": [
+          {
+            "dice": "7d8",
+            "damage_type": "necrotic",
+            "bonus": 30
+          }
+        ],
+        "damage_on_success": "half"
+      },
+      "uses_per_rest": 1
+    },
+    {
+      "name": "Plane Shift",
+      "description": "You and up to eight willing creatures who link hands in a circle are transported to a different plane of existence. You can specify a target destination in general terms, such as the City of Brass on the Elemental Plane of Fire or the palace of Dispater on the second level of the Nine Hells, and you",
+      "action_type": "action",
+      "range": 5,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 7,
+      "target_type": "one_creature",
+      "saving_throw": {
+        "ability": "charisma",
+        "dc": 20,
+        "conditions_on_fail": [
+          "banished"
+        ],
+        "conditions_no_resave": true
+      },
+      "uses_per_rest": 1
+    },
+    {
+      "name": "Dominate Monster",
+      "description": "You attempt to beguile a creature that you can see within range. It must succeed on a wisdom saving throw or be charmed by you for the duration. If you or creatures that are friendly to you are fighting it, it has advantage on the saving throw.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": true,
+      "ai_priority": 7,
+      "spell_level": 8,
+      "target_type": "one_creature",
+      "control_effect": true,
+      "target_creature_types": [],
+      "saving_throw": {
+        "ability": "wisdom",
+        "dc": 20
+      },
+      "uses_per_rest": 1
+    },
+    {
+      "name": "Power Word Stun",
+      "description": "You speak a word of power that can overwhelm the mind of one creature you can see within range, leaving it dumbfounded. If the target has 150 hit points or fewer, it is stunned. Otherwise, the spell has no effect.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 8,
+      "target_type": "one_creature",
+      "hp_threshold": 150,
+      "hp_threshold_effect": "condition",
+      "hp_threshold_condition": "stunned",
+      "condition_save_to_end": "constitution",
+      "uses_per_rest": 1
+    },
+    {
+      "name": "Power Word Kill",
+      "description": "You utter a word of power that can compel one creature you can see within range to die instantly. If the creature you choose has 100 hit points or fewer, it dies. Otherwise, the spell has no effect.",
+      "action_type": "action",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 9,
+      "target_type": "one_creature",
+      "hp_threshold": 100,
+      "hp_threshold_effect": "kill",
+      "uses_per_rest": 1
     }
   ],
   "legendary_actions": [
@@ -133,5 +489,40 @@
   "challenge_rating": 21.0,
   "experience_points": 33000,
   "is_player_controlled": false,
-  "legendary_resistance_count": 3
+  "legendary_resistance_count": 3,
+  "bonus_actions": [],
+  "reactions": [
+    {
+      "name": "Shield",
+      "description": "An invisible barrier of magical force appears and protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from magic missile.",
+      "action_type": "reaction",
+      "range": 0,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 1,
+      "target_type": "self",
+      "buff_effects": [
+        {
+          "stat": "ac",
+          "modifier_type": "flat_bonus",
+          "value": 5
+        }
+      ],
+      "buff_duration_rounds": 1,
+      "uses_per_rest": 4
+    },
+    {
+      "name": "Counterspell",
+      "description": "You attempt to interrupt a creature in the process of casting a spell. If the creature is casting a spell of 3rd level or lower, its spell fails and has no effect. If it is casting a spell of 4th level or higher, make an ability check using your spellcasting ability. The DC equals 10 + the spell's l",
+      "action_type": "reaction",
+      "range": 60,
+      "requires_concentration": false,
+      "ai_priority": 6,
+      "spell_level": 3,
+      "target_type": "one_creature",
+      "is_counterspell": true,
+      "counterspell_auto_level": 3,
+      "uses_per_rest": 3
+    }
+  ]
 }

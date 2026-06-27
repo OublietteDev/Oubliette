@@ -93,3 +93,19 @@ class TestResolveEffectComputesCover:
         # A CON save (e.g. Cloudkill) gets no cover benefit.
         assert self._resolve("constitution", TerrainType.COVER_THREE_QUARTERS) == \
             self._resolve("constitution")
+
+    def test_ignores_cover_suppresses_the_bonus(self):
+        # Sacred Flame ("the target gains no benefit from cover for this saving
+        # throw"): even behind 3/4 cover, the DEX save gets no bonus.
+        origin, target_pos = HexCoord(0, 40), HexCoord(6, 40)
+        grid = self._grid_with_cover(origin, target_pos, TerrainType.COVER_THREE_QUARTERS)
+        action = _save_action("dexterity")
+        action.ignores_cover = True
+        caster, target = _creature("Caster"), _creature("Target")
+        with patch("arena.combat.actions.roll_die", return_value=10):
+            res = resolve_effect(
+                caster, "c", target, "t", action, grid,
+                user_pos=origin, target_pos=target_pos, effect_origin=origin,
+            )
+        # Same as no cover at all.
+        assert _save_modifier(res.events) == self._resolve("dexterity")
