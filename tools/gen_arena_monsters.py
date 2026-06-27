@@ -301,6 +301,11 @@ def _action(a: dict, abils: dict, prof: int) -> dict | None:
                 out["uses_per_rest"] = 2
                 out["rest_type"] = "short"
                 out["current_uses"] = 2
+            # A recharge ability IS the creature's signature move (a dragon's
+            # breath). Mark it high-priority so the AI both *uses* it (a limited
+            # ability at the default priority 5 sits just under the use-threshold
+            # and never fires) and opens with it rather than conserving it.
+            out["ai_priority"] = 9
         return out
     return None
 

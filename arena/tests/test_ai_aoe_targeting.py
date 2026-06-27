@@ -121,3 +121,38 @@ def test_single_target_effect_has_no_center_hex():
     name, target_hex, _ = _plan_first_effect(HOLD_PERSON)
     assert name == "Hold Person"
     assert target_hex is None
+
+
+def test_burst_aims_at_the_densest_cluster():
+    """The blast centers on the enemy whose neighborhood holds the most foes,
+    not a lone outlier (Slice 3B: score the cluster from the target, not the
+    caster)."""
+    enc = Encounter(
+        name="Cluster", grid_width=22, grid_height=16,
+        combatants=[
+            CombatantEntry(creature_id="caster", creature_data=_stormcaller(ICE_STORM),
+                           team="enemy", starting_position=(18, 7)),
+            CombatantEntry(creature_id="lone", creature_data=_hero("Lone"),
+                           team="player", starting_position=(4, 1)),
+            CombatantEntry(creature_id="c1", creature_data=_hero("C1"),
+                           team="player", starting_position=(4, 11)),
+            CombatantEntry(creature_id="c2", creature_data=_hero("C2"),
+                           team="player", starting_position=(5, 11)),
+            CombatantEntry(creature_id="c3", creature_data=_hero("C3"),
+                           team="player", starting_position=(4, 12)),
+        ],
+    )
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("."))
+    cm.roll_initiative()
+    cm.begin_combat()
+    for _ in range(len(cm.combatants) + 1):
+        if cm.active_combatant and cm.active_combatant.creature_id == "stormcaller":
+            break
+        cm.end_turn()
+    plan = AIController(randomness=0.0).plan_turn(cm)
+    center = next((s.target_hex for s in plan.steps
+                   if s.step_type == TurnStepType.EXECUTE_EFFECT), None)
+    assert center is not None
+    # The cluster sits at r 11-12; the lone hero at r=1. Aim at the cluster.
+    assert center[1] >= 9

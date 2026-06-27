@@ -1,0 +1,25 @@
+{
+  "name": "Breath Lab — dragons use their signature ability",
+  "description": "Brain Slice 3 bench: signature recharge abilities (breath weapons) are now used, and area bursts aim at the densest cluster. The Young Red Dragon should open with Fire Breath when its breath is available (recharge 5-6), centering the cone on the bunched party rather than biting one fighter — then Bite when the breath is spent. The four heroes start clustered so the breath catches several at once. If the dragon only ever bites, that's the old bug (breath stuck below the AI use-threshold).",
+  "grid_width": 20,
+  "grid_height": 15,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/thorin.json", "creature_data": null, "team": "player", "starting_position": [6, 6], "count": 1, "name_override": null},
+    {"creature_id": "characters/valeria.json", "creature_data": null, "team": "player", "starting_position": [7, 6], "count": 1, "name_override": null},
+    {"creature_id": "characters/ser_marcus.json", "creature_data": null, "team": "player", "starting_position": [6, 7], "count": 1, "name_override": null},
+    {"creature_id": "characters/kael.json", "creature_data": null, "team": "player", "starting_position": [7, 7], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/young_red_dragon.json", "creature_data": null, "team": "enemy", "starting_position": [14, 7], "count": 1, "name_override": null}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

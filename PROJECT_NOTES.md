@@ -743,8 +743,28 @@ without competence, and building it reveals which knobs are real.
     ignores cover. Added an `ignores_cover` Action flag, set on `sacred_flame.json`. Tests:
     `test_cover_dex_saves.py` (+1). NB: an attacker's own ally in the line granting the target cover
     is RAW and intentional — left as-is.
-  Full suite 2407 green. NEXT: Slice 3 = signature abilities / smarter AoE-cluster aiming / charge
-  setup (audit-driven after playtest), then the Forge AI editor (Phase 2).
+  Full suite 2407 green.
+
+- **Brain Slice 3 — Signature abilities + AoE aiming (DONE, live-verified 2026-06-26). BRAIN PHASE
+  COMPLETE.** (A) Breath weapons were never used: a once-per-rest ability at the generated default
+  `ai_priority=5` lands at willingness 0.375 in `should_use_limited_ability` — just under the 0.4
+  threshold (0.5 × (0.5 + 0.5·pri/10)). Fix: `gen_arena_monsters.py` now stamps recharge abilities at
+  ai_priority 9 (signature: used freely, exempt from the early "save your one use" conservation which
+  only spares pri≥8); `tools/bake_signature_priorities.py` migrated the 38 existing breath/recharge
+  abilities (Fire/Cold/Lightning/Poison Breath, Petrifying Breath, Horror Nimbus, Spores…). Dragons
+  now open with breath, bite when it's spent. (B) AoE cluster aiming: Slice 2 moved burst execution to
+  the target hex but `score_effect_action` still measured the cluster from the CASTER — fixed to score
+  at the blast's real center (the target for non-concentration bursts; caster for concentration auras),
+  so per-enemy ranking auto-picks the densest cluster. Legendary actions were already handled
+  (`controller.plan_legendary_action`, Phase D) — not a gap. Charge-SETUP maneuvering deferred (minor;
+  charge fires when in range). Bench: `breath_lab`. Tests: `test_ai_signature_abilities.py` (2, incl.
+  pri-5-fails regression) + cluster test in `test_ai_aoe_targeting.py`. Full suite 2411 green.
+  Backlog idea (OublietteDev, playtest): AoE/cone AIM INDICATORS in the GUI — hard to see what a breath/blast
+  is targeting (see [[oubliette-arena-ui-cleanup]]).
+
+  **→ NEXT: Forge Phase 2 — the AI editor** (easy mode = plain-English personality questions +
+  presets; pro mode = full `AIProfile` knob board; both write the same profile). Then Phase 3 =
+  monster editor. See `oubliette-ai-forge-arc` memory.
 
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a
 repository abstraction; async edges / sync core; LLM-first routing behind the model seam;

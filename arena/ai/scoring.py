@@ -135,22 +135,26 @@ def score_effect_action(
     if distance_hexes > action_range_hexes:
         base -= (distance_hexes - action_range_hexes) * 10
 
-    # Area effects: real geometry (B5). Execution centers the blast on the
-    # CASTER (_resolve_effect_targets), so measure from me — enemies actually
-    # inside raise the score; allies inside are friendly fire and lower it.
+    # Area effects: real geometry (B5). Measure the blast from its ACTUAL center.
+    # A non-concentration burst (Fireball, breath) is placed on the target hex
+    # (the Slice 2 AoE fix), so count creatures around the TARGET — which also
+    # makes the per-enemy ranking pick the enemy whose cluster is densest.
+    # A concentration aura (Spirit Guardians) stays centered on the caster.
     if action.target_type.value.startswith("area_"):
         area_feet = action.area_size or action.range
         radius_hexes = area_feet / 5 if area_feet else 0
-        if context.me.position is not None and radius_hexes > 0:
+        centered_on_caster = action.requires_concentration
+        center = context.me if centered_on_caster else target
+        if center.position is not None and radius_hexes > 0:
             enemies_hit = sum(
                 1 for e in context.enemies
                 if e.position is not None
-                and creature_distance(context.me, e) <= radius_hexes
+                and creature_distance(center, e) <= radius_hexes
             )
             allies_hit = sum(
                 1 for a in context.allies
                 if a.position is not None
-                and creature_distance(context.me, a) <= radius_hexes
+                and creature_distance(center, a) <= radius_hexes
             )
             if enemies_hit > 1:
                 base *= 1.0 + 0.3 * (enemies_hit - 1)

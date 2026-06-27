@@ -101,7 +101,8 @@
       "area_size": 15,
       "recharge_min": 5,
       "uses_per_rest": 1,
-      "current_uses": 1
+      "current_uses": 1,
+      "ai_priority": 9
     }
   ],
   "legendary_actions": [],
