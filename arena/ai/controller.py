@@ -29,6 +29,7 @@ from arena.ai.scoring import (
 from arena.ai.tactics import check_retreat, check_focus_fire, check_protect_ally
 from arena.models.actions import Action
 from arena.combat.actions import is_in_range
+from arena.combat.stat_modifiers import get_extra_attack_count
 
 if TYPE_CHECKING:
     from arena.combat.manager import CombatManager
@@ -379,7 +380,13 @@ class AIController:
 
         # ── Action ────────────────────────────────────────────────────
         if best_action:
-            self._plan_action(plan, best_action, profile, context)
+            # Multiattack: a creature with extra attacks (a dragon's bite +
+            # two claws, a martial's Extra Attack) gets to swing that many
+            # times per Attack action. The engine already enforces the
+            # action economy (only the final swing consumes the action);
+            # the AI just has to plan all the swings instead of one.
+            num_attacks = get_extra_attack_count(creature)
+            self._plan_action(plan, best_action, profile, context, num_attacks)
 
         # ── Bonus action: teleport or TWF ────────────────────────────
         # Prioritize bonus action teleport (e.g. Misty Step) for casters
@@ -498,20 +505,32 @@ class AIController:
         best_action: ScoredAction,
         profile: AIProfile,
         context: CombatContext,
+        num_attacks: int = 1,
     ) -> None:
-        """Add the chosen action to the plan."""
+        """Add the chosen action to the plan.
+
+        ``num_attacks`` is the creature's Extra Attack / Multiattack count;
+        it only applies to the ``attack`` category. Each swing is a
+        SELECT_ACTION + EXECUTE_ATTACK pair (the attack must be re-selected
+        between swings because completing an attack clears the selection).
+        Swings re-target onto a living foe at execution time if the chosen
+        target drops mid-sequence (see executor `_execute_attack`).
+        """
         if best_action.action_category == "attack":
-            plan.steps.append(TurnStep(
-                step_type=TurnStepType.SELECT_ACTION,
-                action_name=best_action.action_name,
-                cast_level=best_action.cast_level,
-            ))
-            plan.steps.append(TurnStep(
-                step_type=TurnStepType.EXECUTE_ATTACK,
-                target_id=best_action.target_id,
-            ))
+            swings = max(1, num_attacks)
+            for _ in range(swings):
+                plan.steps.append(TurnStep(
+                    step_type=TurnStepType.SELECT_ACTION,
+                    action_name=best_action.action_name,
+                    cast_level=best_action.cast_level,
+                ))
+                plan.steps.append(TurnStep(
+                    step_type=TurnStepType.EXECUTE_ATTACK,
+                    target_id=best_action.target_id,
+                ))
+            suffix = f" (x{swings})" if swings > 1 else ""
             plan.thinking_log.append(
-                f"Action: {best_action.description}"
+                f"Action: {best_action.description}{suffix}"
             )
 
         elif best_action.action_category in ("heal", "effect"):

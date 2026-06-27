@@ -1,0 +1,27 @@
+{
+  "name": "Multiattack Lab — monsters that fight their stat block",
+  "description": "Brain Slice 1 bench: the enemy AI now uses Multiattack. Watch one enemy turn and you should see multiple swings resolve — the Young Red Dragon makes 3 (bite + claw + claw), the Troll 3, the Owlbear 2 — while the lone Wolf still makes exactly 1 (the single-attacker control). If a swing drops a hero, the leftover swings should redirect to another living target rather than hitting the corpse. Three sturdy AC-18 fighters soak the hits so the multiattacks are easy to read in the log.",
+  "grid_width": 20,
+  "grid_height": 15,
+  "terrain": [],
+  "combatants": [
+    {"creature_id": "characters/thorin.json", "creature_data": null, "team": "player", "starting_position": [6, 6], "count": 1, "name_override": null},
+    {"creature_id": "characters/valeria.json", "creature_data": null, "team": "player", "starting_position": [6, 8], "count": 1, "name_override": null},
+    {"creature_id": "characters/ser_marcus.json", "creature_data": null, "team": "player", "starting_position": [5, 7], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/young_red_dragon.json", "creature_data": null, "team": "enemy", "starting_position": [14, 7], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/troll.json", "creature_data": null, "team": "enemy", "starting_position": [15, 4], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/owlbear.json", "creature_data": null, "team": "enemy", "starting_position": [15, 10], "count": 1, "name_override": null},
+    {"creature_id": "monsters/srd/wolf.json", "creature_data": null, "team": "enemy", "starting_position": [16, 7], "count": 1, "name_override": "Lone Wolf (control: 1 attack)"}
+  ],
+  "use_ai_for_enemies": true,
+  "use_ai_for_allies": false,
+  "auto_roll_initiative": true,
+  "has_lair": false,
+  "lair_actions": [],
+  "lighting": "bright",
+  "environmental_effects": [],
+  "music_track": null,
+  "background_image": null,
+  "background_offset": [0.0, 0.0],
+  "background_scale": 1.0
+}

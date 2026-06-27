@@ -161,15 +161,52 @@ def _execute_select_action(
     return None
 
 
+def _resolve_attack_target(
+    manager: CombatManager, target_id: str | None
+) -> str | None:
+    """Return a valid (living, hostile) target id for the active attacker.
+
+    Multiattack swings are planned up front against one chosen target. If an
+    earlier swing drops that target, the remaining swings would otherwise
+    flail at a corpse — so when the planned target is gone or unconscious,
+    redirect to the nearest living enemy instead of wasting the attack.
+    """
+    attacker = manager.active_combatant
+    if attacker is None:
+        return target_id
+
+    planned = manager.combatants.get(target_id) if target_id else None
+    if (planned is not None
+            and planned.team != attacker.team
+            and planned.creature.is_conscious):
+        return target_id  # original target still valid
+
+    # Redirect to the nearest conscious enemy.
+    best_id: str | None = None
+    best_dist = None
+    for cid, c in manager.combatants.items():
+        if c.team == attacker.team or not c.creature.is_conscious:
+            continue
+        if c.position is None or attacker.position is None:
+            dist = 0
+        else:
+            dist = attacker.position.distance_to(c.position)
+        if best_dist is None or dist < best_dist:
+            best_dist = dist
+            best_id = cid
+    return best_id
+
+
 def _execute_attack(
     step: TurnStep, manager: CombatManager
 ) -> CombatEvent | None:
     """Execute an EXECUTE_ATTACK step with on-hit rider evaluation."""
-    if step.target_id is None:
+    target_id = _resolve_attack_target(manager, step.target_id)
+    if target_id is None:
         return None
 
     # Two-phase attack to evaluate riders between hit and damage
-    hit_result = manager.execute_attack_hit_check(step.target_id)
+    hit_result = manager.execute_attack_hit_check(target_id)
     if hit_result is None:
         return None
 
@@ -179,7 +216,7 @@ def _execute_attack(
         rider_results = _evaluate_ai_riders(hit_result, manager)
         # Evaluate damage reduction reaction on the target
         damage_reduction = manager._evaluate_ai_damage_reduction(
-            step.target_id, hit_result,
+            target_id, hit_result,
         )
 
     result = manager.complete_attack(

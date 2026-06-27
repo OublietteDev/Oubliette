@@ -689,6 +689,31 @@ pass, run an audit for the last missing combat pieces — **legendary actions** 
 are the suspected remaining gap (`Encounter` already has `has_lair`/`lair_actions` fields and the
 manager tracks `legendary_points`, so some scaffolding exists — verify depth during the audit).
 
+## Post-Phase-D: AI + Forge arc (started 2026-06-26)
+
+Direction after the Arena was sealed. Goal: make monsters fight their stat block, then let
+non-coders author monster behavior in the Forge. **Guiding split (locked with OublietteDev): competence
+is free, personality is authored.** Competence = uses multiattack / casts its spell list / fires
+signature abilities — automatic from the stat block, nobody authors it. Personality = how it
+chooses (brave/cowardly, who it targets, melee/ranged, protects allies) — authored as an AI
+*profile*, the only thing the Forge edits. Roadmap (this order, deliberate): **1) The Brain**
+(pure code: multiattack → monster spellcasting → signature abilities); **2) Forge AI editor**
+(easy mode = a few plain-English questions + presets; pro mode = full numeric knob board; both
+write the same `AIProfile`, most knobs already in `arena/ai/behavior.py`); **3) Monster editor**
+(create creatures, attach a profile). The Brain comes first because profile knobs are meaningless
+without competence, and building it reveals which knobs are real.
+
+- **Brain Slice 1 — Multiattack (DONE, live-verified 2026-06-26).** The engine already supported
+  monster multiattack (`get_extra_attack_count` reads the Multiattack ability's `extra_attack_count`
+  from `special_abilities`); the AI just planned one swing. Fix: `AIController._plan_action` now emits
+  one SELECT_ACTION+EXECUTE_ATTACK pair per swing (`num_attacks` from `get_extra_attack_count`), and
+  `executor._resolve_attack_target` re-targets the nearest living foe when a swing drops its target
+  (no flailing at corpses). Fidelity note: all swings use the creature's *best* attack (3 claws), not
+  the literal "bite + 2 claws" split — consistent with how the player's Extra Attack already works;
+  "fine unless the public complains." Tests: `arena/tests/test_ai_multiattack.py` (5). Bench:
+  `multiattack_lab` (dragon/troll=3, owlbear=2, lone wolf=1 control). NEXT: Slice 2 = monster
+  spellcasting (caster monsters stab with a dagger instead of casting their spell list).
+
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a
 repository abstraction; async edges / sync core; LLM-first routing behind the model seam;
 provider-native structured output; only protected state + entity-creation are event-sourced
