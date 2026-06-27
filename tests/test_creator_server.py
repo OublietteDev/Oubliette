@@ -497,3 +497,26 @@ def test_srd_monster_returns_statblock_and_combat():
 
 def test_srd_monster_unknown_is_404():
     assert client.get("/api/srd/monster/not_a_monster").status_code == 404
+
+
+# --- baseline projection for the attacks editor (Phase 3b-3a) ---------------
+def test_monster_baseline_projects_statblock(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    sb = {"id": "gloom", "name": "Gloom Beast", "hp": 40, "armor_class": 14,
+          "attack_bonus": 5, "damage": "2d6+3", "cr": 3.0,
+          "abilities": {"str": 17, "dex": 12, "con": 15, "int": 3, "wis": 12, "cha": 6},
+          "damage_resistances": ["cold"]}
+    r = client.post("/api/pack/brightvale/monster-baseline", json={"statblock": sb})
+    assert r.status_code == 200
+    m = r.json()["monster"]
+    assert m["max_hit_points"] == 40 and m["armor_class"] == 14
+    assert m["ability_scores"]["strength"] == 17     # carried for to-hit derivation
+    assert "cold" in m["damage_resistances"]         # defenses carried
+    assert len(m["actions"]) == 1                    # a single starter attack
+
+
+def test_monster_baseline_rejects_garbage(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    r = client.post("/api/pack/brightvale/monster-baseline",
+                    json={"statblock": {"name": "no id or hp"}})
+    assert r.status_code == 400

@@ -885,8 +885,24 @@ prefers a rich file via `arena_monster_file`, so "clone an existing creature" = 
   statblocks.json stays client-owned (persists on Save); the combat file writes immediately (like
   portraits). Cards now show a "⚔ custom combat" badge when a creature has a combat file
   (`state.monsterFiles` from `read_pack`). Tests: +3 server (list / statblock+combat / 404).
-  **NEXT: 3b-3 — the ability builder** (compose attacks/multiattack/save-effects/recharge from the
-  engine primitives), then 3b-4 advanced raw-data editor.
+  **NEXT: 3b-3 — the ability builder.**
+
+- **Phase 3b-3a — The attacks editor (DONE, browser-verified 2026-06-27, 500 green).** First slice of
+  the ability builder: a "⚔ Attacks" button on each creature card opens a modal that edits the
+  creature's COMBAT FILE — its attacks and how many it makes per turn. **Attacks per turn** → a
+  Multiattack `special_ability` (`extra_attack_count`). Each attack: name, melee/ranged, reach/range,
+  damage (`2d6+3`, parsed), damage type (dropdown). **To-hit + damage bonus are derived from the
+  creature's STR (melee) / DEX (ranged) + proficiency** — faithful 5e, no flat to-hit field (the engine
+  has none: `get_attack_modifier` = ability mod + prof) — and shown LIVE per row. Seeds from the combat
+  file if present, else from a baseline projection (`POST /api/pack/{id}/monster-baseline` →
+  `statblock_to_monster`). **Preserves** non-attack actions (breath, spells) and non-Multiattack special
+  abilities (Legendary Resistance…) — only attack actions + Multiattack are rebuilt (verified live by
+  editing a cloned Adult Red Dragon: Fire Breath / Frightful Presence / Legendary Resistance survived).
+  Saves via the 3b-1 PUT; updates the ⚔ badge. Tests: +2 server (baseline projects / rejects garbage),
+  +1 bridge **real-path guard** (a Monster shaped like the editor's output → `get_extra_attack_count`
+  and `get_attack_modifier` honor the multiattack count + previewed to-hit). **NEXT: 3b-3b — save-for-
+  effect abilities** (breath weapons, frightful presence: area + save + damage/half + recharge), then
+  3b-4 advanced raw-data editor + `ai_use_condition`.
 
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a
 repository abstraction; async edges / sync core; LLM-first routing behind the model seam;

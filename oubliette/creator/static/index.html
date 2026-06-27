@@ -187,6 +187,11 @@
   .clone-src { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px;
     border-radius: 99px; border: 1px solid var(--line); color: var(--faint); flex: none; }
   .clone-src.srd { color: var(--gold); border-color: var(--gold); }
+  /* attacks editor rows: name | melee/ranged | ft | damage | type | ✕ , preview below */
+  .atk-row { display: grid; grid-template-columns: 1.4fr .9fr .6fr .9fr 1.1fr auto; gap: 7px;
+    align-items: center; margin-bottom: 6px; }
+  .atk-row input, .atk-row select { font-size: 13px; padding: 7px 8px; }
+  .atk-prev { grid-column: 1 / -1; font-size: 12px; color: var(--gold); opacity: .9; margin: -1px 0 7px 2px; }
   .invalid { color: var(--bad); font-size: 12px; margin-top: 6px; min-height: 16px; }
   /* illustration preview — mirrors the game's quest-card image frame so "fit" is honest */
   .illus-frame { width: 100%; height: 175px; background: var(--bg); border: 1px solid var(--line);
@@ -516,6 +521,7 @@ function cardHtml(kind, e, i, depth, node) {
         <div class="cline">${esc(describe(kind, e))}</div>
       </div>
       ${editable ? `<div class="cactions">
+        ${kind === "statblocks" ? `<button class="btn mini" data-attacks="${i}" title="Edit its attacks & multiattack">⚔ Attacks</button>` : ""}
         <button class="btn mini" data-edit="${kind}" data-i="${i}">Edit</button>
         <button class="btn mini danger" data-del="${kind}" data-i="${i}">Delete</button></div>` : ""}
     </div>`;
@@ -597,6 +603,8 @@ function render() {
     b.addEventListener("click", () => openEditor(b.dataset.add, null)));
   d.querySelectorAll("[data-clone-src]").forEach(b =>
     b.addEventListener("click", openClonePicker));
+  d.querySelectorAll("[data-attacks]").forEach(b =>
+    b.addEventListener("click", () => openAttacksEditor(+b.dataset.attacks)));
   d.querySelectorAll("[data-toggle]").forEach(t =>
     t.addEventListener("click", () => {
       const kind = t.dataset.toggle;
@@ -1340,6 +1348,143 @@ async function cloneFrom(source) {
   openEditor("statblocks", state.contents.statblocks.length - 1);
   toast(combat ? `Cloned ${source.name} with its full combat kit — now make it yours.`
                : `Cloned ${source.name} — now make it yours.`);
+}
+
+// ---- attacks & multiattack editor (Phase 3b-3a) ----
+// Edits a creature's COMBAT FILE (the full Arena Monster) — the attacks it swings
+// and how many per turn. To-hit is derived from the creature's Strength (melee) or
+// Dexterity (ranged) + its proficiency, exactly like 5e, and previewed live. Any
+// breath weapons / traits already on the creature are preserved untouched: only
+// attack actions and the Multiattack entry are rebuilt. The combat file is written
+// immediately (like portraits); the bridge then fights the full kit.
+let attacksCtx = null;
+const _NUMWORD = ["zero", "one", "two", "three", "four", "five", "six"];
+const _abilMod = score => Math.floor(((score ?? 10) - 10) / 2);
+function _parseDamage(s) {
+  const t = String(s || "").replace(/\s+/g, "").toLowerCase();
+  const m = t.match(/^(\d+d\d+)([+-]\d+)?$/);
+  return m ? { dice: m[1], bonus: m[2] ? parseInt(m[2], 10) : 0 } : null;
+}
+function _attackFromAction(a) {
+  const at = a.attack || {}, dmg = (at.damage && at.damage[0]) || {};
+  const ranged = at.attack_type === "ranged_weapon";
+  return { name: a.name || "Attack", kind: ranged ? "ranged" : "melee",
+           dist: ranged ? (at.range_normal || 30) : (at.reach || 5),
+           dmg: `${dmg.dice || "1d6"}${dmg.bonus ? (dmg.bonus > 0 ? "+" + dmg.bonus : dmg.bonus) : ""}`,
+           dtype: dmg.damage_type || "bludgeoning" };
+}
+async function openAttacksEditor(index) {
+  const creature = listOf("statblocks")[index];
+  if (!creature) return;
+  let monster = null;
+  try {
+    if ((state.monsterFiles || []).includes(creature.id)) {
+      const data = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/monster/${encodeURIComponent(creature.id)}`)).json();
+      if (!data.error) monster = data.monster;
+    }
+    if (!monster) {
+      const data = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/monster-baseline`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ statblock: creature }) })).json();
+      if (data.error) { toast(data.error); return; }
+      monster = data.monster;
+    }
+  } catch (e) { toast(String(e.message || e)); return; }
+  const multi = (monster.special_abilities || []).find(f => f.name === "Multiattack");
+  attacksCtx = {
+    index, creature, monster,
+    attacks: (monster.actions || []).filter(a => a.attack).map(_attackFromAction),
+    others: (monster.actions || []).filter(a => !a.attack),       // breath/spells/etc, preserved
+    perTurn: (multi && multi.extra_attack_count) || 1,
+  };
+  const modal = document.getElementById("modal");
+  modal.innerHTML = `
+    <div class="mhead">⚔ Attacks — ${esc(creature.name)}</div>
+    <div class="mbody">
+      <div class="help">The moves this creature swings in a fight. To-hit and damage bonus come from its Strength (melee) or Dexterity (ranged) — shown live below.${attacksCtx.others.length ? ` Its ${attacksCtx.others.length} special move(s) (breath, spells…) are kept as-is.` : ""}</div>
+      ${field("Attacks per turn", `<input id="atk_multi" type="number" min="1" max="6" value="${attacksCtx.perTurn}" />`,
+              "Most creatures make 1. Set higher for a multiattacker — it uses its strongest attack each swing.")}
+      <div class="subform"><div class="sftitle">Attacks</div>
+        <div id="atkList"></div>
+        <button class="btn mini" type="button" id="atkAdd">+ Add an attack</button></div>
+      <div class="invalid" id="atk_err"></div>
+    </div>
+    <div class="mfoot"><button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" id="atkSave">Save attacks</button></div>`;
+  document.getElementById("scrim").classList.add("open");
+  renderAttackRows();
+  document.getElementById("atkAdd").addEventListener("click", () => {
+    attacksCtx.attacks.push({ name: "Attack", kind: "melee", dist: 5, dmg: "1d6", dtype: "bludgeoning" });
+    renderAttackRows();
+  });
+  modal.querySelector("[data-cancel]").addEventListener("click", closeEditor);
+  document.getElementById("atkSave").addEventListener("click", saveAttacks);
+}
+function _attackPreview(a) {
+  const ab = attacksCtx.monster.ability_scores || {};
+  const mod = _abilMod(a.kind === "ranged" ? ab.dexterity : ab.strength);
+  const prof = attacksCtx.monster.proficiency_bonus || 0;
+  const toHit = mod + prof, p = _parseDamage(a.dmg);
+  const dmg = p ? `${p.dice}${p.bonus ? (p.bonus > 0 ? "+" + p.bonus : p.bonus) : ""}` : "—";
+  return `${toHit >= 0 ? "+" : ""}${toHit} to hit · ${dmg} ${a.dtype}`;
+}
+function renderAttackRows() {
+  const box = document.getElementById("atkList");
+  box.innerHTML = attacksCtx.attacks.map((a, i) => `
+    <div class="atk-row">
+      <input data-atk-name="${i}" value="${esc(a.name)}" placeholder="Bite" />
+      <select data-atk-kind="${i}">
+        <option value="melee"${a.kind === "melee" ? " selected" : ""}>melee</option>
+        <option value="ranged"${a.kind === "ranged" ? " selected" : ""}>ranged</option></select>
+      <input data-atk-dist="${i}" type="number" min="0" value="${a.dist}" title="reach/range in feet" />
+      <input data-atk-dmg="${i}" value="${esc(a.dmg)}" placeholder="2d6+3" title="damage dice" />
+      <select data-atk-dtype="${i}">${DAMAGE_TYPES.map(t =>
+        `<option value="${t}"${t === a.dtype ? " selected" : ""}>${t}</option>`).join("")}</select>
+      <button class="btn mini danger" type="button" data-atk-del="${i}">✕</button>
+      <div class="atk-prev">${_attackPreview(a)}</div>
+    </div>`).join("") || '<div class="nothing" style="margin:6px 0">No attacks yet — add one.</div>';
+  // wire each field; text/select changes refresh that row's live preview
+  box.querySelectorAll("[data-atk-name]").forEach(el => el.addEventListener("input", e => { attacksCtx.attacks[+e.target.dataset.atkName].name = e.target.value; }));
+  box.querySelectorAll("[data-atk-dmg]").forEach(el => el.addEventListener("input", e => { const i = +e.target.dataset.atkDmg; attacksCtx.attacks[i].dmg = e.target.value; e.target.closest(".atk-row").querySelector(".atk-prev").textContent = _attackPreview(attacksCtx.attacks[i]); }));
+  box.querySelectorAll("[data-atk-dist]").forEach(el => el.addEventListener("input", e => { attacksCtx.attacks[+e.target.dataset.atkDist].dist = Number(e.target.value || 0); }));
+  box.querySelectorAll("[data-atk-kind]").forEach(el => el.addEventListener("change", e => { const i = +e.target.dataset.atkKind; attacksCtx.attacks[i].kind = e.target.value; e.target.closest(".atk-row").querySelector(".atk-prev").textContent = _attackPreview(attacksCtx.attacks[i]); }));
+  box.querySelectorAll("[data-atk-dtype]").forEach(el => el.addEventListener("change", e => { const i = +e.target.dataset.atkDtype; attacksCtx.attacks[i].dtype = e.target.value; e.target.closest(".atk-row").querySelector(".atk-prev").textContent = _attackPreview(attacksCtx.attacks[i]); }));
+  box.querySelectorAll("[data-atk-del]").forEach(el => el.addEventListener("click", e => { attacksCtx.attacks.splice(+e.target.dataset.atkDel, 1); renderAttackRows(); }));
+}
+function _attackToAction(a) {
+  const p = _parseDamage(a.dmg);
+  const ranged = a.kind === "ranged", dist = Number(a.dist) || (ranged ? 30 : 5);
+  const attack = { name: a.name, attack_type: ranged ? "ranged_weapon" : "melee_weapon",
+                   ability: ranged ? "dexterity" : "strength",
+                   reach: ranged ? 5 : dist,
+                   damage: [{ dice: p.dice, damage_type: a.dtype, bonus: p.bonus }] };
+  if (ranged) attack.range_normal = dist;
+  return { name: a.name, description: `${ranged ? "Ranged" : "Melee"} Weapon Attack`,
+           action_type: "action", target_type: "one_creature", range: dist, attack };
+}
+async function saveAttacks() {
+  const err = document.getElementById("atk_err");
+  if (!attacksCtx.attacks.length) { err.textContent = "Give it at least one attack."; return; }
+  for (const a of attacksCtx.attacks) {
+    if (!a.name.trim()) { err.textContent = "Every attack needs a name."; return; }
+    if (!_parseDamage(a.dmg)) { err.textContent = `“${a.name}”: damage must look like 2d6 or 1d8+2.`; return; }
+  }
+  const perTurn = Math.max(1, Math.min(6, Number(document.getElementById("atk_multi").value || 1)));
+  const m = attacksCtx.monster;
+  m.actions = [...attacksCtx.others, ...attacksCtx.attacks.map(_attackToAction)];
+  m.special_abilities = (m.special_abilities || []).filter(f => f.name !== "Multiattack");
+  if (perTurn > 1)
+    m.special_abilities.push({ name: "Multiattack",
+      description: `The ${attacksCtx.creature.name.toLowerCase()} makes ${_NUMWORD[perTurn] || perTurn} attacks.`,
+      extra_attack_count: perTurn });
+  try {
+    const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/monster/${encodeURIComponent(attacksCtx.creature.id)}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ monster: m }) })).json();
+    if (res.error) { err.textContent = res.error; return; }
+  } catch (e) { err.textContent = String(e.message || e); return; }
+  if (!(state.monsterFiles || []).includes(attacksCtx.creature.id)) (state.monsterFiles = state.monsterFiles || []).push(attacksCtx.creature.id);
+  closeEditor();
+  render();
+  toast(`Saved ${attacksCtx.creature.name}'s attacks.`);
 }
 
 // ---- AI personality editor ----

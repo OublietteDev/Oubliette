@@ -852,3 +852,35 @@ def test_pack_combat_file_overrides_an_srd_id(tmp_path):
     shutil.copy(DATA_DIR / "monsters" / "srd" / "owlbear.json", mdir / "goblin.json")
     inst = enemy_from_statblock(sb, pack_monster_dir=mdir)
     assert inst.creature.name == "Owlbear"          # the pack file, not the SRD goblin
+
+
+# --- Phase 3b-3a: the engine honors what the attacks editor writes ------------
+def test_engine_honors_authored_attacks_and_multiattack():
+    """Guard the REAL path: a combat file shaped like the Forge attacks editor
+    produces (distinct attacks + a Multiattack special ability) is mechanically
+    honored — the multiattack count and the derived to-hit both resolve."""
+    from arena.combat.stat_modifiers import get_extra_attack_count
+    # str 16 (+3), proficiency +2 → melee attacks resolve at +5
+    monster = Monster.model_validate({
+        "name": "Gloom Beast",
+        "ability_scores": {"strength": 16, "dexterity": 12, "constitution": 14,
+                           "intelligence": 3, "wisdom": 10, "charisma": 6},
+        "armor_class": 14, "max_hit_points": 40, "proficiency_bonus": 2,
+        "challenge_rating": 3,
+        "actions": [
+            {"name": "Bite", "description": "Melee Weapon Attack", "action_type": "action",
+             "target_type": "one_creature", "range": 5,
+             "attack": {"name": "Bite", "attack_type": "melee_weapon", "ability": "strength",
+                        "reach": 5, "damage": [{"dice": "2d6", "damage_type": "piercing", "bonus": 3}]}},
+            {"name": "Claw", "description": "Melee Weapon Attack", "action_type": "action",
+             "target_type": "one_creature", "range": 5,
+             "attack": {"name": "Claw", "attack_type": "melee_weapon", "ability": "strength",
+                        "reach": 5, "damage": [{"dice": "1d8", "damage_type": "slashing", "bonus": 3}]}},
+        ],
+        "special_abilities": [
+            {"name": "Multiattack", "description": "makes two attacks.", "extra_attack_count": 2},
+        ],
+    })
+    assert get_extra_attack_count(monster) == 2          # multiattack count is live
+    bite = monster.actions[0]
+    assert get_attack_modifier(monster, bite.attack, bite) == 5   # +3 STR + 2 prof, as previewed

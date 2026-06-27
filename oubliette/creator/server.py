@@ -440,6 +440,25 @@ async def save_monster(pack_id: str, sb_id: str, body: MonsterIn) -> JSONRespons
     return JSONResponse({"ok": True, "filename": f"{sb_id}.json"})
 
 
+@app.post("/api/pack/{pack_id}/monster-baseline")
+async def monster_baseline(pack_id: str, body: dict) -> JSONResponse:
+    """Project a slim StatBlock → a full baseline Arena Monster (via the same bridge
+    the game uses), so the attacks editor can seed a creature that has no combat file
+    yet with its real abilities/AC/HP/defenses and a single starter attack. Pure
+    projection — writes nothing."""
+    d = _pack_dir(pack_id)
+    if d is None:
+        return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
+    try:
+        from oubliette.combat.arena_bridge import statblock_to_monster
+        from oubliette.content.schemas import StatBlock
+        sb = StatBlock.model_validate(body.get("statblock") or {})
+        monster = statblock_to_monster(sb).model_dump(mode="json")
+    except Exception as e:
+        return JSONResponse({"error": f"bad creature: {str(e).splitlines()[0]}"}, status_code=400)
+    return JSONResponse({"ok": True, "monster": monster})
+
+
 @app.delete("/api/pack/{pack_id}/monster/{sb_id}")
 async def delete_monster(pack_id: str, sb_id: str) -> JSONResponse:
     """Remove a creature's combat file — it reverts to the flat mapping (or its SRD
