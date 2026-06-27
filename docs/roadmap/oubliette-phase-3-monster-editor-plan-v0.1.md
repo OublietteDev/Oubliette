@@ -116,6 +116,11 @@ the real `arena/models/actions.py` primitives:
   `ai_use_condition` constrained-expression field for conditional use. **No code
   execution.**
 
+## Known UI-pass polish (deferred, OublietteDev 2026-06-27)
+- The defense pick-lists don't yet stop a damage type being ticked as BOTH a
+  resistance and a vulnerability (nonsensical, but harmless — the engine resolves
+  it predictably). Cross-disable in a later UI pass.
+
 ## Open sub-questions (resolve as we build, not now)
 - Keeping `StatBlock` HP/AC/abilities in sync with the combat file when both exist
   (single source of truth vs. derive-on-clone). Lean: combat file owns combat

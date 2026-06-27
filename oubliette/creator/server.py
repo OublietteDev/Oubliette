@@ -267,8 +267,11 @@ async def read_pack(pack_id: str) -> JSONResponse:
     contents = {name: _read_json(d / f"{name}.json") for name in PACK_FILES}
     audio_dir = d / "audio"
     audio_files = sorted(p.name for p in audio_dir.iterdir() if p.is_file()) if audio_dir.is_dir() else []
+    # which creatures carry a full combat file (Phase 3b) — so the editor can badge them
+    monsters_dir = d / "monsters"
+    monster_files = sorted(p.stem for p in monsters_dir.glob("*.json")) if monsters_dir.is_dir() else []
     return JSONResponse({"id": pack_id, "contents": contents, "validation": _validate(pack_id),
-                         "audio_files": audio_files})
+                         "audio_files": audio_files, "monster_files": monster_files})
 
 
 class SaveIn(BaseModel):
@@ -384,6 +387,71 @@ async def get_portrait(pack_id: str, filename: str) -> FileResponse | JSONRespon
     if not path.is_file():
         return JSONResponse({"error": "not found"}, status_code=404)
     return FileResponse(path, headers={"Cache-Control": "no-cache"})
+
+
+# --- creature combat files (Phase 3b) ------------------------------------------
+# Optional, per-creature: <pack>/monsters/<sb_id>.json holds a full Arena `Monster`
+# (the same shape the SRD set ships). When present, the bridge prefers it over the
+# flat one-swing mapping, so a Forge-authored creature fights its full kit
+# (multiattack, breath weapons, distinct attacks). The slim StatBlock stays the
+# bestiary/identity record; this is layered combat truth on top.
+class MonsterIn(BaseModel):
+    monster: dict          # a full Arena Monster JSON (validated against the engine model)
+
+
+def _validate_arena_monster(data: dict) -> str | None:
+    """None if `data` is a valid Arena Monster, else a short error string. Imported
+    lazily so the Forge needn't load the Arena engine unless someone authors combat."""
+    try:
+        from arena.models.monster import Monster as _ArenaMonster
+        _ArenaMonster.model_validate(data)
+        return None
+    except Exception as e:                  # pydantic ValidationError or import issue
+        return str(e).splitlines()[0] if str(e) else "invalid combat data"
+
+
+@app.get("/api/pack/{pack_id}/monster/{sb_id}", response_model=None)
+async def get_monster(pack_id: str, sb_id: str) -> JSONResponse:
+    """A creature's combat file, or 404 if it has none (then it uses the flat mapping)."""
+    d = _pack_dir(pack_id)
+    if d is None or not _SAFE_NAME.match(sb_id):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    data = _read_json(d / "monsters" / f"{sb_id}.json")
+    if data is None:
+        return JSONResponse({"error": "no combat file"}, status_code=404)
+    return JSONResponse({"ok": True, "monster": data})
+
+
+@app.put("/api/pack/{pack_id}/monster/{sb_id}")
+async def save_monster(pack_id: str, sb_id: str, body: MonsterIn) -> JSONResponse:
+    """Write a creature's combat file. Validated against the Arena `Monster` model so a
+    broken file can't be saved (the bridge would silently skip it at fight time)."""
+    d = _pack_dir(pack_id)
+    if d is None:
+        return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
+    if not _SAFE_NAME.match(sb_id):
+        return JSONResponse({"error": "unsafe creature id"}, status_code=400)
+    err = _validate_arena_monster(body.monster)
+    if err is not None:
+        return JSONResponse({"error": f"invalid combat data: {err}"}, status_code=400)
+    monsters = d / "monsters"
+    monsters.mkdir(exist_ok=True)
+    _write_json(monsters / f"{sb_id}.json", body.monster)
+    return JSONResponse({"ok": True, "filename": f"{sb_id}.json"})
+
+
+@app.delete("/api/pack/{pack_id}/monster/{sb_id}")
+async def delete_monster(pack_id: str, sb_id: str) -> JSONResponse:
+    """Remove a creature's combat file — it reverts to the flat mapping (or its SRD
+    file, if the id matches one). Idempotent: deleting a non-existent file is OK."""
+    d = _pack_dir(pack_id)
+    if d is None or not _SAFE_NAME.match(sb_id):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    path = d / "monsters" / f"{sb_id}.json"
+    existed = path.is_file()
+    if existed:
+        path.unlink()
+    return JSONResponse({"ok": True, "deleted": existed})
 
 
 def _safe_leaf(name: str) -> bool:

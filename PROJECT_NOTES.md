@@ -853,6 +853,25 @@ prefers a rich file via `arena_monster_file`, so "clone an existing creature" = 
     diverge. Tests: `test_creator_server.py` (+4: upload/serve, replace-extension, bad-type, guards).
     Browser-verified the full picker (choose → upload → preview loads → Remove), no console errors.
 
+- **Phase 3b-1 — Bridge prefers a pack combat file (DONE, 2026-06-27, 494 green). THE OPTION-A
+  KEYSTONE.** A pack creature may now ship a full Arena `Monster` JSON at `packs/<id>/monsters/<sb_id>.json`
+  (same shape as the SRD set); the bridge fights THAT instead of the flat one-swing mapping, so a
+  Forge-authored creature gets multiattack / breath / distinct attacks. `arena_bridge.arena_monster_file`
+  now takes a `search_dirs` list (pack dir first, then SRD) and returns the first VALID file — a
+  malformed authored file is skipped (degrades to SRD/flat, never crashes a fight). `enemy_from_statblock`
+  gained `pack_monster_dir`; `arena_launch._resolve_enemies` derives it from `session.pack_id`
+  (`_CONTENT_ROOT/packs/<id>/monsters`) and threads it. Pack file wins even over a matching SRD id (an
+  author's custom take). xp + ai_profile still ride from the StatBlock (identity stays the bestiary
+  record). No new cross-process risk: rich pack monsters use the SAME serialize-into-the-Arena path the
+  SRD rich monsters already use. Forge server: `GET/PUT/DELETE /api/pack/{id}/monster/{sb_id}` (PUT
+  validates against the real `arena.models.monster.Monster`, so a broken combat file can't be saved;
+  DELETE reverts to flat/SRD, idempotent); `read_pack` now returns `monster_files` (which creatures have
+  a combat file, for an editor badge). Content-save only writes the kind JSONs (never subdirs) and
+  `_backup_pack` copies the whole tree, so `monsters/` is preserved + backed up for free. Tests: +5
+  bridge (preferred / xp+profile override / missing→flat / malformed→flat / overrides-SRD-id), +4 server
+  (round-trip+listing / invalid rejected / delete reverts+idempotent / guards). **NEXT: 3b-2 clone an
+  existing creature** (copy an SRD/pack combat file + prefill the StatBlock), then 3b-3 ability builder.
+
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a
 repository abstraction; async edges / sync core; LLM-first routing behind the model seam;
 provider-native structured output; only protected state + entity-creation are event-sourced

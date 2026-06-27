@@ -423,3 +423,53 @@ def test_portrait_endpoints_guard_unknown_pack_and_traversal(tmp_path, monkeypat
                        headers={"Content-Type": "image/png"}).status_code == 404
     # a traversal-y filename on the GET must not resolve
     assert client.get("/api/pack/brightvale/portrait/..%2F..%2Fpack.json").status_code == 404
+
+
+# --- creature combat files (Phase 3b-1) -------------------------------------
+def _valid_arena_monster() -> dict:
+    """A minimal-but-valid Arena Monster JSON, built via the engine model so the
+    test can't drift from the real shape."""
+    from arena.models.monster import Monster
+    return Monster(name="Gloom Beast", max_hit_points=40, armor_class=14,
+                   challenge_rating=3).model_dump(mode="json")
+
+
+def test_monster_combat_file_round_trips(tmp_path, monkeypatch):
+    packs = _temp_brightvale(tmp_path, monkeypatch)
+    mon = _valid_arena_monster()
+    r = client.put("/api/pack/brightvale/monster/lean_wolf", json={"monster": mon})
+    assert r.status_code == 200 and r.json()["filename"] == "lean_wolf.json"
+    # written into the pack's monsters/ dir, where the bridge reads it
+    assert (packs / "brightvale" / "monsters" / "lean_wolf.json").is_file()
+    # and read back
+    g = client.get("/api/pack/brightvale/monster/lean_wolf")
+    assert g.status_code == 200 and g.json()["monster"]["name"] == "Gloom Beast"
+    # surfaced in the open-pack listing so the editor can badge it
+    assert "lean_wolf" in client.get("/api/pack/brightvale").json()["monster_files"]
+
+
+def test_monster_combat_file_invalid_is_rejected(tmp_path, monkeypatch):
+    packs = _temp_brightvale(tmp_path, monkeypatch)
+    # armor_class as a string is not a valid Monster → 400, nothing written
+    r = client.put("/api/pack/brightvale/monster/lean_wolf",
+                   json={"monster": {"name": "Bad", "armor_class": "lots"}})
+    assert r.status_code == 400
+    assert not (packs / "brightvale" / "monsters" / "lean_wolf.json").exists()
+
+
+def test_monster_combat_file_delete_reverts(tmp_path, monkeypatch):
+    packs = _temp_brightvale(tmp_path, monkeypatch)
+    client.put("/api/pack/brightvale/monster/lean_wolf", json={"monster": _valid_arena_monster()})
+    r = client.delete("/api/pack/brightvale/monster/lean_wolf")
+    assert r.status_code == 200 and r.json()["deleted"] is True
+    assert not (packs / "brightvale" / "monsters" / "lean_wolf.json").exists()
+    # idempotent: deleting again is fine
+    assert client.delete("/api/pack/brightvale/monster/lean_wolf").json()["deleted"] is False
+    # GET on a creature with no combat file is a 404
+    assert client.get("/api/pack/brightvale/monster/lean_wolf").status_code == 404
+
+
+def test_monster_combat_file_guards_unknown_pack_and_traversal(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    assert client.put("/api/pack/nope/monster/x", json={"monster": _valid_arena_monster()}).status_code == 404
+    assert client.get("/api/pack/brightvale/monster/..%2F..%2Fpack").status_code == 404

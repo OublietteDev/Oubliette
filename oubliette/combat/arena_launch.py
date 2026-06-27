@@ -136,6 +136,10 @@ def _resolve_enemies(
     # The pack's Forge-authored personalities, keyed by id, so a custom
     # `ai_profile` on a stat block resolves to a real AIProfile in the Arena.
     ai_profiles = {p.id: p for p in getattr(session, "ai_profiles", ()) or ()}
+    # The pack's own combat files (Phase 3b): a Forge-authored creature that ships
+    # `monsters/<id>.json` fights its full kit instead of the flat one-swing mapping.
+    pack_id = getattr(session, "pack_id", None)
+    pack_monster_dir = (_CONTENT_ROOT / "packs" / pack_id / "monsters") if pack_id else None
     out: list[EnemyInstance] = []
     for ref in request.enemies:
         tmpl = ENEMY_TEMPLATES.get(ref.ref)
@@ -145,7 +149,8 @@ def _resolve_enemies(
             continue
         sb = _statblock_for(session, ref.ref)
         if sb is not None:
-            inst = enemy_from_statblock(sb, portraits, ai_profiles=ai_profiles)
+            inst = enemy_from_statblock(sb, portraits, ai_profiles=ai_profiles,
+                                        pack_monster_dir=pack_monster_dir)
             out.extend(inst for _ in range(max(1, ref.count)))
             continue
         try:

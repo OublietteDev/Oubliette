@@ -781,3 +781,74 @@ def test_unknown_custom_id_falls_back_to_default():
     assert inst.creature.ai_profile_inline is None
     resolved = AIController(randomness=0.0)._get_profile(_Comb(inst.creature))
     assert resolved.name == "Default Monster"      # safe fallback
+
+
+# --- Phase 3b-1: pack-carried combat file preferred over the flat mapping -----
+import shutil
+from pathlib import Path
+
+from arena.paths import DATA_DIR
+
+
+def _homebrew_statblock() -> StatBlock:
+    """A custom creature whose id matches NO SRD file, so the only rich source is
+    a pack-authored combat file — isolating pack-vs-flat in the assertions."""
+    return StatBlock(
+        id="brightvale_gloom_beast", name="Gloom Beast", hp=40, armor_class=14,
+        attack_bonus=5, damage="2d6+3", cr=3.0, xp=700,
+        abilities={"str": 17, "dex": 12, "con": 15, "int": 3, "wis": 12, "cha": 6},
+    )
+
+
+def test_pack_combat_file_is_preferred_over_flat_mapping(tmp_path):
+    sb = _homebrew_statblock()
+    mdir = tmp_path / "monsters"
+    mdir.mkdir()
+    # a real, valid combat file (the Owlbear's: two distinct attacks) under the
+    # homebrew id — the bridge should fight THIS, not the flat one-swing mapping
+    shutil.copy(DATA_DIR / "monsters" / "srd" / "owlbear.json", mdir / f"{sb.id}.json")
+    inst = enemy_from_statblock(sb, pack_monster_dir=mdir)
+    assert inst.creature.name == "Owlbear"          # came from the file, not sb.name
+    assert len(inst.creature.actions) == 2          # Beak + Claws; flat gives exactly 1
+    assert inst.xp == sb.xp                          # reward still from the bestiary
+
+
+def test_pack_combat_file_xp_and_profile_overridden_from_statblock(tmp_path):
+    sb = _homebrew_statblock()
+    sb.ai_profile = "berserker"
+    mdir = tmp_path / "monsters"
+    mdir.mkdir()
+    shutil.copy(DATA_DIR / "monsters" / "srd" / "owlbear.json", mdir / f"{sb.id}.json")
+    inst = enemy_from_statblock(sb, pack_monster_dir=mdir)
+    assert inst.creature.experience_points == sb.xp
+    assert inst.creature.ai_profile == "berserker"
+
+
+def test_missing_pack_combat_file_falls_back_to_flat_mapping(tmp_path):
+    sb = _homebrew_statblock()
+    mdir = tmp_path / "monsters"
+    mdir.mkdir()                                     # empty — no file for this id
+    inst = enemy_from_statblock(sb, pack_monster_dir=mdir)
+    assert inst.creature.name == sb.name            # flat mapping
+    assert len(inst.creature.actions) == 1          # single basic attack
+
+
+def test_malformed_pack_combat_file_degrades_to_flat_mapping(tmp_path):
+    sb = _homebrew_statblock()
+    mdir = tmp_path / "monsters"
+    mdir.mkdir()
+    (mdir / f"{sb.id}.json").write_text("{ not valid json", encoding="utf-8")
+    inst = enemy_from_statblock(sb, pack_monster_dir=mdir)
+    assert inst.creature.name == sb.name            # didn't crash; fell back
+    assert len(inst.creature.actions) == 1
+
+
+def test_pack_combat_file_overrides_an_srd_id(tmp_path):
+    """A pack file wins even when the id matches an SRD monster (an author's
+    custom take on a standard creature)."""
+    sb = _goblin_statblock()                         # id "goblin" — has an SRD file
+    mdir = tmp_path / "monsters"
+    mdir.mkdir()
+    shutil.copy(DATA_DIR / "monsters" / "srd" / "owlbear.json", mdir / "goblin.json")
+    inst = enemy_from_statblock(sb, pack_monster_dir=mdir)
+    assert inst.creature.name == "Owlbear"          # the pack file, not the SRD goblin

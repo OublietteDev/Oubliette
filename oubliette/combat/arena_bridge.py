@@ -872,33 +872,44 @@ class EnemyInstance:
     entity_id: str | None = None
 
 
-def arena_monster_file(monster_id: str) -> Monster | None:
-    """The full-fidelity Arena `Monster` for an id, from the generated SRD set
-    (`arena/data/monsters/srd/<id>.json`, produced by tools/gen_arena_monsters.py
-    — a deterministic parse of the same 5e-database the bestiary came from). These
-    carry the real combat kit — multi-type attacks, save-for-half breath weapons,
-    multiattack data — that the flat StatBlock mapping can't express. Returns None
-    when there's no file (then we fall back to the basic mapping)."""
-    path = DATA_DIR / "monsters" / "srd" / f"{monster_id}.json"
-    if not path.is_file():
-        return None
-    try:
-        return Monster.model_validate(json.loads(path.read_text(encoding="utf-8")))
-    except (OSError, ValueError):
-        return None
+def arena_monster_file(
+    monster_id: str, search_dirs: list[Path | None] | None = None
+) -> Monster | None:
+    """The full-fidelity Arena `Monster` for an id — the real combat kit (multi-type
+    attacks, save-for-half breath weapons, multiattack data) the flat StatBlock
+    mapping can't express. Searches `search_dirs` first (a pack's own authored
+    `monsters/` dir, Phase 3b — so a homebrew creature fights its full kit), then
+    always the generated SRD set (`arena/data/monsters/srd/<id>.json`, from
+    tools/gen_arena_monsters.py). Returns the first VALID file found; a malformed
+    one is skipped (so a bad authored file degrades to the next source / the flat
+    mapping rather than crashing a fight). None when nothing matches."""
+    dirs = [*(search_dirs or []), DATA_DIR / "monsters" / "srd"]
+    for directory in dirs:
+        if directory is None:
+            continue
+        path = directory / f"{monster_id}.json"
+        if not path.is_file():
+            continue
+        try:
+            return Monster.model_validate(json.loads(path.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            continue
+    return None
 
 
 def enemy_from_statblock(
     sb: StatBlock, portraits: PortraitDirs | None = None,
-    ai_profiles: dict | None = None,
+    ai_profiles: dict | None = None, pack_monster_dir: Path | None = None,
 ) -> EnemyInstance:
     """Prefer the generated full-fidelity Arena monster when one exists for this id
     (essentially every SRD bestiary monster); otherwise fall back to the flat
     basic-attack mapping (templates, synthetic ids). Either way, Oubliette's
     bestiary stays the source of truth for the reward (its `xp`) and loot.
     Token art (B6): the statblock's `portrait` filename or `<id>.png`, pack
-    dir first then SRD — the same convention the bestiary panel serves."""
-    rich = arena_monster_file(sb.id)
+    dir first then SRD — the same convention the bestiary panel serves.
+    A pack's own `monsters/<id>.json` combat file (Phase 3b, `pack_monster_dir`)
+    wins over the SRD file, so a Forge-authored creature fights its full kit."""
+    rich = arena_monster_file(sb.id, [pack_monster_dir])
     if rich is not None:
         if sb.xp:
             rich.experience_points = sb.xp   # reward = Oubliette's bestiary
