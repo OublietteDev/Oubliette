@@ -183,14 +183,24 @@ Two refinements surfaced in implementation:
 This is the seam that makes Seraphel breathe lightning instead of swinging for
 1d4. Small, surgical, well-tested.
 
-### 4a.2 Forge UI
-In the NPC editor (`static/index.html`, `npcForm` ~line 1862), the Combat section:
-- Choosing **"Author as a creature"** sets `combat_kind="creature"` and reveals
-  the existing creature picker + an **"Edit combat statblock"** button that opens
-  the Phase 3 statblock/monster editor on this NPC's `stat_block` (minting a new
-  statblock id from the NPC if none exists yet).
-- "Clone from an existing creature" (Phase 3b-2) is available here too, so
-  Seraphel can start from the SRD `adult_blue_dragon` and be aged up.
+### 4a.2 Forge UI — SHIPPED
+The NPC editor (`static/index.html`, `npcForm`) gained a **"How they fight"**
+selector → *Doesn't fight / generic stat line* · *A creature (monster)* · *A
+person (character) — coming soon* (the person option shows **disabled** until 4b,
+per OublietteDev's call). The selector drives an adaptive combat panel:
+- **none**: the optional generic stat-line dropdown (today's behaviour).
+- **creature**: a stat-block dropdown + three actions — **+ New creature**,
+  **Start from an existing creature…** (the Phase 3b-2 clone picker, so Seraphel
+  starts from the SRD blue dragon), and **✎ Author this creature's combat**
+  (enabled once a block is chosen; opens the Phase 3 statblock/monster editor).
+- **person**: a "coming in a later update" note.
+
+The cross-editor handoff: New/Clone **save the character first**, then a creature
+minted in the monster editor **links back** to the NPC (`stat_block` +
+`combat_kind="creature"`) via a pending-link (`npcLink`), cleared on cancel so a
+abandoned hop never mis-links the next creature. Live-verified end-to-end against
+Brightvale (selector defaults, disabled person option, new-creature link-back,
+edit-existing, cancel-safety).
 
 ### 4a.3 Tests
 - `_resolve_enemies`: an NPC with a `stat_block` + a `monsters/<id>.json` yields

@@ -19,6 +19,12 @@
       "runtimeArgs": ["-m", "uvicorn", "oubliette.app.server:app", "--host", "127.0.0.1", "--port", "8055"],
       "port": 8055,
       "env": { "OUBLIETTE_DB": "preview-test-save.sqlite" }
+    },
+    {
+      "name": "forge-preview",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "uvicorn", "oubliette.creator.server:app", "--host", "127.0.0.1", "--port", "8012"],
+      "port": 8012
     }
   ]
 }

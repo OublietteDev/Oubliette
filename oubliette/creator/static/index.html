@@ -638,6 +638,7 @@ function deleteEntry(kind, i) {
 
 // --- the modal editor ------------------------------------------------------
 let editorCtx = null;   // { kind, index, exits } while a modal is open
+let npcLink = null;      // an npc id awaiting the creature stat block it's authoring (Phase 4a)
 
 function openEditor(kind, index) {
   const original = index != null ? listOf(kind)[index] : null;
@@ -648,7 +649,7 @@ function openEditor(kind, index) {
     editorCtx.sounds = ((original?.sounds) || []).map(c => ({ ...c }));
   }
   if (kind === "statblocks") { editorCtx.loot = ((original?.loot) || []).filter(l => l.item).map(l => ({ item: l.item, qty: l.qty || 1 })); editorCtx.statblockId = original?.id || null; }
-  if (kind === "npcs") editorCtx.inv = buildInvRows(original);
+  if (kind === "npcs") { editorCtx.inv = buildInvRows(original); editorCtx.original = original; editorCtx.statBlockSel = original?.stat_block || ""; }
   if (kind === "quests") editorCtx.branches = ((original?.branches) || []).map(b => ({ ...b }));
 
   const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, lore: loreForm, quests: questForm, scenarios: scenarioForm, ai_profiles: aiProfileForm };
@@ -665,6 +666,7 @@ function openEditor(kind, index) {
 function closeEditor() {
   document.getElementById("scrim").classList.remove("open");
   editorCtx = null;
+  npcLink = null;          // a cancelled creature hop must not mis-link the next stat block
 }
 
 function field(label, inner, help) {
@@ -1289,6 +1291,7 @@ function confirmStatblock(original) {
   if (desc) base.description = desc; else delete base.description;
   const prof = document.getElementById("f_ai_profile").value;
   if (prof) base.ai_profile = prof; else delete base.ai_profile;
+  linkCreatedStatblock(base.id);                     // link back if authored from an NPC (Phase 4a)
   commitEntry("statblocks", original, base);
   return base.id;
 }
@@ -1375,6 +1378,7 @@ async function cloneFrom(source) {
   }
   state.contents.statblocks = state.contents.statblocks || [];
   state.contents.statblocks.push(sb);
+  linkCreatedStatblock(sb.id);                        // link back if cloned from an NPC (Phase 4a)
   markDirty();
   openEditor("statblocks", state.contents.statblocks.length - 1);
   toast(combat ? `Cloned ${source.name} with its full combat kit — now make it yours.`
@@ -1861,6 +1865,7 @@ function confirmAiProfile(original) {
 // ---- character / NPC form ----
 function npcForm(npc) {
   const v = npc || {};
+  const ck = v.combat_kind || "none";   // legacy data (no field) reads as "none"
   return `
     <div class="mhead">${npc ? "Edit character" : "New character"}</div>
     <div class="mbody">
@@ -1874,8 +1879,13 @@ function npcForm(npc) {
       ${field("Description", `<textarea id="f_desc" placeholder="A leather-goods merchant.">${esc(v.description || "")}</textarea>`)}
       <div class="row2">
         ${field("Lives at", `<select id="f_home">${optionList("places", v.home_location || "", "(nowhere in particular)")}</select>`, "Pick a place.")}
-        ${field("Combat stats", `<select id="f_sb">${optionList("statblocks", v.stat_block || "", "(none / can't fight)")}</select>`, "Pick a creature stat line.")}
+        ${field("How they fight", `<select id="f_combat_kind">
+            <option value="none"${ck === "none" ? " selected" : ""}>Doesn't fight / generic stat line</option>
+            <option value="creature"${ck === "creature" ? " selected" : ""}>A creature (monster)</option>
+            <option value="person"${ck === "person" ? " selected" : ""} disabled>A person (character) — coming soon</option>
+          </select>`, "How their combat is authored.")}
       </div>
+      <div class="subform" id="combatPanel"></div>
       <div class="subform"><div class="sftitle">Shop &amp; belongings</div>
         <div id="invList"></div>
         <button class="btn mini" type="button" id="addInv">+ Add an item</button>
@@ -1902,12 +1912,48 @@ function renderInv() {
 function wireNpcForm() {
   renderInv();
   document.getElementById("addInv").addEventListener("click", () => { editorCtx.inv.push({ item: "", qty: 1, price: "" }); renderInv(); });
+  document.getElementById("f_combat_kind").addEventListener("change", renderCombatPanel);
+  renderCombatPanel();
 }
-function confirmNpc(original) {
+// The "How they fight" fork (Phase 4a): a creature is authored with the monster
+// editor; a person (Phase 4b) will use the character creator; "none" keeps the
+// simple optional generic stat line. The panel adapts to the selector.
+function renderCombatPanel() {
+  const kind = document.getElementById("f_combat_kind").value;
+  const box = document.getElementById("combatPanel");
+  const sel = editorCtx.statBlockSel || "";
+  if (kind === "person") {
+    box.innerHTML = `<div class="sftitle">Combat</div>
+      <div class="help">A person is built with the character creator — race, class, level, the works. That editor is coming in a later update; for now pick “A creature” or a generic stat line.</div>`;
+    return;
+  }
+  if (kind === "creature") {
+    box.innerHTML = `<div class="sftitle">Creature combat</div>
+      ${field("Stat block", `<select id="f_sb">${optionList("statblocks", sel, "(choose or make one)")}</select>`, "Which creature this NPC fights as.")}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <button class="btn mini" type="button" id="npcNewCreature">+ New creature</button>
+        <button class="btn mini" type="button" id="npcCloneCreature">Start from an existing creature…</button>
+        <button class="btn mini" type="button" id="npcEditCombat"${sel ? "" : " disabled"}>✎ Author this creature’s combat</button>
+      </div>
+      <div class="help" style="margin-top:8px">“New” / “Start from…” saves this character first, then opens the creature editor (full kit — attacks, multiattack, breath). “Author…” edits the chosen creature.</div>`;
+  } else {
+    box.innerHTML = `<div class="sftitle">Combat <span style="opacity:.6;font-weight:normal">(optional)</span></div>
+      ${field("Generic stat line", `<select id="f_sb">${optionList("statblocks", sel, "(doesn’t fight)")}</select>`, "Optional — give a townsfolk a basic stat line (commoner, guard) so they can be dragged into a fight. Leave blank if they never fight.")}`;
+  }
+  const sb = document.getElementById("f_sb");
+  if (sb) sb.addEventListener("change", () => { editorCtx.statBlockSel = sb.value; renderCombatPanel(); });
+  const wire = (id, fn) => { const b = document.getElementById(id); if (b) b.addEventListener("click", fn); };
+  wire("npcNewCreature", () => npcAuthorCreature("new"));
+  wire("npcCloneCreature", () => npcAuthorCreature("clone"));
+  wire("npcEditCombat", () => npcAuthorCreature("edit"));
+}
+// Build the NPC record from the form, or null (with an inline error) if invalid.
+// `forceKind` lets the creature-authoring handoff pin combat_kind="creature".
+function npcEntryFromForm(original, forceKind) {
   const name = document.getElementById("f_name").value.trim(), err = document.getElementById("f_err");
-  if (!name) { err.textContent = "Please give them a name."; return; }
+  if (!name) { err.textContent = "Please give them a name."; return null; }
   const rows = editorCtx.inv.filter(r => r.item);
-  if (rows.length !== editorCtx.inv.length) { err.textContent = "Every belongings row needs an item chosen (or remove it)."; return; }
+  if (rows.length !== editorCtx.inv.length) { err.textContent = "Every belongings row needs an item chosen (or remove it)."; return null; }
   const base = original ? { ...original } : {};
   if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("npcs").map(x => x.id)));
   base.name = name;
@@ -1916,7 +1962,11 @@ function confirmNpc(original) {
   setOrDel("disposition", document.getElementById("f_disp").value.trim());
   setOrDel("description", document.getElementById("f_desc").value.trim());
   setOrDel("home_location", document.getElementById("f_home").value);
-  setOrDel("stat_block", document.getElementById("f_sb").value);
+  const kind = forceKind || document.getElementById("f_combat_kind").value || "none";
+  const sbEl = document.getElementById("f_sb");
+  const sbSel = kind === "person" ? "" : (sbEl ? sbEl.value : (editorCtx.statBlockSel || ""));
+  setOrDel("stat_block", sbSel);
+  if (kind && kind !== "none") base.combat_kind = kind; else delete base.combat_kind;   // omit default to keep packs clean
   const goldNum = Number(document.getElementById("f_gold").value || 0);
   if (goldNum) base.gold = goldNum; else delete base.gold;
   const inv = [], prices = {};
@@ -1926,7 +1976,37 @@ function confirmNpc(original) {
   });
   if (inv.length) base.inventory = inv; else delete base.inventory;
   if (Object.keys(prices).length) base.price_list = prices; else delete base.price_list;
-  commitEntry("npcs", original, base);
+  return base;
+}
+function confirmNpc(original) {
+  const base = npcEntryFromForm(original);
+  if (base) commitEntry("npcs", original, base);
+}
+// Author this NPC's creature combat: save the character first (so the link
+// survives the editor hop), then open the monster editor. "new" / "clone" mint a
+// fresh stat block that links back to the NPC via `npcLink`; "edit" opens the one
+// already chosen in the dropdown.
+function npcAuthorCreature(mode) {
+  const base = npcEntryFromForm(editorCtx.original, "creature");
+  if (!base) return;
+  if (mode === "edit") {
+    const idx = listOf("statblocks").findIndex(s => s.id === base.stat_block);
+    if (idx < 0) { toast("Pick a creature first."); return; }
+    commitEntry("npcs", editorCtx.original, base);
+    openEditor("statblocks", idx);
+    return;
+  }
+  commitEntry("npcs", editorCtx.original, base);   // closeEditor clears npcLink → set it AFTER
+  npcLink = base.id;
+  if (mode === "clone") { openClonePicker(); return; }
+  openEditor("statblocks", null);                  // a fresh creature; confirmStatblock links it back
+}
+// A creature minted from within an NPC editor links back to that NPC (Phase 4a).
+function linkCreatedStatblock(newId) {
+  if (!npcLink) return;
+  const npc = (state.contents.npcs || []).find(n => n.id === npcLink);
+  if (npc) { npc.stat_block = newId; npc.combat_kind = "creature"; markDirty(); }
+  npcLink = null;
 }
 
 // ---- lore form ----
