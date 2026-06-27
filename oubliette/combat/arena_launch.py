@@ -133,6 +133,9 @@ def _resolve_enemies(
     """Resolve each `EnemyRef` to an `EnemyInstance`, mirroring the boundary's
     precedence but producing Arena creatures: template → stat block → persistent
     entity. Raises `CombatError` on an unknown ref."""
+    # The pack's Forge-authored personalities, keyed by id, so a custom
+    # `ai_profile` on a stat block resolves to a real AIProfile in the Arena.
+    ai_profiles = {p.id: p for p in getattr(session, "ai_profiles", ()) or ()}
     out: list[EnemyInstance] = []
     for ref in request.enemies:
         tmpl = ENEMY_TEMPLATES.get(ref.ref)
@@ -142,7 +145,7 @@ def _resolve_enemies(
             continue
         sb = _statblock_for(session, ref.ref)
         if sb is not None:
-            inst = enemy_from_statblock(sb, portraits)
+            inst = enemy_from_statblock(sb, portraits, ai_profiles=ai_profiles)
             out.extend(inst for _ in range(max(1, ref.count)))
             continue
         try:

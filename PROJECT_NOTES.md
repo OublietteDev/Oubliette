@@ -783,11 +783,17 @@ FastAPI + vanilla-JS single-page app (`oubliette/creator/`), editors are modal f
   1:1 with range bounds). `loader.py` parses optional `ai_profiles.json` (missing = empty → existing
   packs unaffected), dup-id checks, → `LoadedWorld.ai_profiles`. Forge `server.py` registers the kind
   in PACK_FILES/_TYPES + scaffolds `ai_profiles.json=[]` in new packs. Tests: `tests/test_creator_server.py`
-  (+4: round-trip+loader-reads, scaffold, out-of-range rejected, dup-id rejected). NEXT in 2b:
-  (1) bridge resolves a monster's custom profile *id* → pack `AiProfile` → baked onto the Arena Monster
-  (needs an inline-profile carrier on Monster since the Arena runs as a separate process from a
-  serialized encounter — can't import AIProfile into arena/models, so carry a dict + build in the
-  controller); (2) the editor UI (easy/pro modes); (3) a profile dropdown in the statblock editor.
+  (+4).
+
+- **Phase 2b — Bridge resolution (DONE, 481 + 2411 green).** Custom personalities now fight. Flow:
+  pack `ai_profiles` → `Session.ai_profiles` → `arena_launch._resolve_enemies` → `enemy_from_statblock(
+  ..., ai_profiles=)` resolves a stat block's custom profile *id* against the pack's profiles and bakes
+  it onto the Monster as `ai_profile_inline` (a plain dict — `model_dump(exclude={"id"})` — so
+  `arena/models` needn't import `AIProfile`, and it survives the serialized-encounter trip to the
+  standalone Arena process). `controller._get_profile` prefers `ai_profile_inline` (builds `AIProfile(
+  **inline)`, falls back on malformed), else the named preset, else default. Preset names ride as the
+  string (no inline). Tests: `tests/test_arena_bridge.py` (+3). NEXT in 2b: (1) the editor UI (easy/pro
+  modes) in `oubliette/creator/static/index.html`; (2) a personality dropdown in the statblock editor.
 
   Then Phase 3 = monster editor (attach a profile by name). See `oubliette-ai-forge-arc` memory.
 

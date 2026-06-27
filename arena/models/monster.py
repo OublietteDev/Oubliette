@@ -60,6 +60,11 @@ class Monster(Creature):
     # For AI
     is_player_controlled: bool = False  # Default to AI-controlled
     ai_profile: str = "default_monster"
+    # A resolved custom personality, baked on by the Oubliette bridge (a
+    # Forge-authored AIProfile, serialized as a plain dict so this model needn't
+    # import from arena.ai). When present it OVERRIDES the named `ai_profile`;
+    # the AI controller builds an AIProfile from it. None = use the named profile.
+    ai_profile_inline: dict | None = None
 
     # Source
     source_book: str | None = None  # e.g., "Monster Manual"

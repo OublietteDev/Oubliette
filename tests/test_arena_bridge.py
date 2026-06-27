@@ -721,3 +721,63 @@ def test_carried_profile_resolves_to_a_real_aiprofile():
     mon = statblock_to_monster(_sb_with_profile("coward"))
     assert mon.ai_profile in DEFAULT_PROFILES
     assert DEFAULT_PROFILES[mon.ai_profile].will_flee is True
+
+
+# --- custom (Forge-authored) personalities (Phase 2b bridge resolution) ---
+
+def _pack_profile(**kw):
+    from oubliette.content.schemas import AiProfile as PackProfile
+    base = dict(id="cowardly_goblin", name="Cowardly Goblin",
+                aggression=0.5, self_preservation=1.5, will_flee=True,
+                retreat_threshold=0.5)
+    base.update(kw)
+    return PackProfile(**base)
+
+
+class _Comb:
+    """Duck-typed combatant for AIController._get_profile."""
+    def __init__(self, creature):
+        self.creature = creature
+
+
+def test_custom_profile_is_baked_inline_and_resolved():
+    from arena.ai.controller import AIController
+    prof = _pack_profile()
+    sb = StatBlock(
+        id="goblin", name="Goblin", hp=7, armor_class=15, attack_bonus=4,
+        damage="1d6+2", abilities={"str": 8, "dex": 14, "con": 10},
+        ai_profile="cowardly_goblin",
+    )
+    inst = enemy_from_statblock(sb, ai_profiles={"cowardly_goblin": prof})
+    inline = inst.creature.ai_profile_inline
+    assert inline is not None and inline["will_flee"] is True
+    assert "id" not in inline                      # the runtime AIProfile has no id
+
+    # The Arena controller prefers the inline profile over the named one.
+    resolved = AIController(randomness=0.0)._get_profile(_Comb(inst.creature))
+    assert resolved.name == "Cowardly Goblin"
+    assert resolved.will_flee is True and resolved.aggression == 0.5
+
+
+def test_preset_name_does_not_bake_inline():
+    sb = StatBlock(
+        id="goblin", name="Goblin", hp=7, armor_class=15, attack_bonus=4,
+        damage="1d6+2", abilities={"str": 8, "dex": 14, "con": 10},
+        ai_profile="berserker",                    # a built-in preset, not a custom id
+    )
+    inst = enemy_from_statblock(sb, ai_profiles={"cowardly_goblin": _pack_profile()})
+    assert inst.creature.ai_profile_inline is None  # rides as the string instead
+    assert inst.creature.ai_profile == "berserker"
+
+
+def test_unknown_custom_id_falls_back_to_default():
+    from arena.ai.controller import AIController
+    sb = StatBlock(
+        id="goblin", name="Goblin", hp=7, armor_class=15, attack_bonus=4,
+        damage="1d6+2", abilities={"str": 8, "dex": 14, "con": 10},
+        ai_profile="typo_profile",                 # neither preset nor a known custom id
+    )
+    inst = enemy_from_statblock(sb, ai_profiles={"cowardly_goblin": _pack_profile()})
+    assert inst.creature.ai_profile_inline is None
+    resolved = AIController(randomness=0.0)._get_profile(_Comb(inst.creature))
+    assert resolved.name == "Default Monster"      # safe fallback

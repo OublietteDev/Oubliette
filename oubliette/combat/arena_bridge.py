@@ -889,7 +889,8 @@ def arena_monster_file(monster_id: str) -> Monster | None:
 
 
 def enemy_from_statblock(
-    sb: StatBlock, portraits: PortraitDirs | None = None
+    sb: StatBlock, portraits: PortraitDirs | None = None,
+    ai_profiles: dict | None = None,
 ) -> EnemyInstance:
     """Prefer the generated full-fidelity Arena monster when one exists for this id
     (essentially every SRD bestiary monster); otherwise fall back to the flat
@@ -907,6 +908,11 @@ def enemy_from_statblock(
         creature: Monster = rich
     else:
         creature = statblock_to_monster(sb)
+    # A Forge-authored custom personality (id in the pack's ai_profiles) is baked
+    # onto the creature as an inline AIProfile dict so it survives the trip into
+    # the standalone Arena process. Built-in preset names just ride as the string.
+    if ai_profiles and sb.ai_profile and sb.ai_profile in ai_profiles:
+        creature.ai_profile_inline = ai_profiles[sb.ai_profile].model_dump(exclude={"id"})
     if portraits is not None:
         art = _token_image([portraits.pack, portraits.srd],
                            [sb.portrait, f"{sb.id}.png"])

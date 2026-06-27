@@ -605,7 +605,18 @@ class AIController:
     # ── Helper methods ────────────────────────────────────────────────
 
     def _get_profile(self, combatant) -> AIProfile:
-        """Resolve the AIProfile for a combatant."""
+        """Resolve the AIProfile for a combatant.
+
+        A Forge-authored custom personality, baked on by the Oubliette bridge as
+        a plain dict (`ai_profile_inline`), takes precedence. Otherwise the named
+        `ai_profile` resolves against the built-in presets, falling back to the
+        default monster."""
+        inline = getattr(combatant.creature, "ai_profile_inline", None)
+        if inline:
+            try:
+                return AIProfile(**inline)
+            except (TypeError, ValueError):
+                pass  # malformed custom profile — fall back to the named/default
         profile_name = getattr(combatant.creature, "ai_profile", "default_monster")
         if profile_name in DEFAULT_PROFILES:
             return DEFAULT_PROFILES[profile_name]
