@@ -760,6 +760,7 @@ def statblock_to_monster(sb: StatBlock) -> Monster:
         challenge_rating=float(sb.cr) if sb.cr is not None else 0.0,
         experience_points=sb.xp,
         is_player_controlled=False,
+        ai_profile=sb.ai_profile or "default_monster",
         actions=[
             _basic_attack(
                 sb.actions[0].name if sb.actions else "Attack",
@@ -900,6 +901,9 @@ def enemy_from_statblock(
     if rich is not None:
         if sb.xp:
             rich.experience_points = sb.xp   # reward = Oubliette's bestiary
+        if sb.ai_profile:
+            # A pack author's personality choice wins over the SRD file's default.
+            rich.ai_profile = sb.ai_profile
         creature: Monster = rich
     else:
         creature = statblock_to_monster(sb)

@@ -762,9 +762,24 @@ without competence, and building it reveals which knobs are real.
   Backlog idea (OublietteDev, playtest): AoE/cone AIM INDICATORS in the GUI — hard to see what a breath/blast
   is targeting (see [[oubliette-arena-ui-cleanup]]).
 
-  **→ NEXT: Forge Phase 2 — the AI editor** (easy mode = plain-English personality questions +
-  presets; pro mode = full `AIProfile` knob board; both write the same profile). Then Phase 3 =
-  monster editor. See `oubliette-ai-forge-arc` memory.
+## Forge Phase 2 — AI personality editor (started 2026-06-26)
+
+Reusable named personalities: author a profile once, attach it to many monsters (OublietteDev's framing).
+Architecture: author/store named profiles per-pack → monster references one by name → the bridge
+resolves the name to a full `AIProfile` and bakes it onto the Arena Monster. Easy mode (plain-English
+questions + presets) and pro mode (full knob board) both write the same `AIProfile`. The Forge is a
+FastAPI + vanilla-JS single-page app (`oubliette/creator/`), editors are modal forms
+(FORMS/WIRES/CONFIRMS → commitEntry → POST `/api/pack/{id}/save`).
+
+- **Phase 2a — Plumbing, presets-first (DONE, 474 green).** Carries an `ai_profile` *name* from a pack
+  StatBlock to the Arena. `oubliette/content/schemas.py` StatBlock gained `ai_profile: str | None`;
+  `arena_bridge.statblock_to_monster` passes it through; `enemy_from_statblock` lets a pack author's
+  choice override the rich SRD file's default. The Arena already resolves a preset name →
+  `DEFAULT_PROFILES` (`controller._get_profile`). Tests: `tests/test_arena_bridge.py` (+5). A power
+  user can hand-set `"ai_profile": "berserker"` today and it works. NEXT: 2b = the editor UI + custom
+  (non-preset) named profiles needing pack storage + bridge resolution of custom names.
+
+  Then Phase 3 = monster editor (attach a profile by name). See `oubliette-ai-forge-arc` memory.
 
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a
 repository abstraction; async edges / sync core; LLM-first routing behind the model seam;

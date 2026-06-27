@@ -665,3 +665,59 @@ def test_kit_rides_into_the_staged_player_after_the_basic_attack():
     names = [a.name for a in creature.actions]
     assert names[0] == "Attack"               # the solved sheet attack stays first
     assert "Handaxe" in names and "Handaxe (thrown)" in names
+
+
+# --- AI profile flow (Forge Phase 2a) -----------------------------------
+# A pack StatBlock's `ai_profile` (the creature's personality) must ride the
+# bridge into the Arena Monster, through both the flat mapping and the rich
+# SRD-file path.
+
+def _sb_with_profile(profile, sid="synthetic_brute"):
+    return StatBlock(
+        id=sid, name="Brute", hp=20, armor_class=13, attack_bonus=4, damage="1d8+2",
+        abilities={"str": 16, "dex": 10, "con": 14, "int": 6, "wis": 8, "cha": 6},
+        ai_profile=profile,
+    )
+
+
+def test_statblock_ai_profile_flows_to_monster():
+    # An exotic id with no rich Arena file -> the flat mapping path.
+    mon = statblock_to_monster(_sb_with_profile("berserker"))
+    assert mon.ai_profile == "berserker"
+
+
+def test_statblock_default_ai_profile_when_unset():
+    mon = statblock_to_monster(_sb_with_profile(None))
+    assert mon.ai_profile == "default_monster"
+
+
+def test_pack_profile_overrides_rich_srd_file():
+    from oubliette.combat.arena_bridge import arena_monster_file
+    assert arena_monster_file("goblin") is not None      # this id HAS a rich file
+    sb = StatBlock(
+        id="goblin", name="Goblin", hp=7, armor_class=15, attack_bonus=4,
+        damage="1d6+2", abilities={"str": 8, "dex": 14, "con": 10},
+        ai_profile="berserker",
+    )
+    inst = enemy_from_statblock(sb)
+    assert inst.creature.ai_profile == "berserker"        # author's choice wins
+
+
+def test_rich_file_profile_kept_when_pack_leaves_it_unset():
+    from oubliette.combat.arena_bridge import arena_monster_file
+    own = arena_monster_file("goblin").ai_profile
+    sb = StatBlock(
+        id="goblin", name="Goblin", hp=7, armor_class=15, attack_bonus=4,
+        damage="1d6+2", abilities={"str": 8, "dex": 14, "con": 10},
+        ai_profile=None,
+    )
+    inst = enemy_from_statblock(sb)
+    assert inst.creature.ai_profile == own                # untouched
+
+
+def test_carried_profile_resolves_to_a_real_aiprofile():
+    # End-to-end: the carried name is one the Arena AI actually resolves.
+    from arena.ai.behavior import DEFAULT_PROFILES
+    mon = statblock_to_monster(_sb_with_profile("coward"))
+    assert mon.ai_profile in DEFAULT_PROFILES
+    assert DEFAULT_PROFILES[mon.ai_profile].will_flee is True

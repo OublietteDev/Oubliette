@@ -152,6 +152,12 @@ class StatBlock(_Strict):
     portrait: str | None = None      # image filename in the source's portraits/ dir;
                                      # falls back to "<id>.png", then a silhouette
 
+    # --- AI behavior -------------------------------------------------------
+    # Which personality this creature fights with: a built-in preset
+    # ("berserker", "coward", ...) or a pack-authored named profile. None =
+    # "default_monster". Resolved to an AIProfile by the Arena bridge.
+    ai_profile: str | None = None
+
 
 # --- NPCs --------------------------------------------------------------------
 class InvEntry(_Strict):
