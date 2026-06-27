@@ -20,6 +20,7 @@ import base64
 import difflib
 import json
 import os
+import random
 import re
 import shutil
 from datetime import datetime
@@ -31,7 +32,12 @@ from pydantic import BaseModel
 
 from ..content.loader import PackValidationError, load_pack
 from ..content.ruleset import load_ruleset
-from ..rules.chargen_view import chargen_options
+from ..rules.chargen import (CharacterBuild, ChargenError, _project_srd_item,
+                             build_character)
+from ..rules.chargen_view import chargen_options, preview_payload
+from ..rules.levelup import (MAX_LEVEL, LevelUpChoice, LevelUpError, level_up,
+                             level_up_plan, xp_for_level)
+from ..state.models import Character
 
 STATIC = Path(__file__).parent / "static"
 _DEFAULT_PACKS_ROOT = Path(__file__).parent.parent / "content" / "packs"
@@ -534,6 +540,85 @@ async def get_chargen_options() -> JSONResponse:
     backgrounds, spell lists, ability methods — straight from the SRD ruleset, the
     same projection the play app's chargen wizard uses (rules.chargen_view)."""
     return JSONResponse(chargen_options(_ruleset()))
+
+
+def _equipped_items(char: Character, rs):
+    """The character's worn/wielded gear as state Items, resolved from the SRD
+    catalog — what the derivation needs to recompute AC/attack (no repo here, so we
+    project straight from the ruleset, like chargen does)."""
+    return [_project_srd_item(rs.equipment[i]) for i in char.equipped if i in rs.equipment]
+
+
+def _grant_level_xp(char: Character) -> Character:
+    """Authoring convenience: an authored NPC is assumed to have earned their
+    level, so grant the XP the *next* level needs. XP is a gate during PLAY (you
+    grind for it), but in the Forge the author just dials a level — this lets the
+    same `level_up` engine advance them without a grind. Mutates and returns char."""
+    nxt = char.level + 1
+    if nxt <= MAX_LEVEL:
+        char.xp = max(char.xp, xp_for_level(nxt))
+    return char
+
+
+@app.post("/api/chargen/preview")
+async def post_chargen_preview(body: CharacterBuild) -> JSONResponse:
+    """Run the chargen firewall on an in-progress build and return either the
+    aggregated errors or the fully-derived preview sheet — live wizard feedback,
+    nothing persisted."""
+    rs = _ruleset()
+    try:
+        char, items = build_character(body, rs)
+    except ChargenError as e:
+        return JSONResponse({"ok": False, "errors": e.errors})
+    return JSONResponse({"ok": True, "errors": [], "preview": preview_payload(char, items, rs)})
+
+
+@app.post("/api/chargen/build")
+async def post_chargen_build(body: CharacterBuild) -> JSONResponse:
+    """Build the level-1 character for real and return the full `Character` snapshot
+    (what a person-NPC stores, 4b-3) alongside the preview. Same firewall as
+    /preview."""
+    rs = _ruleset()
+    try:
+        char, items = build_character(body, rs)
+    except ChargenError as e:
+        return JSONResponse({"ok": False, "errors": e.errors})
+    return JSONResponse({"ok": True, "errors": [],
+                         "character": char.model_dump(mode="json"),
+                         "preview": preview_payload(char, items, rs)})
+
+
+@app.post("/api/chargen/levelup/plan")
+async def post_chargen_levelup_plan(character: Character) -> JSONResponse:
+    """What the character's NEXT level requires (HP, ASI/feat, subclass, new
+    spells) — drives the wizard's per-level choices. Operates on the transient
+    character in the body; no repo. XP is granted so authoring isn't gated by it."""
+    return JSONResponse(level_up_plan(_grant_level_xp(character), _ruleset()))
+
+
+class _ForgeLevelUpIn(BaseModel):
+    character: Character
+    choice: LevelUpChoice = LevelUpChoice()
+
+
+@app.post("/api/chargen/levelup")
+async def post_chargen_levelup(body: _ForgeLevelUpIn) -> JSONResponse:
+    """Advance the transient character one level and return the new snapshot. Unlike
+    the play app this isn't event-sourced (authoring, not a live game), so a "roll"
+    HP method without an explicit value just rolls here."""
+    rs = _ruleset()
+    char, choice = _grant_level_xp(body.character), body.choice
+    cc = rs.classes.get(char.sheet.char_class) if char.sheet else None
+    if choice.hp_method == "roll" and choice.hp_roll is None and cc is not None:
+        choice.hp_roll = random.randint(1, cc.hit_die)
+    try:
+        leveled = level_up(char, rs, choice, equipped_items=_equipped_items(char, rs),
+                           char_id=char.id)
+    except LevelUpError as e:
+        return JSONResponse({"ok": False, "errors": e.errors}, status_code=400)
+    return JSONResponse({"ok": True, "errors": [],
+                         "character": leveled.model_dump(mode="json"),
+                         "preview": preview_payload(leveled, _equipped_items(leveled, rs), rs)})
 
 
 def _safe_leaf(name: str) -> bool:

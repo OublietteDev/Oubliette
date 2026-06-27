@@ -74,6 +74,57 @@ def test_chargen_options_from_shared_ruleset():
     assert data == json.loads(json.dumps(chargen_options(load_ruleset())))
 
 
+def test_chargen_preview_and_build():
+    """Phase 4b-2: /preview derives a sheet from a valid build; /build returns the
+    full Character snapshot a person-NPC stores."""
+    from tests.test_chargen import _fighter
+
+    build = _fighter().model_dump(mode="json")
+
+    pv = client.post("/api/chargen/preview", json=build).json()
+    assert pv["ok"] is True
+    assert pv["preview"]["max_hp"] == 12                       # d10 + CON 2
+    assert pv["preview"]["derived"]["armor_class"] == 18       # chain mail + shield
+
+    bd = client.post("/api/chargen/build", json=build).json()
+    assert bd["ok"] is True
+    char = bd["character"]
+    assert char["kind"] == "pc" and char["level"] == 1
+    assert char["sheet"]["char_class"] == "fighter"
+    assert char["max_hp"] == 12 and char["armor_class"] == 18
+
+
+def test_chargen_preview_rejects_invalid_build():
+    """The chargen firewall still bites through the Forge endpoint."""
+    from tests.test_chargen import _fighter
+
+    bad = _fighter(skills=[]).model_dump(mode="json")          # fighter must choose 2 skills
+    r = client.post("/api/chargen/preview", json=bad).json()
+    assert r["ok"] is False and r["errors"]
+
+
+def test_chargen_levelup_builds_a_higher_level_npc():
+    """Phase 4b-2: from a level-1 build (xp=0), the Forge levels the character to 3
+    — authoring grants the XP so it isn't gated by a grind. HP grows each level."""
+    from tests.test_chargen import _fighter
+
+    char = client.post("/api/chargen/build", json=_fighter().model_dump(mode="json")).json()["character"]
+
+    for target in (2, 3):
+        plan = client.post("/api/chargen/levelup/plan", json=char).json()
+        assert plan["can_level"] is True and plan["next_level"] == target   # not gated by xp=0
+        choice = {"hp_method": "average"}
+        if plan.get("needs_subclass"):                          # fighter picks an archetype at 3
+            choice["subclass"] = plan["subclass_options"][0]["id"]
+        out = client.post("/api/chargen/levelup",
+                          json={"character": char, "choice": choice}).json()
+        assert out["ok"] is True, out
+        char = out["character"]
+        assert char["level"] == target
+    assert char["sheet"]["subclass"]                            # the archetype stuck
+    assert char["max_hp"] > 12                                  # leveled HP > level-1 HP
+
+
 def test_path_traversal_is_refused():
     # an id that tries to climb out of the packs root must not resolve
     assert client.get("/api/pack/..").status_code == 404

@@ -249,13 +249,26 @@ Thin wrappers over `chargen`/`levelup` — no new rules logic:
 - `GET  /api/chargen/options` → races, classes, subclasses, backgrounds, spell
   lists, equipment choices, ability-score methods. **SHIPPED (4b-1).**
 - `POST /api/chargen/preview` → body is a `CharacterBuild`; returns the firewall's
-  errors or the derived preview sheet (`preview_payload`). *(4b-2)*
+  errors or the derived preview sheet (`preview_payload`). **SHIPPED (4b-2).**
 - `POST /api/chargen/build` → body is a `CharacterBuild`; returns the built
-  `Character` **or** the chargen firewall's validation errors. *(4b-2)*
-- `POST /api/chargen/levelup` → body is `{character, choice}`; returns the
-  leveled `Character` or validation errors. *(4b-2)*
+  `Character` snapshot **or** the chargen firewall's validation errors.
+  **SHIPPED (4b-2).**
+- `POST /api/chargen/levelup/plan` → body is a `Character`; returns the next
+  level's requirements. `POST /api/chargen/levelup` → body is `{character,
+  choice}`; returns the leveled `Character` or validation errors. Both operate on
+  the transient character in the body (no repo). **SHIPPED (4b-2).**
 - `PUT  /api/pack/<id>/character/<npc_id>` → persist the snapshot to
   `characters/<npc_id>.json`; `GET`/`DELETE` to load/clear. *(4b-3)*
+
+**Authoring decision (4b-2):** XP is a *play* gate (you grind for levels), but in
+the Forge the author just dials a level. So both level-up endpoints **grant the
+level-appropriate XP** (`_grant_level_xp`) before invoking the engine — an
+authored NPC is assumed to have earned their level. The same `level_up` firewall
+still bites (e.g. a Fighter must choose a Martial Archetype at level 3), so the
+wizard drives a real plan → choice → apply loop per level. *(Open downstream
+nuance for later: `enemy_from_character` awards `char.xp` as the kill reward, so a
+high-level person-NPC adversary would grant level-worth XP on defeat — revisit
+kill-reward calibration when person-NPC adversaries get live testing.)*
 
 ### 7.3 Forge UI — the chargen wizard
 The substantial piece. A guided flow mirroring the game's chargen, embedded in
