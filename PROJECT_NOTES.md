@@ -900,9 +900,24 @@ prefers a rich file via `arena_monster_file`, so "clone an existing creature" = 
   editing a cloned Adult Red Dragon: Fire Breath / Frightful Presence / Legendary Resistance survived).
   Saves via the 3b-1 PUT; updates the ⚔ badge. Tests: +2 server (baseline projects / rejects garbage),
   +1 bridge **real-path guard** (a Monster shaped like the editor's output → `get_extra_attack_count`
-  and `get_attack_modifier` honor the multiattack count + previewed to-hit). **NEXT: 3b-3b — save-for-
-  effect abilities** (breath weapons, frightful presence: area + save + damage/half + recharge), then
-  3b-4 advanced raw-data editor + `ai_use_condition`.
+  and `get_attack_modifier` honor the multiattack count + previewed to-hit).
+
+- **Phase 3b-3b — Save-for-effect special moves (DONE, browser-verified 2026-06-27, 501 green).**
+  Folded a "Special moves" section into the attacks editor: author breath weapons / frightful presence /
+  poison clouds — an area effect that forces a save. Per move: name, shape (cone/line/ball/cube) + size,
+  which save the target rolls (6 abilities) + DC (default 8+prof+CON mod), optional damage (`6d6`) with
+  half-or-none on a save, conditions on a failed save (the 15-condition checklist), and frequency
+  (at will / recharge 5–6 / recharge 6 / once a day). Maps to an Action with a `saving_throw` + area
+  `target_type`; recharge/limited uses set `recharge_min`/`uses_per_rest` AND `ai_priority=9` so the AI
+  opens with them (Brain Slice 3). Live preview per block ("15-ft cone · CON save DC 12 · 3d8 cold,
+  half on save · recharge 5–6"). On load, the combat file's non-attack actions are **classified**:
+  simple save effects become editable special-move blocks; anything exotic (spells, teleports, walls,
+  summons, buffs — `_isSimpleSave` rejects via `_EXOTIC_KEYS`) is **preserved verbatim** and listed as
+  "advanced moves kept as-is" (edit in 3b-4). Verified live: authored a Frost Breath on the lean wolf
+  (cone/CON/3d8/recharge); cloned an Adult White Dragon and its Cold Breath + Frightful Presence loaded
+  as editable specials while Ice Walk + Legendary Resistance were preserved. Tests: +1 bridge guard
+  (a breath action validates against the engine Action model with area/save/recharge intact). Pure
+  frontend (reused the 3b-3a endpoints). **NEXT: 3b-4 — advanced raw-data editor + `ai_use_condition`.**
 
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a
 repository abstraction; async edges / sync core; LLM-first routing behind the model seam;

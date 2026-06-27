@@ -884,3 +884,22 @@ def test_engine_honors_authored_attacks_and_multiattack():
     assert get_extra_attack_count(monster) == 2          # multiattack count is live
     bite = monster.actions[0]
     assert get_attack_modifier(monster, bite.attack, bite) == 5   # +3 STR + 2 prof, as previewed
+
+
+def test_engine_accepts_authored_breath_weapon():
+    """Guard the real path for save-for-effect moves: a breath weapon shaped like
+    the Forge special-move editor writes validates against the engine Action model,
+    with its area + saving throw + recharge intact."""
+    from arena.models.actions import Action, TargetType
+    act = Action.model_validate({
+        "name": "Frost Breath", "description": "15-ft cone.", "action_type": "action",
+        "target_type": "area_cone", "area_size": 15, "range": 15,
+        "saving_throw": {"ability": "constitution", "dc": 12,
+                         "damage_on_fail": [{"dice": "3d8", "damage_type": "cold", "bonus": 0}],
+                         "damage_on_success": "half", "conditions_on_fail": []},
+        "recharge_min": 5, "ai_priority": 9,
+    })
+    assert act.target_type == TargetType.AREA_CONE
+    assert act.saving_throw.ability == "constitution" and act.saving_throw.dc == 12
+    assert act.saving_throw.damage_on_success == "half"
+    assert act.recharge_min == 5 and act.ai_priority == 9   # signature: AI uses it freely
