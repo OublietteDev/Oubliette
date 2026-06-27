@@ -941,7 +941,12 @@ non-coder: clone an SRD/pack creature OR build one fresh → set identity & defe
 dropdowns → pick a portrait from disk → author real attacks + multiattack → author save-for-effect
 specials (breath/fear) with AI-use gating → drop to the raw-data escape hatch for anything exotic — and
 every bit of it actually fights correctly in the Arena (the bridge prefers the pack combat file). Shipped
-across 6 commits (3a, 3b-1, 3b-2, 3b-3a, 3b-3b, 3b-4). See `oubliette-ai-forge-arc` memory. NEXT arc is
+across 6 commits (3a, 3b-1, 3b-2, 3b-3a, 3b-3b, 3b-4) + a discoverability fix. See `oubliette-ai-forge-arc`
+memory. **Discoverability fix (post-3b-4):** combat authoring was only reachable via a per-card button
+(easy to miss; users open "Edit" to customize). Added a **"⚔ Edit attacks & special abilities…" button
+inside the Edit-creature form** (a "Combat moves" section; it commits the form then opens the combat
+editor — `confirmStatblock` now returns the id), and relabeled the card button `⚔ Attacks → ⚔ Combat`
+(+ editor header) so it reads as the whole combat home, not just attacks. NEXT arc is
 open (candidates: the UI-pass polish items in the plan doc; Brightvale content; the audio soundscape).
 
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a

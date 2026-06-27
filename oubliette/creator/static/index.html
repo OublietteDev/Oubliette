@@ -537,7 +537,7 @@ function cardHtml(kind, e, i, depth, node) {
         <div class="cline">${esc(describe(kind, e))}</div>
       </div>
       ${editable ? `<div class="cactions">
-        ${kind === "statblocks" ? `<button class="btn mini" data-attacks="${i}" title="Edit its attacks & multiattack">⚔ Attacks</button>` : ""}
+        ${kind === "statblocks" ? `<button class="btn mini" data-attacks="${i}" title="Attacks, multiattack, special moves & raw data">⚔ Combat</button>` : ""}
         <button class="btn mini" data-edit="${kind}" data-i="${i}">Edit</button>
         <button class="btn mini danger" data-del="${kind}" data-i="${i}">Delete</button></div>` : ""}
     </div>`;
@@ -658,7 +658,7 @@ function openEditor(kind, index) {
   const modal = document.getElementById("modal");
   modal.innerHTML = FORMS[kind](original);
   document.getElementById("scrim").classList.add("open");
-  if (WIRES[kind]) WIRES[kind]();
+  if (WIRES[kind]) WIRES[kind](original);
   modal.querySelector("[data-cancel]").addEventListener("click", closeEditor);
   modal.querySelector("[data-confirm]").addEventListener("click", () => CONFIRMS[kind](original));
 }
@@ -1175,6 +1175,10 @@ function statblockForm(sb) {
           </div>
           <input type="hidden" id="f_portrait" value="${esc(v.portrait || "")}">
         </div>`, "Pick an image from your computer — it's saved into this world's portraits/ folder.")}
+      <div class="subform"><div class="sftitle">Combat moves</div>
+        <div class="help" style="margin-bottom:9px">Attacks, multiattack, breath weapons & special abilities (and the raw-data editor for anything else) live in the combat editor.</div>
+        <button class="btn" type="button" id="f_editcombat">⚔ Edit attacks &amp; special abilities…</button>
+        <div class="help" style="margin-top:6px">Saves this creature first, then opens its combat editor.</div></div>
       <div class="subform"><div class="sftitle">Loot dropped</div>
         ${field("Gold", `<input id="f_gold" type="number" min="0" value="${gold}" placeholder="(optional)" />`)}
         <div id="lootList"></div>
@@ -1197,9 +1201,10 @@ function renderLoot() {
   box.querySelectorAll("[data-loot-qty]").forEach(inp => inp.addEventListener("input", e => editorCtx.loot[+e.target.dataset.lootQty].qty = Number(e.target.value || 1)));
   box.querySelectorAll("[data-loot-del]").forEach(b => b.addEventListener("click", e => { editorCtx.loot.splice(+e.target.dataset.lootDel, 1); renderLoot(); }));
 }
-function wireStatblockForm() {
+function wireStatblockForm(original) {
   renderLoot();
   document.getElementById("addLoot").addEventListener("click", () => { editorCtx.loot.push({ item: "", qty: 1 }); renderLoot(); });
+  document.getElementById("f_editcombat").addEventListener("click", () => editCombatFromForm(original));
   const fileInp = document.getElementById("f_portrait_file");
   if (fileInp) fileInp.addEventListener("change", () => { if (fileInp.files[0]) uploadCreaturePortrait(fileInp.files[0]); });
   const clearBtn = document.getElementById("f_portrait_clear");
@@ -1234,7 +1239,7 @@ function setCreaturePortrait(filename) {
 }
 function confirmStatblock(original) {
   const name = document.getElementById("f_name").value.trim();
-  if (!name) { document.getElementById("f_err").textContent = "Please give it a name."; return; }
+  if (!name) { document.getElementById("f_err").textContent = "Please give it a name."; return null; }
   const base = original ? { ...original } : {};
   if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("statblocks").map(x => x.id)));
   base.name = name;
@@ -1285,6 +1290,16 @@ function confirmStatblock(original) {
   const prof = document.getElementById("f_ai_profile").value;
   if (prof) base.ai_profile = prof; else delete base.ai_profile;
   commitEntry("statblocks", original, base);
+  return base.id;
+}
+// From inside the Edit form: save the creature's identity, then jump straight to
+// its combat editor (attacks / specials / raw data) — the place people instinctively
+// look for "customize this monster". Committing first means no field edits are lost.
+function editCombatFromForm(original) {
+  const id = confirmStatblock(original);
+  if (!id) return;                                   // validation failed; error already shown
+  const idx = listOf("statblocks").findIndex(s => s.id === id);
+  if (idx >= 0) openAttacksEditor(idx);
 }
 
 // ---- clone an existing creature (Phase 3b-2) ----
@@ -1416,7 +1431,7 @@ async function openAttacksEditor(index) {
   };
   const modal = document.getElementById("modal");
   modal.innerHTML = `
-    <div class="mhead">⚔ Attacks — ${esc(creature.name)}</div>
+    <div class="mhead">⚔ Combat — ${esc(creature.name)}</div>
     <div class="mbody">
       <div class="help">How this creature fights. To-hit and damage bonus come from its Strength (melee) or Dexterity (ranged) — shown live.${attacksCtx.keep.length ? ` Its advanced moves (${attacksCtx.keep.map(a => esc(a.name)).join(", ")}) are kept as-is.` : ""}</div>
       ${field("Attacks per turn", `<input id="atk_multi" type="number" min="1" max="6" value="${attacksCtx.perTurn}" />`,
