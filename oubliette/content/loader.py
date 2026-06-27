@@ -26,8 +26,8 @@ from ..enums import Ability
 from ..state.models import Character, Item as StateItem, ItemStack
 from ..state.repository import InMemoryRepository
 from .ruleset import Ruleset, load_ruleset
-from .schemas import (NPC, AuthoredQuest, BestiaryGate, Item, Lore, Place,
-                      PackManifest, Scenario, StatBlock)
+from .schemas import (NPC, AiProfile, AuthoredQuest, BestiaryGate, Item, Lore,
+                      Place, PackManifest, Scenario, StatBlock)
 
 DEFAULT_PACK = "brightvale"
 _PACKS_ROOT = Path(__file__).parent / "packs"
@@ -82,6 +82,7 @@ class LoadedWorld:
     statblocks: tuple = ()         # the pack's authored StatBlocks (this-world bestiary section)
     bestiary_gate: "BestiaryGate | None" = None   # per-world bestiary knowledge cutoff (manifest)
     quests: tuple = ()             # the pack's authored quests (offered during play, not canon)
+    ai_profiles: tuple = ()        # the pack's authored AI personalities (Forge-authored monster behavior)
 
 
 # --- file reading ------------------------------------------------------------
@@ -363,9 +364,11 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     lore = _parse_list(base / "lore.json", Lore, "lore.json", errors)
     scenarios = _parse_list(base / "scenarios.json", Scenario, "scenarios.json", errors)
     quests = _parse_list(base / "quests.json", AuthoredQuest, "quests.json", errors)
+    ai_profiles = _parse_list(base / "ai_profiles.json", AiProfile, "ai_profiles.json", errors)
 
     _lint(manifest, items, statblocks, npcs, places, scenarios, quests, errors)
     _dup_ids(lore, "lore", errors)        # subjects are free-form, so only ids are checked
+    _dup_ids(ai_profiles, "ai_profiles", errors)
 
     if errors:
         raise PackValidationError(pack_id, errors)
@@ -397,4 +400,5 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
         ruleset=load_ruleset(),   # the global SRD layer (shared by every world)
         pack_name=manifest.name, statblocks=tuple(statblocks),
         bestiary_gate=manifest.bestiary_gate, quests=tuple(quests),
+        ai_profiles=tuple(ai_profiles),
     )

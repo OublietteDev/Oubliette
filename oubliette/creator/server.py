@@ -33,17 +33,18 @@ from ..content.loader import PackValidationError, load_pack
 
 STATIC = Path(__file__).parent / "static"
 _DEFAULT_PACKS_ROOT = Path(__file__).parent.parent / "content" / "packs"
-_TYPES = ["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios"]
+_TYPES = ["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios", "ai_profiles"]
 _TYPE_WORD = {"items": "items", "statblocks": "creatures", "npcs": "characters",
               "places": "places", "lore": "lore entries", "quests": "quests",
-              "scenarios": "opening setups"}
+              "scenarios": "opening setups", "ai_profiles": "AI personalities"}
 
 
 def _slug(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", name.strip().lower()).strip("_") or "world"
 
 # The per-type files a pack is made of (the world recipe).
-PACK_FILES = ["pack", "items", "statblocks", "npcs", "places", "lore", "quests", "scenarios"]
+PACK_FILES = ["pack", "items", "statblocks", "npcs", "places", "lore", "quests",
+              "scenarios", "ai_profiles"]
 
 app = FastAPI(title="Oubliette: The Forge")
 
@@ -401,7 +402,7 @@ async def new_pack(body: NewIn) -> JSONResponse:
     _write_json(d / "pack.json", {
         "id": pack_id, "schema_version": 1, "name": name, "version": "0.1.0",
         "author": "", "description": "", "entry_scenario": "opening"})
-    for t in ["items", "statblocks", "npcs", "lore", "quests"]:
+    for t in ["items", "statblocks", "npcs", "lore", "quests", "ai_profiles"]:
         _write_json(d / f"{t}.json", [])
     _write_json(d / "places.json", [{
         "id": "town_square", "name": "Town Square",

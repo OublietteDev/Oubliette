@@ -154,9 +154,42 @@ class StatBlock(_Strict):
 
     # --- AI behavior -------------------------------------------------------
     # Which personality this creature fights with: a built-in preset
-    # ("berserker", "coward", ...) or a pack-authored named profile. None =
+    # ("berserker", "coward", ...) or the id of a pack-authored AiProfile. None =
     # "default_monster". Resolved to an AIProfile by the Arena bridge.
     ai_profile: str | None = None
+
+
+# --- AI personalities --------------------------------------------------------
+class AiProfile(_Strict):
+    """A reusable monster personality authored in the Forge — *how* a creature
+    fights (brave/cowardly, who it targets, melee/ranged, protects allies). The
+    bridge maps these fields 1:1 onto the Arena's `AIProfile`; a StatBlock points
+    at one by `id`. Mechanical *competence* (multiattack, spells, breath) is
+    automatic from the stat block and is NOT configured here."""
+
+    id: str
+    name: str
+
+    # Temperament (0.0–2.0; 1.0 = neutral)
+    aggression: float = Field(default=1.0, ge=0.0, le=2.0)
+    self_preservation: float = Field(default=1.0, ge=0.0, le=2.0)
+
+    # Who it goes after
+    target_priority: Literal["nearest", "weakest", "strongest", "random", "threatening"] = "nearest"
+    focuses_spellcasters: bool = False
+
+    # How it fights / positions
+    prefers_melee: bool = True
+    uses_area_attacks: bool = True
+    maintains_distance: int = Field(default=0, ge=0, le=120)  # preferred ft from foes (0 = melee)
+    flanks_when_possible: bool = True
+    avoids_opportunity_attacks: bool = True
+    protects_allies: bool = False
+
+    # Resources & nerve
+    uses_limited_abilities: float = Field(default=0.5, ge=0.0, le=1.0)  # 0 = hoard, 1 = freely
+    retreat_threshold: float = Field(default=0.25, ge=0.0, le=1.0)      # HP% to consider fleeing
+    will_flee: bool = False
 
 
 # --- NPCs --------------------------------------------------------------------

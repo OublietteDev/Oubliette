@@ -321,3 +321,57 @@ def test_friendly_errors_are_plain_with_suggestions(tmp_path, monkeypatch):
     belt = [f for f in v["friendly"] if "belt" in f["message"]]
     assert belt and belt[0]["section"] == "npcs"
     assert any("Did you mean" in f["message"] and "sturdy belt" in f["message"] for f in v["friendly"])
+
+
+# --- AI personalities (Forge Phase 2b storage layer) --------------------
+
+def test_ai_profiles_persist_and_the_loader_reads_them(tmp_path, monkeypatch):
+    """An authored personality saves into the pack and the GAME's loader reads
+    it back — so the Forge and the game agree by construction."""
+    packs = _temp_brightvale(tmp_path, monkeypatch)
+    contents = client.get("/api/pack/brightvale").json()["contents"]
+    # Brightvale has no ai_profiles.json yet, so it loads as None — back-compat.
+    assert contents.get("ai_profiles") in (None, [])
+    contents["ai_profiles"] = [{
+        "id": "cowardly_goblin", "name": "Cowardly Goblin",
+        "aggression": 0.5, "self_preservation": 1.5,
+        "will_flee": True, "retreat_threshold": 0.5, "prefers_melee": True,
+    }]
+    r = client.post("/api/pack/brightvale/save", json={"contents": contents})
+    assert r.status_code == 200 and r.json()["validation"]["ok"] is True
+
+    from oubliette.content.loader import load_pack
+    world = load_pack("brightvale", packs_root=packs)
+    names = {p.id: p for p in world.ai_profiles}
+    assert "cowardly_goblin" in names
+    assert names["cowardly_goblin"].will_flee is True
+
+
+def test_new_world_scaffolds_an_empty_ai_profiles_section(tmp_path, monkeypatch):
+    monkeypatch.setenv("OUBLIETTE_PACKS_ROOT", str(tmp_path / "packs"))
+    client.post("/api/pack/new", json={"name": "Personality Realm"})
+    contents = client.get("/api/pack/personality_realm").json()["contents"]
+    assert contents["ai_profiles"] == []
+
+
+def test_out_of_range_ai_profile_value_is_rejected(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    contents = client.get("/api/pack/brightvale").json()["contents"]
+    contents["ai_profiles"] = [{
+        "id": "broken", "name": "Broken", "aggression": 9.0,  # > 2.0 ceiling
+    }]
+    r = client.post("/api/pack/brightvale/save", json={"contents": contents})
+    assert r.json()["validation"]["ok"] is False
+
+
+def test_duplicate_ai_profile_ids_are_rejected(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    contents = client.get("/api/pack/brightvale").json()["contents"]
+    contents["ai_profiles"] = [
+        {"id": "dup", "name": "One"},
+        {"id": "dup", "name": "Two"},
+    ]
+    r = client.post("/api/pack/brightvale/save", json={"contents": contents})
+    v = r.json()["validation"]
+    assert v["ok"] is False
+    assert any("dup" in i for i in v["issues"])

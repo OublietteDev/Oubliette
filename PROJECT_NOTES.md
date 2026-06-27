@@ -776,8 +776,18 @@ FastAPI + vanilla-JS single-page app (`oubliette/creator/`), editors are modal f
   `arena_bridge.statblock_to_monster` passes it through; `enemy_from_statblock` lets a pack author's
   choice override the rich SRD file's default. The Arena already resolves a preset name →
   `DEFAULT_PROFILES` (`controller._get_profile`). Tests: `tests/test_arena_bridge.py` (+5). A power
-  user can hand-set `"ai_profile": "berserker"` today and it works. NEXT: 2b = the editor UI + custom
-  (non-preset) named profiles needing pack storage + bridge resolution of custom names.
+  user can hand-set `"ai_profile": "berserker"` today and it works.
+
+- **Phase 2b — Storage layer (DONE, 478 green).** Packs can now hold named personalities. New
+  `AiProfile` schema in `oubliette/content/schemas.py` (id + name + the 13 `AIProfile` knobs, mirrored
+  1:1 with range bounds). `loader.py` parses optional `ai_profiles.json` (missing = empty → existing
+  packs unaffected), dup-id checks, → `LoadedWorld.ai_profiles`. Forge `server.py` registers the kind
+  in PACK_FILES/_TYPES + scaffolds `ai_profiles.json=[]` in new packs. Tests: `tests/test_creator_server.py`
+  (+4: round-trip+loader-reads, scaffold, out-of-range rejected, dup-id rejected). NEXT in 2b:
+  (1) bridge resolves a monster's custom profile *id* → pack `AiProfile` → baked onto the Arena Monster
+  (needs an inline-profile carrier on Monster since the Arena runs as a separate process from a
+  serialized encounter — can't import AIProfile into arena/models, so carry a dict + build in the
+  controller); (2) the editor UI (easy/pro modes); (3) a profile dropdown in the statblock editor.
 
   Then Phase 3 = monster editor (attach a profile by name). See `oubliette-ai-forge-arc` memory.
 
