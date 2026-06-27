@@ -654,3 +654,69 @@ def test_ephemeral_arena_enemy_never_becomes_a_persistent_entity(monkeypatch):
     for ref in ("bandit", "road bandit", "road bandit#1"):
         with pytest.raises(StateError):
             s.repo.get_character(ref)
+
+
+def test_creature_npc_enemy_fights_its_statblock_kit_as_a_persistent_foe():
+    """Forge 4a-2: a recurring creature-NPC (Seraphel) resolves to her full stat
+    block kit — proven by the block's HP (99) overriding the NPC's flat Character
+    HP (10) — while keeping persistent-entity semantics (HP write-back via
+    entity_id, a single instance, no loot) and her OWN name, not the species label.
+    """
+    from types import SimpleNamespace
+
+    from oubliette.combat.arena_launch import _resolve_enemies
+    from oubliette.content.schemas import StatBlock
+    from oubliette.state.models import Character
+
+    sb = StatBlock(id="seraphel_kit", name="Ancient Blue Dragon", hp=99, armor_class=18)
+    npc = Character(id="seraphel", name="Seraphel", kind="npc", hp=10, max_hp=10, xp=5000)
+
+    class _Repo:
+        def get_character(self, ref):
+            if ref == "seraphel":
+                return npc
+            raise StateError(f"no entity {ref!r}")
+
+    session = SimpleNamespace(
+        statblocks=(sb,), npc_statblocks={"seraphel": "seraphel_kit"},
+        ai_profiles=(), pack_id=None, ruleset=None,
+    )
+    req = EncounterRequest(kind="ambush", enemies=[EnemyRef(ref="seraphel", count=3)],
+                           terrain=TerrainSpec(kind="chokepoint"))
+
+    insts = _resolve_enemies(req, _Repo(), session)
+
+    assert len(insts) == 1                       # persistent ⇒ a single Seraphel
+    inst = insts[0]
+    assert inst.entity_id == "seraphel"          # her final HP writes back
+    assert inst.loot == []                        # a recurring foe drops no loot
+    assert inst.creature.name == "Seraphel"      # her name, not "Ancient Blue Dragon"
+    assert inst.creature.max_hit_points == 99    # the stat-block kit, not the flat 10
+
+
+def test_persistent_npc_without_a_statblock_still_resolves_flat():
+    """An NPC with no stat block keeps the existing flat mapping (entity semantics,
+    its own Character HP) — the 4a-2 reorder must not regress the no-block path."""
+    from types import SimpleNamespace
+
+    from oubliette.combat.arena_launch import _resolve_enemies
+    from oubliette.state.models import Character
+
+    npc = Character(id="thug", name="Sour Ned", kind="npc", hp=17, max_hp=17)
+
+    class _Repo:
+        def get_character(self, ref):
+            if ref == "thug":
+                return npc
+            raise StateError(f"no entity {ref!r}")
+
+    session = SimpleNamespace(statblocks=(), npc_statblocks={}, ai_profiles=(),
+                              pack_id=None, ruleset=None)
+    req = EncounterRequest(kind="brawl", enemies=[EnemyRef(ref="thug")],
+                           terrain=TerrainSpec())
+
+    insts = _resolve_enemies(req, _Repo(), session)
+    assert len(insts) == 1
+    assert insts[0].entity_id == "thug"
+    assert insts[0].creature.name == "Sour Ned"
+    assert insts[0].creature.max_hit_points == 17

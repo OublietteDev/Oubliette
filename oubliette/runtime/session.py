@@ -49,6 +49,7 @@ class Session:
         self.pack_name: str = ""            # the pack's display name (bestiary source label)
         self.statblocks: tuple = ()         # the pack's authored StatBlocks (this-world bestiary)
         self.ai_profiles: tuple = ()        # the pack's Forge-authored monster personalities (AiProfile)
+        self.npc_statblocks: dict = {}      # {npc id -> StatBlock id} for the combat bridge (Phase 4a)
         self.world_map: str | None = None   # top-level map background image filename (pack)
         self.bestiary_gate = None           # per-world bestiary knowledge cutoff (manifest)
         self.ended: bool = False            # the DM closed this session (end_session tool)
@@ -92,6 +93,7 @@ class Session:
             pack_name = world.pack_name
             statblocks = world.statblocks
             ai_profiles = world.ai_profiles
+            npc_statblocks = world.npc_statblocks
             bestiary_gate = world.bestiary_gate
             authored_quests = {q.id: q for q in world.quests}
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
@@ -106,6 +108,7 @@ class Session:
             pack_name = ""
             statblocks = ()
             ai_profiles = ()
+            npc_statblocks = {}
             bestiary_gate = None
             authored_quests = {}
             marker = {}
@@ -155,6 +158,7 @@ class Session:
         session.pack_name = pack_name
         session.statblocks = statblocks
         session.ai_profiles = ai_profiles
+        session.npc_statblocks = npc_statblocks
         session.world_map = world_map
         session.bestiary_gate = bestiary_gate
         session.ended = ended

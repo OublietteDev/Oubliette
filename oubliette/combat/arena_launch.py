@@ -126,20 +126,44 @@ def _statblock_for(session, ref: str):
     return best
 
 
+def _try_entity(repo: Repository, ref: str):
+    """The persistent character for an EXACT-id ref, or None. Exact-only so the
+    DM's descriptive naming ('a wild wolf') still resolves as a stat block, while
+    a code-issued entity id (a recurring foe) is recognised as persistent."""
+    try:
+        return repo.get_character(ref)
+    except StateError:
+        return None
+
+
 def _resolve_enemies(
     request: EncounterRequest, repo: Repository, session,
     portraits: PortraitDirs | None = None,
 ) -> list[EnemyInstance]:
-    """Resolve each `EnemyRef` to an `EnemyInstance`, mirroring the boundary's
-    precedence but producing Arena creatures: template → stat block → persistent
-    entity. Raises `CombatError` on an unknown ref."""
+    """Resolve each `EnemyRef` to an `EnemyInstance`: template → persistent entity
+    → stat block. Raises `CombatError` on an unknown ref.
+
+    Precedence note (Forge Phase 4a): a persistent ENTITY is checked BEFORE a bare
+    stat block, so a recurring creature-NPC (Seraphel, whose id matches her stat
+    block) keeps entity semantics — final HP written back, a single instance, no
+    loot — rather than spawning as an ephemeral copy. Generic monsters ('a pack of
+    wolves') aren't repo entities, so they fall through to the stat-block path
+    unchanged."""
     # The pack's Forge-authored personalities, keyed by id, so a custom
     # `ai_profile` on a stat block resolves to a real AIProfile in the Arena.
     ai_profiles = {p.id: p for p in getattr(session, "ai_profiles", ()) or ()}
+    # {npc id -> StatBlock id}: the runtime Character drops the stat_block ref, so
+    # this is how a recurring creature-NPC is mapped back to its authored block.
+    npc_statblocks = getattr(session, "npc_statblocks", None) or {}
     # The pack's own combat files (Phase 3b): a Forge-authored creature that ships
     # `monsters/<id>.json` fights its full kit instead of the flat one-swing mapping.
     pack_id = getattr(session, "pack_id", None)
     pack_monster_dir = (_CONTENT_ROOT / "packs" / pack_id / "monsters") if pack_id else None
+
+    def from_statblock(sb) -> EnemyInstance:
+        return enemy_from_statblock(sb, portraits, ai_profiles=ai_profiles,
+                                    pack_monster_dir=pack_monster_dir)
+
     out: list[EnemyInstance] = []
     for ref in request.enemies:
         tmpl = ENEMY_TEMPLATES.get(ref.ref)
@@ -147,19 +171,31 @@ def _resolve_enemies(
             inst = enemy_from_template(tmpl)
             out.extend(inst for _ in range(max(1, ref.count)))
             continue
+        ent = _try_entity(repo, ref.ref)
+        if ent is not None:
+            sb_id = npc_statblocks.get(ent.id)
+            sb = _statblock_for(session, sb_id) if sb_id else None
+            if sb is not None:
+                # A creature-NPC: the full stat-block kit (its rich monsters/<id>.json
+                # wins when present), but PERSISTENT — write HP back and drop no loot,
+                # the recurring-foe policy `enemy_from_character` already follows. Keep
+                # the NPC's own name (Seraphel), not the stat block's species label.
+                inst = from_statblock(sb)
+                inst.creature.name = ent.name
+                inst.entity_id = ent.id
+                inst.loot = []
+            else:
+                inst = enemy_from_character(ent, portraits)   # no stat block: flat
+            out.append(inst)                                  # persistent ⇒ one
+            continue
         sb = _statblock_for(session, ref.ref)
         if sb is not None:
-            inst = enemy_from_statblock(sb, portraits, ai_profiles=ai_profiles,
-                                        pack_monster_dir=pack_monster_dir)
+            inst = from_statblock(sb)
             out.extend(inst for _ in range(max(1, ref.count)))
             continue
-        try:
-            ent = repo.get_character(ref.ref)
-        except StateError as e:
-            raise CombatError(
-                f"enemy ref {ref.ref!r} is neither a template, a bestiary monster, nor an entity"
-            ) from e
-        out.append(enemy_from_character(ent, portraits))
+        raise CombatError(
+            f"enemy ref {ref.ref!r} is neither a template, a bestiary monster, nor an entity"
+        )
     return out
 
 

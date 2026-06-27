@@ -153,17 +153,32 @@ persistent foe whose HP is written back between fights.
 This is the small, high-payoff slice: Phase 3 already built the editor and the
 rich-file bridge. 4a is mostly *connecting* them to the NPC side.
 
-### 4a.1 Bridge seam (the core change)
-In `_resolve_enemies` (`arena_launch.py:129`), when a ref resolves to a
-persistent **NPC that carries a `stat_block`**, route it through the
-**statblock + rich-file** path instead of the flat `enemy_from_character`:
+### 4a.1 Bridge seam (the core change) — SHIPPED
+In `_resolve_enemies` (`arena_launch.py`), a persistent **NPC that carries a
+`stat_block`** is routed through the **statblock + rich-file** path
+(`enemy_from_statblock` → full kit + AI + portrait, with the rich
+`monsters/<id>.json` winning when present), then stamped persistent:
+`inst.entity_id = ent.id`, `inst.loot = []` (HP write-back, no loot — the
+recurring-foe policy `enemy_from_character` already follows). An NPC with no
+`stat_block` keeps the flat `enemy_from_character` mapping.
 
-- Look up the NPC's `StatBlock`, call `enemy_from_statblock(sb, portraits,
-  ai_profiles=..., pack_monster_dir=...)` (gets the full kit + AI + portrait),
-  **then stamp `inst.entity_id = ent.id`** so HP still writes back and loot stays
-  empty (persistent-foe policy, matching `enemy_from_character`).
-- Falls back to today's flat `enemy_from_character` only when the NPC has no
-  `stat_block`.
+Two refinements surfaced in implementation:
+
+- **Precedence reorder: template → persistent entity → stat block** (was
+  template → stat block → entity). A creature-NPC whose id matches her stat block
+  (Seraphel/`seraphel`) otherwise resolved via the stat-block branch as an
+  *ephemeral* copy — no entity_id, dropped loot, count > 1. Checking the repo
+  first makes "is it a persistent entity?" the single decider; generic monsters
+  ('a pack of wolves') aren't repo entities, so they fall through unchanged.
+  Entity match is **exact-id only**, so the DM's descriptive naming still resolves
+  as a stat block.
+- **NPC→stat_block map on the session.** The runtime `Character` drops the
+  `stat_block` ref, so the loader now exposes `LoadedWorld.npc_statblocks`
+  (`{npc id -> StatBlock id}`), threaded onto `Session.npc_statblocks`. This maps
+  the entity back to its block *explicitly* (no id==id convention), and supports a
+  creature-NPC whose id differs from its stat block id (e.g. cloned creatures).
+- **Identity preserved:** the combatant keeps the NPC's own name (`Seraphel`),
+  not the stat block's species label (`Ancient Blue Dragon`).
 
 This is the seam that makes Seraphel breathe lightning instead of swinging for
 1d4. Small, surgical, well-tested.

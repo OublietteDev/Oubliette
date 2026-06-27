@@ -16,7 +16,7 @@ old `seed.seed_world()`. Authored canon for NPCs/places is a later step.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
@@ -83,6 +83,11 @@ class LoadedWorld:
     bestiary_gate: "BestiaryGate | None" = None   # per-world bestiary knowledge cutoff (manifest)
     quests: tuple = ()             # the pack's authored quests (offered during play, not canon)
     ai_profiles: tuple = ()        # the pack's authored AI personalities (Forge-authored monster behavior)
+    # Forge Phase 4a: {npc entity id -> its StatBlock id}, only for NPCs that carry
+    # one. Lets the combat bridge give a recurring creature-NPC (Seraphel) her full
+    # statblock kit *with* persistent-entity semantics — the runtime Character drops
+    # the stat_block ref, so this is how the entity is mapped back to its block.
+    npc_statblocks: dict = field(default_factory=dict)
 
 
 # --- file reading ------------------------------------------------------------
@@ -401,4 +406,5 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
         pack_name=manifest.name, statblocks=tuple(statblocks),
         bestiary_gate=manifest.bestiary_gate, quests=tuple(quests),
         ai_profiles=tuple(ai_profiles),
+        npc_statblocks={n.id: n.stat_block for n in npcs if n.stat_block},
     )
