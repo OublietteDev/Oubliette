@@ -792,10 +792,26 @@ FastAPI + vanilla-JS single-page app (`oubliette/creator/`), editors are modal f
   `arena/models` needn't import `AIProfile`, and it survives the serialized-encounter trip to the
   standalone Arena process). `controller._get_profile` prefers `ai_profile_inline` (builds `AIProfile(
   **inline)`, falls back on malformed), else the named preset, else default. Preset names ride as the
-  string (no inline). Tests: `tests/test_arena_bridge.py` (+3). NEXT in 2b: (1) the editor UI (easy/pro
-  modes) in `oubliette/creator/static/index.html`; (2) a personality dropdown in the statblock editor.
+  string (no inline). Tests: `tests/test_arena_bridge.py` (+3).
 
-  Then Phase 3 = monster editor (attach a profile by name). See `oubliette-ai-forge-arc` memory.
+- **Phase 2b — Editor UI (DONE, browser-verified 2026-06-27). FORGE PHASE 2 COMPLETE.** The
+  "AI Personalities" editor in `oubliette/creator/static/index.html` (registered as a content kind in
+  ORDER/TITLES/SINGULAR/EDITABLE + FORMS/WIRES/CONFIRMS, like every other editor). **Easy mode** = 4
+  plain-English questions (How brave? Who does it hunt? How does it fight? Protects allies?) + a row of
+  preset buttons (Berserker/Archer/Battle-mage/Coward/Bodyguard); **Pro mode** = the 13 `AIProfile`
+  knobs. Both write the SAME inputs: the Pro inputs are the single source of truth; easy answers and
+  presets call `aipApply()` on them; `confirmAiProfile` reads the Pro inputs. Easy answers map via
+  `AIP_EASY`, presets via `AIP_PRESETS`, defaults `AIP_DEFAULTS`; `aipDeriveEasy` best-effort fills the
+  easy dropdowns when editing. The **creature form** gained a personality dropdown
+  (`aiProfileOptions`: Default + built-in styles + this world's custom profiles) read into
+  `statblock.ai_profile`; `describe()` shows the chosen personality on the card. Verified live via the
+  preview browser: no console errors, create a "Cowardly Goblin" (preset + easy override), it appears
+  in the creature dropdown, attaches to a creature, card updates. The full loop works:
+  author personality → tag a creature → (bridge already) → it fights that way in the Arena.
+  No new Python tests (pure frontend; server/loader/bridge already covered). Oubliette 481 / Arena 2411.
+
+  **→ NEXT: Phase 3 — the monster editor** (richer creature authoring; the personality dropdown is
+  already in place). See `oubliette-ai-forge-arc` memory.
 
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a
 repository abstraction; async edges / sync core; LLM-first routing behind the model seam;

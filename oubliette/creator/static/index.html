@@ -266,12 +266,13 @@
 
 <script>
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const EDITABLE = new Set(["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios"]);
+const EDITABLE = new Set(["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios", "ai_profiles"]);
 const SINGULAR = { items: "item", statblocks: "creature", npcs: "character", places: "place",
-                   lore: "lore entry", quests: "quest", scenarios: "opening" };
+                   lore: "lore entry", quests: "quest", scenarios: "opening", ai_profiles: "personality" };
 const TITLES = { items: "Items", statblocks: "Creatures", npcs: "Characters & NPCs",
-                 places: "Places", lore: "Lore", quests: "Quests", scenarios: "Opening setup" };
-const ORDER = ["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios"];
+                 places: "Places", lore: "Lore", quests: "Quests", scenarios: "Opening setup",
+                 ai_profiles: "AI Personalities" };
+const ORDER = ["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios", "ai_profiles"];
 const CATEGORIES = ["weapon", "armor", "gear", "consumable", "treasure", "misc"];
 const SLOTS = ["", "main_hand", "off_hand", "body", "feet", "hands", "waist", "head", "neck", "ring"];
 const ARMOR_TYPES = ["light", "medium", "heavy", "shield"];
@@ -360,7 +361,16 @@ function describe(kind, e) {
     if (e.weapon) bits.push(`weapon ${e.weapon.damage}`);
     return bits.filter(Boolean).join(" · ") + (e.description ? ` — ${e.description}` : "");
   }
-  if (kind === "statblocks") return `${e.kind} · ${e.hp} HP · defense ${e.armor_class} · worth ${e.xp} XP`;
+  if (kind === "statblocks") {
+    const prof = e.ai_profile ? ` · ${describeProfileRef(e.ai_profile)}` : "";
+    return `${e.kind} · ${e.hp} HP · defense ${e.armor_class} · worth ${e.xp} XP${prof}`;
+  }
+  if (kind === "ai_profiles") {
+    const brave = e.aggression >= 1.5 ? "reckless" : e.will_flee ? "flees when hurt" : e.aggression <= 0.85 ? "cautious" : "steady";
+    const range = e.prefers_melee ? "melee" : "ranged";
+    const tgt = e.focuses_spellcasters ? "hunts casters" : `targets ${e.target_priority || "nearest"}`;
+    return `${brave} · ${range} · ${tgt}${e.protects_allies ? " · guards allies" : ""}`;
+  }
   if (kind === "npcs") {
     const where = e.home_location ? ` · lives at ${placeName(e.home_location)}` : "";
     const shop = e.price_list && Object.keys(e.price_list).length ? ` · sells ${Object.keys(e.price_list).length} item(s)` : "";
@@ -588,9 +598,9 @@ function openEditor(kind, index) {
   if (kind === "npcs") editorCtx.inv = buildInvRows(original);
   if (kind === "quests") editorCtx.branches = ((original?.branches) || []).map(b => ({ ...b }));
 
-  const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, lore: loreForm, quests: questForm, scenarios: scenarioForm };
-  const WIRES = { statblocks: wireStatblockForm, npcs: wireNpcForm, places: wirePlaceForm, items: wireItemForm, quests: wireQuestForm };
-  const CONFIRMS = { items: confirmItem, statblocks: confirmStatblock, npcs: confirmNpc, places: confirmPlace, lore: confirmLore, quests: confirmQuest, scenarios: confirmScenario };
+  const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, lore: loreForm, quests: questForm, scenarios: scenarioForm, ai_profiles: aiProfileForm };
+  const WIRES = { statblocks: wireStatblockForm, npcs: wireNpcForm, places: wirePlaceForm, items: wireItemForm, quests: wireQuestForm, ai_profiles: wireAiProfileForm };
+  const CONFIRMS = { items: confirmItem, statblocks: confirmStatblock, npcs: confirmNpc, places: confirmPlace, lore: confirmLore, quests: confirmQuest, scenarios: confirmScenario, ai_profiles: confirmAiProfile };
 
   const modal = document.getElementById("modal");
   modal.innerHTML = FORMS[kind](original);
@@ -1008,6 +1018,8 @@ function statblockForm(sb) {
           field(k.toUpperCase(), `<input id="f_ab_${k}" type="number" value="${A(k)}" />`)).join("")}</div></div>
       ${field("Skills", `<input id="f_skills" value="${esc((v.skills || []).join(", "))}" placeholder="stealth, perception" />`, "Optional, comma-separated.")}
       ${field("Special traits", `<input id="f_traits" value="${esc((v.traits || []).join(", "))}" placeholder="keen senses" />`, "Optional, comma-separated.")}
+      ${field("Personality (how it fights)", `<select id="f_ai_profile">${aiProfileOptions(v.ai_profile)}</select>`,
+              "Its battle behaviour. Built-in styles, or a personality you authored in “AI Personalities”. Competence (its attacks, spells, breath) is always automatic.")}
       <div class="subform"><div class="sftitle">Loot dropped</div>
         ${field("Gold", `<input id="f_gold" type="number" min="0" value="${gold}" placeholder="(optional)" />`)}
         <div id="lootList"></div>
@@ -1057,7 +1069,173 @@ function confirmStatblock(original) {
   if (loot.length) base.loot = loot; else delete base.loot;
   const desc = document.getElementById("f_desc").value.trim();
   if (desc) base.description = desc; else delete base.description;
+  const prof = document.getElementById("f_ai_profile").value;
+  if (prof) base.ai_profile = prof; else delete base.ai_profile;
   commitEntry("statblocks", original, base);
+}
+
+// ---- AI personality editor ----
+// Reusable monster behaviour. Competence (attacks/spells/breath) is automatic; a
+// personality only shapes HOW a creature fights. Two ways in: Easy (a few plain
+// questions that set the dials) and Pro (the dials themselves). Both write the
+// same knobs; Easy answers and presets just call aipApply() on the Pro inputs,
+// which are the single source of truth read on confirm.
+const AIP_DEFAULTS = { aggression: 1.0, self_preservation: 1.0, target_priority: "nearest",
+  focuses_spellcasters: false, prefers_melee: true, uses_area_attacks: true, maintains_distance: 0,
+  flanks_when_possible: true, avoids_opportunity_attacks: true, protects_allies: false,
+  uses_limited_abilities: 0.5, retreat_threshold: 0.25, will_flee: false };
+const AIP_EASY = {
+  brave: { reckless: { aggression: 1.8, self_preservation: 0.3, will_flee: false, retreat_threshold: 0.1 },
+           steady:   { aggression: 1.0, self_preservation: 1.0, will_flee: false, retreat_threshold: 0.25 },
+           cautious: { aggression: 0.8, self_preservation: 1.2, will_flee: true,  retreat_threshold: 0.35 },
+           cowardly: { aggression: 0.5, self_preservation: 1.5, will_flee: true,  retreat_threshold: 0.5 } },
+  hunt:  { closest: { target_priority: "nearest", focuses_spellcasters: false },
+           weakest: { target_priority: "weakest", focuses_spellcasters: false },
+           threat:  { target_priority: "threatening", focuses_spellcasters: false },
+           casters: { target_priority: "threatening", focuses_spellcasters: true } },
+  fight: { melee:  { prefers_melee: true,  maintains_distance: 0,  avoids_opportunity_attacks: false },
+           ranged: { prefers_melee: false, maintains_distance: 30, avoids_opportunity_attacks: true } },
+  protect: { no: { protects_allies: false }, yes: { protects_allies: true } },
+};
+const AIP_PRESETS = {
+  berserker:   { label: "Berserker",  knobs: { aggression: 1.8, self_preservation: 0.3, will_flee: false, retreat_threshold: 0.1 }, easy: { brave: "reckless", hunt: "closest", fight: "melee", protect: "no" } },
+  archer:      { label: "Archer",     knobs: { prefers_melee: false, maintains_distance: 60, avoids_opportunity_attacks: true }, easy: { brave: "steady", hunt: "weakest", fight: "ranged", protect: "no" } },
+  spellcaster: { label: "Battle-mage", knobs: { aggression: 0.8, prefers_melee: false, maintains_distance: 30, uses_limited_abilities: 0.8, uses_area_attacks: true, focuses_spellcasters: true }, easy: { brave: "cautious", hunt: "casters", fight: "ranged", protect: "no" } },
+  coward:      { label: "Coward",     knobs: { aggression: 0.5, self_preservation: 1.5, retreat_threshold: 0.5, will_flee: true }, easy: { brave: "cowardly", hunt: "closest", fight: "melee", protect: "no" } },
+  protector:   { label: "Bodyguard",  knobs: { aggression: 0.7, protects_allies: true, target_priority: "threatening" }, easy: { brave: "steady", hunt: "threat", fight: "melee", protect: "yes" } },
+};
+const _AIP_BRAVE = { reckless: "Reckless — charges in", steady: "Steady — fights normally", cautious: "Cautious — hangs back", cowardly: "Cowardly — flees when hurt" };
+const _AIP_HUNT = { closest: "Whoever's closest", weakest: "The weakest", threat: "The biggest threat", casters: "Spellcasters first" };
+const _AIP_FIGHT = { melee: "Up close", ranged: "At range" };
+const _AIP_PROTECT = { no: "No — every monster for itself", yes: "Yes — guards its allies" };
+
+// A friendly label for a creature's personality reference (preset or custom id).
+function describeProfileRef(ref) {
+  const builtin = { berserker: "Berserker", archer: "Archer", spellcaster: "Battle-mage",
+    coward: "Coward", protector: "Bodyguard", default_monster: "Default" };
+  if (builtin[ref]) return builtin[ref];
+  const c = listOf("ai_profiles").find(p => p.id === ref);
+  return c ? c.name : ref;
+}
+
+// Options for the creature form's personality dropdown (built-ins + this world's).
+function aiProfileOptions(sel) {
+  const b = { berserker: "Berserker (reckless brawler)", archer: "Archer (ranged skirmisher)",
+    spellcaster: "Battle-mage (blasts groups)", coward: "Coward (flees when hurt)", protector: "Bodyguard (guards allies)" };
+  let html = `<option value=""${!sel ? " selected" : ""}>Default — steady monster</option>`;
+  html += `<optgroup label="Built-in styles">` + Object.keys(b).map(k =>
+    `<option value="${k}"${sel === k ? " selected" : ""}>${b[k]}</option>`).join("") + `</optgroup>`;
+  const custom = listOf("ai_profiles");
+  if (custom.length) html += `<optgroup label="This world's personalities">` + custom.map(p =>
+    `<option value="${esc(p.id)}"${sel === p.id ? " selected" : ""}>${esc(p.name || p.id)}</option>`).join("") + `</optgroup>`;
+  return html;
+}
+
+function aipDeriveEasy(v) {
+  const g = k => (v[k] != null ? v[k] : AIP_DEFAULTS[k]);
+  const agg = g("aggression");
+  const brave = agg >= 1.5 ? "reckless"
+    : g("will_flee") ? (g("self_preservation") >= 1.4 ? "cowardly" : "cautious")
+    : (agg <= 0.85 ? "cautious" : "steady");
+  const hunt = g("focuses_spellcasters") ? "casters"
+    : ({ nearest: "closest", weakest: "weakest", strongest: "threat", threatening: "threat", random: "closest" }[g("target_priority")] || "closest");
+  return { brave, hunt, fight: g("prefers_melee") ? "melee" : "ranged", protect: g("protects_allies") ? "yes" : "no" };
+}
+
+function aiProfileForm(p) {
+  const v = p || {};
+  const g = k => (v[k] != null ? v[k] : AIP_DEFAULTS[k]);
+  const opts = (m, cur) => Object.keys(m).map(k => `<option value="${k}"${cur === k ? " selected" : ""}>${m[k]}</option>`).join("");
+  const num = (id, lbl, min, max, step, help) => field(lbl, `<input id="f_ap_${id}" type="number" min="${min}" max="${max}" step="${step}" value="${g(id)}" />`, help);
+  const bool = (id, lbl, help) => field(lbl, `<label style="display:flex;align-items:center;gap:6px;font-weight:400"><input id="f_ap_${id}" type="checkbox" ${g(id) ? "checked" : ""}/> yes</label>`, help);
+  const sel = (id, lbl, choices, help) => field(lbl, `<select id="f_ap_${id}">${choices.map(o => `<option value="${o}"${g(id) === o ? " selected" : ""}>${o}</option>`).join("")}</select>`, help);
+  const e = aipDeriveEasy(v);
+  const pro = `
+    <div class="row2">${num("aggression", "Aggression", 0, 2, 0.1, "0 = defensive · 1 = neutral · 2 = all-out")}${num("self_preservation", "Self-preservation", 0, 2, 0.1, "Higher = more careful with its own life")}</div>
+    ${sel("target_priority", "Target priority", ["nearest", "weakest", "strongest", "random", "threatening"], "Who it goes after first")}
+    <div class="row2">${bool("prefers_melee", "Prefers melee")}${num("maintains_distance", "Keeps distance (ft)", 0, 120, 5, "0 = closes to melee · 30–60 = kites")}</div>
+    <div class="row2">${bool("uses_area_attacks", "Uses area attacks")}${bool("focuses_spellcasters", "Hunts spellcasters")}</div>
+    <div class="row2">${bool("flanks_when_possible", "Flanks when possible")}${bool("avoids_opportunity_attacks", "Avoids opportunity attacks")}</div>
+    ${bool("protects_allies", "Protects its allies")}
+    <div class="row2">${num("uses_limited_abilities", "Spends limited abilities", 0, 1, 0.1, "0 = hoards · 1 = uses freely")}${num("retreat_threshold", "Flees below HP fraction", 0, 1, 0.05, "e.g. 0.5 = at half health")}</div>
+    ${bool("will_flee", "Will flee at all")}`;
+  return `
+    <div class="mhead">${p ? "Edit personality" : "New personality"}</div>
+    <div class="mbody">
+      ${field("Name", `<input id="f_name" value="${esc(v.name || "")}" placeholder="Cowardly Goblin" />`, "A label you'll pick when you build a creature.")}
+      <div style="display:flex;gap:6px;margin:4px 0 10px">
+        <button class="btn mini" type="button" data-mode="easy">Easy</button>
+        <button class="btn mini" type="button" data-mode="pro">Pro</button>
+      </div>
+      <div id="ap_easy">
+        <p class="help" style="margin-top:0">Answer a few questions — we'll set the dials. Or start from a preset, then tweak.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">${Object.keys(AIP_PRESETS).map(k => `<button class="btn mini" type="button" data-preset="${k}">${AIP_PRESETS[k].label}</button>`).join("")}</div>
+        <div class="row2">
+          ${field("How brave is it?", `<select id="ap_q_brave"><option value="">—</option>${opts(_AIP_BRAVE, e.brave)}</select>`)}
+          ${field("Who does it hunt?", `<select id="ap_q_hunt"><option value="">—</option>${opts(_AIP_HUNT, e.hunt)}</select>`)}
+        </div>
+        <div class="row2">
+          ${field("How does it fight?", `<select id="ap_q_fight"><option value="">—</option>${opts(_AIP_FIGHT, e.fight)}</select>`)}
+          ${field("Protects its allies?", `<select id="ap_q_protect"><option value="">—</option>${opts(_AIP_PROTECT, e.protect)}</select>`)}
+        </div>
+      </div>
+      <div id="ap_pro" style="display:none">
+        <p class="help" style="margin-top:0">The dials behind the questions. Competence (its attacks, spells, breath) is always automatic — these only shape behaviour.</p>
+        ${pro}
+      </div>
+      <div class="invalid" id="f_err"></div>
+    </div>
+    <div class="mfoot"><button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" data-confirm>${p ? "Update" : "Add"} personality</button></div>`;
+}
+
+function aipApply(obj) {
+  for (const k in obj) {
+    const el = document.getElementById("f_ap_" + k);
+    if (!el) continue;
+    if (el.type === "checkbox") el.checked = !!obj[k]; else el.value = obj[k];
+  }
+}
+function wireAiProfileForm() {
+  const easy = document.getElementById("ap_easy"), pro = document.getElementById("ap_pro");
+  document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => {
+    const isPro = b.dataset.mode === "pro";
+    pro.style.display = isPro ? "" : "none";
+    easy.style.display = isPro ? "none" : "";
+  }));
+  // An easy answer applies its dial-bundle onto the Pro inputs.
+  [["brave", "ap_q_brave"], ["hunt", "ap_q_hunt"], ["fight", "ap_q_fight"], ["protect", "ap_q_protect"]].forEach(([axis, id]) =>
+    document.getElementById(id).addEventListener("change", e => { if (e.target.value) aipApply(AIP_EASY[axis][e.target.value]); }));
+  // A preset fills everything (Pro inputs + the easy answers).
+  document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
+    const pr = AIP_PRESETS[b.dataset.preset];
+    aipApply({ ...AIP_DEFAULTS, ...pr.knobs });
+    for (const axis in pr.easy) { const s = document.getElementById("ap_q_" + axis); if (s) s.value = pr.easy[axis]; }
+  }));
+}
+function confirmAiProfile(original) {
+  const name = document.getElementById("f_name").value.trim();
+  const err = document.getElementById("f_err");
+  if (!name) { err.textContent = "Please name this personality."; return; }
+  const base = original ? { ...original } : {};
+  if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("ai_profiles").map(x => x.id)));
+  base.name = name;
+  const num = id => Number(document.getElementById("f_ap_" + id).value);
+  const bool = id => document.getElementById("f_ap_" + id).checked;
+  base.aggression = num("aggression");
+  base.self_preservation = num("self_preservation");
+  base.target_priority = document.getElementById("f_ap_target_priority").value;
+  base.focuses_spellcasters = bool("focuses_spellcasters");
+  base.prefers_melee = bool("prefers_melee");
+  base.uses_area_attacks = bool("uses_area_attacks");
+  base.maintains_distance = num("maintains_distance");
+  base.flanks_when_possible = bool("flanks_when_possible");
+  base.avoids_opportunity_attacks = bool("avoids_opportunity_attacks");
+  base.protects_allies = bool("protects_allies");
+  base.uses_limited_abilities = num("uses_limited_abilities");
+  base.retreat_threshold = num("retreat_threshold");
+  base.will_flee = bool("will_flee");
+  commitEntry("ai_profiles", original, base);
 }
 
 // ---- character / NPC form ----
