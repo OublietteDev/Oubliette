@@ -813,6 +813,46 @@ FastAPI + vanilla-JS single-page app (`oubliette/creator/`), editors are modal f
   **→ NEXT: Phase 3 — the monster editor** (richer creature authoring; the personality dropdown is
   already in place). See `oubliette-ai-forge-arc` memory.
 
+## Forge Phase 3 — the Monster Editor (started 2026-06-27)
+
+Plan: `docs/roadmap/oubliette-phase-3-monster-editor-plan-v0.1.md`. Goal: a non-coder can author a
+creature that actually fights well. **Key finding that shaped the phase:** "competence is free" only
+held for the 354 SRD monsters (each ships a full Arena combat file); a *brand-new* authored creature
+has no such file, so the bridge falls back to the flat `statblock_to_monster` mapping = ONE generic
+attack per turn. Ability scores / AC / HP / CR / damage resistances+immunities+vulns+condition-
+immunities DO carry; the *moves* don't. **Locked decisions (OublietteDev):** ships open-source → expose the
+engine's REAL combat primitives; escape hatch = structured **data + safe expressions, never
+executable code** (a downloaded pack must never run code); **architecture = Option A** — packs may
+carry the engine's real `Monster` JSON (`packs/<id>/monsters/<sb_id>.json`), the bridge already
+prefers a rich file via `arena_monster_file`, so "clone an existing creature" = copy+rename. Sequence:
+**3a** richer fields → **3b-1** bridge prefers pack combat file + server reads `monsters/` →
+**3b-2** clone → **3b-3** ability builder → **3b-4** advanced raw-data editor + `ai_use_condition`.
+
+- **Phase 3a — Richer identity & defense fields (DONE, browser-verified 2026-06-27, 485 green).**
+  The creature form (`oubliette/creator/static/index.html` `statblockForm`/`confirmStatblock`) now
+  exposes the StatBlock fields it omitted: size (select), type, alignment, **challenge rating** (the
+  standard 5e ladder 0–30 incl. 1/8–1/2; drives the bestiary gate), hit dice, AC note, **saving-throw
+  bonuses** (6-grid, optional), **speed** (walk/fly/swim/climb/burrow, ft → "N ft."), **damage
+  resistances / immunities / vulnerabilities / condition immunities** (the combat-honored star of 3a;
+  the flat mapping already reads these), senses (darkvision + passive perception), languages, and
+  portrait. Empty inputs delete their key (packs stay clean). The creature card (`describe`) now leads
+  with "Medium beast · CR 1/4 · …". Deferred to 3b (where it gains teeth): `skill_bonuses` numeric dict.
+  - **Fat-finger guard (OublietteDev's call):** fields the engine reads against a fixed vocabulary are now
+    **checkbox pick-lists**, not free text, so a typo can't silently no-op (or, for skills, hard-fail
+    the pack load — the loader validates skills). `checklist()`/`readChecklist()` helpers over
+    **13 damage types**, **15 SRD conditions**, **18 SRD skills** (token must match the engine), and
+    **16 standard languages** + a free-text "other" for prose cases (telepathy, "understands…").
+    Tokens verified against `arena/models/{conditions,actions}.py` + `oubliette/enums.py Skill`.
+    **Traits stay free text** by design — prose, no closed vocab, not parsed mechanically (real
+    mechanical specials come from the 3b ability builder).
+  - **Portrait picker:** a real file picker (mirrors the character sheet's flow) replaces the filename
+    text box. New Forge endpoints `POST/GET /api/pack/{id}/portrait/{…}` save raw bytes (format
+    preserved → PNG transparency survives) into the pack's `portraits/<id>.<ext>` — the same dir the
+    game + Arena read (`arena_bridge PortraitDirs.pack`). Keyed by creature id (slug of the name for a
+    not-yet-saved creature); the explicit `portrait` filename is stored so it resolves even if id/slug
+    diverge. Tests: `test_creator_server.py` (+4: upload/serve, replace-extension, bad-type, guards).
+    Browser-verified the full picker (choose → upload → preview loads → Remove), no console errors.
+
 **Foundational decisions that are settled** (don't relitigate without reason): SQLite behind a
 repository abstraction; async edges / sync core; LLM-first routing behind the model seam;
 provider-native structured output; only protected state + entity-creation are event-sourced

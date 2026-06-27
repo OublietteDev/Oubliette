@@ -375,3 +375,51 @@ def test_duplicate_ai_profile_ids_are_rejected(tmp_path, monkeypatch):
     v = r.json()["validation"]
     assert v["ok"] is False
     assert any("dup" in i for i in v["issues"])
+
+
+# --- creature portraits (Phase 3a) ------------------------------------------
+# A tiny valid 1x1 PNG (raw bytes), used to exercise the portrait upload path.
+_PNG_1x1 = bytes.fromhex(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+    "0000000a49444154789c6300010000050001 0d0a2db40000000049454e44ae426082".replace(" ", "")
+)
+
+
+def test_portrait_upload_stores_and_serves(tmp_path, monkeypatch):
+    packs = _temp_brightvale(tmp_path, monkeypatch)
+    r = client.post("/api/pack/brightvale/portrait/lean_wolf",
+                    content=_PNG_1x1, headers={"Content-Type": "image/png"})
+    assert r.status_code == 200 and r.json() == {"ok": True, "filename": "lean_wolf.png"}
+    # written into the pack's portraits/ dir, where the game + Arena read it
+    assert (packs / "brightvale" / "portraits" / "lean_wolf.png").read_bytes() == _PNG_1x1
+    # and served back for the editor's preview
+    g = client.get("/api/pack/brightvale/portrait/lean_wolf.png")
+    assert g.status_code == 200 and g.content == _PNG_1x1
+
+
+def test_portrait_upload_replaces_prior_extension(tmp_path, monkeypatch):
+    packs = _temp_brightvale(tmp_path, monkeypatch)
+    client.post("/api/pack/brightvale/portrait/lean_wolf",
+                content=_PNG_1x1, headers={"Content-Type": "image/png"})
+    # re-upload as a different format → the old-extension file is dropped
+    r = client.post("/api/pack/brightvale/portrait/lean_wolf",
+                    content=_PNG_1x1, headers={"Content-Type": "image/jpeg"})
+    assert r.json()["filename"] == "lean_wolf.jpg"
+    pdir = packs / "brightvale" / "portraits"
+    assert not (pdir / "lean_wolf.png").exists()
+    assert (pdir / "lean_wolf.jpg").exists()
+
+
+def test_portrait_upload_rejects_unsupported_type(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    r = client.post("/api/pack/brightvale/portrait/lean_wolf",
+                    content=b"<svg/>", headers={"Content-Type": "image/svg+xml"})
+    assert r.status_code == 400
+
+
+def test_portrait_endpoints_guard_unknown_pack_and_traversal(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    assert client.post("/api/pack/nope/portrait/x", content=_PNG_1x1,
+                       headers={"Content-Type": "image/png"}).status_code == 404
+    # a traversal-y filename on the GET must not resolve
+    assert client.get("/api/pack/brightvale/portrait/..%2F..%2Fpack.json").status_code == 404

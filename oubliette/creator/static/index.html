@@ -164,6 +164,18 @@
   .shop-row { display: grid; grid-template-columns: 1fr 64px 80px auto; gap: 8px; margin-bottom: 8px; align-items: center; }
   .ability-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .ability-grid .field { margin-bottom: 0; }
+  /* pick-from-a-fixed-list checkbox groups (damage types, conditions, skills, languages) */
+  .chk-group { display: flex; flex-wrap: wrap; gap: 7px 16px; }
+  .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink);
+    cursor: pointer; white-space: nowrap; }
+  .chk input { width: auto; flex: none; margin: 0; accent-color: var(--accent); }
+  /* creature portrait picker — preview chip + choose/remove */
+  .portrait-pick { display: flex; align-items: center; gap: 12px; }
+  .portrait-prev { width: 64px; height: 64px; flex: none; border-radius: 10px; object-fit: cover;
+    border: 1px solid var(--line); background: var(--bg); }
+  .portrait-prev.is-empty { border-style: dashed; }
+  .portrait-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+  .portrait-actions label.btn { cursor: pointer; }
   .invalid { color: var(--bad); font-size: 12px; margin-top: 6px; min-height: 16px; }
   /* illustration preview — mirrors the game's quest-card image frame so "fit" is honest */
   .illus-frame { width: 100%; height: 175px; background: var(--bg); border: 1px solid var(--line);
@@ -363,7 +375,10 @@ function describe(kind, e) {
   }
   if (kind === "statblocks") {
     const prof = e.ai_profile ? ` · ${describeProfileRef(e.ai_profile)}` : "";
-    return `${e.kind} · ${e.hp} HP · defense ${e.armor_class} · worth ${e.xp} XP${prof}`;
+    const crLab = e.cr == null ? "" : (CR_LABEL[String(e.cr)] || String(e.cr));
+    const idy = [e.size, e.type].filter(Boolean).join(" ");
+    const head = [idy, crLab ? `CR ${crLab}` : ""].filter(Boolean).join(" · ");
+    return `${head ? head + " · " : ""}${e.kind} · ${e.hp} HP · defense ${e.armor_class} · worth ${e.xp} XP${prof}`;
   }
   if (kind === "ai_profiles") {
     const brave = e.aggression >= 1.5 ? "reckless" : e.will_flee ? "flees when hurt" : e.aggression <= 0.85 ? "cautious" : "steady";
@@ -594,7 +609,7 @@ function openEditor(kind, index) {
     editorCtx.image = original?.image || null;
     editorCtx.sounds = ((original?.sounds) || []).map(c => ({ ...c }));
   }
-  if (kind === "statblocks") editorCtx.loot = ((original?.loot) || []).filter(l => l.item).map(l => ({ item: l.item, qty: l.qty || 1 }));
+  if (kind === "statblocks") { editorCtx.loot = ((original?.loot) || []).filter(l => l.item).map(l => ({ item: l.item, qty: l.qty || 1 })); editorCtx.statblockId = original?.id || null; }
   if (kind === "npcs") editorCtx.inv = buildInvRows(original);
   if (kind === "quests") editorCtx.branches = ((original?.branches) || []).map(b => ({ ...b }));
 
@@ -991,10 +1006,63 @@ function confirmPlace(original) {
 }
 
 // ---- creature (stat block) form ----
+// Sizes + the standard 5e challenge-rating ladder (value = the number stored,
+// label = the friendly fraction). "" = unset.
+const CREATURE_SIZES = ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan"];
+const CR_CHOICES = [["", "(unset)"], ["0", "0"], ["0.125", "1/8"], ["0.25", "1/4"], ["0.5", "1/2"],
+  ...Array.from({ length: 30 }, (_, i) => [String(i + 1), String(i + 1)])];
+// value → friendly label (so the card shows "CR 1/4" not "CR 0.25").
+const CR_LABEL = Object.fromEntries(CR_CHOICES.filter(([v]) => v !== "").map(([v, l]) => [v, l]));
+// Pull a feet count out of a stored speed/sense string like "60 ft." → "60".
+const ftNum = s => { const m = String(s ?? "").match(/-?\d+/); return m ? m[0] : ""; };
+
+// --- closed vocabularies (3a polish) ----------------------------------------
+// Pickable lists for fields the engine reads against a fixed set, so an author
+// can't fat-finger "sychic" and have it silently do nothing (or, for skills,
+// hard-fail the pack load). Values must match the engine tokens exactly.
+const DAMAGE_TYPES = ["acid","bludgeoning","cold","fire","force","lightning","necrotic",
+  "piercing","poison","psychic","radiant","slashing","thunder"];
+const CONDITIONS = ["blinded","charmed","deafened","exhaustion","frightened","grappled",
+  "incapacitated","invisible","paralyzed","petrified","poisoned","prone","restrained",
+  "stunned","unconscious"];
+// SRD skills — value = engine token, label = friendly. The loader validates these
+// (a typo is a load error), so the dropdown is a real crash-guard.
+const SKILLS = [["acrobatics","Acrobatics"],["animal_handling","Animal Handling"],["arcana","Arcana"],
+  ["athletics","Athletics"],["deception","Deception"],["history","History"],["insight","Insight"],
+  ["intimidation","Intimidation"],["investigation","Investigation"],["medicine","Medicine"],
+  ["nature","Nature"],["perception","Perception"],["performance","Performance"],["persuasion","Persuasion"],
+  ["religion","Religion"],["sleight_of_hand","Sleight of Hand"],["stealth","Stealth"],["survival","Survival"]];
+// Standard SRD languages. Display-only (can't crash), so the form also keeps a
+// free-text "other" for the cases the SRD writes in prose (telepathy, "understands…").
+const LANGUAGES = ["Common","Dwarvish","Elvish","Giant","Gnomish","Goblin","Halfling","Orc",
+  "Abyssal","Celestial","Draconic","Deep Speech","Infernal","Primordial","Sylvan","Undercommon"];
+
+// A wrapped checkbox group. `options` is a list of "value" strings or [value,label]
+// pairs; `selected` pre-checks by case-insensitive value. Read back with readChecklist(groupId).
+function checklist(groupId, options, selected) {
+  const sel = new Set((selected || []).map(s => String(s).toLowerCase().trim()));
+  return `<div class="chk-group" id="${groupId}">${options.map(o => {
+    const [val, lab] = Array.isArray(o) ? o : [o, o];
+    return `<label class="chk"><input type="checkbox" value="${esc(val)}"${
+      sel.has(String(val).toLowerCase()) ? " checked" : ""}>${esc(lab)}</label>`;
+  }).join("")}</div>`;
+}
+const readChecklist = groupId => [...document.querySelectorAll(`#${groupId} input:checked`)].map(i => i.value);
+// Languages are stored as ONE comma string; split a free-text "other" remainder
+// (anything not in the standard list) back out so it round-trips into its own box.
+function splitLanguages(s) {
+  const parts = String(s || "").split(",").map(x => x.trim()).filter(Boolean);
+  const stdLower = new Set(LANGUAGES.map(l => l.toLowerCase()));
+  return { std: parts.filter(p => stdLower.has(p.toLowerCase())),
+           other: parts.filter(p => !stdLower.has(p.toLowerCase())).join(", ") };
+}
+
 function statblockForm(sb) {
-  const v = sb || {}, ab = v.abilities || {};
+  const v = sb || {}, ab = v.abilities || {}, sv = v.saves || {}, spd = v.speed || {}, sen = v.senses || {};
   const A = k => ab[k] ?? 10;
   const gold = (v.loot || []).find(l => l.gold != null)?.gold ?? "";
+  const crSel = v.cr == null ? "" : String(v.cr);
+  const _langSplit = splitLanguages(v.languages);
   return `
     <div class="mhead">${sb ? "Edit creature" : "New creature"}</div>
     <div class="mbody">
@@ -1005,9 +1073,26 @@ function statblockForm(sb) {
             <option value="npc"${v.kind === "npc" ? " selected" : ""}>townsfolk (npc)</option></select>`)}
         ${field("Worth (XP)", `<input id="f_xp" type="number" min="0" value="${v.xp ?? 0}" />`)}
       </div>
+      <div class="subform"><div class="sftitle">What it is</div>
+        <div class="row2">
+          ${field("Size", `<select id="f_size"><option value="">(unset)</option>${CREATURE_SIZES.map(s =>
+            `<option value="${s}"${s === (v.size || "") ? " selected" : ""}>${s}</option>`).join("")}</select>`)}
+          ${field("Challenge rating", `<select id="f_cr">${CR_CHOICES.map(([val, lab]) =>
+            `<option value="${val}"${val === crSel ? " selected" : ""}>${lab}</option>`).join("")}</select>`,
+            "How tough it is, 5e-style. Also drives the bestiary knowledge gate.")}
+        </div>
+        <div class="row2">
+          ${field("Type", `<input id="f_type" value="${esc(v.type || "")}" placeholder="beast, dragon, humanoid…" />`)}
+          ${field("Alignment", `<input id="f_align" value="${esc(v.alignment || "")}" placeholder="chaotic evil, unaligned…" />`)}
+        </div>
+      </div>
       <div class="row2">
         ${field("Health (HP)", `<input id="f_hp" type="number" min="1" value="${v.hp ?? 8}" />`)}
         ${field("Defense (AC)", `<input id="f_ac" type="number" value="${v.armor_class ?? 10}" />`)}
+      </div>
+      <div class="row2">
+        ${field("Hit dice", `<input id="f_hitdice" value="${esc(v.hit_dice || "")}" placeholder="4d8+8 (optional)" />`, "How its HP is rolled. Display only.")}
+        ${field("Defense note", `<input id="f_acdesc" value="${esc(v.ac_desc || "")}" placeholder="natural armor (optional)" />`, "Where its AC comes from. Display only.")}
       </div>
       <div class="row2">
         ${field("Attack bonus", `<input id="f_atk" type="number" value="${v.attack_bonus ?? 0}" />`)}
@@ -1016,10 +1101,42 @@ function statblockForm(sb) {
       <div class="subform"><div class="sftitle">Ability scores</div>
         <div class="ability-grid">${["str","dex","con","int","wis","cha"].map(k =>
           field(k.toUpperCase(), `<input id="f_ab_${k}" type="number" value="${A(k)}" />`)).join("")}</div></div>
-      ${field("Skills", `<input id="f_skills" value="${esc((v.skills || []).join(", "))}" placeholder="stealth, perception" />`, "Optional, comma-separated.")}
-      ${field("Special traits", `<input id="f_traits" value="${esc((v.traits || []).join(", "))}" placeholder="keen senses" />`, "Optional, comma-separated.")}
+      <div class="subform"><div class="sftitle">Saving throw bonuses <span style="font-weight:400;opacity:.6">— optional</span></div>
+        <div class="ability-grid">${["str","dex","con","int","wis","cha"].map(k =>
+          field(k.toUpperCase(), `<input id="f_sv_${k}" type="number" value="${sv[k] ?? ""}" placeholder="—" />`)).join("")}</div></div>
+      <div class="subform"><div class="sftitle">Speed <span style="font-weight:400;opacity:.6">— feet</span></div>
+        <div class="ability-grid">${[["walk","Walk"],["fly","Fly"],["swim","Swim"],["climb","Climb"],["burrow","Burrow"]].map(([k, lab]) =>
+          field(lab, `<input id="f_spd_${k}" type="number" min="0" value="${ftNum(spd[k])}" placeholder="${k === "walk" ? "30" : "—"}" />`)).join("")}</div></div>
+      <div class="subform"><div class="sftitle">Defenses <span style="font-weight:400;opacity:.6">— tick any that apply</span></div>
+        ${field("Resistances", checklist("f_res", DAMAGE_TYPES, v.damage_resistances), "Takes half damage from these.")}
+        ${field("Immunities", checklist("f_imm", DAMAGE_TYPES, v.damage_immunities), "Takes no damage from these.")}
+        ${field("Vulnerabilities", checklist("f_vuln", DAMAGE_TYPES, v.damage_vulnerabilities), "Takes double damage from these.")}
+        ${field("Condition immunities", checklist("f_cond", CONDITIONS, v.condition_immunities), "Can't be affected by these conditions.")}
+      </div>
+      <div class="row2">
+        ${field("Darkvision (ft)", `<input id="f_darkvision" type="number" min="0" value="${ftNum(sen.darkvision)}" placeholder="(optional)" />`)}
+        ${field("Passive perception", `<input id="f_passperc" type="number" min="0" value="${ftNum(sen.passive_perception)}" placeholder="(optional)" />`)}
+      </div>
+      <div class="subform"><div class="sftitle">Languages <span style="font-weight:400;opacity:.6">— optional</span></div>
+        ${checklist("f_langs", LANGUAGES, _langSplit.std)}
+        <div style="margin-top:9px">${field("Other", `<input id="f_langs_other" value="${esc(_langSplit.other)}" placeholder="telepathy 60 ft., understands Common…" />`, "Anything not in the list above. Use “—” for none.")}</div>
+      </div>
+      <div class="subform"><div class="sftitle">Skills <span style="font-weight:400;opacity:.6">— what it's proficient in</span></div>
+        ${checklist("f_skills", SKILLS, v.skills)}</div>
+      ${field("Special traits", `<input id="f_traits" value="${esc((v.traits || []).join(", "))}" placeholder="keen senses, pack tactics" />`, "Free-form notes, comma-separated. Real mechanical abilities (extra attacks, breath weapons) come from the attacks editor.")}
       ${field("Personality (how it fights)", `<select id="f_ai_profile">${aiProfileOptions(v.ai_profile)}</select>`,
               "Its battle behaviour. Built-in styles, or a personality you authored in “AI Personalities”. Competence (its attacks, spells, breath) is always automatic.")}
+      ${field("Portrait", `
+        <div class="portrait-pick">
+          <img id="f_portrait_img" class="portrait-prev${v.portrait ? "" : " is-empty"}"${
+            v.portrait ? ` src="/api/pack/${encodeURIComponent(state.id)}/portrait/${encodeURIComponent(v.portrait)}?t=${Date.now()}"` : ""} alt="">
+          <div class="portrait-actions">
+            <label class="btn mini">Choose image…<input type="file" id="f_portrait_file" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none"></label>
+            <button class="btn mini danger" type="button" id="f_portrait_clear"${v.portrait ? "" : ' style="display:none"'}>Remove</button>
+            <span id="f_portrait_name" class="help" style="margin:0">${v.portrait ? esc(v.portrait) : "No portrait — a silhouette is used in play."}</span>
+          </div>
+          <input type="hidden" id="f_portrait" value="${esc(v.portrait || "")}">
+        </div>`, "Pick an image from your computer — it's saved into this world's portraits/ folder.")}
       <div class="subform"><div class="sftitle">Loot dropped</div>
         ${field("Gold", `<input id="f_gold" type="number" min="0" value="${gold}" placeholder="(optional)" />`)}
         <div id="lootList"></div>
@@ -1045,6 +1162,37 @@ function renderLoot() {
 function wireStatblockForm() {
   renderLoot();
   document.getElementById("addLoot").addEventListener("click", () => { editorCtx.loot.push({ item: "", qty: 1 }); renderLoot(); });
+  const fileInp = document.getElementById("f_portrait_file");
+  if (fileInp) fileInp.addEventListener("change", () => { if (fileInp.files[0]) uploadCreaturePortrait(fileInp.files[0]); });
+  const clearBtn = document.getElementById("f_portrait_clear");
+  if (clearBtn) clearBtn.addEventListener("click", setCreaturePortrait.bind(null, ""));
+}
+// Saves the picked image into the pack's portraits/ folder (keyed by the creature's
+// id, or a slug of its name for a not-yet-saved creature) and stores the filename.
+// The file IS written to disk on pick (like the map background) — "Save world" then
+// records the reference; the silhouette returns if you Remove it.
+async function uploadCreaturePortrait(file) {
+  const id = (editorCtx && editorCtx.statblockId) || slugify((document.getElementById("f_name").value || "").trim());
+  if (!id) { toast("Give the creature a name first, then add a portrait."); return; }
+  try {
+    const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/portrait/${encodeURIComponent(id)}`, {
+      method: "POST", headers: { "Content-Type": file.type }, body: file })).json();
+    if (res.error) { toast(res.error); return; }
+    setCreaturePortrait(res.filename);
+  } catch (e) { toast(String(e.message || e)); }
+}
+function setCreaturePortrait(filename) {
+  document.getElementById("f_portrait").value = filename || "";
+  const img = document.getElementById("f_portrait_img");
+  const nm = document.getElementById("f_portrait_name");
+  const clearBtn = document.getElementById("f_portrait_clear");
+  if (filename) {
+    img.src = `/api/pack/${encodeURIComponent(state.id)}/portrait/${encodeURIComponent(filename)}?t=${Date.now()}`;
+    img.classList.remove("is-empty"); nm.textContent = filename; clearBtn.style.display = "";
+  } else {
+    img.removeAttribute("src"); img.classList.add("is-empty");
+    nm.textContent = "No portrait — a silhouette is used in play."; clearBtn.style.display = "none";
+  }
 }
 function confirmStatblock(original) {
   const name = document.getElementById("f_name").value.trim();
@@ -1060,8 +1208,35 @@ function confirmStatblock(original) {
   base.attack_bonus = Number(document.getElementById("f_atk").value || 0);
   base.damage = document.getElementById("f_dmg").value.trim() || "1d4";
   base.xp = Number(document.getElementById("f_xp").value || 0);
-  const skills = csv(document.getElementById("f_skills").value), traits = csv(document.getElementById("f_traits").value);
-  if (skills.length) base.skills = skills; else delete base.skills;
+  // --- identity (3a): set when given, else drop the key to keep packs clean ---
+  const setStr = (key, id) => { const t = document.getElementById(id).value.trim(); if (t) base[key] = t; else delete base[key]; };
+  setStr("size", "f_size"); setStr("type", "f_type"); setStr("alignment", "f_align");
+  setStr("hit_dice", "f_hitdice"); setStr("ac_desc", "f_acdesc"); setStr("portrait", "f_portrait");
+  // languages = ticked standard ones + the free-text "other", joined into one string
+  const langs = [...readChecklist("f_langs"), ...csv(document.getElementById("f_langs_other").value)];
+  if (langs.length) base.languages = langs.join(", "); else delete base.languages;
+  const crRaw = document.getElementById("f_cr").value;
+  if (crRaw !== "") base.cr = Number(crRaw); else delete base.cr;
+  // --- saving throw bonuses: only the abilities the author filled in ---
+  const saves = {};
+  ["str","dex","con","int","wis","cha"].forEach(k => { const t = document.getElementById("f_sv_" + k).value.trim(); if (t !== "") saves[k] = Number(t); });
+  if (Object.keys(saves).length) base.saves = saves; else delete base.saves;
+  // --- speed: feet inputs → "{n} ft." strings, only the filled lanes ---
+  const speed = {};
+  [["walk","f_spd_walk"],["fly","f_spd_fly"],["swim","f_spd_swim"],["climb","f_spd_climb"],["burrow","f_spd_burrow"]].forEach(([k, id]) => {
+    const t = document.getElementById(id).value.trim(); if (t !== "") speed[k] = `${Number(t)} ft.`; });
+  if (Object.keys(speed).length) base.speed = speed; else delete base.speed;
+  // --- senses: darkvision (ft) + passive perception (bare number) ---
+  const senses = {};
+  const dv = document.getElementById("f_darkvision").value.trim(); if (dv !== "") senses.darkvision = `${Number(dv)} ft.`;
+  const pp = document.getElementById("f_passperc").value.trim(); if (pp !== "") senses.passive_perception = String(Number(pp));
+  if (Object.keys(senses).length) base.senses = senses; else delete base.senses;
+  // --- defenses + skills: ticked from fixed lists (can't be fat-fingered) ---
+  const setChecks = (key, groupId) => { const xs = readChecklist(groupId); if (xs.length) base[key] = xs; else delete base[key]; };
+  setChecks("damage_resistances", "f_res"); setChecks("damage_immunities", "f_imm");
+  setChecks("damage_vulnerabilities", "f_vuln"); setChecks("condition_immunities", "f_cond");
+  setChecks("skills", "f_skills");
+  const traits = csv(document.getElementById("f_traits").value);
   if (traits.length) base.traits = traits; else delete base.traits;
   const loot = [], gold = document.getElementById("f_gold").value;
   if (gold !== "" && Number(gold) > 0) loot.push({ gold: Number(gold) });

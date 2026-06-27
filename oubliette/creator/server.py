@@ -25,7 +25,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
@@ -330,6 +330,57 @@ async def get_image(pack_id: str, filename: str) -> FileResponse | JSONResponse:
     if d is None or not _SAFE_NAME.match(filename):
         return JSONResponse({"error": "not found"}, status_code=404)
     path = d / "images" / filename
+    if not path.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(path, headers={"Cache-Control": "no-cache"})
+
+
+# --- creature portraits (Phase 3a) ---------------------------------------------
+# A pack creature's token art lives in <pack>/portraits/<id>.<ext>, the same dir
+# the game + Arena read (arena_bridge PortraitDirs.pack). Mirrors the app's
+# character-portrait upload (raw bytes, format preserved so PNG transparency
+# survives) for a consistent picker UX, keyed by the creature's id.
+_PORTRAIT_MIME_EXT = {"image/png": ".png", "image/jpeg": ".jpg",
+                      "image/webp": ".webp", "image/gif": ".gif"}
+_PORTRAIT_MAX_BYTES = 8 * 1024 * 1024          # 8 MB, matching the app
+
+
+@app.post("/api/pack/{pack_id}/portrait/{sb_id}")
+async def upload_portrait(pack_id: str, sb_id: str, request: Request) -> JSONResponse:
+    """Save a creature's portrait into the pack's portraits/ folder, keyed by the
+    creature id. POSTed as raw bytes; the browser sets Content-Type from the file
+    (we keep the original format, so transparent PNG token art stays transparent).
+    Re-uploading replaces any prior-extension image. Returns the stored filename."""
+    d = _pack_dir(pack_id)
+    if d is None:
+        return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
+    if not _SAFE_NAME.match(sb_id):
+        return JSONResponse({"error": "unsafe creature id"}, status_code=400)
+    mime = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    ext = _PORTRAIT_MIME_EXT.get(mime)
+    if ext is None:
+        return JSONResponse({"error": "unsupported image type; use PNG, JPG, WEBP, or GIF"}, status_code=400)
+    data = await request.body()
+    if not data:
+        return JSONResponse({"error": "the uploaded file is empty"}, status_code=400)
+    if len(data) > _PORTRAIT_MAX_BYTES:
+        return JSONResponse({"error": f"image too large ({len(data) // (1024 * 1024)} MB); max is 8 MB"}, status_code=400)
+    portraits = d / "portraits"
+    portraits.mkdir(exist_ok=True)
+    for old in portraits.glob(f"{sb_id}.*"):   # drop any prior-extension image
+        old.unlink()
+    fname = f"{sb_id}{ext}"
+    (portraits / fname).write_bytes(data)
+    return JSONResponse({"ok": True, "filename": fname})
+
+
+@app.get("/api/pack/{pack_id}/portrait/{filename}", response_model=None)
+async def get_portrait(pack_id: str, filename: str) -> FileResponse | JSONResponse:
+    """Serve a creature portrait (for The Forge's preview)."""
+    d = _pack_dir(pack_id)
+    if d is None or not _SAFE_NAME.match(filename):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    path = d / "portraits" / filename
     if not path.is_file():
         return JSONResponse({"error": "not found"}, status_code=404)
     return FileResponse(path, headers={"Cache-Control": "no-cache"})
