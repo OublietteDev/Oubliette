@@ -2128,7 +2128,8 @@ function cgInit(name) {
          ability_method: "standard_array", base_abilities: {}, skills: [], expertise: [],
          languages: [], race_ability_choices: [], race_skills: [], race_languages: [],
          race_cantrips: [], cantrips: [], spells: [], equipment_choices: [], alignment: "",
-         description: "", personality_traits: [], ideals: [], bonds: [], flaws: [], _pool: [] };
+         description: "", personality_traits: [], ideals: [], bonds: [], flaws: [], _pool: [],
+         mode: "auto", levelChoices: {} };   // leveling: "auto" walks defaults; "manual" uses levelChoices[level]
   selectRace(cgOpt.races[0].id);
   selectClass(cgOpt.classes[0].id, true);
   selectBackground(cgOpt.backgrounds[0].id, true);
@@ -2177,7 +2178,7 @@ function rollPool() {
   cgOpt.abilities.forEach((a, i) => cg.base_abilities[a] = cg._pool[i]);
 }
 function cgBuild() {
-  const b = { ...cg }; delete b._pool; delete b.level;
+  const b = { ...cg }; delete b._pool; delete b.level; delete b.mode; delete b.levelChoices;
   // a subclass earned after level 1 (e.g. a Fighter's archetype at 3) isn't part of
   // the level-1 build — it's applied during the level walk. Only classes that pick a
   // subclass at level 1 (cleric, sorcerer, warlock) send it with the base build.
@@ -2270,6 +2271,22 @@ function renderCgForm() {
   root.appendChild(renderEquipment());
   if (cgBg().languages > 0) root.appendChild(renderLanguages());
   const raceLang = renderRaceLanguages(); if (raceLang) root.appendChild(raceLang);
+
+  if ((cg.level || 1) > 1) {
+    const lvlSec = secEl("Leveling");
+    const modes = el("div", "cg-methods");
+    [["auto", "Auto-level"], ["manual", "Manual"]].forEach(([m, label]) => {
+      const b = el("button", "btn" + (cg.mode === m ? " primary" : ""), label); b.type = "button";
+      b.addEventListener("click", () => { cg.mode = m; renderCgForm(); cgPreview(); });
+      modes.appendChild(b);
+    });
+    lvlSec.appendChild(modes);
+    lvlSec.appendChild(el("div", "cg-hint", cg.mode === "manual"
+      ? "Pick each level's choices below. Anything left unset is auto-filled so the build stays valid."
+      : "HP, ability increases, and spells are chosen automatically (subclass is set above)."));
+    root.appendChild(lvlSec);
+    if (cg.mode === "manual") { const c = el("div"); c.id = "cg-levels"; root.appendChild(c); }
+  }
 }
 
 function renderRaceAbilityChoices() {
@@ -2511,23 +2528,44 @@ function cgDefaultChoice(plan, preview) {
   }
   return choice;
 }
+// Manual choices override the auto defaults where the author set them; anything
+// left unset stays auto so the build is always valid.
+function mergeChoice(def, stored) {
+  if (!stored) return def;
+  const c = { ...def };
+  if (stored.hp_method) c.hp_method = stored.hp_method;
+  if (stored.hp_method === "roll" && stored.hp_roll != null) c.hp_roll = stored.hp_roll;
+  if (stored.feat) { c.feat = stored.feat; c.ability_increases = {}; }
+  else if (stored.ability_increases && Object.keys(stored.ability_increases).length) {
+    c.ability_increases = stored.ability_increases; c.feat = null;
+  }
+  if (stored.new_cantrips) c.new_cantrips = stored.new_cantrips;
+  if (stored.new_spells) c.new_spells = stored.new_spells;
+  return c;
+}
 // Build at level 1, then walk /levelup up to the target level. Returns the final
-// {ok, errors, character, preview} — used by both the live preview and save.
+// {ok, errors, character, preview, plans} — plans (each level's requirements) feed
+// the manual-leveling editors. Used by both the live preview and save.
 async function cgEvaluate() {
   const base = await _post("/api/chargen/build", cgBuild());
-  if (!base.ok) return { ok: false, errors: base.errors, character: null, preview: null };
+  if (!base.ok) return { ok: false, errors: base.errors, character: null, preview: null, plans: [] };
   let char = base.character, preview = base.preview, level = 1;
   const target = Math.max(1, Math.min(20, cg.level || 1));
+  const plans = [];
   while (level < target) {
     const plan = await _post("/api/chargen/levelup/plan", char);
-    if (!plan.can_level) return { ok: false, errors: [plan.reason || `can't reach level ${level + 1}`], character: char, preview };
-    const up = await _post("/api/chargen/levelup", { character: char, choice: cgDefaultChoice(plan, preview) });
-    if (!up.ok) return { ok: false, errors: up.errors, character: char, preview };
+    if (!plan.can_level) return { ok: false, errors: [plan.reason || `can't reach level ${level + 1}`], character: char, preview, plans };
+    plans.push({ level: level + 1, plan });
+    const def = cgDefaultChoice(plan, preview);
+    const choice = cg.mode === "manual" ? mergeChoice(def, cg.levelChoices[level + 1]) : def;
+    const up = await _post("/api/chargen/levelup", { character: char, choice });
+    if (!up.ok) return { ok: false, errors: up.errors, character: char, preview, plans };
     char = up.character; preview = up.preview; level++;
   }
-  return { ok: true, errors: [], character: char, preview };
+  return { ok: true, errors: [], character: char, preview, plans };
 }
 // --- live preview (the firewall, surfaced) ---
+let cgLastPlans = [];
 function cgPreview() {
   clearTimeout(cgTimer);
   cgTimer = setTimeout(async () => {
@@ -2536,7 +2574,104 @@ function cgPreview() {
     try { data = await cgEvaluate(); } catch (e) { return; }
     if (seq !== cgSeq) return;            // a newer preview superseded this one
     renderPreview(data);
+    if (cg.mode === "manual" && (cg.level || 1) > 1) { cgLastPlans = data.plans || []; fillManualLevels(cgLastPlans); }
   }, 250);
+}
+// Re-render the manual editors immediately from the cached plans (so toggles feel
+// instant), then kick a fresh walk (later levels can depend on this choice).
+function refreshLevels() { if (gid("cg-levels")) fillManualLevels(cgLastPlans); cgPreview(); }
+
+function fillManualLevels(plans) {
+  const box = gid("cg-levels"); if (!box) return;
+  box.innerHTML = "";
+  if (!plans.length) { box.appendChild(el("div", "cg-hint", "Finish the level-1 build above to set per-level choices.")); return; }
+  plans.forEach(({ level, plan }) => box.appendChild(renderLevelChoice(level, plan)));
+}
+function lc(level) { return (cg.levelChoices[level] = cg.levelChoices[level] || {}); }
+
+function renderLevelChoice(level, plan) {
+  const sec = secEl(`Level ${level}`);
+  const stored = lc(level);
+  if (plan.new_features && plan.new_features.length)
+    sec.appendChild(el("div", "cg-hint", "Gains: " + plan.new_features.join(", ")));
+  // HP
+  const hpRow = el("div", "cg-row");
+  hpRow.appendChild(selectField("Hit points", stored.hp_method || "average",
+    [{ value: "average", label: `Average (+${plan.average_hp_gain})` }, { value: "roll", label: "Roll" }],
+    v => { stored.hp_method = v; refreshLevels(); }));
+  if (stored.hp_method === "roll") {
+    const f = el("label", "cg-field"); f.appendChild(el("span", null, `Roll (1–${(plan.hit_die || "d8").replace("d", "")})`));
+    const inp = el("input"); inp.type = "number"; inp.min = 1; inp.value = stored.hp_roll || "";
+    inp.addEventListener("change", () => { stored.hp_roll = parseInt(inp.value || "1", 10); cgPreview(); });
+    f.appendChild(inp); hpRow.appendChild(f);
+  }
+  sec.appendChild(hpRow);
+  // Ability score improvement / feat
+  if (plan.is_asi) sec.appendChild(renderAsiChoice(stored, plan));
+  // Spells gained this level
+  const sp = plan.spellcasting;
+  if (sp && (sp.cantrips_needed > 0 || sp.spells_needed > 0)) sec.appendChild(renderLevelSpells(stored, sp));
+  return sec;
+}
+function renderAsiChoice(stored, plan) {
+  const wrap = el("div");
+  const inc = stored.ability_increases || {};
+  const mode = stored.feat ? "feat" : (Object.values(inc).some(v => v === 2) ? "one" : (Object.keys(inc).length >= 2 ? "two" : "one"));
+  wrap.appendChild(selectField("Ability Score Improvement",
+    mode,
+    [{ value: "one", label: "+2 to one ability" }, { value: "two", label: "+1 to two abilities" }, { value: "feat", label: "Take a feat" }],
+    v => {
+      if (v === "feat") { stored.feat = (plan.feats[0] || {}).id || null; stored.ability_increases = {}; }
+      else if (v === "two") { stored.feat = null; stored.ability_increases = {}; }
+      else { stored.feat = null; stored.ability_increases = {}; }
+      refreshLevels();
+    }));
+  const abilOpts = cgOpt.abilities.map(a => ({ value: a, label: a.toUpperCase() }));
+  if (mode === "feat") {
+    wrap.appendChild(selectField("Feat", stored.feat || (plan.feats[0] || {}).id || "",
+      (plan.feats || []).map(f => ({ value: f.id, label: f.name })),
+      v => { stored.feat = v; cgPreview(); }));
+  } else if (mode === "one") {
+    const cur = Object.keys(inc)[0] || cgOpt.abilities[0];
+    wrap.appendChild(selectField("+2 to", cur, abilOpts,
+      v => { stored.ability_increases = { [v]: 2 }; stored.feat = null; cgPreview(); }));
+  } else {
+    const keys = Object.keys(inc); const a1 = keys[0] || cgOpt.abilities[0], a2 = keys[1] || cgOpt.abilities[1];
+    const setTwo = (x, y) => { stored.ability_increases = x === y ? { [x]: 2 } : { [x]: 1, [y]: 1 }; stored.feat = null; cgPreview(); };
+    const row = el("div", "cg-row");
+    row.appendChild(selectField("+1 to", a1, abilOpts, v => setTwo(v, a2)));
+    row.appendChild(selectField("and +1 to", a2, abilOpts, v => setTwo(a1, v)));
+    wrap.appendChild(row);
+  }
+  return wrap;
+}
+function renderLevelSpells(stored, sp) {
+  const wrap = el("div");
+  if (sp.cantrips_needed > 0) {
+    wrap.appendChild(el("div", "cg-hint", `Cantrips — choose ${sp.cantrips_needed}`));
+    const row = el("div", "cg-checks");
+    stored.new_cantrips = stored.new_cantrips || [];
+    (sp.cantrip_options || []).forEach(o => row.appendChild(levelSpellCheck(o, stored.new_cantrips)));
+    wrap.appendChild(row);
+  }
+  if (sp.spells_needed > 0) {
+    wrap.appendChild(el("div", "cg-hint", `Spells — choose ${sp.spells_needed}`));
+    const row = el("div", "cg-checks");
+    stored.new_spells = stored.new_spells || [];
+    (sp.spell_options || []).forEach(o => row.appendChild(levelSpellCheck(o, stored.new_spells)));
+    wrap.appendChild(row);
+  }
+  return wrap;
+}
+function levelSpellCheck(opt, arr) {
+  const lab = el("label", "cg-check");
+  const cb = el("input"); cb.type = "checkbox"; cb.checked = arr.includes(opt.id);
+  cb.addEventListener("change", () => {
+    if (cb.checked) arr.push(opt.id); else { const i = arr.indexOf(opt.id); if (i >= 0) arr.splice(i, 1); }
+    cgPreview();
+  });
+  lab.appendChild(cb); lab.appendChild(el("span", null, opt.name + (opt.level ? ` (${opt.level})` : "")));
+  return lab;
 }
 function renderPreview(data) {
   const root = gid("cg-preview"); if (!root) return;
