@@ -229,22 +229,33 @@ This is the larger slice: the combat-side plumbing exists, but **chargen and
 level-up are not exposed in the Forge yet** — they live in the main game's
 character-creation flow. 4b builds that bridge.
 
-### 7.1 Forge must load the SRD ruleset
+### 7.1 Forge must load the SRD ruleset — SHIPPED (4b-1)
 Chargen/level-up need a `Ruleset` (races, classes, backgrounds, spells,
-equipment). The creator server (`oubliette/creator/server.py`) must load the same
-ruleset the game uses, once at startup, and hand it to the new endpoints.
+equipment). The creator server (`oubliette/creator/server.py`) loads it via a
+cached `_ruleset()` (`load_ruleset()`, pack-independent) and hands it to the
+chargen endpoints.
+
+**Shared-module decision (4b-1):** the play app's chargen *projections*
+(`_chargen_options`, `_class_view`, `_preview_payload`) were pure functions of the
+ruleset, so rather than duplicate them into the Forge (drift risk), they were
+**extracted to `oubliette/rules/chargen_view.py`** (`chargen_options(rs)`,
+`class_view(rs, cc)`, `preview_payload(char, items, rs)`). Both servers now render
+chargen from one source of truth; the play app delegates to it (behaviour
+unchanged, full suite green), and a creator test pins that the Forge's options are
+byte-identical to the shared projection.
 
 ### 7.2 New creator endpoints (drive the existing engine)
 Thin wrappers over `chargen`/`levelup` — no new rules logic:
 - `GET  /api/chargen/options` → races, classes, subclasses, backgrounds, spell
-  lists, equipment choices, ability-score methods (for populating the wizard).
+  lists, equipment choices, ability-score methods. **SHIPPED (4b-1).**
+- `POST /api/chargen/preview` → body is a `CharacterBuild`; returns the firewall's
+  errors or the derived preview sheet (`preview_payload`). *(4b-2)*
 - `POST /api/chargen/build` → body is a `CharacterBuild`; returns the built
-  `Character` **or** the chargen firewall's validation errors.
+  `Character` **or** the chargen firewall's validation errors. *(4b-2)*
 - `POST /api/chargen/levelup` → body is `{character, choice}`; returns the
-  leveled `Character` or validation errors. (Used to author an NPC above level 1
-  — repeat to taste.)
+  leveled `Character` or validation errors. *(4b-2)*
 - `PUT  /api/pack/<id>/character/<npc_id>` → persist the snapshot to
-  `characters/<npc_id>.json`; `GET`/`DELETE` to load/clear.
+  `characters/<npc_id>.json`; `GET`/`DELETE` to load/clear. *(4b-3)*
 
 ### 7.3 Forge UI — the chargen wizard
 The substantial piece. A guided flow mirroring the game's chargen, embedded in

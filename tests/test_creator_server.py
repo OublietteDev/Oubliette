@@ -53,6 +53,27 @@ def test_unknown_pack_is_404():
     assert client.get("/api/pack/does_not_exist").status_code == 404
 
 
+def test_chargen_options_from_shared_ruleset():
+    """Phase 4b: the Forge serves the person-NPC builder's options from the SAME
+    rules.chargen_view projection the play app's wizard uses — one source of truth,
+    so the two can't drift."""
+    from oubliette.content.ruleset import load_ruleset
+    from oubliette.rules.chargen_view import chargen_options
+
+    r = client.get("/api/chargen/options")
+    assert r.status_code == 200
+    data = r.json()
+    for key in ("classes", "races", "backgrounds", "spells_by_class",
+                "abilities", "skills", "standard_array", "point_buy"):
+        assert key in data
+    assert any(c["id"] == "fighter" for c in data["classes"])
+    assert any(c["id"] == "wizard" for c in data["classes"])
+    assert data["standard_array"] == [15, 14, 13, 12, 10, 8]
+    # byte-identical to the shared projection (JSON round-trip normalises int keys
+    # like point_buy.cost, which JSON renders as strings)
+    assert data == json.loads(json.dumps(chargen_options(load_ruleset())))
+
+
 def test_path_traversal_is_refused():
     # an id that tries to climb out of the packs root must not resolve
     assert client.get("/api/pack/..").status_code == 404

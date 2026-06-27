@@ -30,6 +30,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from ..content.loader import PackValidationError, load_pack
+from ..content.ruleset import load_ruleset
+from ..rules.chargen_view import chargen_options
 
 STATIC = Path(__file__).parent / "static"
 _DEFAULT_PACKS_ROOT = Path(__file__).parent.parent / "content" / "packs"
@@ -512,6 +514,26 @@ async def get_srd_monster(srd_id: str) -> JSONResponse:
         from arena.paths import DATA_DIR
         combat = _read_json(DATA_DIR / "monsters" / "srd" / f"{srd_id}.json")
     return JSONResponse({"ok": True, "statblock": sb, "combat": combat})
+
+
+_ruleset_cache = None
+
+
+def _ruleset():
+    """The global SRD ruleset (chargen pickers + derivation) — pack-independent, so
+    loaded once and cached. Phase 4b: building a person-NPC as a real character."""
+    global _ruleset_cache
+    if _ruleset_cache is None:
+        _ruleset_cache = load_ruleset()
+    return _ruleset_cache
+
+
+@app.get("/api/chargen/options")
+async def get_chargen_options() -> JSONResponse:
+    """Everything the person-NPC character builder renders — classes, races,
+    backgrounds, spell lists, ability methods — straight from the SRD ruleset, the
+    same projection the play app's chargen wizard uses (rules.chargen_view)."""
+    return JSONResponse(chargen_options(_ruleset()))
 
 
 def _safe_leaf(name: str) -> bool:
