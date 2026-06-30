@@ -205,6 +205,27 @@
   .start-btn:hover:not(:disabled) { border-color: var(--gold); background: #2a231d; }
   .start-btn.primary { border-color: var(--accent-2); color: var(--gold); }
   .start-btn:disabled { opacity: .4; cursor: not-allowed; }
+  /* AI provider connection (front-door "connect your AI") + offline banner */
+  .prov-list { display: flex; flex-direction: column; gap: 8px; text-align: left; margin-top: 6px; }
+  .prov { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); cursor: pointer; }
+  .prov:hover:not(.disabled) { border-color: var(--gold); }
+  .prov.sel { border-color: var(--accent-2); background: #2a231d; }
+  .prov.disabled { opacity: .5; cursor: not-allowed; }
+  .prov .pname { font-family: var(--serif); color: var(--ink); font-size: 14px; }
+  .prov .pnote { margin-left: auto; font-size: 10px; color: var(--faint); text-transform: uppercase; letter-spacing: .06em; border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
+  .prov .pok { margin-left: auto; font-size: 11px; color: #8db870; }
+  .ai-key { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; text-align: left; }
+  .ai-key label { font-size: 12px; color: var(--gold); }
+  .ai-key input { width: 100%; box-sizing: border-box; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font: inherit; font-size: 13px; padding: 8px 10px; }
+  .ai-key input:focus { outline: none; border-color: var(--accent); }
+  .ai-priv { font-size: 11px; color: var(--faint); font-style: italic; margin-top: 8px; }
+  .offline-banner { display: flex; align-items: center; gap: 8px; margin: 12px 16px 0; padding: 9px 13px; border: 1px solid var(--accent-2); border-radius: 10px; background: rgba(120,80,40,.18); color: var(--gold); font-size: 13px; }
+  .offline-banner.hidden { display: none; }
+  .offline-banner b { font-family: var(--serif); letter-spacing: .02em; }
+  .offline-banner .ob-text { color: var(--muted); }
+  .offline-banner .spacer { flex: 1; }
+  .offline-banner button { font: inherit; font-size: 12px; cursor: pointer; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); padding: 5px 10px; white-space: nowrap; }
+  .offline-banner button:hover { border-color: var(--gold); }
   /* table-contract form (New Game + Settings) */
   .contract-form { display: flex; flex-direction: column; gap: 3px; text-align: left; }
   .contract-form label { font-size: 12px; color: var(--gold); margin-top: 12px; }
@@ -587,6 +608,12 @@
 
   <main>
     <section class="chat">
+      <div id="offline-banner" class="offline-banner hidden">
+        <b>Offline Mode</b>
+        <span class="ob-text">— the Phantom is running on the built-in demo script, not a live AI. Connect a provider for the real game.</span>
+        <span class="spacer"></span>
+        <button id="offline-connect" type="button">Connect your AI</button>
+      </div>
       <div class="log" id="log"></div>
       <div id="combat-bar" class="combat-bar hidden">
         <span class="combat-bar-text">⚔ A fight is upon you — the table waits.</span>
@@ -643,6 +670,7 @@
     <div class="start-actions">
       <button class="start-btn primary" id="start-continue">Continue</button>
       <button class="start-btn" id="start-new">New Game</button>
+      <button class="start-btn" id="start-ai">🔌 Connect your AI</button>
       <button class="start-btn" id="start-settings">Settings</button>
     </div>
   </div>
@@ -699,6 +727,24 @@
     <div class="ng-foot">
       <div class="spacer"></div>
       <button class="act primary" id="settings-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="ai-overlay" class="overlay hidden">
+  <div class="start-modal" style="width: min(470px, 94vw); text-align: left;">
+    <h2 style="text-align:center;">Connect your AI</h2>
+    <div class="sub" style="text-align:center;">The Phantom needs a language model to narrate. Pick a service and paste its API key.</div>
+    <div class="prov-list" id="ai-providers"></div>
+    <div class="ai-key" id="ai-key-wrap">
+      <label id="ai-key-label" for="ai-key-input">API key</label>
+      <input type="password" id="ai-key-input" autocomplete="off" spellcheck="false" placeholder="" />
+    </div>
+    <div class="ai-priv">Your key is stored only on this computer (never shared, never sent anywhere but the provider you choose). Save with the box empty to return to offline mode.</div>
+    <div class="cg-status" id="ai-status" style="margin-top:10px; text-align:center;"></div>
+    <div class="start-actions" style="flex-direction: row; gap: 10px; margin-top: 16px;">
+      <button class="start-btn primary" id="ai-save" style="flex:1;">Save &amp; connect</button>
+      <button class="start-btn" id="ai-close" style="flex:1;">Close</button>
     </div>
   </div>
 </div>
@@ -1104,7 +1150,7 @@ $("trade-done").addEventListener("click", closeTrade);
 $("trade-settle").addEventListener("click", settle);
 $("trade-haggle").addEventListener("click", doHaggle);
 $("trade-overlay").addEventListener("click", (e) => { if (e.target.id === "trade-overlay") closeTrade(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeTrade(); closeJournal(); closeInventory(); closeWorldMap(); closeMenu(); closeSettings(); closeNewGame(); } });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeTrade(); closeJournal(); closeInventory(); closeWorldMap(); closeMenu(); closeSettings(); closeNewGame(); closeAI(); } });
 
 let gameEnded = false;          // set when the DM ends the session (locks the composer)
 let combatPending = false;      // a tactical fight is staged, awaiting "Enter the Arena" (Stage 3c)
@@ -1998,6 +2044,86 @@ function showStart() { $("start-overlay").classList.remove("hidden"); }
 $("start-continue").addEventListener("click", () => { if (!$("start-continue").disabled) hideStart(); });
 $("start-new").addEventListener("click", () => { hideStart(); openNewGame(); });
 $("start-settings").addEventListener("click", openSettings);
+
+// --- AI provider connection (front-door "connect your AI") -----------------
+let aiSelected = null;            // the provider the player has highlighted
+function applyConnection(status) {
+  // status: {online, client, selected, model} — drives the badge + offline banner.
+  const live = !!status.online;
+  $("model-badge").textContent = live ? `● ${status.model || "live DM"}` : "○ Offline Mode";
+  $("offline-banner").classList.toggle("hidden", live);
+}
+async function refreshConnection() {
+  try {
+    const data = await (await fetch("/api/providers")).json();
+    renderProviders(data);
+    applyConnection(data);
+  } catch (e) { /* leave the badge as-is on a transient failure */ }
+}
+function renderProviders(data) {
+  if (aiSelected === null) aiSelected = data.selected || "anthropic";
+  const list = $("ai-providers");
+  list.innerHTML = "";
+  data.providers.forEach(p => {
+    const row = document.createElement("div");
+    row.className = "prov" + (p.implemented ? "" : " disabled") + (p.id === aiSelected ? " sel" : "");
+    const name = document.createElement("span");
+    name.className = "pname"; name.textContent = p.label;
+    row.appendChild(name);
+    if (!p.implemented) {
+      const note = document.createElement("span");
+      note.className = "pnote"; note.textContent = "Soon";
+      row.appendChild(note);
+    } else if (p.has_key) {
+      const ok = document.createElement("span");
+      ok.className = "pok"; ok.textContent = "key saved ✓";
+      row.appendChild(ok);
+    }
+    if (p.implemented) row.addEventListener("click", () => { aiSelected = p.id; renderProviders(data); });
+    list.appendChild(row);
+  });
+  syncKeyField(data);
+}
+function syncKeyField(data) {
+  const p = data.providers.find(x => x.id === aiSelected);
+  if (!p) return;
+  $("ai-key-label").textContent = p.key_label || "API key";
+  $("ai-key-input").placeholder = p.has_key ? "•••••• (saved — leave blank to keep)" : (p.key_hint || "");
+}
+function openAI() {
+  $("ai-status").textContent = "";
+  $("ai-key-input").value = "";
+  $("ai-overlay").classList.remove("hidden");
+  refreshConnection();
+}
+function closeAI() { $("ai-overlay").classList.add("hidden"); }
+async function saveAI() {
+  const status = $("ai-status");
+  status.className = "cg-status"; status.textContent = "Connecting…";
+  try {
+    const res = await fetch("/api/providers", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider: aiSelected, api_key: $("ai-key-input").value || null }),
+    });
+    const data = await res.json();
+    renderProviders(data);
+    applyConnection(data);
+    if (data.ok) {
+      status.className = "cg-status ok";
+      status.textContent = data.online ? `Connected — ${data.model}. The Phantom is live.`
+                                        : "Saved. Offline mode (no key set).";
+      if (data.online) $("ai-key-input").value = "";
+    } else {
+      status.className = "cg-status bad";
+      status.textContent = data.error || "could not connect";
+    }
+  } catch (e) { status.className = "cg-status bad"; status.textContent = "Error: " + e; }
+}
+$("start-ai").addEventListener("click", openAI);
+$("ai-close").addEventListener("click", closeAI);
+$("ai-save").addEventListener("click", saveAI);
+$("ai-overlay").addEventListener("click", (e) => { if (e.target.id === "ai-overlay") closeAI(); });
+$("offline-connect").addEventListener("click", openAI);
 $("reload-btn").addEventListener("click", async () => {
   if (busy) return;
   const btn = $("reload-btn"); btn.disabled = true;
@@ -3216,7 +3342,7 @@ updateSoundBtn();
 async function boot() {
   const res = await fetch("/api/state");
   const data = await res.json();
-  $("model-badge").textContent = (data.model === "anthropic" ? "● live DM" : "○ scripted DM");
+  await refreshConnection();      // sets the model badge + offline banner
   renderState(data.state);
   setSoundscape(data.soundscape);          // queued; plays once sound is enabled
   addMessage("System", "The Phantom waits at the head of the table. Describe what you do to begin.", "system");

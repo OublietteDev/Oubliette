@@ -11,8 +11,18 @@ for the original rationale).
 **Play in your browser:** install the web deps once (`pip install -e ".[web]"`),
 then run `oubliette-play` (or double-click `play.bat` on Windows). A chat window
 opens: talk to the DM on the left, watch the live character sheet, inventory, and
-canon on the right. It uses the real model when `ANTHROPIC_API_KEY` is set (env or
-`.env`), else the scripted offline DM.
+canon on the right.
+
+**Connecting a model:** the start screen's **🔌 Connect your AI** panel lets you
+pick a provider and paste an API key right in the browser — stored locally in a
+gitignored `oubliette-config.json`, never committed. Anthropic (Claude Sonnet 4.6)
+is wired; OpenAI / Gemini / local models are shown as "coming soon". A key in the
+environment or a `.env` (`ANTHROPIC_API_KEY`) still works too. With no key the game
+runs the scripted **Offline Mode** DM (a canned demo) and says so in the chat.
+
+**Sharing it with someone else (Windows):** they double-click `setup.bat` once to
+build the environment, then `play.bat` to run — see [`PLAYTEST.md`](PLAYTEST.md) for
+the playtester walkthrough (installing Python, getting an API key, what to look at).
 
 ## Earlier phases
 

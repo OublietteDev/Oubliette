@@ -54,12 +54,21 @@ def _load_dotenv(path: str = ".env") -> None:
 
 
 def _pick_client(force_scripted: bool):
-    if not force_scripted and os.environ.get("ANTHROPIC_API_KEY"):
-        try:
-            from ..llm.anthropic_client import AnthropicLLMClient
-            return AnthropicLLMClient(), "anthropic"
-        except Exception as e:  # pragma: no cover
-            print(f"[warn] falling back to scripted client: {e}")
+    """Pick the DM client from the player's saved provider/key (front-door config),
+    falling back to the scripted OFFLINE stub when no live provider is configured.
+    The config's key takes precedence, then the provider's env var (so a .env /
+    ANTHROPIC_API_KEY still works untouched). Only wired providers can go live; an
+    unimplemented selection or a missing key lands on the offline stub."""
+    if not force_scripted:
+        from ..llm import providers
+        prov = providers.selected_provider()
+        key = providers.stored_key(prov)
+        if prov == "anthropic" and key:
+            try:
+                from ..llm.anthropic_client import AnthropicLLMClient
+                return AnthropicLLMClient(api_key=key), "anthropic"
+            except Exception as e:  # pragma: no cover
+                print(f"[warn] falling back to scripted client: {e}")
     from ..llm.scripted import ScriptedLLMClient
     return ScriptedLLMClient(), "scripted"
 

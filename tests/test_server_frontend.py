@@ -12,6 +12,7 @@ import tempfile
 
 # Must be set BEFORE importing the server (it builds the game at import time).
 os.environ["OUBLIETTE_DB"] = os.path.join(tempfile.mkdtemp(), "test.sqlite")
+os.environ["OUBLIETTE_CONFIG"] = os.path.join(tempfile.mkdtemp(), "cfg.json")  # isolate provider config
 os.environ.pop("ANTHROPIC_API_KEY", None)  # force the scripted client
 
 from fastapi.testclient import TestClient  # noqa: E402
@@ -446,3 +447,36 @@ def test_chargen_options_half_casters_have_no_level1_spellcasting():
     # full casters still cast at level 1 (sanity: the guard doesn't over-fire)
     for full in ("cleric", "wizard", "druid", "bard"):
         assert classes[full]["max_spell_level"] >= 1
+
+
+# --- provider / API-key front door (connect-your-AI) ----------------------
+
+def test_providers_endpoint_lists_roster_and_offline_state():
+    r = client.get("/api/providers")
+    assert r.status_code == 200
+    d = r.json()
+    by_id = {p["id"]: p for p in d["providers"]}
+    assert by_id["anthropic"]["implemented"] is True
+    assert by_id["openai"]["implemented"] is False        # visible but unselectable
+    assert d["online"] is False and d["client"] == "scripted"  # no key in this harness
+
+
+def test_setting_an_unimplemented_provider_is_refused():
+    r = client.post("/api/providers", json={"provider": "openai", "api_key": "x"})
+    assert r.status_code == 400
+    assert r.json()["ok"] is False
+
+
+def test_saving_an_anthropic_key_brings_the_dm_online():
+    r = client.post("/api/providers", json={"provider": "anthropic", "api_key": "sk-ant-test"})
+    assert r.status_code == 200
+    d = r.json()
+    assert d["ok"] is True and d["online"] is True
+    assert d["client"] == "anthropic" and "Sonnet" in d["model"]
+    assert GAME.client_name == "anthropic"               # the live client was re-picked
+    # the roster now reports a key on file, still without leaking it
+    assert {p["id"]: p for p in d["providers"]}["anthropic"]["has_key"] is True
+    assert "sk-ant-test" not in r.text
+    # clear it again so the rest of the suite stays offline/deterministic
+    client.post("/api/providers", json={"provider": "anthropic", "api_key": None})
+    assert GAME.client_name == "scripted"

@@ -43,6 +43,7 @@ from ..state.repository import StateError
 from ..table import TONE_PRESETS, TableContract
 from ..tools.dispatch import ToolApplyError
 from ..trade.service import build_state, buy_transact, checkout_transact, sell_transact
+from ..llm import providers
 from .repl import _load_dotenv, _pick_client
 
 STATIC = Path(__file__).parent / "static"
@@ -1224,6 +1225,60 @@ async def post_reload() -> JSONResponse:
         GAME.reload_world()
         return JSONResponse({"state": _snapshot(), "model": GAME.client_name,
                              "pack_id": GAME.pack_id, "soundscape": _soundscape()})
+
+
+# --- provider / API-key front door ------------------------------------------
+
+class ProviderSetBody(BaseModel):
+    provider: str
+    api_key: str | None = None
+
+
+def _pretty_model(mid: str) -> str:
+    """`claude-sonnet-4-6` -> `Claude Sonnet 4.6` for the connection badge."""
+    words, nums = [], []
+    for tok in mid.split("-"):
+        (nums if tok.isdigit() else words).append(tok)
+    return f"{' '.join(w.capitalize() for w in words)} {'.'.join(nums)}".strip()
+
+
+def _provider_status() -> dict:
+    """Live connection state for the front door: is a real DM wired up, and a
+    friendly model label when it is. (`scripted` == offline stub.)"""
+    online = GAME.client_name != "scripted"
+    from ..llm.anthropic_client import DEFAULT_MODEL
+    model = _pretty_model(DEFAULT_MODEL) if GAME.client_name == "anthropic" else ""
+    return {"online": online, "client": GAME.client_name,
+            "selected": providers.selected_provider(), "model": model}
+
+
+@app.get("/api/providers")
+async def get_providers() -> JSONResponse:
+    """The provider roster (which services exist + which are wired) plus the current
+    connection state. Never returns key material — only whether one is on file."""
+    return JSONResponse({"providers": providers.registry_view(), **_provider_status()})
+
+
+@app.post("/api/providers")
+async def post_providers(body: ProviderSetBody) -> JSONResponse:
+    """Save the chosen provider + key and re-pick the live DM immediately (no
+    restart). An unimplemented provider is refused; a key that fails to construct a
+    client leaves the game offline and says so."""
+    prov = providers.get_provider(body.provider)
+    if prov is None or not prov.implemented:
+        return JSONResponse(
+            {"ok": False, "error": f"{body.provider!r} isn't available yet",
+             "providers": providers.registry_view(), **_provider_status()},
+            status_code=400)
+    async with GAME.lock:
+        providers.set_provider_key(body.provider, body.api_key)
+        GAME.refresh_client()
+    status = _provider_status()
+    if body.api_key and not status["online"]:
+        return JSONResponse(
+            {"ok": False, "error": "that key didn't connect — still in offline mode",
+             "providers": providers.registry_view(), **status}, status_code=400)
+    return JSONResponse({"ok": True, "providers": providers.registry_view(), **status})
 
 
 def main() -> None:

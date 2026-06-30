@@ -36,3 +36,7 @@ srd-rule-sections-raw.json
 APIKey.txt
 *.key
 srd-spells-raw.json
+# The player's local provider + API-key config (front-door "connect your AI").
+# Plaintext, per-machine — must never enter shared history.
+oubliette-config.json
+preview-test-config.json
