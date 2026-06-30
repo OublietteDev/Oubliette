@@ -9,6 +9,9 @@ venv/
 *.sqlite3
 .DS_Store
 
+# Build output from package.bat (the shareable playtester zip).
+dist/
+
 # The Forge writes timestamped pack backups here before each save — local safety
 # net, not shared history.
 pack-backups/
