@@ -1,6 +1,6 @@
 # Forge Phase 4 — Combat stats for NPCs
 
-**Status:** design / not started · **Date:** 2026-06-27 · **Owner:** OublietteDev (+ Claude)
+**Status:** COMPLETE (4a + 4b shipped) · **Date:** 2026-06-27 (updated 2026-06-30) · **Owner:** OublietteDev (+ Claude)
 **Predecessor:** Forge Phase 3 (creature authoring) — COMPLETE, committed through `965b535`.
 
 ---
@@ -311,24 +311,32 @@ written) and `character_files` in the pack read, so the editor can badge which
 person-NPCs are built.
 
 ### 7.5 Bridge — adversary vs. ally
-- **Adversary (default).** The snapshot already gives honest numbers, so today's
-  `enemy_from_character` flat mapping is *acceptable* — a level-3 enemy fighter
-  arrives with ~28 HP / AC 16 / +5 / longsword instead of 10/10/+2/1d4. Full
+- **Adversary (default) — VERIFIED (4b-5).** The snapshot already gives honest
+  numbers, so today's `enemy_from_character` flat mapping is *acceptable* — a
+  level-3 enemy fighter arrives with ~28 HP / AC 16 / +5 / longsword instead of
+  10/10/+2/1d4. A person-NPC has no `stat_block`, so `_resolve_enemies` falls to
+  `enemy_from_character` → `character_to_monster`, which reads the snapshot's
+  `max_hp`/`armor_class`/`attack_bonus`/`damage`/`abilities`/`xp` — so the WHOLE
+  built sheet's combat line reaches the Arena, not just HP. **No code change was
+  needed; 4b-5 is a regression test pinning that contract**
+  (`test_person_npc_adversary_fights_with_its_honest_snapshot_numbers`). Full
   class-feature fidelity for AI-controlled enemies is **deferred** (§9).
-- **Recruited ally.** Add the person-NPC's `Character` to the `party` list in
-  `build_encounter` (`arena_bridge.py:1032`). `character_to_player` already
-  produces a full-fidelity, player-controlled combatant from any `Character` with
-  a sheet — no new mapping needed. The remaining work is upstream: a **party /
-  recruitment concept** that decides *who is in `party`* for a given encounter
-  (see §7.6).
+- **Recruited ally — SHIPPED (4b-ally).** See §7.6.
 
-### 7.6 Recruitment (scope check)
-"Fights alongside the party" needs a notion of *current party membership* beyond
-the single PC. Confirm whether one exists; if not, the minimal version for 4b is:
-an encounter request can name allied entity ids, and `_resolve` adds those
-`Character`s to `party` (player-controlled) rather than `enemies`. This may be a
-distinct sub-slice (`4b-ally`) depending on what the encounter/party layer looks
-like — **flagged, not yet scoped against code.**
+### 7.6 Recruitment — SHIPPED (4b-ally, per-encounter)
+"Fights alongside the party" needs a notion of party membership beyond the single
+PC (`repo.party()` returns only `kind=="pc"` characters). **OublietteDev's call
+(2026-06-30): the per-encounter stateless model** — no standing "recruited" flag.
+`EncounterRequest` gained `allies: list[str]` (present-entity ids); `stage_combat`
+resolves them via `_resolve_allies(request, repo, party)` and appends each to the
+party list handed to `build_encounter`, where they're team-tagged `"player"` and
+mapped by `character_to_player` to **player-controlled** combatants (OublietteDev's locked
+decision — no allied AI). HP writes back like any party member (`persistent_ids`).
+An ally is *additive*: an unknown or duplicate id is **skipped, not fatal** (unlike
+an unknown ENEMY ref, which raises). The DM narrator is told to populate `allies`
+with a present friendly NPC who'd plainly fight for the player (`dm/brain.py`
+COMBAT instruction). **Persistent recruitment** (a recruit/dismiss mechanic +
+party state across fights) is deferred to "if it matters."
 
 ### 7.7 Tests
 - Endpoints: a valid `CharacterBuild` builds; an invalid one returns the firewall
@@ -345,8 +353,10 @@ like — **flagged, not yet scoped against code.**
 2. `4b-2` `/api/chargen/build` + `/api/chargen/levelup` (server, tested headless).
 3. `4b-3` character sidecar storage + loader merge + validation.
 4. `4b-4` the chargen wizard UI in the NPC editor (likely several sub-commits).
-5. `4b-5` adversary bridge wire-up (person-NPC enemies use their snapshot).
-6. `4b-ally` recruited ally → party list (scope per §7.6).
+5. `4b-5` adversary bridge — **SHIPPED** (verified; regression test, no code change).
+6. `4b-ally` recruited ally → party list — **SHIPPED** (per-encounter, stateless).
+
+**Phase 4 COMPLETE** as of 4b-5 + 4b-ally.
 
 ---
 

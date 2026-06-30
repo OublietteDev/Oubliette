@@ -39,6 +39,11 @@ class EncounterRequest(BaseModel):
 
     kind: str = "brawl"         # "ambush", "standoff", "brawl", ...
     enemies: list[EnemyRef] = Field(default_factory=list)
+    # Friendly entities that fight on the player's side this encounter (4b-ally):
+    # ids of present, allied persistent entities (a recruited person-NPC, a guard
+    # who sides with the party). They join the party — player-controlled — for THIS
+    # fight only; no standing party membership is implied. An unknown id is skipped.
+    allies: list[str] = Field(default_factory=list)
     terrain: TerrainSpec = Field(default_factory=TerrainSpec)
     allow_exits: list[ExitKind] = Field(default_factory=list)
     # Phase 1 placeholder: real combat picks exits interactively across turns.

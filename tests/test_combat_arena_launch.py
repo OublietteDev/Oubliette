@@ -720,3 +720,124 @@ def test_persistent_npc_without_a_statblock_still_resolves_flat():
     assert insts[0].entity_id == "thug"
     assert insts[0].creature.name == "Sour Ned"
     assert insts[0].creature.max_hit_points == 17
+
+
+def test_person_npc_adversary_fights_with_its_honest_snapshot_numbers():
+    """Forge 4b-5: a person-NPC enemy (a Fighter 3 built via chargen, with a real
+    sheet) has no stat block, so it resolves through the flat `enemy_from_character`
+    path — but that path reads the SNAPSHOT, so the foe arrives with honest
+    AC/HP/XP/abilities (≈28 HP / AC 16), not the 10/10/+2/1d4 placeholder. Guards
+    the bridge contract that the WHOLE built sheet's combat numbers reach the Arena,
+    not just HP."""
+    from types import SimpleNamespace
+
+    from oubliette.combat.arena_launch import _resolve_enemies
+    from oubliette.state.models import Character, CharacterSheet
+
+    aldric = Character(
+        id="capt_aldric", name="Captain Aldric", kind="npc", level=3,
+        abilities={"str": 16, "dex": 12, "con": 14, "int": 10, "wis": 11, "cha": 13},
+        hp=28, max_hp=28, armor_class=16, attack_bonus=5, damage="1d8+3", xp=900,
+        sheet=CharacterSheet(race="Human", char_class="Fighter",
+                             background="Soldier", size="Medium"),
+    )
+
+    class _Repo:
+        def get_character(self, ref):
+            if ref == "capt_aldric":
+                return aldric
+            raise StateError(f"no entity {ref!r}")
+
+    session = SimpleNamespace(statblocks=(), npc_statblocks={}, ai_profiles=(),
+                              pack_id=None, ruleset=None)
+    req = EncounterRequest(kind="brawl", enemies=[EnemyRef(ref="capt_aldric")],
+                           terrain=TerrainSpec())
+
+    insts = _resolve_enemies(req, _Repo(), session)
+    assert len(insts) == 1
+    inst = insts[0]
+    assert inst.entity_id == "capt_aldric"          # persistent ⇒ HP writes back
+    mon = inst.creature
+    assert mon.name == "Captain Aldric"
+    assert mon.armor_class == 16                     # the built AC, not 10
+    assert mon.max_hit_points == 28                  # the built HP, not 10
+    assert mon.experience_points == 900
+    assert mon.ability_scores.strength == 16         # the whole snapshot, not just HP
+    assert mon.is_player_controlled is False         # an adversary, AI-run
+
+
+# --- recruited allies (4b-ally) ------------------------------------------
+
+def _ally_repo(chars):
+    """A tiny repo over a {id -> Character} map, raising like the real one."""
+    class _Repo:
+        def get_character(self, ref):
+            try:
+                return chars[ref]
+            except KeyError:
+                raise StateError(f"no entity {ref!r}")
+    return _Repo()
+
+
+def _person(cid, name, kind="npc", **over):
+    from oubliette.state.models import Character, CharacterSheet
+    base = dict(
+        id=cid, name=name, kind=kind, level=3, hp=28, max_hp=28,
+        armor_class=16, attack_bonus=5, damage="1d8+3",
+        abilities={"str": 16, "dex": 12, "con": 14, "int": 10, "wis": 11, "cha": 13},
+        sheet=CharacterSheet(race="Human", char_class="Fighter",
+                             background="Soldier", size="Medium"),
+    )
+    base.update(over)
+    return Character(**base)
+
+
+def test_named_ally_joins_the_player_party_player_controlled():
+    """Forge 4b-ally: an entity named in `encounter.allies` is appended to the party,
+    so `build_encounter` team-tags it 'player' and `character_to_player` makes it
+    player-controlled — a recruited captain fights at the PC's side, his HP written
+    back like any party member."""
+    from oubliette.combat.arena_bridge import build_encounter
+    from oubliette.combat.arena_launch import _resolve_allies
+
+    pc = _person("pc", "Hero", kind="pc", hp=20, max_hp=20)
+    aldric = _person("capt_aldric", "Captain Aldric")
+    repo = _ally_repo({"pc": pc, "capt_aldric": aldric})
+
+    req = EncounterRequest(enemies=[EnemyRef(ref="bandit")], allies=["capt_aldric"])
+    party = _resolve_allies(req, repo, [pc])
+    assert [c.id for c in party] == ["pc", "capt_aldric"]
+
+    plan = build_encounter(party, [], TerrainSpec())
+    slot = next(c for c in plan.encounter.combatants
+                if c.name_override == "Captain Aldric")
+    assert slot.team == "player"
+    assert slot.creature_data.is_player_controlled is True
+    assert plan.persistent_ids["Captain Aldric"] == "capt_aldric"  # HP writes back
+
+
+def test_unknown_ally_id_is_skipped_not_fatal():
+    """An ally is additive: a stray/hallucinated ally id is dropped silently rather
+    than aborting the fight (the opposite of an unknown ENEMY ref, which raises)."""
+    from oubliette.combat.arena_launch import _resolve_allies
+
+    pc = _person("pc", "Hero", kind="pc")
+    repo = _ally_repo({"pc": pc})
+
+    req = EncounterRequest(enemies=[EnemyRef(ref="bandit")],
+                           allies=["ghost_who_isnt_here"])
+    party = _resolve_allies(req, repo, [pc])
+    assert [c.id for c in party] == ["pc"]
+
+
+def test_ally_already_in_party_is_not_doubled():
+    """Naming the PC (or an already-present party member) as an ally is a no-op —
+    deduped by id so no combatant appears twice."""
+    from oubliette.combat.arena_launch import _resolve_allies
+
+    pc = _person("pc", "Hero", kind="pc")
+    repo = _ally_repo({"pc": pc})
+
+    req = EncounterRequest(enemies=[EnemyRef(ref="bandit")], allies=["pc"])
+    party = _resolve_allies(req, repo, [pc])
+    assert [c.id for c in party] == ["pc"]

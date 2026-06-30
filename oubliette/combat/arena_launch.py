@@ -199,6 +199,31 @@ def _resolve_enemies(
     return out
 
 
+def _resolve_allies(
+    request: EncounterRequest, repo: Repository, party: list,
+) -> list:
+    """The player party PLUS any friendly entities the encounter names as allies
+    (Forge 4b-ally). Each ally id is an EXISTING persistent entity (a recruited
+    person-NPC, or any present NPC who sides with the party); it joins the player
+    team for THIS fight, player-controlled, at full sheet fidelity via
+    `character_to_player`. Per-encounter only — naming an ally implies no standing
+    party membership.
+
+    Unlike an unknown ENEMY ref (which aborts the fight), an unresolvable or
+    duplicate ally id is simply SKIPPED — an ally is additive, never required, so a
+    stray ref the narrator invents must not collapse the encounter."""
+    have = {c.id for c in party}
+    out = list(party)
+    for ref in request.allies:
+        if ref in have:
+            continue
+        ent = _try_entity(repo, ref)
+        if ent is not None:
+            have.add(ent.id)
+            out.append(ent)
+    return out
+
+
 # --- staging -------------------------------------------------------------
 
 def stage_combat(
@@ -232,7 +257,7 @@ def stage_combat(
     if portraits is None:
         portraits = _portrait_dirs(session)
     enemies = _resolve_enemies(request, repo, session, portraits)
-    party = repo.party() or [repo.pc()]
+    party = _resolve_allies(request, repo, repo.party() or [repo.pc()])
     # The ruleset rides along: the equipment catalog turns drinkable consumables
     # into Arena item actions (B1), and the class tables stage each PC's CURRENT
     # spell-slot/resource state (B2). Pack-authored items carry no mechanics yet.
