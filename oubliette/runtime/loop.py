@@ -83,6 +83,7 @@ class TurnLoop:
             self.repo, scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits,
             location=self.session.location, places=self.session.places,
             quests=self.session.quests.active(),
+            pending_rewards=self.session.quests.reward_pending(),
             time_of_day=self.session.time_of_day, weather=self.session.weather,
             ruleset=self.session.ruleset,
             authored_quests=authored, offerable=eligible, offered_here=here)
@@ -238,6 +239,7 @@ class TurnLoop:
                     self.session.emit_quest_update(
                         rt.quest_update.quest_id, status=rt.quest_update.status,
                         note=rt.quest_update.note, outcome=rt.quest_update.outcome,
+                        reward_settled=rt.quest_update.reward_settled,
                         reason=rt.reason)
                 else:
                     self.session.emit_state(

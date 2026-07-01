@@ -226,7 +226,8 @@ def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = N
     if event.kind == EventKind.QUEST_UPDATED.value:
         if quests is not None:
             quests.update(event.payload["quest_id"], status=event.payload.get("status"),
-                          note=event.payload.get("note"))
+                          note=event.payload.get("note"),
+                          reward_settled=event.payload.get("reward_settled"))
         return
     if event.kind == EventKind.CHARACTER_CREATED.value:
         install_character(event.payload, repo)

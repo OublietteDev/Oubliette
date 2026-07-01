@@ -29,7 +29,7 @@ class QuestStore:
         return self._quests.get(quest_id)
 
     def update(self, quest_id: str, status: QuestStatus | None = None,
-               note: str | None = None) -> None:
+               note: str | None = None, reward_settled: bool | None = None) -> None:
         quest = self._quests.get(quest_id)
         if quest is None:
             return
@@ -37,9 +37,18 @@ class QuestStore:
             quest.status = status
         if note:
             quest.notes.append(note)
+        if reward_settled is not None:
+            quest.reward_settled = reward_settled
 
     def all(self) -> list[Quest]:
         return list(self._quests.values())
 
     def active(self) -> list[Quest]:
         return [q for q in self._quests.values() if q.status == "active"]
+
+    def reward_pending(self) -> list[Quest]:
+        """Completed quests whose reward the DM hasn't yet confirmed as settled — kept
+        in the DM's context so a reward promised now and handed over later (possibly
+        renegotiated) isn't forgotten. Cleared by update_quest(reward_settled=True)."""
+        return [q for q in self._quests.values()
+                if q.status == "completed" and not q.reward_settled]

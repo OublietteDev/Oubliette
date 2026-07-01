@@ -228,15 +228,18 @@ class Session:
 
     def emit_quest_update(self, quest_id: str, status: QuestStatus | None = None,
                           note: str | None = None, outcome: str | None = None,
-                          reason: str = "") -> None:
-        """Advance a quest (the DM's `update_quest` tool): change its status and/or
-        append a note. `outcome` is recorded for authored-quest chain routing but is NOT
-        applied to quest state — it's read back from the log by quest.offers, so replay
-        stays byte-identical without it touching the QuestStore."""
+                          reward_settled: bool | None = None, reason: str = "") -> None:
+        """Advance a quest (the DM's `update_quest` tool): change its status, append a
+        note, and/or mark its reward settled. `outcome` is recorded for authored-quest
+        chain routing but is NOT applied to quest state — it's read back from the log by
+        quest.offers, so replay stays byte-identical without it touching the QuestStore.
+        `reward_settled` IS quest state (clears the REWARDS PENDING reminder)."""
         self.store.append(EventKind.QUEST_UPDATED,
                           {"quest_id": quest_id, "status": status, "note": note,
-                           "outcome": outcome, "reason": reason})
-        self.quests.update(quest_id, status=status, note=note)
+                           "outcome": outcome, "reward_settled": reward_settled,
+                           "reason": reason})
+        self.quests.update(quest_id, status=status, note=note,
+                           reward_settled=reward_settled)
 
     def emit_party_created(self, builds: list["CharacterBuild"],
                            reason: str = "party created") -> list[Character]:

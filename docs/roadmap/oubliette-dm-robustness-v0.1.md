@@ -60,14 +60,18 @@ canon clip 160, present-NPC location scoping, merchant stock cap 8, recent-turns
 window 4-of-8, active-quest text clip 200 / last-note-only). Full table lives in the
 audit appendix; the flowchart deliverable (below) visualizes it.
 
-- **W1a — quest reward fix (do first, it's small).** `[LOCKED: keep-until-paid]`
-  A completed quest stays in the DM's context in a "recently completed / reward
-  pending" block **until the reward is actually handed over** via give/transact, then
-  it drops. Needs: (1) a "reward settled" signal — simplest is to treat the quest as
-  pending until a give/transact to the player references it or the DM marks it settled;
-  (2) a new small context block distinct from ACTIVE QUESTS. Open sub-question: how the
-  DM signals "settled" — infer from a matching give/transact, or an explicit
-  `settle_reward`/quest-note flag. Decide at build time.
+- **W1a — quest reward fix.** `[LOCKED: keep-until-paid]` `[BUILT 2026-06-30]`
+  A completed quest stays in the DM's context in a new **REWARDS PENDING** block
+  (distinct from ACTIVE QUESTS) until the DM confirms the party was compensated.
+  **Settle signal = an explicit `reward_settled` flag on `update_quest`** — NOT inferred
+  from a matching give/transact, because rewards are renegotiable (the party may take
+  gold instead of the promised sword, or decline it), so a handover deliberately won't
+  match the promise. `Quest.reward_settled` is event-sourced via QUEST_UPDATED (survives
+  reload); `QuestStore.reward_pending()` = completed & unsettled; the block shows the
+  authored reward (or, for emergent quests, the last note/text as a hint); the DM is
+  prompted to hand over the reward then set `reward_settled=true`. A settle-only update
+  emits no player quest-card (the give/transact chip already shows the handover).
+  Tests: `tests/test_quests.py` (+4). Full oubliette suite 537 green.
 - **W1b — audit the other drop points** and decide keep-as-designed vs fix (most are
   fine; present-NPC scoping and the canon top-5 are the ones worth a second look).
 - **Deliverable: a context-lifecycle flowchart** (the thing you asked for) — a living
@@ -154,8 +158,8 @@ path for the test suite.
 - **Reload recap (W3):** replay the full stored transcript, show a short generated
   recap ("Last time…"), or both? Leaning: replay transcript for the player (we now
   store it) + seed a compact recap into the DM's first-turn context.
-- **W1a "settled" signal:** infer from a matching give/transact vs. an explicit
-  settle flag.
+- ~~**W1a "settled" signal**~~ — RESOLVED: explicit `reward_settled` flag (renegotiation
+  makes give/transact inference unworkable). Built.
 - **Firewall invariant (must hold):** durable narration and the DM notebook are new
   persisted, model-written surfaces. They are **memory/prose, never protected state** —
   the model can read them but code still owns every number. Keep the "code owns state,

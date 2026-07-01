@@ -176,7 +176,8 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   places: dict | None = None, quests: list | None = None,
                   time_of_day: str | None = None, weather: str | None = None,
                   ruleset=None, authored_quests: dict | None = None,
-                  offerable: set | None = None, offered_here: set | None = None) -> str:
+                  offerable: set | None = None, offered_here: set | None = None,
+                  pending_rewards: list | None = None) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -321,6 +322,23 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                 if len(aq.branches) > 1:
                     lines.append("      TO ADVANCE THE CHAIN, complete with update_quest "
                                  "outcome=<one of>: " + ", ".join(b.outcome for b in aq.branches))
+    # A completed quest's reward stays in view until the DM confirms the party was paid —
+    # a reward promised now and handed over later (or renegotiated for gold/other goods)
+    # would otherwise drop out of context the instant the quest left ACTIVE QUESTS, and
+    # the DM would have to guess what it owed. Cleared by update_quest(reward_settled=true).
+    if pending_rewards:
+        lines.append("REWARDS PENDING (these quests are DONE but the party hasn't been "
+                     "compensated yet — hand over the agreed reward via give/transact "
+                     "(renegotiable), then clear it with update_quest reward_settled=true):")
+        for q in pending_rewards:
+            aq = (authored_quests or {}).get(q.authored_id)
+            reward = _reward_text(repo, aq.reward) if aq is not None else ""
+            if reward:
+                hint = f"promised: {reward}"
+            else:
+                latest = (q.notes[-1] if q.notes else q.text) or "(recall what you offered them)"
+                hint = (latest[:160] + "…") if len(latest) > 160 else latest
+            lines.append(f"  - [{q.id}] {q.title} — {hint}")
     # Short-term continuity: what just happened, so the DM honors established
     # fiction and successful checks instead of re-litigating each turn (gap G5).
     if recent:

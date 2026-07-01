@@ -227,6 +227,11 @@ def _quest_beats(report) -> list[dict]:
             title = aq.title if aq is not None else rt.quest_accept.quest_id
             beats.append({"kind": "started", "title": title, "detail": "", "image": image})
         elif rt.quest_update is not None:
+            # A pure reward-settled flip (no status change, no note) is DM bookkeeping —
+            # the reward handover itself surfaces via its give/transact chip, so don't
+            # emit an empty "updated" card for it.
+            if rt.quest_update.status is None and not rt.quest_update.note:
+                continue
             q = GAME.session.quests.get(rt.quest_update.quest_id)
             title = q.title if q is not None else rt.quest_update.quest_id
             status = rt.quest_update.status

@@ -167,6 +167,12 @@ class UpdateQuest(BaseModel):
         description="ONLY when completing an authored quest that lists OUTCOMES: the exact "
                     "outcome label that fits how it resolved (e.g. 'spared') — it unlocks the "
                     "next quest in the chain. Omit for an emergent quest or one with no outcomes.")
+    reward_settled: bool | None = Field(
+        default=None,
+        description="set true once the party has been justly compensated for this quest — in "
+                    "whatever form they agreed to (the promised reward, a renegotiated one, or "
+                    "nothing if they declined). Until you set this, a completed quest's reward "
+                    "stays in your REWARDS PENDING list so you don't forget to hand it over.")
     reason: str
 
 

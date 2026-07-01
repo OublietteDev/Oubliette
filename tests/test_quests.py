@@ -104,3 +104,55 @@ def test_active_quests_appear_in_context():
     assert "ACTIVE QUESTS" in ctx
     assert "Find the captain" in ctx and "quest-0" in ctx
     assert "asked at the docks" in ctx          # the latest note is surfaced
+
+
+# --- keep-until-paid: a reward stays in view until the DM settles it ---------
+def test_reward_pending_tracks_completed_unsettled_quests():
+    qs = QuestStore()
+    qs.add(Quest(id="quest-0", title="Slay the wolf", status="active"))
+    assert qs.reward_pending() == []                    # active → nothing owed yet
+    qs.update("quest-0", status="completed")
+    assert [q.id for q in qs.reward_pending()] == ["quest-0"]   # done but unpaid
+    qs.update("quest-0", reward_settled=True)
+    assert qs.reward_pending() == []                    # settled → cleared
+    qs.add(Quest(id="quest-1", title="A doomed errand", status="failed"))
+    assert qs.reward_pending() == []                    # a failed quest owes nothing
+
+
+def test_dispatcher_passes_reward_settled():
+    qs = QuestStore()
+    qs.add(Quest(id="quest-0", title="A job", status="completed"))
+    disp = Dispatcher(None, None, None, qs)
+    updated = disp.resolve(UpdateQuest(quest_id="quest-0", reward_settled=True, reason="paid"))
+    assert updated.quest_update.reward_settled is True
+
+
+def test_reward_settled_survives_reload(tmp_path):
+    db = str(tmp_path / "reward.sqlite")
+    store = SqliteEventStore(db)
+    s = Session.open(store)
+    q = s.emit_quest_start("Deliver the letter", "Take it to the governor.", "intro")
+    s.emit_quest_update(q.id, status="completed", note="delivered")
+    assert [x.id for x in s.quests.reward_pending()] == [q.id]
+    s.emit_quest_update(q.id, reward_settled=True, reason="paid 50g")
+    assert s.quests.reward_pending() == []
+    store.close()
+
+    reloaded = Session.open(SqliteEventStore(db))
+    assert reloaded.quests.get(q.id).reward_settled is True
+    assert reloaded.quests.reward_pending() == []       # settled state rebuilds on reload
+
+
+def test_completed_quest_reward_stays_in_context_until_settled():
+    # The bug this fixes: a promised reward must not vanish from the DM's view the
+    # moment a quest completes — deferred or renegotiated payouts need it to persist.
+    repo = InMemoryRepository([Character(id="pc", name="You", kind="pc")], [], "pc")
+    q = Quest(id="quest-0", title="Recover the heirloom",
+              text="Bring back the locket.", status="completed",
+              notes=["locket recovered — she still owes the promised 200g"])
+    ctx = build_context(repo, "scene", quests=[], pending_rewards=[q])
+    assert "REWARDS PENDING" in ctx
+    assert "quest-0" in ctx and "Recover the heirloom" in ctx
+    assert "200g" in ctx                                # the promised reward is still visible
+    # once the DM settles it, nothing lingers
+    assert "REWARDS PENDING" not in build_context(repo, "scene", quests=[], pending_rewards=[])
