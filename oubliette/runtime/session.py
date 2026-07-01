@@ -292,6 +292,21 @@ class Session:
         """Append a non-state event (player message, roll, marker). No ops."""
         return self.store.append(kind, payload)
 
+    def emit_narration(self, narration: str, beat: str,
+                       caused_by: int | None = None) -> Event:
+        """Record the DM's narration for a completed turn, verbatim (W2). Carries the
+        full narration (rebuilds the player transcript) and the compact continuity beat
+        (rehydrates the DM's short-term memory on reload). Non-deterministic model
+        OUTPUT, so — like PLAYER_MESSAGE — it is stored as inert prose and is a no-op on
+        replay: durable memory, never an authority the model can use to assert protected
+        state. `caused_by` links it to the PLAYER_MESSAGE that prompted it (None when the
+        turn had no player message, e.g. entering the Arena)."""
+        return self.store.append(
+            EventKind.NARRATION_RECORDED,
+            {"narration": narration, "beat": beat},
+            caused_by=caused_by,
+        )
+
     def emit_state(self, kind: "str | EventKind", ops: list[StateOp], **payload) -> Event:
         """Append a protected-state event carrying its replayable ops, THEN apply
         them to the materialized repo (append-then-commit, spec §5)."""

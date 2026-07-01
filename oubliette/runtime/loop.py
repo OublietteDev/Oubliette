@@ -106,7 +106,7 @@ class TurnLoop:
                 assessment.intent = assessment.intent.model_copy(update={"verb": Verb.SKILL_CHECK})
                 self.debug.append("note", stage="assess", coerced="meta->skill_check (in-character)")
         # The PLAYER_MESSAGE event carries the raw text + the parsed intent (§4.1).
-        self.session.emit_log(
+        player_event = self.session.emit_log(
             EventKind.PLAYER_MESSAGE, text=player_text,
             intent=assessment.intent.model_dump(mode="json"),
         )
@@ -129,7 +129,7 @@ class TurnLoop:
         else:
             report = await self._resolve_turn(player_text, assessment, context, on_text=on_text)
 
-        self._record_beat(report)
+        self._record_beat(report, caused_by=player_event.seq)
         return report
 
     def _compute_offers(self) -> tuple[dict, set, set]:
@@ -400,8 +400,12 @@ class TurnLoop:
         self._record_beat(report)
         return report
 
-    def _record_beat(self, report: TurnReport) -> None:
-        """Append a compact, factual summary of the turn for short-term continuity."""
+    def _record_beat(self, report: TurnReport, caused_by: int | None = None) -> None:
+        """Finalize a completed turn's memory: build the compact continuity beat, keep it
+        in short-term memory, and record it durably alongside the verbatim narration (W2).
+        This is the single choke point both turn paths (`take_turn`, `enter_combat`) pass
+        through, so every narrated turn is captured exactly once. `caused_by` links the
+        durable record to the PLAYER_MESSAGE that prompted it (None for Arena entry)."""
         parts = [f'Player: "{report.player_text.strip()}"']
         if report.roll_outcome is not None and report.assessment.roll is not None:
             parts.append(
@@ -432,9 +436,13 @@ class TurnLoop:
         narr = " ".join(report.narration.split())
         if narr:
             parts.append(f'DM: "{narr[:140]}"')
-        self.history.append(" | ".join(parts))
+        beat = " | ".join(parts)
+        self.history.append(beat)
         if len(self.history) > HISTORY_CAP:
             self.history = self.history[-HISTORY_CAP:]
+        # Durable capture: the full narration (rebuilds the player transcript) + the beat
+        # (rehydrates this in-memory history on reload). Inert prose, no-op on replay (W2).
+        self.session.emit_narration(report.narration, beat, caused_by=caused_by)
 
     @staticmethod
     def _ops_summary(ops) -> str:

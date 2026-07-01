@@ -78,7 +78,17 @@ audit appendix; the flowchart deliverable (below) visualizes it.
   diagram of what enters context, from which source, and under what condition it
   drops. Rendered from the audit map; kept in this doc's folder.
 
-### W2 — Durable narration  `[keystone]  [LOCKED: new event kind]`
+### W2 — Durable narration  `[keystone]  [LOCKED: new event kind]  [BUILT 2026-06-30]`
+A new `NARRATION_RECORDED` event is emitted at the single beat-finalizing choke point
+(`_record_beat`, reached by both `take_turn` and `enter_combat`), so every narrated turn
+is captured exactly once. Payload = `{narration, beat}`: the **verbatim narration**
+(rebuilds the player transcript, W3) + the **compact continuity beat** (rehydrates
+`TurnLoop.history`, W3), with `caused_by` linking it to the prompting PLAYER_MESSAGE
+(None for Arena entry). It carries **no ops → inert no-op on replay** (the PLAYER_MESSAGE
+pattern), so protected state still replays byte-identical and the firewall holds:
+`Session.emit_narration`. Tests: `tests/test_narration_durable.py` (+3, verbatim capture /
+player-message linkage / no-ops-inert-on-replay). Full suite 540 green.
+
 Make the DM's narration (and enough of each turn to reconstruct it) durable via a
 **new event kind** (e.g. `NARRATION_RECORDED`, or fold into a per-turn record).
 Narration is non-deterministic, so it is **stored verbatim and is a no-op on replay**
@@ -138,9 +148,9 @@ path for the test suite.
 
 ## 4. Proposed build order
 
-1. **W1a — quest reward fix** (small, independent, real bug a playtester would hit).
-2. **W2 — durable narration** (keystone; unblocks the rest).
-3. **W3 — continuity/recap on reload** (the other real bug).
+1. **W1a — quest reward fix** (small, independent, real bug a playtester would hit). ✅ BUILT
+2. **W2 — durable narration** (keystone; unblocks the rest). ✅ BUILT
+3. **W3 — continuity/recap on reload** (the other real bug). ← next
 4. **Resolve restructure = W6 + W4 together** (narration-as-streaming-text + scratchpad,
    built in one pass so we don't rework the resolve path twice).
 5. **W5 — end-of-session notes.**

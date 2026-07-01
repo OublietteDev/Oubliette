@@ -40,6 +40,9 @@ class EventKind(str, Enum):
     REST_TAKEN = "rest_taken"           # short/long rest: ops restoring hp/slots/hit-dice/resources
     PORTRAIT_SET = "portrait_set"       # player attached/changed a PC portrait (bounded player action)
     SPELLS_PREPARED = "spells_prepared" # prepared caster re-prepared its spells after a long rest (CS5/C5)
+    NARRATION_RECORDED = "narration_recorded"  # DM narration + continuity beat, stored verbatim; inert on
+                                        # replay (like player_message). Model OUTPUT made durable — prose, not
+                                        # authority: the firewall holds, code still owns every number (W2).
 
 
 class StateOp(BaseModel):
@@ -208,7 +211,8 @@ def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = N
                 quests: "QuestStore | None" = None, strict: bool = True) -> None:
     """Replay one event into state. Protected-state events carry ops; canon/quest
     events carry their record/mutation. Non-state events (player_message, roll,
-    marker) are no-ops here."""
+    marker, narration_recorded) carry no ops and are no-ops here — narration is
+    durable prose, never an authority the model can use to assert state (W2)."""
     if event.kind == EventKind.CREATE_ENTITY.value:
         if canon is not None:
             from ..canon.models import CanonRecord
