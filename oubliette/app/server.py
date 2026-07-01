@@ -731,11 +731,6 @@ def _preview_payload(char: Character, items, rs: Ruleset) -> dict:
     return preview_payload(char, items, rs)
 
 
-def _spell_name(rs: Ruleset, spell_id: str) -> str:
-    s = rs.spells.get(spell_id)
-    return s.name if s is not None else spell_id
-
-
 @app.get("/api/chargen/options")
 async def get_chargen_options() -> JSONResponse:
     return JSONResponse(_chargen_options())
