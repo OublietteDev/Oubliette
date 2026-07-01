@@ -27,7 +27,7 @@ from .streaming import extract_string_field
 
 T = TypeVar("T", bound=BaseModel)
 
-DEFAULT_MODEL = "claude-sonnet-4-6"
+DEFAULT_MODEL = "claude-sonnet-5"
 _API_URL = "https://api.anthropic.com/v1/messages"
 _RETRYABLE = {429, 500, 502, 503, 529}
 

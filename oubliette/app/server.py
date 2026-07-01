@@ -1235,7 +1235,7 @@ class ProviderSetBody(BaseModel):
 
 
 def _pretty_model(mid: str) -> str:
-    """`claude-sonnet-4-6` -> `Claude Sonnet 4.6` for the connection badge."""
+    """`claude-sonnet-5` -> `Claude Sonnet 5` for the connection badge."""
     words, nums = [], []
     for tok in mid.split("-"):
         (nums if tok.isdigit() else words).append(tok)

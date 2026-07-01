@@ -42,7 +42,7 @@ The Dungeon Master is powered by Anthropic's Claude. You supply your own key:
 1. **Double-click `play.bat`.** Your browser opens to the game.
 2. Click **🔌 Connect your AI** on the start screen.
 3. Make sure **Anthropic — Claude** is selected, paste your `sk-ant-...` key, and
-   click **Save & connect**. You should see **● Claude Sonnet 4.6** at the top.
+   click **Save & connect**. You should see **● Claude Sonnet 5** at the top.
 4. Click **New Game**, pick a world, and start telling the Phantom what you do.
 
 Your key is saved **only on your computer** (never shared, never uploaded anywhere

@@ -15,7 +15,7 @@ canon on the right.
 
 **Connecting a model:** the start screen's **🔌 Connect your AI** panel lets you
 pick a provider and paste an API key right in the browser — stored locally in a
-gitignored `oubliette-config.json`, never committed. Anthropic (Claude Sonnet 4.6)
+gitignored `oubliette-config.json`, never committed. Anthropic (Claude Sonnet 5)
 is wired; OpenAI / Gemini / local models are shown as "coming soon". A key in the
 environment or a `.env` (`ANTHROPIC_API_KEY`) still works too. With no key the game
 runs the scripted **Offline Mode** DM (a canned demo) and says so in the chat.
