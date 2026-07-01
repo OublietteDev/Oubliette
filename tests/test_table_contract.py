@@ -109,7 +109,7 @@ class _CapturingClient:
                 tier=Tier.FREESTYLE, requires_roll=False)
         raise AssertionError(f"unexpected schema {schema}")
 
-    async def act(self, *, system, messages, tools, on_text=None):
+    async def act(self, *, system, messages, tools, on_text=None, effort=None):
         # The resolve turn is now the streaming, tool_choice:auto `act` call (W6).
         self.resolve_system = system
         return ActResult(narration="You take in the square.")

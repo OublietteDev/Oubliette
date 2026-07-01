@@ -132,10 +132,23 @@ Once narration is durable:
 
 ### W4 — DM scratchpad  `[rides the W2/W6 resolve restructure]  [LOCKED: both]`
 Build **both** flavors:
-- **Per-turn thinking:** a scratchpad/thinking space the model fills before it narrates
-  (natural once resolve is restructured; a text/thinking block the UI never shows).
-  Improves single-turn reasoning; not persisted. Near-free once W6 lands.
-- **Persistent DM notebook:** a durable, DM-owned notes store (distinct from the
+- **Per-turn thinking:** ✅ **BUILT 2026-07-01 (Stage 2), live-verified.** Native extended
+  thinking on the resolve `act` call — `thinking: {type: "adaptive", display: "summarized"}`
+  + `output_config: {effort}` (claude-sonnet-5's shape; the old `{enabled, budget_tokens}`
+  400s). **Per-turn effort by tier** (`Brain._effort_for`): contested adjudications
+  (`RECOMBINED`, `DENIED`) → `high`; routine narration (`FREESTYLE`, `AUTHORED`) → thinking
+  off — so the DM reasons only where the ruling is genuinely in question, with no latency/
+  cost tax on routine turns. `act(effort=...)` overrides the client default per call (sentinel
+  `_INHERIT`); the summarized thinking is captured and logged to the non-replayed debug channel
+  (`TurnLoop._resolve_turn`), never shown to the player. `complete` (assess/wrap) explicitly
+  sets `thinking: {type: "disabled"}` (forced-tool calls can't think, and sonnet-5 would
+  otherwise default adaptive-on). **Empirical finding that drove the design:** at low/medium
+  effort adaptive thinking almost never fires on DM narration turns (the dice are pre-resolved
+  in code, and it's a generative task) — only `high` on an open judgment reliably triggers it
+  (live: a contested trap ruling → 541 chars of reasoning; a routine "glance around" → 0).
+  Tests: `test_resolve_streaming.py` (adaptive-thinking payload, canned-SSE thinking parse,
+  tier→effort mapping, Brain passes per-turn effort). NOT persisted across turns.
+- **Persistent DM notebook (Stage 3 — NEXT):** a durable, DM-owned notes store (distinct from the
   player's DM-invisible journal) that rides context each turn — the DM's own memory of
   plans, foreshadowing, NPC intentions. Persisted via W2's durable record (its own
   event kind or notebook table); the DM writes to it with a tool; it feeds back into
@@ -234,11 +247,12 @@ deltas + a `CreateEntity` witness and a `StartQuest`). Two follow-on fixes lande
 5. **Resolve restructure = W6 + W4.** Staged, not one pass:
    - **Stage 1 — W6 streaming** (narration-as-streaming-text, actions/env as `tool_choice:auto`
      tools). ✅ BUILT 2026-07-01 (2979 green). Live-verify streaming with the real key, then:
-   - **Stage 2 — W4 per-turn thinking** (native extended thinking recommended over a prompted
-     scratchpad — API hides it, better reasoning per token, composes with `tool_choice:auto`;
-     cost = a short pre-narration pause). Decide at reassess with live streaming data in hand.
-   - **Stage 3 — W4 persistent DM notebook** (a `dm_note` tool → durable inert-on-replay event
-     → "DM NOTEBOOK" context block; firewall: prose only).
+   - **Stage 2 — W4 per-turn thinking.** ✅ BUILT + live-verified 2026-07-01 (2984 green).
+     Native adaptive thinking, **per-turn effort by tier** (contested → high, routine → off).
+     See W4 above for the empirical finding (thinking only fires at high effort on genuinely
+     contested turns) and the wiring.
+   - **Stage 3 — W4 persistent DM notebook (NEXT):** a `dm_note` tool → durable inert-on-replay
+     event → "DM NOTEBOOK" context block; firewall: prose only.
 6. **W1b — remaining context-drop cleanups** (opportunistic, as we go).
 
 **Session-memory model locked with OublietteDev (2026-07-01):** episodic vs. semantic memory.

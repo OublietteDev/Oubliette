@@ -47,12 +47,14 @@ class LLMClient(Protocol):
 
     async def act(
         self, *, system: str, messages: list[Msg], tools: list[type[BaseModel]],
-        on_text: TextSink | None = None,
+        on_text: TextSink | None = None, effort: str | None = None,
     ) -> ActResult:
         """The resolve turn (W6): the model narrates as streaming assistant text and
         emits 0+ tool calls for state changes. `tools` are the candidate tool models
         (each registered by its `tool` literal); returned `tool_calls` are validated
         instances. If `on_text` is given, narration text deltas stream to it as they
         generate — genuine token-by-token, since narration is no longer trapped in a
-        forced tool's JSON."""
+        forced tool's JSON. `effort` is the per-turn thinking depth (W4): None disables
+        thinking for this turn, otherwise low|medium|high|xhigh|max — the caller sets it
+        from the turn's stakes (see Brain.resolve)."""
         ...

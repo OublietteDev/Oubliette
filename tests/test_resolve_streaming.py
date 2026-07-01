@@ -53,15 +53,17 @@ def test_tool_def_strips_the_discriminator():
     assert d["description"]                         # the docstring becomes the tool description
 
 
-def test_collect_act_splits_text_and_tool_use():
+def test_collect_act_splits_text_thinking_and_tool_use():
     data = {"content": [
+        {"type": "thinking", "thinking": "The lock is simple; the rogue succeeds."},
         {"type": "text", "text": "You "},
         {"type": "text", "text": "step inside."},
         {"type": "tool_use", "name": "give", "input": {"to": "pc"}},
     ]}
-    narration, raw = _collect_act(data)
+    narration, raw, thinking = _collect_act(data)
     assert narration == "You step inside."
     assert raw == [{"name": "give", "input": {"to": "pc"}}]
+    assert thinking == "The lock is simple; the rogue succeeds."
 
 
 # --- the set_environment tool -----------------------------------------------
@@ -178,22 +180,31 @@ def test_complete_retries_on_empty_forced_emit(monkeypatch):
     assert result.tier == Tier.FREESTYLE
 
 
-def test_post_stream_act_parses_text_and_tool_use(monkeypatch):
+def test_post_stream_act_parses_thinking_text_and_tool_use(monkeypatch):
     events = [
         {"type": "message_start", "message": {}},
-        {"type": "content_block_start", "index": 0, "content_block": {"type": "text"}},
+        # a leading extended-thinking block (W4) — captured, but NEVER streamed to the player
+        {"type": "content_block_start", "index": 0, "content_block": {"type": "thinking"}},
         {"type": "content_block_delta", "index": 0,
-         "delta": {"type": "text_delta", "text": "You step "}},
+         "delta": {"type": "thinking_delta", "thinking": "The door is unlocked; "}},
         {"type": "content_block_delta", "index": 0,
-         "delta": {"type": "text_delta", "text": "into the hall."}},
+         "delta": {"type": "thinking_delta", "thinking": "no check needed."}},
+        {"type": "content_block_delta", "index": 0,
+         "delta": {"type": "signature_delta", "signature": "abc123"}},
         {"type": "content_block_stop", "index": 0},
-        {"type": "content_block_start", "index": 1,
-         "content_block": {"type": "tool_use", "id": "t1", "name": "give", "input": {}}},
+        {"type": "content_block_start", "index": 1, "content_block": {"type": "text"}},
         {"type": "content_block_delta", "index": 1,
-         "delta": {"type": "input_json_delta", "partial_json": '{"to":"p'}},
+         "delta": {"type": "text_delta", "text": "You step "}},
         {"type": "content_block_delta", "index": 1,
-         "delta": {"type": "input_json_delta", "partial_json": 'c","items":[]}'}},
+         "delta": {"type": "text_delta", "text": "into the hall."}},
         {"type": "content_block_stop", "index": 1},
+        {"type": "content_block_start", "index": 2,
+         "content_block": {"type": "tool_use", "id": "t1", "name": "give", "input": {}}},
+        {"type": "content_block_delta", "index": 2,
+         "delta": {"type": "input_json_delta", "partial_json": '{"to":"p'}},
+        {"type": "content_block_delta", "index": 2,
+         "delta": {"type": "input_json_delta", "partial_json": 'c","items":[]}'}},
+        {"type": "content_block_stop", "index": 2},
         {"type": "message_delta", "delta": {}},
         {"type": "message_stop"},
     ]
@@ -202,8 +213,98 @@ def test_post_stream_act_parses_text_and_tool_use(monkeypatch):
 
     client = AnthropicLLMClient(api_key="test-key")
     chunks: list[str] = []
-    narration, tools = client._post_stream_act({}, chunks.append)
+    narration, tools, thinking = client._post_stream_act({}, chunks.append)
 
     assert narration == "You step into the hall."
-    assert chunks == ["You step ", "into the hall."]     # streamed as two real text deltas
+    assert chunks == ["You step ", "into the hall."]     # ONLY narration streamed to the player
+    assert thinking == "The door is unlocked; no check needed."   # captured, not streamed
     assert tools == [{"name": "give", "input": {"to": "pc", "items": []}}]
+
+
+def test_act_uses_adaptive_thinking_and_complete_disables_it(monkeypatch):
+    """The resolve turn (`act`) opts into ADAPTIVE thinking + effort with `tool_choice: auto`
+    (sonnet-5's shape — the old `budget_tokens` form 400s); the forced-tool `complete`
+    (assess/wrap) explicitly DISABLES thinking (incompatible with a forced tool, and
+    classification doesn't want the pause)."""
+    from oubliette.enums import Tier
+    from oubliette.llm.client import Msg
+    from oubliette.schemas import TurnAssessment
+    from oubliette.tools.schemas import TOOL_MODELS
+
+    client = AnthropicLLMClient(api_key="test-key", effort="low")
+    seen = {}
+
+    def fake_post(payload):
+        seen.clear(); seen.update(payload)
+        if payload.get("tool_choice", {}).get("type") == "tool":
+            return {"content": [{"type": "tool_use", "name": "emit", "input": {
+                "intent": {"raw_text": "x", "verb": "skill_check"}, "tier": "freestyle"}}]}
+        return {"content": [{"type": "text", "text": "You look about."}]}
+
+    monkeypatch.setattr(client, "_post", fake_post)
+
+    asyncio.run(client.act(system="", messages=[Msg(role="user", content="x")],
+                           tools=list(TOOL_MODELS)))
+    assert seen["thinking"] == {"type": "adaptive", "display": "summarized"}
+    assert seen["output_config"] == {"effort": "low"}
+    assert seen["tool_choice"] == {"type": "auto"}
+    assert seen["max_tokens"] >= 4096                     # room for thinking + narration + tools
+
+    asyncio.run(client.complete(system="", messages=[Msg(role="user", content="x")],
+                                schema=TurnAssessment))
+    assert seen["thinking"] == {"type": "disabled"}       # forced-tool call never thinks
+    assert "output_config" not in seen
+
+
+def test_effort_by_tier():
+    from oubliette.dm.brain import _effort_for
+    from oubliette.enums import Tier, Verb
+    from oubliette.schemas import Intent, TurnAssessment
+
+    def a(tier):
+        return TurnAssessment(intent=Intent(raw_text="x", verb=Verb.SKILL_CHECK), tier=tier)
+
+    assert _effort_for(a(Tier.RECOMBINED)) == "high"   # clever/edge-case adjudication → think
+    assert _effort_for(a(Tier.DENIED)) == "high"       # bald claim to refuse → think
+    assert _effort_for(a(Tier.FREESTYLE)) is None       # routine narration → no thinking
+    assert _effort_for(a(Tier.AUTHORED)) is None        # scripted content → no thinking
+
+
+def test_brain_resolve_passes_per_turn_effort():
+    from oubliette.dm.brain import Brain
+    from oubliette.enums import Tier, Verb
+    from oubliette.schemas import Intent, TurnAssessment
+
+    captured = {}
+
+    class _Cap:
+        async def act(self, *, system, messages, tools, on_text=None, effort=None):
+            captured["effort"] = effort
+            return ActResult(narration="ok")
+
+        async def complete(self, **k):  # pragma: no cover - resolve never calls it
+            raise AssertionError
+
+    brain = Brain(_Cap())
+    contested = TurnAssessment(intent=Intent(raw_text="I con the merchant", verb=Verb.SKILL_CHECK),
+                               tier=Tier.RECOMBINED)
+    asyncio.run(brain.resolve("I con the merchant", contested, roll_result="success"))
+    assert captured["effort"] == "high"
+
+    routine = TurnAssessment(intent=Intent(raw_text="I look around", verb=Verb.SKILL_CHECK),
+                             tier=Tier.FREESTYLE)
+    asyncio.run(brain.resolve("I look around", routine, roll_result=None))
+    assert captured["effort"] is None
+
+
+def test_effort_none_disables_thinking(monkeypatch):
+    from oubliette.llm.client import Msg
+    from oubliette.tools.schemas import TOOL_MODELS
+
+    client = AnthropicLLMClient(api_key="test-key", effort=None)
+    seen = {}
+    monkeypatch.setattr(client, "_post", lambda p: (seen.update(p),
+        {"content": [{"type": "text", "text": "ok"}]})[1])
+    asyncio.run(client.act(system="", messages=[Msg(role="user", content="x")],
+                           tools=list(TOOL_MODELS)))
+    assert "thinking" not in seen and "output_config" not in seen

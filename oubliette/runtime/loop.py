@@ -238,6 +238,10 @@ class TurnLoop:
                 self.debug.append("anomaly", stage="resolve", attempt=attempt, error=str(e))
                 continue
             narration = resolution.narration
+            if getattr(resolution, "thinking", None):
+                # Per-turn scratchpad (W4): the DM's hidden reasoning. Never shown to the
+                # player; logged to the non-replayed debug channel so it's inspectable.
+                self.debug.append("thinking", stage="resolve", text=resolution.thinking)
             try:
                 resolved = [self.dispatcher.resolve(c) for c in resolution.tool_calls]
             except ToolApplyError as e:

@@ -10,11 +10,22 @@ capability (gap G3).
 from __future__ import annotations
 
 from ..combat.templates import ENEMY_TEMPLATES
+from ..enums import Tier
 from ..llm.client import ActResult, LLMClient, Msg
 from ..schemas import SessionNotes, TurnAssessment
 from ..tools.schemas import TOOL_MODELS
 
 _TEMPLATES = ", ".join(sorted(ENEMY_TEMPLATES))
+
+# Per-turn thinking effort (W4). The DM reasons on the turns where adjudication is genuinely
+# contested — a clever/edge-case attempt (RECOMBINED) or a bald claim to protected state that
+# must be refused (DENIED) — and skips thinking on routine narration (FREESTYLE) and scripted
+# content (AUTHORED), so there's no latency/cost tax where reasoning wouldn't change the ruling.
+_HIGH_EFFORT_TIERS = {Tier.RECOMBINED, Tier.DENIED}
+
+
+def _effort_for(assessment: TurnAssessment) -> str | None:
+    return "high" if assessment.tier in _HIGH_EFFORT_TIERS else None
 
 ASSESS_SYSTEM = (
     "You are the DM of Oubliette Table. Read the player's message (with the given "
@@ -239,7 +250,7 @@ class Brain:
         system = RESOLVE_SYSTEM + table_prompt if table_prompt else RESOLVE_SYSTEM
         result = await self.client.act(
             system=system, messages=[Msg(role="user", content="\n".join(parts))],
-            tools=list(TOOL_MODELS), on_text=on_text,
+            tools=list(TOOL_MODELS), on_text=on_text, effort=_effort_for(assessment),
         )
         if not result.narration.strip() and not result.tool_calls:
             raise RuntimeError("model returned an empty resolution (no narration, no tools)")

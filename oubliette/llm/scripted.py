@@ -49,7 +49,8 @@ class ScriptedLLMClient:
         raise NotImplementedError(f"ScriptedLLMClient has no script for {schema.__name__}")
 
     async def act(self, *, system: str, messages: list[Msg],
-                  tools: list[type[BaseModel]] | None = None, on_text=None) -> ActResult:
+                  tools: list[type[BaseModel]] | None = None, on_text=None,
+                  effort: str | None = None) -> ActResult:
         """The restructured resolve turn (W6). The scripted double still builds a whole
         TurnResolution internally (its `_resolve` is unchanged); `act` just unpacks it into
         narration TEXT + tool calls, and simulates the token-by-token stream word-by-word."""
