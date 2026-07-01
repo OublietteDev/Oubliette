@@ -11,12 +11,12 @@ import asyncio
 
 from oubliette.dm.brain import ASSESS_SYSTEM, RESOLVE_SYSTEM, Brain
 from oubliette.enums import Tier, Verb
-from oubliette.llm.client import Msg
+from oubliette.llm.client import ActResult, Msg
 from oubliette.record.rng import Rng
 from oubliette.record.store import InMemoryEventStore, SqliteEventStore
 from oubliette.runtime.loop import TurnLoop
 from oubliette.runtime.session import Session
-from oubliette.schemas import Intent, TurnAssessment, TurnResolution
+from oubliette.schemas import Intent, TurnAssessment
 from oubliette.table import (DEFAULT_TABLE, TONE_PRESETS, TableContract,
                              normalize_contract, render_table_prompt)
 
@@ -107,10 +107,12 @@ class _CapturingClient:
             return TurnAssessment(
                 intent=Intent(raw_text="look", verb=Verb.SKILL_CHECK),
                 tier=Tier.FREESTYLE, requires_roll=False)
-        if schema is TurnResolution:
-            self.resolve_system = system
-            return TurnResolution(narration="You take in the square.")
         raise AssertionError(f"unexpected schema {schema}")
+
+    async def act(self, *, system, messages, tools, on_text=None, effort=None):
+        # The resolve turn is now the streaming, tool_choice:auto `act` call (W6).
+        self.resolve_system = system
+        return ActResult(narration="You take in the square.")
 
 
 def test_contract_reaches_resolve_prompt_only():

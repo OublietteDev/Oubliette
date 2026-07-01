@@ -322,6 +322,15 @@ class Session:
             caused_by=caused_by,
         )
 
+    def emit_notebook_note(self, note: str, caused_by: int | None = None) -> Event:
+        """Record a DM private working note (the `dm_note` tool, W4). The DM's own memory of
+        plans, an NPC's true intentions, foreshadowing it planted — written mid-play, fed back
+        into the DM's context (never the player's). Like narration it is inert prose, a no-op on
+        replay: durable memory, never an authority for protected state. `caused_by` links it to
+        the prompting PLAYER_MESSAGE."""
+        return self.store.append(
+            EventKind.NOTEBOOK_NOTE, {"note": note}, caused_by=caused_by)
+
     def emit_state(self, kind: "str | EventKind", ops: list[StateOp], **payload) -> Event:
         """Append a protected-state event carrying its replayable ops, THEN apply
         them to the materialized repo (append-then-commit, spec §5)."""

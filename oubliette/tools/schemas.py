@@ -157,6 +157,38 @@ class ForceEndSession(BaseModel):
     reason: str = Field(description="a brief, honest reason for force-ending (logged, not shown as fiction)")
 
 
+class DmNote(BaseModel):
+    """Jot a PRIVATE note to your own DM notebook (W4) — your working memory for THIS session.
+    Use it for things you want to remember but that aren't protected state: a plan you're
+    building toward, an NPC's true intention or secret, foreshadowing you just planted, a
+    promise or lie left standing, a thread to follow up. These notes ride your context every
+    turn and the players NEVER see them. They are prose memory only — do NOT record gold/HP/XP
+    or any number here (code owns those; the give/transact/award_xp tools change them)."""
+
+    tool: Literal["dm_note"] = "dm_note"
+    note: str = Field(description="the private note to remember, a sentence or two")
+
+
+class SetEnvironment(BaseModel):
+    """Report a CHANGE to the world's time-of-day and/or weather (engine-owned state
+    that drives the audio soundscape). Emit this ONLY when the fiction has just turned
+    the environment — the party beds down for the night, a storm you've been building
+    finally breaks. Do NOT emit it every turn: with no call, the current time/weather
+    simply carry forward unchanged. Set only the field(s) that changed."""
+
+    tool: Literal["set_environment"] = "set_environment"
+    time_of_day: Literal["day", "night"] | None = None
+    weather: Literal["clear", "rain", "storm", "wind"] | None = None
+    reason: str = Field(default="the fiction turned the environment",
+                        description="the fiction for the change, e.g. 'night falls as they make camp'")
+
+    @model_validator(mode="after")
+    def _at_least_one(self) -> "SetEnvironment":
+        if self.time_of_day is None and self.weather is None:
+            raise ValueError("set_environment must change at least one of {time_of_day, weather}")
+        return self
+
+
 class StartQuest(BaseModel):
     """Begin tracking a goal the party has taken on (an NPC's request, a mystery
     they're chasing). Code records it as an active quest."""
@@ -205,6 +237,16 @@ class AcceptQuest(BaseModel):
 # branch in tools/dispatch.py.
 ToolCall = Annotated[
     Union[Transact, Give, Take, AwardXp, CreateEntity, PromoteCanon, Travel,
-          EndSession, ForceEndSession, StartQuest, UpdateQuest, AcceptQuest],
+          EndSession, ForceEndSession, StartQuest, UpdateQuest, AcceptQuest,
+          SetEnvironment, DmNote],
     Field(discriminator="tool"),
 ]
+
+# The candidate tools handed to the model on a resolve turn (W6). Order is the order
+# the model sees them; each is registered by its `tool` literal via `act()`. This is
+# the single list to extend when adding a resolve-time tool (also add a dispatch branch).
+TOOL_MODELS: tuple[type[BaseModel], ...] = (
+    Transact, Give, Take, AwardXp, CreateEntity, PromoteCanon, Travel,
+    EndSession, ForceEndSession, StartQuest, UpdateQuest, AcceptQuest,
+    SetEnvironment, DmNote,
+)

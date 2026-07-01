@@ -132,15 +132,37 @@ Once narration is durable:
 
 ### W4 — DM scratchpad  `[rides the W2/W6 resolve restructure]  [LOCKED: both]`
 Build **both** flavors:
-- **Per-turn thinking:** a scratchpad/thinking space the model fills before it narrates
-  (natural once resolve is restructured; a text/thinking block the UI never shows).
-  Improves single-turn reasoning; not persisted. Near-free once W6 lands.
-- **Persistent DM notebook:** a durable, DM-owned notes store (distinct from the
-  player's DM-invisible journal) that rides context each turn — the DM's own memory of
-  plans, foreshadowing, NPC intentions. Persisted via W2's durable record (its own
-  event kind or notebook table); the DM writes to it with a tool; it feeds back into
-  context. This is also the substrate for W5 (session notes = notebook entries the DM
-  writes at session end). Firewall: notebook is DM memory/prose, never protected state.
+- **Per-turn thinking:** ✅ **BUILT 2026-07-01 (Stage 2), live-verified.** Native extended
+  thinking on the resolve `act` call — `thinking: {type: "adaptive", display: "summarized"}`
+  + `output_config: {effort}` (claude-sonnet-5's shape; the old `{enabled, budget_tokens}`
+  400s). **Per-turn effort by tier** (`Brain._effort_for`): contested adjudications
+  (`RECOMBINED`, `DENIED`) → `high`; routine narration (`FREESTYLE`, `AUTHORED`) → thinking
+  off — so the DM reasons only where the ruling is genuinely in question, with no latency/
+  cost tax on routine turns. `act(effort=...)` overrides the client default per call (sentinel
+  `_INHERIT`); the summarized thinking is captured and logged to the non-replayed debug channel
+  (`TurnLoop._resolve_turn`), never shown to the player. `complete` (assess/wrap) explicitly
+  sets `thinking: {type: "disabled"}` (forced-tool calls can't think, and sonnet-5 would
+  otherwise default adaptive-on). **Empirical finding that drove the design:** at low/medium
+  effort adaptive thinking almost never fires on DM narration turns (the dice are pre-resolved
+  in code, and it's a generative task) — only `high` on an open judgment reliably triggers it
+  (live: a contested trap ruling → 541 chars of reasoning; a routine "glance around" → 0).
+  Tests: `test_resolve_streaming.py` (adaptive-thinking payload, canned-SSE thinking parse,
+  tier→effort mapping, Brain passes per-turn effort). NOT persisted across turns.
+- **Persistent DM notebook:** ✅ **BUILT 2026-07-01 (Stage 3), live-verified.** A `dm_note`
+  tool the DM calls to jot private working memory — plans, an NPC's true intention, foreshadowing
+  planted, a lie left standing. Recorded as a new `NOTEBOOK_NOTE` event (payload `{note}`, inert
+  on replay like NARRATION_RECORDED — the firewall pattern), fed back each turn as a **DM NOTEBOOK**
+  context block (`transcript.notebook_notes` → `build_context`). **Scoped to the current session**
+  (like beats): the DM's episodic working memory, durable across reloads within the session, reset
+  at wrap — its threads carry forward via STORY SO FAR (W5's per-session dm_private notes are the
+  semantic layer above it). Players NEVER see it (not in the transcript). Pieces: `EventKind.NOTEBOOK_NOTE`,
+  `Session.emit_notebook_note`, `DmNote` tool + TOOL_MODELS + dispatch (`ResolvedTool.note_text`),
+  loop apply-branch + beat summary, `transcript.notebook_notes`, `build_context` DM NOTEBOOK block,
+  `RESOLVE_SYSTEM` NOTEBOOK guidance. Live-verified: the DM recorded an NPC's secret allegiance to
+  the notebook, it reached the next turn's context, and the secret stayed OUT of the player narration.
+  Tests: `test_resolve_streaming.py` (dispatch, records+feeds-context+player-invisible, current-session
+  scoping + inert-on-replay). Full suite 2987 green. (Also fixed the stale `build_context` ENVIRONMENT
+  line — "report on your TurnResolution" → "emit set_environment when the story turns them".)
 
 ### W5 — Session wrap-up + two-faced notes  `[builds on W2/W3]  [BUILT 2026-07-01]`
 The episodic→semantic compaction. A **wrap** (distinct from a free pause = closing the
@@ -170,7 +192,7 @@ follow-on** (promote provisional→confirmed canon at wrap).
 
 Old note (superseded): `emit_end` recorded only a reason string that was never read back.
 
-### W6 — Streaming redesign  `[folded; shares the W2/W4 resolve restructure]  [LOCKED: one-call, narration as text]`
+### W6 — Streaming redesign  `[folded; shares the W2/W4 resolve restructure]  [LOCKED: one-call, narration as text]  [BUILT 2026-07-01]`
 Restructure resolve so narration is a streaming assistant **text** channel and only
 state-changing actions go through tool calls (`tool_choice: auto`, not forced `emit`).
 One model call, real token-by-token streaming, narration leaves the validated schema
@@ -183,6 +205,45 @@ covering all three. Risk to manage: the whole loop + tests are built around the 
 the highest-touch change in the arc — stage it behind tests and keep the non-streaming
 path for the test suite.
 
+**BUILT (Stage 1 of the resolve restructure):** a second seam method `LLMClient.act(system,
+messages, tools, on_text) -> ActResult{narration, tool_calls, thinking}` (`llm/client.py`).
+`AnthropicLLMClient.act` uses `tool_choice: auto`, registers each tool model by its `tool`
+literal (`_tool_def` strips the discriminator from the input schema), streams assistant
+**text** deltas straight to `on_text` (genuine token-by-token — `_post_stream_act`), and
+accumulates `tool_use` blocks (validated via the shared `_coerce_input` envelope-unwrap).
+The forced-`emit` streaming path it replaced (`_post_stream` + `llm/streaming.py`
+`extract_string_field` + `test_streaming_extract.py`) is DELETED; `complete()` is now
+assess/wrap-only (forced structured output, no streaming). `Brain.resolve` calls `act` with
+`TOOL_MODELS` and returns `ActResult` (empty-narration-AND-no-tools → raises → the loop's
+existing retry/D6 fallback catches it). Environment left the `TurnResolution` schema and
+became a `set_environment` tool (`tools/schemas.py`, dispatch branch → `ResolvedTool.env_time/
+env_weather`, loop emits `ENVIRONMENT_CHANGED` only on an ACTUAL change). `ScriptedLLMClient.act`
+reuses its `_resolve` and unpacks. Tests: `test_resolve_streaming.py` (+9: scripted act, the
+Anthropic pure helpers `_tool_def`/`_collect_act`, a canned-SSE parse of `_post_stream_act`,
+and `set_environment` through the loop) + `test_table_contract` capturing-client updated to
+`act`; `test_resolve_robustness` unchanged (still catches the raised empty resolution). Full
+suite 2979 green. **Stage 2 (W4 per-turn thinking) + Stage 3 (W4 notebook) deferred to the
+reassess after live-verifying Stage 1 streaming with the real key.** Live Anthropic behavior
+(does `tool_choice: auto` stream text deltas as expected; sonnet-5 quirks) still needs OublietteDev's
+key to confirm in live play — same handoff as W5.
+
+**LIVE-VERIFIED by Claude with OublietteDev's key (2026-07-01, sandboxed preview):** `act()` streams real
+text deltas and returns validated tool calls (a fountain call-out produced ~1.3k chars over ~20
+deltas + a `CreateEntity` witness and a `StartQuest`). Two follow-on fixes landed from the live run:
+1. **Choppiness smoothing (frontend).** The API delivers narration in ~11 fat, clause-sized lurches
+   (~60 chars every ~360ms). The client no longer renders deltas as they land — it buffers them and
+   reveals at a steady, frame-rate-independent ~190 chars/sec (a `requestAnimationFrame` pump using
+   elapsed-time, with proportional catch-up above a 220-char backlog), decoupling on-screen cadence
+   from network jitter. `index.html` `send()`: `pump`/`startPump`/`finalize`, `REVEAL_CPS`/
+   `CATCHUP_BACKLOG`. Chips/state/quest-cards now apply on `finalize` (after the reveal drains), not
+   at `done`. (Frame-level smoothness is a focused-browser eyeball check — automated preview tabs
+   throttle timers when unfocused, so headless measurement only shows ~1/sec granularity.)
+2. **Empty-`emit` hardening (`complete`).** Sonnet-5 intermittently returns an empty forced call
+   `emit({})`; the live run caught it crashing **assess** with "2 validation errors for
+   TurnAssessment" (assess/wrap have no upstream retry loop, unlike resolve). `complete` now
+   regenerates a few times on a validation failure before surfacing it. Test:
+   `test_resolve_streaming.py::test_complete_retries_on_empty_forced_emit`. Full suite 2980 green.
+
 ---
 
 ## 4. Proposed build order
@@ -192,9 +253,23 @@ path for the test suite.
 3. **W3 — current-session continuity on reload** (the other real bug). ✅ BUILT
 4. **W5 — session wrap-up + two-faced notes** (the `end_session` wrap ritual). ✅ BUILT
    (canonization ceremony still the deferred follow-on).
-5. **Resolve restructure = W6 + W4 together** (narration-as-streaming-text + scratchpad,
-   built in one pass so we don't rework the resolve path twice). ← next (the last arc piece)
+5. **Resolve restructure = W6 + W4.** Staged, not one pass:
+   - **Stage 1 — W6 streaming** (narration-as-streaming-text, actions/env as `tool_choice:auto`
+     tools). ✅ BUILT 2026-07-01 (2979 green). Live-verify streaming with the real key, then:
+   - **Stage 2 — W4 per-turn thinking.** ✅ BUILT + live-verified 2026-07-01 (2984 green).
+     Native adaptive thinking, **per-turn effort by tier** (contested → high, routine → off).
+     See W4 above for the empirical finding (thinking only fires at high effort on genuinely
+     contested turns) and the wiring.
+   - **Stage 3 — W4 persistent DM notebook.** ✅ BUILT + live-verified 2026-07-01 (2987 green).
+     `dm_note` tool → `NOTEBOOK_NOTE` inert-on-replay event → current-session "DM NOTEBOOK"
+     context block (resets at wrap, carried forward by STORY SO FAR); firewall: prose only,
+     player-invisible. See W4 above.
 6. **W1b — remaining context-drop cleanups** (opportunistic, as we go).
+
+**ARC STATUS 2026-07-01: W1a, W2, W3, W5, W6, and W4 (both flavors) all BUILT. The DM-robustness
+arc's planned workstreams are complete.** Remaining follow-ons (all deferred, none blocking): the
+canonization ceremony (promote provisional→confirmed canon at wrap), W1b opportunistic context-drop
+patches, and the interview-surfaced backlog (HP-outside-combat gap + small prompt fixes).
 
 **Session-memory model locked with OublietteDev (2026-07-01):** episodic vs. semantic memory.
 *Current session* → player gets full transcript replay, DM gets its beats window rehydrated

@@ -43,6 +43,9 @@ class EventKind(str, Enum):
     NARRATION_RECORDED = "narration_recorded"  # DM narration + continuity beat, stored verbatim; inert on
                                         # replay (like player_message). Model OUTPUT made durable — prose, not
                                         # authority: the firewall holds, code still owns every number (W2).
+    NOTEBOOK_NOTE = "notebook_note"     # DM's private working note (the dm_note tool, W4): plans, NPC true
+                                        # intentions, foreshadowing. Durable prose, inert on replay; feeds the
+                                        # DM's context (never the player's), never a source of protected state.
 
 
 class StateOp(BaseModel):

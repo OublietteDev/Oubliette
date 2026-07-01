@@ -15,8 +15,9 @@ from ..canon.models import CanonDraft
 from ..canon.store import CanonStore
 from ..record.events import StateOp
 from ..state.repository import Repository, StateError
-from .schemas import (AcceptQuest, AwardXp, CreateEntity, EndSession, ForceEndSession, Give, PromoteCanon,
-                      StartQuest, Take, ToolCall, Transact, Travel, UpdateQuest, ValueEntry)
+from .schemas import (AcceptQuest, AwardXp, CreateEntity, DmNote, EndSession, ForceEndSession, Give,
+                      PromoteCanon, SetEnvironment, StartQuest, Take, ToolCall, Transact, Travel,
+                      UpdateQuest, ValueEntry)
 
 
 class ToolApplyError(Exception):
@@ -40,6 +41,9 @@ class ResolvedTool:
     quest_start: "StartQuest | None" = None              # start_quest
     quest_update: "UpdateQuest | None" = None            # update_quest
     quest_accept: "AcceptQuest | None" = None            # accept_quest -> activate authored quest
+    env_time: str | None = None                          # set_environment -> new time-of-day (day/night)
+    env_weather: str | None = None                       # set_environment -> new weather
+    note_text: str | None = None                         # dm_note -> a private DM notebook entry (W4)
 
 
 class Dispatcher:
@@ -78,6 +82,11 @@ class Dispatcher:
             return ResolvedTool(call.tool, call.reason, canon_promote=call.entity_id)
         if isinstance(call, Travel):
             return ResolvedTool(call.tool, call.reason, travel_to=self._resolve_place_id(call.to))
+        if isinstance(call, SetEnvironment):
+            return ResolvedTool(call.tool, call.reason,
+                                env_time=call.time_of_day, env_weather=call.weather)
+        if isinstance(call, DmNote):
+            return ResolvedTool(call.tool, "dm note", note_text=call.note)
         if isinstance(call, EndSession):
             return ResolvedTool(call.tool, call.reason, wrap_proposed=True)
         if isinstance(call, ForceEndSession):

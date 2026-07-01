@@ -31,7 +31,7 @@ from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
 from ..trade.schemas import TradeState
 from ..trade.service import build_state, has_stock
 from .session import Session
-from .transcript import recent_beats, session_notes, transcript_turns
+from .transcript import notebook_notes, recent_beats, session_notes, transcript_turns
 
 MAX_TOOL_RETRIES = 2    # D6: after this, force a narration-only turn.
 HISTORY_IN_CONTEXT = 4  # recent turns fed back to the DM for continuity (gap G5).
@@ -99,7 +99,9 @@ class TurnLoop:
         self.dispatcher.offered_here = here
         # Long-term memory: the DM's private notes from every PAST wrapped session (W5),
         # cumulative. The current session isn't wrapped yet, so it reaches the DM as beats.
-        past_notes = [n["dm_private"] for n in session_notes(self.session.store.read_all())]
+        # The DM's own working notebook (W4) is current-session only (dm_note entries).
+        events = self.session.store.read_all()
+        past_notes = [n["dm_private"] for n in session_notes(events)]
         return build_context(
             self.repo, scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits,
             location=self.session.location, places=self.session.places,
@@ -108,7 +110,7 @@ class TurnLoop:
             time_of_day=self.session.time_of_day, weather=self.session.weather,
             ruleset=self.session.ruleset,
             authored_quests=authored, offerable=eligible, offered_here=here,
-            past_notes=past_notes)
+            past_notes=past_notes, notebook=notebook_notes(events))
 
     async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
         context = self._build_context(player_text)
@@ -238,6 +240,10 @@ class TurnLoop:
                 self.debug.append("anomaly", stage="resolve", attempt=attempt, error=str(e))
                 continue
             narration = resolution.narration
+            if getattr(resolution, "thinking", None):
+                # Per-turn scratchpad (W4): the DM's hidden reasoning. Never shown to the
+                # player; logged to the non-replayed debug channel so it's inspectable.
+                self.debug.append("thinking", stage="resolve", text=resolution.thinking)
             try:
                 resolved = [self.dispatcher.resolve(c) for c in resolution.tool_calls]
             except ToolApplyError as e:
@@ -269,18 +275,20 @@ class TurnLoop:
                         note=rt.quest_update.note, outcome=rt.quest_update.outcome,
                         reward_settled=rt.quest_update.reward_settled,
                         reason=rt.reason)
+                elif rt.env_time is not None or rt.env_weather is not None:
+                    # set_environment (W6): the DM turned time/weather. Record only an
+                    # ACTUAL change so we don't needlessly re-cue the soundscape.
+                    s = self.session
+                    nt = rt.env_time if rt.env_time and rt.env_time != s.time_of_day else None
+                    nw = rt.env_weather if rt.env_weather and rt.env_weather != s.weather else None
+                    if nt or nw:
+                        s.emit_environment(nt, nw, reason=rt.reason)
+                elif rt.note_text is not None:
+                    self.session.emit_notebook_note(rt.note_text)   # dm_note (W4): durable DM memory
                 else:
                     self.session.emit_state(
                         EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
             applied = resolved
-            # The DM reports the current environment each turn; record only an ACTUAL
-            # change (it carries the values forward unchanged otherwise) so we don't log
-            # every turn or needlessly re-cue the soundscape.
-            s = self.session
-            new_time = resolution.time_of_day if resolution.time_of_day and resolution.time_of_day != s.time_of_day else None
-            new_weather = resolution.weather if resolution.weather and resolution.weather != s.weather else None
-            if new_time or new_weather:
-                s.emit_environment(new_time, new_weather, reason="dm report")
             success = True
             break
 
@@ -487,6 +495,11 @@ class TurnLoop:
                 parts.append("force-ended the session")
             elif rt.wrap_proposed:
                 parts.append("proposed wrapping the session")
+            elif rt.env_time is not None or rt.env_weather is not None:
+                parts.append("environment → " + ", ".join(
+                    v for v in (rt.env_time, rt.env_weather) if v))
+            elif rt.note_text is not None:
+                parts.append("jotted a DM note")
             else:
                 parts.append(f"effect({rt.tool}): {self._ops_summary(rt.ops)}")
         if report.combat_result is not None:
