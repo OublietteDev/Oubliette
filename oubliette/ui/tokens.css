@@ -1,0 +1,49 @@
+/* The house style — one token block for every Oubliette web surface.
+ *
+ * Served as /tokens.css by BOTH the play app (oubliette/app/server.py) and the
+ * Forge (oubliette/creator/server.py); each page <link>s it ABOVE its inline
+ * <style>, so all component CSS in both apps draws from the same variables and
+ * the two UIs can no longer drift apart palette-first. There is deliberately
+ * no build step: this file is the entire design-token system.
+ *
+ * Rules of the house:
+ *  - Component CSS never hardcodes a color that has a token here.
+ *  - New shared concepts get a token here, not a copy-pasted hex.
+ */
+:root {
+  /* surfaces */
+  --bg: #14110f;                /* page background (under the radial washes) */
+  --panel: #1d1916;             /* raised surface: cards, buttons, inputs */
+  --panel-2: #241f1c;           /* second-level surface: nested cards, toggles */
+
+  /* text */
+  --ink: #e9e0d2;               /* primary text (parchment) */
+  --muted: #a99d88;             /* secondary text */
+  --faint: #6f6555;             /* tertiary text, labels-in-repose */
+
+  /* brand + semantics */
+  --gold: #d9b25a;              /* titles, emphasis, the Phantom's metal */
+  --accent: #b8743a;            /* interactive warmth: hovers, focus, primary buttons */
+  --accent-2: #7d9a6b;          /* the green counterpoint: OOC voice, positive accents */
+  --good: #7d9a6b;              /* success */
+  --bad: #b9533f;               /* danger/failure (borders, fills) */
+  --bad-soft: #d98b6a;          /* danger/failure as TEXT on dark panels (readable red) */
+  --prov: #9a7bb0;              /* provisional canon (violet) */
+
+  /* chat bubbles (play app; harmless elsewhere) */
+  --player: #2b3a4a;
+  --dm: #221d18;
+
+  /* chrome */
+  --line: #3a322a;              /* hairline borders */
+  --shadow: 0 8px 30px rgba(0,0,0,.45);
+
+  /* recipes */
+  --btn-grad: linear-gradient(180deg, var(--accent), #9c5f2e);       /* primary action */
+  --btn-grad-danger: linear-gradient(180deg, #b5543f, #7e2f23);      /* combat/destructive */
+  --opacity-disabled: .45;
+
+  /* type */
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: system-ui, "Segoe UI", Roboto, sans-serif;
+}

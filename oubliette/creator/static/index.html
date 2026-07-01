@@ -4,16 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Oubliette: The Forge</title>
+<!-- The house-style tokens (palette/fonts/recipes) are SHARED with the play app —
+     served from oubliette/ui/tokens.css by both servers. Never redefine them inline. -->
+<link rel="stylesheet" href="/tokens.css" />
 <style>
-  :root {
-    --bg: #14110f; --panel: #1d1916; --panel-2: #241f1c;
-    --ink: #e9e0d2; --muted: #a99d88; --faint: #6f6555;
-    --gold: #d9b25a; --accent: #b8743a; --accent-2: #7d9a6b;
-    --line: #3a322a; --good: #7d9a6b; --bad: #b9533f;
-    --shadow: 0 8px 30px rgba(0,0,0,.45);
-    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
-    --sans: system-ui, "Segoe UI", Roboto, sans-serif;
-  }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body {
@@ -45,7 +39,7 @@
     padding: 7px 13px; transition: border-color .15s, background .15s;
   }
   button.btn:hover { border-color: var(--accent); background: #2a231d; }
-  button.btn:disabled { opacity: .45; cursor: default; }
+  button.btn:disabled { opacity: var(--opacity-disabled); cursor: default; }
   button.btn.primary { border-color: var(--gold); color: var(--gold); }
   button.btn.primary:hover:not(:disabled) { background: #2a231d; }
   button.mini { font-size: 11px; padding: 4px 9px; border-radius: 7px; }
@@ -126,12 +120,12 @@
   .modal { background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px;
     width: min(560px, 92vw); max-height: 88vh; overflow-y: auto; box-shadow: var(--shadow); }
   .modal .mhead { padding: 16px 20px; border-bottom: 1px solid var(--line);
-    font-family: var(--serif); color: var(--gold); font-size: 18px; }
+    font-family: var(--serif); color: var(--gold); font-size: 20px; }  /* matches the play app's modal headers */
   .modal .mbody { padding: 18px 20px; }
   .modal .mfoot { padding: 14px 20px; border-top: 1px solid var(--line);
     display: flex; justify-content: flex-end; gap: 10px; }
   .field { margin-bottom: 14px; }
-  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .field label { display: block; font-size: 12px; color: var(--gold); margin-bottom: 5px; }  /* gold labels, like the play app's forms */
   .field .help { font-size: 11px; color: var(--faint); font-style: italic; margin-top: 4px; }
   .field input, .field select, .field textarea {
     width: 100%; font: inherit; font-size: 14px; color: var(--ink);
@@ -208,7 +202,7 @@
   .raw-json { width: 100%; min-height: 360px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
     font-size: 12.5px; line-height: 1.45; white-space: pre; tab-size: 2; }
   .mfoot-spacer { flex: 1; }
-  .invalid { color: var(--bad); font-size: 12px; margin-top: 6px; min-height: 16px; }
+  .invalid { color: var(--bad-soft); font-size: 12px; margin-top: 6px; min-height: 16px; }  /* readable error red on dark panels */
   /* illustration preview — mirrors the game's quest-card image frame so "fit" is honest */
   .illus-frame { width: 100%; height: 175px; background: var(--bg); border: 1px solid var(--line);
     border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; }

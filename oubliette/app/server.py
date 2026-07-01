@@ -296,8 +296,17 @@ class TurnIn(BaseModel):
 @app.get("/")
 async def index() -> FileResponse:
     # no-cache: always revalidate so a refresh never serves a stale page (e.g. an
-    # old copy missing the menu). The single-file UI has no other assets to bust.
+    # old copy missing the menu).
     return FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-cache, max-age=0"})
+
+
+@app.get("/tokens.css")
+async def tokens_css() -> FileResponse:
+    """The shared house-style token block (oubliette/ui/tokens.css) — the SAME file
+    the Forge serves, so the two UIs draw from one palette and cannot drift."""
+    return FileResponse(Path(__file__).resolve().parents[1] / "ui" / "tokens.css",
+                        media_type="text/css",
+                        headers={"Cache-Control": "no-cache, max-age=0"})
 
 
 @app.get("/api/state")

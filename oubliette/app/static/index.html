@@ -4,17 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Oubliette Table — The Phantom's Table</title>
+<!-- The house-style tokens (palette/fonts/recipes) are SHARED with the Forge —
+     served from oubliette/ui/tokens.css by both servers. Never redefine them inline. -->
+<link rel="stylesheet" href="/tokens.css" />
 <style>
-  :root {
-    --bg: #14110f; --panel: #1d1916; --panel-2: #241f1c;
-    --ink: #e9e0d2; --muted: #a99d88; --faint: #6f6555;
-    --gold: #d9b25a; --accent: #b8743a; --accent-2: #7d9a6b;
-    --player: #2b3a4a; --dm: #221d18; --line: #3a322a;
-    --good: #7d9a6b; --bad: #b9533f; --prov: #9a7bb0;
-    --shadow: 0 8px 30px rgba(0,0,0,.45);
-    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
-    --sans: system-ui, "Segoe UI", Roboto, sans-serif;
-  }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body {
@@ -47,6 +40,11 @@
     padding: 7px 13px; transition: border-color .15s, background .15s;
   }
   button.act:hover { border-color: var(--accent); background: #2a231d; }
+  /* Keyboard users get the same affordance hover users do. */
+  button:focus-visible, .start-btn:focus-visible, .ooc-toggle:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; }
+  .composer.locked textarea, .composer.locked button, .composer.locked .ooc-toggle {
+    opacity: var(--opacity-disabled); }
 
   main { display: grid; grid-template-columns: 1fr 320px; flex: 1; min-height: 0; }
 
@@ -61,7 +59,7 @@
   }
   .msg.dm { background: var(--dm); border: 1px solid var(--line); border-top-left-radius: 4px; font-family: var(--serif); font-size: 16px; }
   .msg.player { background: var(--player); border: 1px solid #34495c; border-top-right-radius: 4px; }
-  .msg.system { background: transparent; border: 1px dashed var(--line); color: var(--muted); font-size: 13px; font-style: italic; max-width: 90%; }
+  .msg.system { background: #1a1613; border: 1px solid var(--line); color: var(--muted); font-size: 13px; font-style: italic; max-width: 90%; }
   .who { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--faint); margin-bottom: 5px; }
   .msg .body strong { color: var(--gold); font-weight: 700; }
   .msg.dm .body em { color: #e7d9bf; }
@@ -91,10 +89,10 @@
   .combat-bar .combat-bar-text { color: #e7b4a4; font-weight: 600; font-size: 14px; }
   .combat-bar button {
     border: none; border-radius: 10px; cursor: pointer; padding: 10px 20px; font: inherit; font-weight: 700;
-    background: linear-gradient(180deg, #b5543f, #7e2f23); color: #fff; white-space: nowrap;
+    background: var(--btn-grad-danger); color: #fff; white-space: nowrap;
     box-shadow: 0 0 0 1px #6e3a30 inset; transition: filter .15s; }
   .combat-bar button:hover { filter: brightness(1.12); }
-  .combat-bar button:disabled { opacity: .6; cursor: default; }
+  .combat-bar button:disabled { opacity: var(--opacity-disabled); cursor: default; }
 
   .composer { border-top: 1px solid var(--line); padding: 14px 18px; display: flex; gap: 10px; background: rgba(0,0,0,.18); }
   .composer textarea {
@@ -105,9 +103,9 @@
   .composer textarea:focus { outline: none; border-color: var(--accent); }
   .composer button {
     align-self: stretch; padding: 0 20px; border: none; border-radius: 10px; cursor: pointer;
-    background: linear-gradient(180deg, var(--accent), #9c5f2e); color: #fff; font: inherit; font-weight: 600;
+    background: var(--btn-grad); color: #fff; font: inherit; font-weight: 600;
   }
-  .composer button:disabled { opacity: .5; cursor: default; }
+  .composer button:disabled { opacity: var(--opacity-disabled); cursor: default; }
   .ooc-toggle { font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; align-self: stretch;
     background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 0 13px;
     color: var(--muted); transition: color .15s, border-color .15s, background .15s; }
@@ -160,7 +158,7 @@
   .pc-row .pc-row-name { font-family: var(--serif); font-size: 15px; color: var(--ink); flex: 1; }
   .pc-row .hpbar { margin: 6px 0 4px; }
   .pc-row .pc-row-stats { display: flex; gap: 12px; font-size: 12px; color: var(--muted); }
-  .pc-row .pc-row-cond { font-size: 11.5px; color: #d98b6a; margin-top: 3px; }
+  .pc-row .pc-row-cond { font-size: 11.5px; color: var(--bad-soft); margin-top: 3px; }
   .list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; }
   .list li { display: flex; justify-content: space-between; gap: 8px; color: var(--ink); }
   .list li .sub { color: var(--faint); font-size: 12px; }
@@ -204,7 +202,7 @@
   .start-btn { padding: 12px 14px; font-size: 15px; font-family: var(--serif); cursor: pointer; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; color: var(--ink); transition: border-color .15s, background .15s; }
   .start-btn:hover:not(:disabled) { border-color: var(--gold); background: #2a231d; }
   .start-btn.primary { border-color: var(--accent-2); color: var(--gold); }
-  .start-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .start-btn:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
   /* AI provider connection (front-door "connect your AI") + offline banner */
   .prov-list { display: flex; flex-direction: column; gap: 8px; text-align: left; margin-top: 6px; }
   .prov { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); cursor: pointer; }
@@ -237,16 +235,24 @@
   .contract-form textarea { resize: vertical; min-height: 44px; }
   .ng-foot { display: flex; align-items: center; gap: 10px; padding: 16px 20px 20px; }
   .ng-foot .spacer { flex: 1; }
-  .ng-foot .primary { background: linear-gradient(180deg, var(--accent), #9c5f2e); color: #fff; border: none; font-weight: 600; }
-  .ng-foot .primary:disabled { opacity: .45; cursor: default; }
+  .ng-foot .primary { background: var(--btn-grad); color: #fff; border: none; font-weight: 600; }
+  .ng-foot .primary:disabled { opacity: var(--opacity-disabled); cursor: default; }
   .cg-status { font-size: 12px; color: var(--faint); font-style: italic; }
-  .cg-status.bad { color: #d98b6a; }
+  .cg-status.bad { color: var(--bad-soft); }
   .cg-status.ok { color: #8db870; }
   .linklike { background: none; border: none; color: var(--accent); font: inherit; font-style: italic; cursor: pointer; padding: 0; text-decoration: underline; }
   /* --- chargen wizard --- */
   .newgame-modal.wide { width: min(900px, 96vw); }
   .cg-grid { display: grid; grid-template-columns: 1fr 300px; gap: 18px; padding: 12px 20px 4px; }
   @media (max-width: 760px) { .cg-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 480px) { .cg-field { min-width: 100%; } }  /* stack chargen fields on very narrow windows */
+  /* Narrow-window FALLBACK (not mobile support — a decision, see the UI-pass doc):
+     below 700px the sidebar yields the floor to the chat so the table stays playable. */
+  @media (max-width: 700px) {
+    main { grid-template-columns: 1fr; }
+    aside { display: none; }
+    .msg { max-width: 92%; }
+  }
   .cg-form { display: flex; flex-direction: column; gap: 14px; text-align: left; min-width: 0; }
   .cg-sec { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--panel-2); }
   .cg-sec > h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); }
@@ -278,7 +284,7 @@
   .cg-abil b { display: block; font-size: 14px; } .cg-abil span { font-size: 9px; color: var(--faint); text-transform: uppercase; }
   .cg-abil em { font-size: 10px; color: var(--muted); font-style: normal; }
   .cg-errs { list-style: none; margin: 6px 0 0; padding: 0; }
-  .cg-errs li { font-size: 12px; color: #d98b6a; padding: 2px 0 2px 14px; text-indent: -10px; }
+  .cg-errs li { font-size: 12px; color: var(--bad-soft); padding: 2px 0 2px 14px; text-indent: -10px; }
   .cg-plist { margin: 4px 0 0; padding-left: 16px; color: var(--muted); font-size: 12px; }
   .cg-portrait-note { margin-top: 12px; padding: 8px 10px; border: 1px dashed var(--line); border-radius: 8px;
     background: var(--bg); font-size: 11.5px; line-height: 1.45; color: var(--muted); }
@@ -335,7 +341,7 @@
   .trade-row .price { color: var(--gold); font-weight: 600; font-size: 13px; white-space: nowrap; }
   .trade-row button { font: inherit; font-size: 12.5px; cursor: pointer; border-radius: 7px; padding: 6px 13px; border: 1px solid var(--line); background: #2a231d; color: var(--ink); }
   .trade-row button:hover:not(:disabled) { border-color: var(--accent); }
-  .trade-row button:disabled { opacity: .35; cursor: default; }
+  .trade-row button:disabled { opacity: var(--opacity-disabled); cursor: default; }
   .trade-empty { color: var(--faint); font-style: italic; font-size: 13px; }
 
   /* player menu */
@@ -382,7 +388,7 @@
   .j-in, .j-ta { width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 14px; }
   .j-ta { min-height: 92px; resize: vertical; line-height: 1.45; }
   .j-erow { display: flex; gap: 8px; }
-  .j-save { font: inherit; font-weight: 600; cursor: pointer; border: none; border-radius: 8px; padding: 7px 14px; background: linear-gradient(180deg, var(--accent), #9c5f2e); color: #fff; }
+  .j-save { font: inherit; font-weight: 600; cursor: pointer; border: none; border-radius: 8px; padding: 7px 14px; background: var(--btn-grad); color: #fff; }
   .j-empty { color: var(--faint); font-style: italic; }
 
   /* inventory */
@@ -392,7 +398,7 @@
   .inv-head .spacer { flex: 1; }
   .inv-body { padding: 16px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 22px; }
   /* --- character sheet (CS3) --- */
-  .sheet-modal { width: min(820px, 96vw); }
+  .sheet-modal { width: min(820px, 96vw); max-height: 90vh; overflow-y: auto; }
   .sh-name { font-family: var(--serif); font-size: 22px; color: var(--gold); }
   .sh-sub { color: var(--muted); font-size: 13px; margin: 2px 0 14px; }
   /* portrait header (A3) */
@@ -525,14 +531,14 @@
   .stepper { display: flex; align-items: center; gap: 6px; }
   .stepper button { width: 26px; height: 26px; padding: 0; font-size: 15px; line-height: 1; border-radius: 6px; border: 1px solid var(--line); background: #2a231d; color: var(--ink); cursor: pointer; }
   .stepper button:hover:not(:disabled) { border-color: var(--accent); }
-  .stepper button:disabled { opacity: .3; cursor: default; }
+  .stepper button:disabled { opacity: var(--opacity-disabled); cursor: default; }
   .stepper .q { min-width: 18px; text-align: center; font-variant-numeric: tabular-nums; }
   .trade-foot { display: flex; align-items: center; gap: 12px; padding: 13px 18px; border-top: 1px solid var(--line); background: linear-gradient(0deg, rgba(0,0,0,.28), transparent); }
   .trade-summary { flex: 1; font-size: 13px; color: var(--muted); }
   .trade-summary b { color: var(--gold); }
   .trade-actions { display: flex; gap: 8px; }
-  #trade-settle { font: inherit; font-weight: 600; cursor: pointer; border: none; border-radius: 9px; padding: 8px 16px; background: linear-gradient(180deg, var(--accent), #9c5f2e); color: #fff; }
-  #trade-settle:disabled, #trade-haggle:disabled { opacity: .4; cursor: default; }
+  #trade-settle { font: inherit; font-weight: 600; cursor: pointer; border: none; border-radius: 9px; padding: 8px 16px; background: var(--btn-grad); color: #fff; }
+  #trade-settle:disabled, #trade-haggle:disabled { opacity: var(--opacity-disabled); cursor: default; }
 
   /* world map (player menu) — top-level areas as PINS on the world-map image; hover
      reveals name + description; double-click a discovered area opens its sub-map.
@@ -1237,6 +1243,7 @@ function renderState(s) {
   // clears once the fight resolves (the post-combat state has combat_pending false).
   combatPending = !!s.combat_pending;
   combatBar.classList.toggle("hidden", !combatPending);
+  if (combatPending) { hideWrapBar(); hideRestBar(); }   // one bar at a time: combat outranks proposals
   setBusy(busy);                // re-apply the composer lock (stays disabled when ended/in combat)
 }
 
@@ -1268,6 +1275,7 @@ function setBusy(b) {
   busy = b;
   const locked = b || gameEnded || combatPending;
   sendBtn.disabled = locked; input.disabled = locked;
+  document.querySelector(".composer").classList.toggle("locked", locked);  // visible dim, not just dead keys
   if (!locked) input.focus();
 }
 
@@ -1316,8 +1324,10 @@ async function send(textOverride) {
     if (data.soundscape) setSoundscape(data.soundscape);   // travel may have changed the mix
     if (data.trade) openTrade(data.trade);
     (data.quest_beats || []).forEach(addQuestCard);
-    if (data.wrap_pending) showWrapBar();                  // the DM offered a resting point (W5)
-    if (data.rest_pending) showRestBar(data.rest_pending); // the DM proposed a short/long rest
+    // One bar at a time (combat > wrap > rest): a staged fight silences proposals, and a
+    // wrap offer outranks a rest offer if the DM somehow emits both in one turn.
+    if (data.wrap_pending && !combatPending) showWrapBar();
+    else if (data.rest_pending && !combatPending) showRestBar(data.rest_pending);
   }
   function pump(ts) {
     rafId = null;

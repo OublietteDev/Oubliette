@@ -244,6 +244,15 @@ async def index() -> FileResponse:
                         headers={"Cache-Control": "no-cache, max-age=0"})
 
 
+@app.get("/tokens.css")
+async def tokens_css() -> FileResponse:
+    """The shared house-style token block (oubliette/ui/tokens.css) — the SAME file
+    the play app serves, so the two UIs draw from one palette and cannot drift."""
+    return FileResponse(Path(__file__).resolve().parents[1] / "ui" / "tokens.css",
+                        media_type="text/css",
+                        headers={"Cache-Control": "no-cache, max-age=0"})
+
+
 @app.get("/api/packs")
 async def list_packs() -> JSONResponse:
     """Every openable world, with a quick ✓ ready / ⚠ N-to-fix summary."""

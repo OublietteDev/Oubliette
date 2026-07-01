@@ -36,6 +36,8 @@ exclude = ["arena.tests*"]
 "oubliette.app" = ["static/**/*"]
 # The Forge's single-page UI.
 "oubliette.creator" = ["static/*"]
+# The house-style design tokens shared by both web UIs (served as /tokens.css).
+"oubliette.ui" = ["*.css"]
 # The Arena's content (monsters/characters/encounters/schemas) — JSON data files.
 # Visual assets (assets/**) are intentionally NOT packaged: they're large (~100MB)
 # and gitignored; they live on disk for local play.
