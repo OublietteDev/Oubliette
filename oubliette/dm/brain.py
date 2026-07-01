@@ -195,9 +195,11 @@ RESOLVE_SYSTEM = (
     "tool — a test fight is requested through the same codeword as an action the assessment "
     "stages.)\n"
     "NARRATE the outcome directly as your reply (second person, in-fiction prose — this text is "
-    "what the player reads), and emit tool calls ONLY for state changes. A turn with no state "
-    "change is just narration and no tools. Don't describe your tool calls in the narration; "
-    "let the prose read as story."
+    "what the player reads), and emit tool calls ONLY for state changes. EVERY turn MUST include "
+    "narration — at least a sentence — even when you also emit a tool: never reply with tool calls "
+    "and no prose (that leaves the player staring at an empty message). When you travel the party, "
+    "narrate the journey and arrival in that same reply. A turn with no state change is just "
+    "narration and no tools. Don't describe your tool calls mechanically; let the prose read as story."
 )
 
 WRAP_SYSTEM = (

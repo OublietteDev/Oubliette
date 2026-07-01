@@ -198,12 +198,24 @@ def _build_inventory() -> dict:
     return {"party": party}
 
 
-def _describe_applied(rt) -> str:
+def _describe_applied(rt) -> str | None:
+    """A short player-facing chip for a state-changing tool, or None for tools that get no
+    chip: `dm_note` is PRIVATE (a chip would leak that the DM jotted a secret), and
+    set_environment / wrap / force-end surface through the narration, wrap-bar, and force-end
+    paths respectively. Travel has no StateOps, so it needs its own label (else '(none)')."""
     if rt.canon_create is not None:
         return f"introduced {rt.canon_create.entity_type} “{rt.canon_create.name}” (provisional)"
     if rt.canon_promote is not None:
         return f"confirmed canon {rt.canon_promote}"
-    return f"{rt.tool}: {TurnLoop._ops_summary(rt.ops)}"
+    if rt.travel_to is not None:
+        node = GAME.session.places.get(rt.travel_to)
+        return f"travelled to {node.name if node is not None else rt.travel_to}"
+    if rt.note_text is not None or rt.wrap_proposed or rt.force_end_session \
+            or rt.env_time is not None or rt.env_weather is not None:
+        return None
+    if rt.ops:
+        return f"{rt.tool}: {TurnLoop._ops_summary(rt.ops)}"
+    return None
 
 
 def _top_location_id() -> str | None:
@@ -257,9 +269,9 @@ def _turn_payload(report) -> dict:
     return {
         "narration": report.narration,
         "roll": roll,
-        # quest tools surface as their own cards (quest_beats), not raw chips
-        "applied": [_describe_applied(rt) for rt in report.applied
-                    if rt.quest_start is None and rt.quest_update is None],
+        # quest tools surface as their own cards (quest_beats); dm_note/env/wrap/force-end
+        # get no chip — _describe_applied returns None for all of those, so drop the Nones.
+        "applied": [d for rt in report.applied if (d := _describe_applied(rt)) is not None],
         "quest_beats": _quest_beats(report),
         "combat": combat,
         "trade": report.trade_open.model_dump() if report.trade_open is not None else None,
