@@ -210,8 +210,8 @@ def _describe_applied(rt) -> str | None:
     if rt.travel_to is not None:
         node = GAME.session.places.get(rt.travel_to)
         return f"travelled to {node.name if node is not None else rt.travel_to}"
-    if rt.note_text is not None or rt.wrap_proposed or rt.force_end_session \
-            or rt.env_time is not None or rt.env_weather is not None:
+    if rt.note_text is not None or rt.wrap_proposed or rt.rest_proposed is not None \
+            or rt.force_end_session or rt.env_time is not None or rt.env_weather is not None:
         return None
     if rt.ops:
         return f"{rt.tool}: {TurnLoop._ops_summary(rt.ops)}"
@@ -278,6 +278,7 @@ def _turn_payload(report) -> dict:
         "meta_notice": report.meta_notice,
         "combat_pending": getattr(report, "combat_pending", False),
         "wrap_pending": getattr(report, "wrap_pending", False),
+        "rest_pending": getattr(report, "rest_pending", None),   # "short"|"long"|None (DM proposal)
         "session_force_ended": report.session_force_ended,
         "verb": report.assessment.intent.verb.value,
         "tier": report.assessment.tier.value,

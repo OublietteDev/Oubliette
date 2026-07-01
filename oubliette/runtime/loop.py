@@ -51,6 +51,7 @@ class TurnReport:
     combat_pending: bool = False           # a fight is staged, awaiting "⚔ Enter the Arena"
     trade_open: TradeState | None = None   # set when a trade window is summoned
     wrap_pending: bool = False             # the DM proposed wrapping the session (player confirms)
+    rest_pending: str | None = None        # the DM proposed a rest: "short"|"long" (player confirms)
     session_force_ended: bool = False      # the DM terminally closed the game (force_end_session)
 
 
@@ -77,7 +78,7 @@ class TurnLoop:
         self._scene_override = scene
         self.dispatcher = Dispatcher(session.repo, session.canon, session.places,
                                      session.quests, ruleset=session.ruleset,
-                                     authored_quests=session.authored_quests)
+                                     authored_quests=session.authored_quests, rng=rng)
         # Short-term continuity beats (gap G5). Rehydrated from the durable record on
         # construction (W3): a reload rebuilds the DM's recent memory of THIS session from
         # the stored beats, so it resumes with the same short-term context it had before —
@@ -260,9 +261,9 @@ class TurnLoop:
                     self.session.emit_travel(rt.travel_to, rt.reason)
                 elif rt.force_end_session:
                     self.session.emit_force_end(rt.reason)
-                elif rt.wrap_proposed:
-                    pass    # a proposal only — nothing is recorded; the player confirms the
-                            # wrap (POST /api/wrap), which authors the notes. Surfaced below.
+                elif rt.wrap_proposed or rt.rest_proposed is not None:
+                    pass    # proposals only — nothing is recorded; the player confirms the
+                            # wrap (POST /api/wrap) or the rest (POST /api/rest). Surfaced below.
                 elif rt.quest_start is not None:
                     self.session.emit_quest_start(
                         rt.quest_start.title, rt.quest_start.text, rt.reason)
@@ -311,6 +312,8 @@ class TurnLoop:
             roll_outcome=roll_outcome, roll_result=roll_result, applied=applied,
             meta_notice=meta_notice,
             wrap_pending=any(rt.wrap_proposed for rt in applied),
+            rest_pending=next((rt.rest_proposed for rt in applied
+                               if rt.rest_proposed is not None), None),
             session_force_ended=any(rt.force_end_session for rt in applied),
         )
 
@@ -501,6 +504,8 @@ class TurnLoop:
                 parts.append("force-ended the session")
             elif rt.wrap_proposed:
                 parts.append("proposed wrapping the session")
+            elif rt.rest_proposed is not None:
+                parts.append(f"proposed a {rt.rest_proposed} rest")
             elif rt.env_time is not None or rt.env_weather is not None:
                 parts.append("environment → " + ", ".join(
                     v for v in (rt.env_time, rt.env_weather) if v))

@@ -35,6 +35,14 @@ def _parse(spec: str) -> tuple[int, int, int]:
     return count, sides, modifier
 
 
+def dice_average(spec: str) -> int:
+    """The expected value of a dice spec, rounded down — the deterministic stand-in
+    used where no Rng is wired (e.g. resolving a potion's healing in a bare test
+    Dispatcher). Live play always rolls."""
+    count, sides, modifier = _parse(spec)
+    return count * (sides + 1) // 2 + modifier
+
+
 class Rng:
     """Seeded for reproducible live play. `record(kind, **payload)` receives each
     ROLL (typically `Session.emit_log`); pass None to roll without recording."""

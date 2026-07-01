@@ -624,6 +624,11 @@
         <button id="wrap-confirm" type="button">Wrap up session</button>
         <button id="wrap-dismiss" type="button">Keep playing</button>
       </div>
+      <div id="rest-bar" class="combat-bar hidden">
+        <span id="rest-bar-text" class="combat-bar-text">🔥 The Phantom suggests a rest.</span>
+        <button id="rest-take" type="button">Take the rest</button>
+        <button id="rest-dismiss" type="button">Press on</button>
+      </div>
       <div class="composer">
         <button id="ooc-toggle" class="ooc-toggle" type="button"
                 title="Switch between speaking as your character and speaking to the DM out-of-character">🎭 In character</button>
@@ -953,7 +958,7 @@
 const $ = (id) => document.getElementById(id);
 const log = $("log"), input = $("input"), sendBtn = $("send");
 const combatBar = $("combat-bar"), enterArenaBtn = $("enter-arena");
-const wrapBar = $("wrap-bar");
+const wrapBar = $("wrap-bar"), restBar = $("rest-bar");
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -1269,6 +1274,7 @@ async function send(textOverride) {
   if (!text || busy) return;
   if (!override) input.value = "";
   hideWrapBar();                 // a fresh action supersedes any pending wrap proposal
+  hideRestBar();                 // ...and any pending rest proposal
   addMessage("You", text, "player");
   setBusy(true);
   const thinkRow = el("div", "row dm");
@@ -1308,6 +1314,7 @@ async function send(textOverride) {
     if (data.trade) openTrade(data.trade);
     (data.quest_beats || []).forEach(addQuestCard);
     if (data.wrap_pending) showWrapBar();                  // the DM offered a resting point (W5)
+    if (data.rest_pending) showRestBar(data.rest_pending); // the DM proposed a short/long rest
   }
   function pump(ts) {
     rafId = null;
@@ -1432,6 +1439,28 @@ async function wrapSession(fromProposal) {
 $("wrap-confirm").addEventListener("click", () => wrapSession(true));
 $("wrap-dismiss").addEventListener("click", hideWrapBar);
 
+// --- DM-proposed rest: the Phantom suggests a rest, the player takes it (or not).
+// Taking it runs the SAME party rest as the sheet's buttons — code owns the recovery.
+let restKind = "long";
+function showRestBar(kind) {
+  restKind = kind === "short" ? "short" : "long";
+  $("rest-bar-text").textContent = restKind === "long"
+    ? "🌙 The Phantom suggests making camp — take a long rest?"
+    : "🔥 The Phantom suggests a breather — take a short rest?";
+  restBar.classList.remove("hidden"); scrollDown();
+}
+function hideRestBar() { restBar.classList.add("hidden"); }
+$("rest-take").addEventListener("click", async () => {
+  hideRestBar();
+  if (busy || gameEnded || combatPending) return;
+  if (restKind === "long") { await doRestParty("long", null); return; }
+  if (!(sheetParty || []).length) {     // popup needs the roster; fetch if the sheet never opened
+    try { renderSheet(await (await fetch("/api/sheet")).json()); } catch (e) { /* transient */ }
+  }
+  openShortRest();
+});
+$("rest-dismiss").addEventListener("click", hideRestBar);
+
 sendBtn.addEventListener("click", () => send());
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
@@ -1553,6 +1582,7 @@ async function beginNewGame(builds) {
   combatPending = false;        // ...and any staged fight from the prior save
   combatBar.classList.add("hidden");
   hideWrapBar();                // ...and any pending wrap proposal
+  hideRestBar();                // ...and any pending rest proposal
   log.innerHTML = "";
   addMessage("System", `A new tale begins in ${ngPack.name}. Describe what you do.`, "system");
   renderState(data.state);

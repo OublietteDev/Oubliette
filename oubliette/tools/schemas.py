@@ -85,6 +85,34 @@ class Take(BaseModel):
     reason: str
 
 
+class UseItem(BaseModel):
+    """Use up ONE consumable from a character's inventory (drink a potion, quaff a
+    draught) and let CODE apply its effect. For a healing item, code rolls the healing
+    dice and raises the character's HP — you never pick or assert the number. The item
+    is removed from the stack. Non-consumable gear (a sword, a rope) is USED in the
+    fiction but not used UP — just narrate that; this tool will refuse it."""
+
+    tool: Literal["use_item"] = "use_item"
+    char: str = Field(default="pc", description="who uses it (usually 'pc')")
+    item_id: str = Field(description="the consumable's item id from the inventory context")
+    reason: str = Field(description="the fiction, e.g. 'downs the potion after the ambush'")
+
+
+class ProposeRest(BaseModel):
+    """PROPOSE that the party take a rest — a short breather or a long night's sleep.
+    Like end_session, this is an offer, not an act: it surfaces a rest prompt to the
+    player, and THEY confirm it. Only when they accept does code apply the recovery
+    (HP, spell slots, hit dice — a rest is the ONLY way those come back outside a
+    potion). So never narrate the party already rested and restored in the same turn
+    you propose: narrate settling in, and let the player take the rest."""
+
+    tool: Literal["propose_rest"] = "propose_rest"
+    kind: Literal["short", "long"] = Field(description="'short' for a breather (an hour), "
+                                           "'long' for a full night's sleep")
+    reason: str = Field(description="the in-fiction moment that invites the rest, "
+                        "e.g. 'the party makes camp beneath the overhang'")
+
+
 class AwardXp(BaseModel):
     """Grant experience points for a meaningful accomplishment — finishing a quest,
     overcoming a challenge or a tense social encounter, a milestone in the story.
@@ -236,9 +264,9 @@ class AcceptQuest(BaseModel):
 # the model fills in). To add a tool: add a model + a `tool` literal, and a resolver
 # branch in tools/dispatch.py.
 ToolCall = Annotated[
-    Union[Transact, Give, Take, AwardXp, CreateEntity, PromoteCanon, Travel,
+    Union[Transact, Give, Take, UseItem, AwardXp, CreateEntity, PromoteCanon, Travel,
           EndSession, ForceEndSession, StartQuest, UpdateQuest, AcceptQuest,
-          SetEnvironment, DmNote],
+          SetEnvironment, DmNote, ProposeRest],
     Field(discriminator="tool"),
 ]
 
@@ -246,7 +274,7 @@ ToolCall = Annotated[
 # the model sees them; each is registered by its `tool` literal via `act()`. This is
 # the single list to extend when adding a resolve-time tool (also add a dispatch branch).
 TOOL_MODELS: tuple[type[BaseModel], ...] = (
-    Transact, Give, Take, AwardXp, CreateEntity, PromoteCanon, Travel,
+    Transact, Give, Take, UseItem, AwardXp, CreateEntity, PromoteCanon, Travel,
     EndSession, ForceEndSession, StartQuest, UpdateQuest, AcceptQuest,
-    SetEnvironment, DmNote,
+    SetEnvironment, DmNote, ProposeRest,
 )

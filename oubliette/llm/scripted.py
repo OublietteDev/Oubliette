@@ -13,8 +13,8 @@ from pydantic import BaseModel
 from ..combat.schemas import EncounterRequest, EnemyRef, ExitKind, TerrainSpec
 from ..enums import Ability, Skill, Tier, Verb, may_canonize
 from ..schemas import Intent, RollRequest, SessionNotes, TurnAssessment, TurnResolution
-from ..tools.schemas import (CreateEntity, EndSession, ForceEndSession, StartQuest, Transact,
-                             Travel, UpdateQuest, ValueEntry)
+from ..tools.schemas import (CreateEntity, EndSession, ForceEndSession, ProposeRest, StartQuest,
+                             Transact, Travel, UpdateQuest, UseItem, ValueEntry)
 from ..trade.schemas import TradeRequest
 from .client import ActResult, Msg
 
@@ -96,6 +96,14 @@ class ScriptedLLMClient:
                                      "good place to stop", "let's rest here")):
             return assessment(Verb.SKILL_CHECK, Tier.FREESTYLE,
                               hint="A natural resting point; the DM may propose wrapping the session.")
+
+        # Recovery — drinking a consumable, or settling in for a rest (DM proposes).
+        if "drink" in player and ("potion" in player or "draught" in player):
+            return assessment(Verb.USE_ITEM, Tier.FREESTYLE,
+                              hint="Player drinks a consumable; use_item applies it.")
+        if "make camp" in player or "settle in for the night" in player or "breather" in player:
+            return assessment(Verb.SKILL_CHECK, Tier.FREESTYLE,
+                              hint="The fiction invites a rest; the DM may propose one.")
 
         # Quests — accepting a task / reporting it done (resolved via quest tools).
         if any(p in player for p in ("accept the task", "take the job", "i'll help", "accept the quest",
@@ -203,6 +211,26 @@ class ScriptedLLMClient:
                 narration=("The fire burns low and the road can wait until morning. "
                            "This seems a fine place to rest, if you'd like to stop here."),
                 tool_calls=[EndSession(reason="The party reaches a natural resting point.")],
+            )
+
+        # Recovery — use up a consumable / propose a rest (code applies the recovery).
+        if "drink" in player and ("potion" in player or "draught" in player):
+            item = "potion_of_healing" if "potion" in player else "healing_draught"
+            return TurnResolution(
+                narration="You pull the stopper and drink; warmth spreads from your chest outward.",
+                tool_calls=[UseItem(char="pc", item_id=item,
+                                    reason="The player drinks a consumable.")],
+            )
+        if "make camp" in player or "settle in for the night" in player:
+            return TurnResolution(
+                narration=("You bank the fire and lay out your bedrolls beneath the overhang; "
+                           "the night is quiet, if you choose to take it."),
+                tool_calls=[ProposeRest(kind="long", reason="The party makes camp for the night.")],
+            )
+        if "breather" in player:
+            return TurnResolution(
+                narration="You find a sheltered spot to catch your breath and see to your gear.",
+                tool_calls=[ProposeRest(kind="short", reason="A safe hour to catch their breath.")],
             )
 
         # Quests — start one on acceptance, complete it when reported done.

@@ -14,10 +14,11 @@ from dataclasses import dataclass, field
 from ..canon.models import CanonDraft
 from ..canon.store import CanonStore
 from ..record.events import StateOp
+from ..record.rng import dice_average
 from ..state.repository import Repository, StateError
 from .schemas import (AcceptQuest, AwardXp, CreateEntity, DmNote, EndSession, ForceEndSession, Give,
-                      PromoteCanon, SetEnvironment, StartQuest, Take, ToolCall, Transact, Travel,
-                      UpdateQuest, ValueEntry)
+                      PromoteCanon, ProposeRest, SetEnvironment, StartQuest, Take, ToolCall,
+                      Transact, Travel, UpdateQuest, UseItem, ValueEntry)
 
 
 class ToolApplyError(Exception):
@@ -44,14 +45,17 @@ class ResolvedTool:
     env_time: str | None = None                          # set_environment -> new time-of-day (day/night)
     env_weather: str | None = None                       # set_environment -> new weather
     note_text: str | None = None                         # dm_note -> a private DM notebook entry (W4)
+    rest_proposed: str | None = None                     # propose_rest -> "short"|"long" (player confirms)
 
 
 class Dispatcher:
     def __init__(self, repo: Repository, canon: CanonStore | None = None,
                  places: dict | None = None, quests=None, ruleset=None,
-                 authored_quests: dict | None = None) -> None:
+                 authored_quests: dict | None = None, rng=None) -> None:
         self.repo = repo
         self.canon = canon
+        self.rng = rng                   # seeded Rng — rolls a consumable's healing (use_item);
+                                         # without one, dice_average stands in deterministically
         self.places = places or {}       # {place_id: PlaceNode} — for travel resolution
         self.quests = quests             # QuestStore — for update_quest validation
         self.ruleset = ruleset           # SRD ruleset — for scroll min-level validation (A5)
@@ -70,6 +74,10 @@ class Dispatcher:
             self._assert_can_cover(call.from_, call.items)
             return ResolvedTool(call.tool, call.reason,
                                 ops=[self._debit_op(call.from_, e) for e in call.items])
+        if isinstance(call, UseItem):
+            return ResolvedTool(call.tool, call.reason, ops=self._resolve_use_item(call))
+        if isinstance(call, ProposeRest):
+            return ResolvedTool(call.tool, call.reason, rest_proposed=call.kind)
         if isinstance(call, AwardXp):
             self._assert_char(call.to)         # XP goes to a tracked character (the party)
             return ResolvedTool(call.tool, call.reason, ops=[StateOp.xp(call.to, call.amount)])
@@ -135,6 +143,42 @@ class Dispatcher:
         raise ToolApplyError(f"cannot travel to unknown place {ref!r}")
 
     # --- resolvers ------------------------------------------------------------
+    def _resolve_use_item(self, call: UseItem) -> list[StateOp]:
+        """Consume ONE of a consumable and apply its structured effect. Healing rolls
+        through the seeded Rng (recorded as a ROLL event) and lands as an absolute
+        `hp_set`, capped at max HP — same replay-safe shape as short-rest healing. A
+        consumable with no structured healing is still used up; its effect lives in
+        the narration. Non-consumables are refused (using a sword doesn't spend it)."""
+        try:
+            char = self.repo.get_character(call.char)
+        except StateError as e:
+            raise ToolApplyError(str(e)) from e
+        item_id = self._canon_item(call.item_id)
+        item = self.repo.get_item(item_id)
+        if item.category != "consumable":
+            raise ToolApplyError(
+                f"{item.name} isn't a consumable — it's used in the fiction, not used up. "
+                "Narrate its use; only remove it with `take` if it's genuinely lost.")
+        if char.variant_qty(item_id) < 1:
+            raise ToolApplyError(f"{char.name} has no {item.name} to use")
+        ops = [StateOp.item(char.id, item_id, -1)]
+        healing = self._healing_spec(item_id)
+        if healing is not None and char.hp < char.max_hp:
+            if self.rng is not None:
+                healed = self.rng.roll(healing, f"use_item.{item_id}").total
+            else:
+                healed = dice_average(healing)
+            if healed > 0:
+                ops.append(StateOp.hp_set(char.id, min(char.max_hp, char.hp + healed)))
+        return ops
+
+    def _healing_spec(self, item_id: str) -> str | None:
+        """The item's structured healing dice, if the catalog carries them."""
+        srd = self.ruleset.equipment.get(item_id) if self.ruleset is not None else None
+        if srd is None or srd.mechanics != "structured" or srd.consumable is None:
+            return None
+        return srd.consumable.healing
+
     def _resolve_transact(self, t: Transact) -> list[StateOp]:
         # Validate BOTH sides can cover their half (transact symmetry, §5).
         self._assert_can_cover(t.from_, t.give)
