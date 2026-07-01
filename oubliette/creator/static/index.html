@@ -138,6 +138,31 @@
     margin-bottom: 14px; background: rgba(0,0,0,.15); }
   .subform .sftitle { font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
     color: var(--faint); margin-bottom: 10px; }
+  /* --- UI pass Stage 3 --------------------------------------------------- */
+  /* per-field validation: required marks, bad inputs, inline field errors */
+  .field label .req { color: var(--bad-soft); margin-left: 2px; }
+  .field input.bad, .field textarea.bad, .field select.bad,
+  .exit-row select.bad, .shop-row select.bad, .cue select.bad, .branch-row select.bad,
+  .branch-row input.bad { border-color: var(--bad); }
+  .ferr { color: var(--bad-soft); font-size: 12px; margin-top: 4px; }
+  /* nested-editor breadcrumb: says WHOSE sub-thing this modal is editing */
+  .crumb { font-size: 12px; color: var(--muted); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 11px; margin-bottom: 13px; }
+  .crumb b { color: var(--gold); font-weight: 600; }
+  /* creature-editor tabs */
+  .mtabs { display: flex; gap: 6px; margin: 4px 0 16px; border-bottom: 1px solid var(--line); }
+  .mtab { font: inherit; font-size: 12.5px; cursor: pointer; background: transparent;
+    color: var(--muted); border: 1px solid transparent; border-bottom: none;
+    border-radius: 8px 8px 0 0; padding: 7px 13px; }
+  .mtab:hover { color: var(--ink); }
+  .mtab.on { background: var(--panel); border-color: var(--line); color: var(--gold); }
+  .mtab-pane { display: none; }
+  .mtab-pane.on { display: block; }
+  /* collapsible drawer (heavy sections fold away until needed) */
+  details.drawer > summary { cursor: pointer; }
+  details.drawer > summary .drawer-note { font-weight: 400; opacity: .7;
+    text-transform: none; letter-spacing: 0; margin-left: 6px; }
+  details.drawer[open] > summary { margin-bottom: 10px; }
   .exit-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
   .cue { border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; margin-bottom: 9px; background: rgba(0,0,0,.12); }
   /* sound grouping headers + inherited (read-only) cues */
@@ -703,11 +728,48 @@ function closeEditor() {
   document.getElementById("modal").classList.remove("cg-modal");   // reset the wide chargen layout
   editorCtx = null;
   npcLink = null;          // a cancelled creature hop must not mis-link the next stat block
+  editorCrumb = null;      // ...and its breadcrumb goes with it
 }
 
 function field(label, inner, help) {
   return `<div class="field"><label>${label}</label>${inner}${help ? `<div class="help">${help}</div>` : ""}</div>`;
 }
+// A required field's label — the * warns BEFORE save, not only after a failed one.
+function req(label) { return `${label}<span class="req">*</span>`; }
+// Per-field validation (Stage 3): flag the offending input where the author is
+// looking — red border + message under the field — instead of only a line lost at
+// the modal footer. Reveals the tab pane holding the field, scrolls to it, and
+// clears itself on the next keystroke. Falls back to the footer if the id is odd.
+function fieldInvalid(id, msg) {
+  const err = gid("f_err"); if (err) err.textContent = "";
+  const inp = gid(id);
+  if (!inp) { if (err) err.textContent = msg; return; }
+  inp.classList.add("bad");
+  const home = inp.closest(".field") || inp.parentElement;
+  let fe = home.querySelector(".ferr");
+  if (!fe) { fe = document.createElement("div"); fe.className = "ferr"; home.appendChild(fe); }
+  fe.textContent = msg;
+  inp.addEventListener("input", function h() {
+    inp.classList.remove("bad"); fe.textContent = ""; inp.removeEventListener("input", h); });
+  const pane = inp.closest(".mtab-pane");
+  if (pane && !pane.classList.contains("on")) showTab(pane.dataset.pane);
+  inp.scrollIntoView({ block: "center", behavior: "smooth" });
+  inp.focus({ preventScroll: true });
+}
+// Mark every row-select in a repeating list (exits, belongings, cues, branches)
+// that's missing its pick — pairs with the footer message for row-level errors.
+function markEmptyRows(attr) {
+  document.querySelectorAll(`[${attr}]`).forEach(s => { if (!s.value) s.classList.add("bad"); });
+}
+function showTab(name) {
+  document.querySelectorAll("#modal .mtab").forEach(b => b.classList.toggle("on", b.dataset.tab === name));
+  document.querySelectorAll("#modal .mtab-pane").forEach(p => p.classList.toggle("on", p.dataset.pane === name));
+}
+// Nested-editor breadcrumb (Stage 3): when a modal is opened FROM another editor
+// (an NPC's creature form, a clone pick for an NPC), say so at the top so the
+// author never wonders where Cancel will land them. Cleared with the editor.
+let editorCrumb = null;
+function editorCrumbHtml() { return editorCrumb ? `<div class="crumb">${editorCrumb}</div>` : ""; }
 
 // ---- item form ----
 function itemForm(it) {
@@ -716,7 +778,7 @@ function itemForm(it) {
   return `
     <div class="mhead">${it ? "Edit item" : "New item"}</div>
     <div class="mbody">
-      ${field("Name", `<input id="f_name" value="${esc(v.name || "")}" placeholder="worn leather boots" />`,
+      ${field(req("Name"), `<input id="f_name" value="${esc(v.name || "")}" placeholder="worn leather boots" />`,
               "What players see it called.")}
       <div class="row2">
         ${field("Kind", `<select id="f_cat">${CATEGORIES.map(c =>
@@ -765,7 +827,7 @@ function wireItemForm() {
 }
 function confirmItem(original) {
   const name = document.getElementById("f_name").value.trim();
-  if (!name) { document.getElementById("f_err").textContent = "Please give it a name."; return; }
+  if (!name) { fieldInvalid("f_name", "Please give it a name."); return; }
   const base = original ? { ...original } : {};
   if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("items").map(x => x.id)));
   base.name = name;
@@ -798,10 +860,10 @@ function placeForm(pl) {
   return `
     <div class="mhead">${pl ? "Edit place" : "New place"}</div>
     <div class="mbody">
-      ${field("Name", `<input id="f_name" value="${esc(v.name || "")}" placeholder="Brightvale Market Square" />`)}
+      ${field(req("Name"), `<input id="f_name" value="${esc(v.name || "")}" placeholder="Brightvale Market Square" />`)}
       ${field("Part of (area)", `<select id="f_parent">${parentOptions(v.id, v.parent || "")}</select>`,
               "Optional: the larger place this sits inside — e.g. a town a shop belongs to, or a dungeon a room belongs to.")}
-      ${field("Scene description", `<textarea id="f_desc" placeholder="What players read when they arrive here.">${esc(v.description || "")}</textarea>`,
+      ${field(req("Scene description"), `<textarea id="f_desc" placeholder="What players read when they arrive here.">${esc(v.description || "")}</textarea>`,
               "This is the opening scene whenever the party is here.")}
       ${field("Tags", `<input id="f_tags" value="${esc((v.tags || []).join(", "))}" placeholder="town, safe" />`)}
       <div class="subform">
@@ -821,11 +883,13 @@ function placeForm(pl) {
         <div class="help" style="margin-top:8px">Shown on quest cards while the party is in this area (top-level areas mainly). It's resized for the web automatically; the preview shows how it sits in a card.</div>
       </div>
       <div class="subform">
-        <div class="sftitle">Soundscape</div>
-        <div id="soundList"></div>
-        <button class="btn mini" id="addSound" type="button">+ Add a sound</button>
-        <input type="file" id="audioFile" accept="audio/*" style="display:none" />
-        <div class="help" style="margin-top:8px">Looping <b>beds</b> set the ambience; <b>occasional sounds</b> fire now and then. Mark a sound <b>“plays in sub-locations”</b> to pass it down to places inside this one (e.g. a city theme). “Music” vs “sound effect” chooses which volume slider controls it. ▶ previews; sounds are copied into the pack.</div>
+        <details class="drawer" id="sndDrawer">
+          <summary class="sftitle" style="margin-bottom:0">Soundscape<span class="drawer-note" id="sndSummary"></span></summary>
+          <div id="soundList" style="margin-top:10px"></div>
+          <button class="btn mini" id="addSound" type="button">+ Add a sound</button>
+          <input type="file" id="audioFile" accept="audio/*" style="display:none" />
+          <div class="help" style="margin-top:8px">Looping <b>beds</b> set the ambience; <b>occasional sounds</b> fire now and then. Mark a sound <b>“plays in sub-locations”</b> to pass it down to places inside this one (e.g. a city theme). “Music” vs “sound effect” chooses which volume slider controls it. ▶ previews; sounds are copied into the pack.</div>
+        </details>
       </div>
       <div class="invalid" id="f_err"></div>
     </div>
@@ -889,9 +953,7 @@ function resizeToDataUrl(file, maxW) {
 }
 async function onChooseIllus(file) {
   const name = document.getElementById("f_name").value.trim();
-  const err = document.getElementById("f_err");
-  if (!name) { err.textContent = "Name the place first, then add its illustration."; return; }
-  err.textContent = "";
+  if (!name) { fieldInvalid("f_name", "Name the place first, then add its illustration."); return; }
   try {
     const dataUrl = await resizeToDataUrl(file, 1200);
     const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/image`, {
@@ -978,6 +1040,14 @@ function renderSounds() {
     </div>`;
   }).join("");
   box.innerHTML = inhHtml + (ownHtml || '<div class="nothing" style="margin:8px 0">No sounds of its own yet.</div>');
+  // Drawer summary (Stage 3): the folded soundscape still tells you what's inside.
+  const sum = document.getElementById("sndSummary");
+  if (sum) {
+    const n = editorCtx.sounds.length;
+    const parts = [n ? `${n} sound${n > 1 ? "s" : ""}` : "none yet"];
+    if (inh.length) parts.push(`${inh.length} inherited`);
+    sum.textContent = ` — ${parts.join(" · ")}`;
+  }
   const on = (sel, ev, fn) => box.querySelectorAll(sel).forEach(el => el.addEventListener(ev, fn));
   on("[data-cue-file]", "change", e => {
     const i = +e.target.dataset.cueFile;
@@ -1060,12 +1130,17 @@ function confirmPlace(original) {
   const name = document.getElementById("f_name").value.trim();
   const desc = document.getElementById("f_desc").value.trim();
   const err = document.getElementById("f_err");
-  if (!name) { err.textContent = "Please give it a name."; return; }
-  if (!desc) { err.textContent = "Please write a scene description — it's what players read here."; return; }
+  if (!name) { fieldInvalid("f_name", "Please give it a name."); return; }
+  if (!desc) { fieldInvalid("f_desc", "Please write a scene description — it's what players read here."); return; }
   const exits = editorCtx.exits.filter(e => e.to);
-  if (exits.length !== editorCtx.exits.length) { err.textContent = "Every exit needs a destination chosen (or remove it)."; return; }
+  if (exits.length !== editorCtx.exits.length) {
+    markEmptyRows("data-exit-to");
+    err.textContent = "Every exit needs a destination chosen (or remove it)."; return; }
   const sounds = editorCtx.sounds.filter(c => c.file);
-  if (sounds.length !== editorCtx.sounds.length) { err.textContent = "Every sound needs a file chosen (or remove it)."; return; }
+  if (sounds.length !== editorCtx.sounds.length) {
+    document.getElementById("sndDrawer").open = true;
+    markEmptyRows("data-cue-file");
+    err.textContent = "Every sound needs a file chosen (or remove it)."; return; }
 
   const base = original ? { ...original } : {};
   if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("places").map(x => x.id)));
@@ -1139,16 +1214,29 @@ function statblockForm(sb) {
   const gold = (v.loot || []).find(l => l.gold != null)?.gold ?? "";
   const crSel = v.cr == null ? "" : String(v.cr);
   const _langSplit = splitLanguages(v.languages);
+  // Stage 3: the creature sheet is TABBED — Core / Abilities / Combat / Defenses /
+  // Loot — instead of one 20-field scroll. Identity (name/kind/XP) stays above the
+  // tabs so you always see whose sheet you're on. Every input id is unchanged;
+  // confirmStatblock reads hidden panes just fine (display:none, still in the DOM).
   return `
     <div class="mhead">${sb ? "Edit creature" : "New creature"}</div>
     <div class="mbody">
-      ${field("Name", `<input id="f_name" value="${esc(v.name || "")}" placeholder="road bandit" />`)}
+      ${editorCrumbHtml()}
+      ${field(req("Name"), `<input id="f_name" value="${esc(v.name || "")}" placeholder="road bandit" />`)}
       <div class="row2">
         ${field("Kind", `<select id="f_kind">
             <option value="monster"${(v.kind || "monster") === "monster" ? " selected" : ""}>monster</option>
             <option value="npc"${v.kind === "npc" ? " selected" : ""}>townsfolk (npc)</option></select>`)}
         ${field("Worth (XP)", `<input id="f_xp" type="number" min="0" value="${v.xp ?? 0}" />`)}
       </div>
+      <div class="mtabs" id="sbTabs">
+        <button type="button" class="mtab on" data-tab="core">Core</button>
+        <button type="button" class="mtab" data-tab="abilities">Abilities</button>
+        <button type="button" class="mtab" data-tab="combat">Combat</button>
+        <button type="button" class="mtab" data-tab="defenses">Defenses</button>
+        <button type="button" class="mtab" data-tab="loot">Loot</button>
+      </div>
+      <div class="mtab-pane on" data-pane="core">
       <div class="subform"><div class="sftitle">What it is</div>
         <div class="row2">
           ${field("Size", `<select id="f_size"><option value="">(unset)</option>${CREATURE_SIZES.map(s =>
@@ -1170,38 +1258,7 @@ function statblockForm(sb) {
         ${field("Hit dice", `<input id="f_hitdice" value="${esc(v.hit_dice || "")}" placeholder="4d8+8 (optional)" />`, "How its HP is rolled. Display only.")}
         ${field("Defense note", `<input id="f_acdesc" value="${esc(v.ac_desc || "")}" placeholder="natural armor (optional)" />`, "Where its AC comes from. Display only.")}
       </div>
-      <div class="row2">
-        ${field("Attack bonus", `<input id="f_atk" type="number" value="${v.attack_bonus ?? 0}" />`)}
-        ${field("Damage", `<input id="f_dmg" value="${esc(v.damage || "1d6")}" placeholder="1d6" />`, "Dice it hits for.")}
-      </div>
-      <div class="subform"><div class="sftitle">Ability scores</div>
-        <div class="ability-grid">${["str","dex","con","int","wis","cha"].map(k =>
-          field(k.toUpperCase(), `<input id="f_ab_${k}" type="number" value="${A(k)}" />`)).join("")}</div></div>
-      <div class="subform"><div class="sftitle">Saving throw bonuses <span style="font-weight:400;opacity:.6">— optional</span></div>
-        <div class="ability-grid">${["str","dex","con","int","wis","cha"].map(k =>
-          field(k.toUpperCase(), `<input id="f_sv_${k}" type="number" value="${sv[k] ?? ""}" placeholder="—" />`)).join("")}</div></div>
-      <div class="subform"><div class="sftitle">Speed <span style="font-weight:400;opacity:.6">— feet</span></div>
-        <div class="ability-grid">${[["walk","Walk"],["fly","Fly"],["swim","Swim"],["climb","Climb"],["burrow","Burrow"]].map(([k, lab]) =>
-          field(lab, `<input id="f_spd_${k}" type="number" min="0" value="${ftNum(spd[k])}" placeholder="${k === "walk" ? "30" : "—"}" />`)).join("")}</div></div>
-      <div class="subform"><div class="sftitle">Defenses <span style="font-weight:400;opacity:.6">— tick any that apply</span></div>
-        ${field("Resistances", checklist("f_res", DAMAGE_TYPES, v.damage_resistances), "Takes half damage from these.")}
-        ${field("Immunities", checklist("f_imm", DAMAGE_TYPES, v.damage_immunities), "Takes no damage from these.")}
-        ${field("Vulnerabilities", checklist("f_vuln", DAMAGE_TYPES, v.damage_vulnerabilities), "Takes double damage from these.")}
-        ${field("Condition immunities", checklist("f_cond", CONDITIONS, v.condition_immunities), "Can't be affected by these conditions.")}
-      </div>
-      <div class="row2">
-        ${field("Darkvision (ft)", `<input id="f_darkvision" type="number" min="0" value="${ftNum(sen.darkvision)}" placeholder="(optional)" />`)}
-        ${field("Passive perception", `<input id="f_passperc" type="number" min="0" value="${ftNum(sen.passive_perception)}" placeholder="(optional)" />`)}
-      </div>
-      <div class="subform"><div class="sftitle">Languages <span style="font-weight:400;opacity:.6">— optional</span></div>
-        ${checklist("f_langs", LANGUAGES, _langSplit.std)}
-        <div style="margin-top:9px">${field("Other", `<input id="f_langs_other" value="${esc(_langSplit.other)}" placeholder="telepathy 60 ft., understands Common…" />`, "Anything not in the list above. Use “—” for none.")}</div>
-      </div>
-      <div class="subform"><div class="sftitle">Skills <span style="font-weight:400;opacity:.6">— what it's proficient in</span></div>
-        ${checklist("f_skills", SKILLS, v.skills)}</div>
-      ${field("Special traits", `<input id="f_traits" value="${esc((v.traits || []).join(", "))}" placeholder="keen senses, pack tactics" />`, "Free-form notes, comma-separated. Real mechanical abilities (extra attacks, breath weapons) come from the attacks editor.")}
-      ${field("Personality (how it fights)", `<select id="f_ai_profile">${aiProfileOptions(v.ai_profile)}</select>`,
-              "Its battle behaviour. Built-in styles, or a personality you authored in “AI Personalities”. Competence (its attacks, spells, breath) is always automatic.")}
+      ${field("Description", `<textarea id="f_desc" placeholder="A short, flavourful line.">${esc(v.description || "")}</textarea>`)}
       ${field("Portrait", `
         <div class="portrait-pick">
           <img id="f_portrait_img" class="portrait-prev${v.portrait ? "" : " is-empty"}"${
@@ -1213,15 +1270,55 @@ function statblockForm(sb) {
           </div>
           <input type="hidden" id="f_portrait" value="${esc(v.portrait || "")}">
         </div>`, "Pick an image from your computer — it's saved into this world's portraits/ folder.")}
+      </div>
+      <div class="mtab-pane" data-pane="abilities">
+      <div class="subform"><div class="sftitle">Ability scores</div>
+        <div class="ability-grid">${["str","dex","con","int","wis","cha"].map(k =>
+          field(k.toUpperCase(), `<input id="f_ab_${k}" type="number" value="${A(k)}" />`)).join("")}</div></div>
+      <div class="subform"><div class="sftitle">Saving throw bonuses <span style="font-weight:400;opacity:.6">— optional</span></div>
+        <div class="ability-grid">${["str","dex","con","int","wis","cha"].map(k =>
+          field(k.toUpperCase(), `<input id="f_sv_${k}" type="number" value="${sv[k] ?? ""}" placeholder="—" />`)).join("")}</div></div>
+      <div class="subform"><div class="sftitle">Skills <span style="font-weight:400;opacity:.6">— what it's proficient in</span></div>
+        ${checklist("f_skills", SKILLS, v.skills)}</div>
+      <div class="subform"><div class="sftitle">Languages <span style="font-weight:400;opacity:.6">— optional</span></div>
+        ${checklist("f_langs", LANGUAGES, _langSplit.std)}
+        <div style="margin-top:9px">${field("Other", `<input id="f_langs_other" value="${esc(_langSplit.other)}" placeholder="telepathy 60 ft., understands Common…" />`, "Anything not in the list above. Use “—” for none.")}</div>
+      </div>
+      <div class="row2">
+        ${field("Darkvision (ft)", `<input id="f_darkvision" type="number" min="0" value="${ftNum(sen.darkvision)}" placeholder="(optional)" />`)}
+        ${field("Passive perception", `<input id="f_passperc" type="number" min="0" value="${ftNum(sen.passive_perception)}" placeholder="(optional)" />`)}
+      </div>
+      </div>
+      <div class="mtab-pane" data-pane="combat">
+      <div class="row2">
+        ${field("Attack bonus", `<input id="f_atk" type="number" value="${v.attack_bonus ?? 0}" />`)}
+        ${field("Damage", `<input id="f_dmg" value="${esc(v.damage || "1d6")}" placeholder="1d6" />`, "Dice it hits for.")}
+      </div>
+      <div class="subform"><div class="sftitle">Speed <span style="font-weight:400;opacity:.6">— feet</span></div>
+        <div class="ability-grid">${[["walk","Walk"],["fly","Fly"],["swim","Swim"],["climb","Climb"],["burrow","Burrow"]].map(([k, lab]) =>
+          field(lab, `<input id="f_spd_${k}" type="number" min="0" value="${ftNum(spd[k])}" placeholder="${k === "walk" ? "30" : "—"}" />`)).join("")}</div></div>
+      ${field("Special traits", `<input id="f_traits" value="${esc((v.traits || []).join(", "))}" placeholder="keen senses, pack tactics" />`, "Free-form notes, comma-separated. Real mechanical abilities (extra attacks, breath weapons) come from the attacks editor.")}
+      ${field("Personality (how it fights)", `<select id="f_ai_profile">${aiProfileOptions(v.ai_profile)}</select>`,
+              "Its battle behaviour. Built-in styles, or a personality you authored in “AI Personalities”. Competence (its attacks, spells, breath) is always automatic.")}
       <div class="subform"><div class="sftitle">Combat moves</div>
         <div class="help" style="margin-bottom:9px">Attacks, multiattack, breath weapons & special abilities (and the raw-data editor for anything else) live in the combat editor.</div>
         <button class="btn" type="button" id="f_editcombat">⚔ Edit attacks &amp; special abilities…</button>
         <div class="help" style="margin-top:6px">Saves this creature first, then opens its combat editor.</div></div>
+      </div>
+      <div class="mtab-pane" data-pane="defenses">
+      <div class="subform"><div class="sftitle">Defenses <span style="font-weight:400;opacity:.6">— tick any that apply</span></div>
+        ${field("Resistances", checklist("f_res", DAMAGE_TYPES, v.damage_resistances), "Takes half damage from these.")}
+        ${field("Immunities", checklist("f_imm", DAMAGE_TYPES, v.damage_immunities), "Takes no damage from these.")}
+        ${field("Vulnerabilities", checklist("f_vuln", DAMAGE_TYPES, v.damage_vulnerabilities), "Takes double damage from these.")}
+        ${field("Condition immunities", checklist("f_cond", CONDITIONS, v.condition_immunities), "Can't be affected by these conditions.")}
+      </div>
+      </div>
+      <div class="mtab-pane" data-pane="loot">
       <div class="subform"><div class="sftitle">Loot dropped</div>
         ${field("Gold", `<input id="f_gold" type="number" min="0" value="${gold}" placeholder="(optional)" />`)}
         <div id="lootList"></div>
         <button class="btn mini" type="button" id="addLoot">+ Add an item drop</button></div>
-      ${field("Description", `<textarea id="f_desc" placeholder="A short, flavourful line.">${esc(v.description || "")}</textarea>`)}
+      </div>
       <div class="invalid" id="f_err"></div>
     </div>
     <div class="mfoot"><button class="btn" data-cancel>Cancel</button>
@@ -1240,6 +1337,8 @@ function renderLoot() {
   box.querySelectorAll("[data-loot-del]").forEach(b => b.addEventListener("click", e => { editorCtx.loot.splice(+e.target.dataset.lootDel, 1); renderLoot(); }));
 }
 function wireStatblockForm(original) {
+  document.querySelectorAll("#sbTabs .mtab").forEach(b =>
+    b.addEventListener("click", () => showTab(b.dataset.tab)));
   renderLoot();
   document.getElementById("addLoot").addEventListener("click", () => { editorCtx.loot.push({ item: "", qty: 1 }); renderLoot(); });
   document.getElementById("f_editcombat").addEventListener("click", () => editCombatFromForm(original));
@@ -1277,7 +1376,7 @@ function setCreaturePortrait(filename) {
 }
 function confirmStatblock(original) {
   const name = document.getElementById("f_name").value.trim();
-  if (!name) { document.getElementById("f_err").textContent = "Please give it a name."; return null; }
+  if (!name) { fieldInvalid("f_name", "Please give it a name."); return null; }
   const base = original ? { ...original } : {};
   if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("statblocks").map(x => x.id)));
   base.name = name;
@@ -1357,6 +1456,7 @@ async function openClonePicker() {
   modal.innerHTML = `
     <div class="mhead">Start from an existing creature</div>
     <div class="mbody">
+      ${editorCrumbHtml()}
       <div class="help">Copy a creature to use as a starting point — you'll get its full combat kit (attacks, multiattack, breath) and stats, then rename and tweak. The original is never changed.</div>
       ${field("Search", `<input id="cloneSearch" placeholder="owlbear, dragon, goblin…" autocomplete="off" />`)}
       <div id="cloneList" class="clone-list"></div>
@@ -1822,7 +1922,7 @@ function aiProfileForm(p) {
   return `
     <div class="mhead">${p ? "Edit personality" : "New personality"}</div>
     <div class="mbody">
-      ${field("Name", `<input id="f_name" value="${esc(v.name || "")}" placeholder="Cowardly Goblin" />`, "A label you'll pick when you build a creature.")}
+      ${field(req("Name"), `<input id="f_name" value="${esc(v.name || "")}" placeholder="Cowardly Goblin" />`, "A label you'll pick when you build a creature.")}
       <div style="display:flex;gap:6px;margin:4px 0 10px">
         <button class="btn mini" type="button" data-mode="easy">Easy</button>
         <button class="btn mini" type="button" data-mode="pro">Pro</button>
@@ -1875,8 +1975,7 @@ function wireAiProfileForm() {
 }
 function confirmAiProfile(original) {
   const name = document.getElementById("f_name").value.trim();
-  const err = document.getElementById("f_err");
-  if (!name) { err.textContent = "Please name this personality."; return; }
+  if (!name) { fieldInvalid("f_name", "Please name this personality."); return; }
   const base = original ? { ...original } : {};
   if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("ai_profiles").map(x => x.id)));
   base.name = name;
@@ -1905,7 +2004,7 @@ function npcForm(npc) {
   return `
     <div class="mhead">${npc ? "Edit character" : "New character"}</div>
     <div class="mbody">
-      ${field("Name", `<input id="f_name" value="${esc(v.name || "")}" placeholder="Thom" />`)}
+      ${field(req("Name"), `<input id="f_name" value="${esc(v.name || "")}" placeholder="Thom" />`)}
       <div class="row2">
         ${field("Role", `<input id="f_role" value="${esc(v.role || "")}" placeholder="merchant, guard, ..." />`, "Optional, advisory.")}
         ${field("Coin (gold)", `<input id="f_gold" type="number" min="0" value="${v.gold ?? 0}" />`, "Caps what they can pay.")}
@@ -1994,9 +2093,11 @@ function renderCombatPanel() {
 // `forceKind` lets the creature-authoring handoff pin combat_kind="creature".
 function npcEntryFromForm(original, forceKind) {
   const name = document.getElementById("f_name").value.trim(), err = document.getElementById("f_err");
-  if (!name) { err.textContent = "Please give them a name."; return null; }
+  if (!name) { fieldInvalid("f_name", "Please give them a name."); return null; }
   const rows = editorCtx.inv.filter(r => r.item);
-  if (rows.length !== editorCtx.inv.length) { err.textContent = "Every belongings row needs an item chosen (or remove it)."; return null; }
+  if (rows.length !== editorCtx.inv.length) {
+    markEmptyRows("data-inv-item");
+    err.textContent = "Every belongings row needs an item chosen (or remove it)."; return null; }
   const base = original ? { ...original } : {};
   if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("npcs").map(x => x.id)));
   base.name = name;
@@ -2036,11 +2137,15 @@ function npcAuthorCreature(mode) {
     const idx = listOf("statblocks").findIndex(s => s.id === base.stat_block);
     if (idx < 0) { toast("Pick a creature first."); return; }
     commitEntry("npcs", editorCtx.original, base);
+    toast(`“${base.name}” saved — opening their creature`);
+    editorCrumb = `↩ Part of character <b>${esc(base.name)}</b> — you're editing the creature they fight as.`;
     openEditor("statblocks", idx);
     return;
   }
   commitEntry("npcs", editorCtx.original, base);   // closeEditor clears npcLink → set it AFTER
   npcLink = base.id;
+  toast(`“${base.name}” saved — opening the creature editor`);
+  editorCrumb = `↩ Part of character <b>${esc(base.name)}</b> — this creature will be linked to them.`;
   if (mode === "clone") { openClonePicker(); return; }
   openEditor("statblocks", null);                  // a fresh creature; confirmStatblock links it back
 }
@@ -2087,6 +2192,7 @@ function npcBuildCharacter() {
   const base = npcEntryFromForm(editorCtx.original, "person");
   if (!base) return;
   commitEntry("npcs", editorCtx.original, base);
+  toast(`“${base.name}” saved — opening the character builder`);
   openChargenView(base.id, base.name);
 }
 
@@ -2101,7 +2207,9 @@ async function openChargenView(npcId, npcName) {
   modal.classList.add("cg-modal");
   modal.innerHTML = `
     <div class="mhead">Build a character${npcName ? " — " + esc(npcName) : ""}</div>
-    <div class="mbody"><div class="cg-wrap">
+    <div class="mbody">
+      ${npcName ? `<div class="crumb">↩ This is the character sheet of <b>${esc(npcName)}</b> — they were just saved; “Save character” writes their sheet, Cancel keeps them without one.</div>` : ""}
+      <div class="cg-wrap">
       <div class="cg-form" id="cg-form"></div>
       <div class="cg-side"><div class="cg-preview" id="cg-preview"></div></div>
     </div></div>
@@ -2773,7 +2881,7 @@ function loreForm(lo) {
   return `
     <div class="mhead">${lo ? "Edit lore" : "New lore"}</div>
     <div class="mbody">
-      ${field("Title", `<input id="f_title" value="${esc(v.title || "")}" placeholder="The Founding of Brightvale" />`)}
+      ${field(req("Title"), `<input id="f_title" value="${esc(v.title || "")}" placeholder="The Founding of Brightvale" />`)}
       ${field("The lore", `<textarea id="f_text" style="min-height:160px" placeholder="The established history or legend — concentrated.">${esc(v.text || "")}</textarea>`,
               "Background the DM draws on and weaves in — not a script to recite. Keep it focused.")}
       ${field("About (people, places, topics)", `<input id="f_subjects" list="entity-names" value="${esc((v.subjects || []).join(", "))}" placeholder="Brightvale, Silverfin Bay, Alden, Seraphel" />`,
@@ -2788,9 +2896,8 @@ function loreForm(lo) {
 function confirmLore(original) {
   const title = document.getElementById("f_title").value.trim();
   const text = document.getElementById("f_text").value.trim();
-  const err = document.getElementById("f_err");
-  if (!title) { err.textContent = "Please give it a title."; return; }
-  if (!text) { err.textContent = "Please write the lore itself."; return; }
+  if (!title) { fieldInvalid("f_title", "Please give it a title."); return; }
+  if (!text) { fieldInvalid("f_text", "Please write the lore itself."); return; }
   const base = original ? { ...original } : {};
   if (!base.id) base.id = uniqueId(slugify(title), new Set(listOf("lore").map(x => x.id)));
   base.title = title; base.text = text;
@@ -2814,7 +2921,7 @@ function questForm(q) {
   return `
     <div class="mhead">${q ? "Edit quest" : "New quest"}</div>
     <div class="mbody">
-      ${field("Title", `<input id="f_title" value="${esc(v.title || "")}" placeholder="The Missing Cargo" />`, "A short name for the quest.")}
+      ${field(req("Title"), `<input id="f_title" value="${esc(v.title || "")}" placeholder="The Missing Cargo" />`, "A short name for the quest.")}
       ${field("Hook — the players hear this", `<textarea id="f_hook" placeholder="Bromley needs his stolen shipment found.">${esc(v.hook || "")}</textarea>`,
               "The offer as the party learns it, once they reach the source.")}
       ${field("Briefing — secret, only the DM", `<textarea id="f_brief" placeholder="The 'thief' is the harbormaster, being blackmailed.">${esc(v.briefing || "")}</textarea>`,
@@ -2888,16 +2995,18 @@ function wireQuestForm() {
 }
 function confirmQuest(original) {
   const title = document.getElementById("f_title").value.trim(), err = document.getElementById("f_err");
-  if (!title) { err.textContent = "Please give the quest a title."; return; }
+  if (!title) { fieldInvalid("f_title", "Please give the quest a title."); return; }
   const srcType = document.getElementById("f_srctype").value;
   const giverNpc = document.getElementById("f_giver_npc").value;
   const giverPlace = document.getElementById("f_giver_place").value;
   const discovery = document.getElementById("f_discovery").value.trim();
-  if (srcType === "npc" && !giverNpc) { err.textContent = "Choose the character who gives this quest."; return; }
-  if (srcType === "place" && !giverPlace) { err.textContent = "Choose the place where this quest is found."; return; }
-  if (srcType === "place" && !discovery) { err.textContent = "Say how it's found (e.g. a notice board)."; return; }
+  if (srcType === "npc" && !giverNpc) { fieldInvalid("f_giver_npc", "Choose the character who gives this quest."); return; }
+  if (srcType === "place" && !giverPlace) { fieldInvalid("f_giver_place", "Choose the place where this quest is found."); return; }
+  if (srcType === "place" && !discovery) { fieldInvalid("f_discovery", "Say how it's found (e.g. a notice board)."); return; }
   const branches = editorCtx.branches.filter(b => b.outcome.trim() && b.to);
   if (branches.length !== editorCtx.branches.length) {
+    document.querySelectorAll("[data-br-outcome]").forEach(i => { if (!i.value.trim()) i.classList.add("bad"); });
+    markEmptyRows("data-br-to");
     err.textContent = "Every outcome needs both a label and a target quest (or remove it)."; return; }
 
   const base = original ? { ...original } : {};
@@ -2931,8 +3040,8 @@ function scenarioForm(sc) {
   return `
     <div class="mhead">${sc ? "Edit opening setup" : "New opening setup"}</div>
     <div class="mbody">
-      ${field("Name", `<input id="f_name" value="${esc(v.name || "")}" placeholder="A Morning at Brightvale" />`)}
-      ${field("Starts at", `<select id="f_start">${optionList("places", v.start_location || "", "(choose a place)")}</select>`, "Where a new game begins.")}
+      ${field(req("Name"), `<input id="f_name" value="${esc(v.name || "")}" placeholder="A Morning at Brightvale" />`)}
+      ${field(req("Starts at"), `<select id="f_start">${optionList("places", v.start_location || "", "(choose a place)")}</select>`, "Where a new game begins.")}
       ${field("Opening scene (optional)", `<textarea id="f_scene" placeholder="Leave blank to use the starting place's own description.">${esc(v.scene_override || "")}</textarea>`,
               "Overrides the starting place's description, for the very first scene only.")}
       ${party ? `<div class="help">Starting hero(es): ${party}. Editing heroes will come with character creation (a later feature) — they're kept untouched when you save.</div>` : ""}
@@ -2943,9 +3052,9 @@ function scenarioForm(sc) {
 }
 function confirmScenario(original) {
   const name = document.getElementById("f_name").value.trim();
-  const start = document.getElementById("f_start").value, err = document.getElementById("f_err");
-  if (!name) { err.textContent = "Please give it a name."; return; }
-  if (!start) { err.textContent = "Please choose where the game starts."; return; }
+  const start = document.getElementById("f_start").value;
+  if (!name) { fieldInvalid("f_name", "Please give it a name."); return; }
+  if (!start) { fieldInvalid("f_start", "Please choose where the game starts."); return; }
   const base = original ? { ...original } : {};
   if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("scenarios").map(x => x.id)));
   base.name = name; base.start_location = start;
