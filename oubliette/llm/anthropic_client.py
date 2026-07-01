@@ -32,6 +32,23 @@ _API_URL = "https://api.anthropic.com/v1/messages"
 _RETRYABLE = {429, 500, 502, 503, 529}
 
 
+def _coerce_input(schema: type[T], inp: object) -> T:
+    """Validate a forced-tool input into `schema`, tolerating a bogus single-key envelope.
+    As of 2026-07, claude-sonnet-5 intermittently wraps the tool input under a lone key
+    (observed 'parameters' / 'parameter') instead of returning the schema's fields at the top
+    level — e.g. `{"parameters": {"intent": …, "tier": …}}` rather than `{"intent": …}`. The
+    nested content is otherwise correct, so when the direct shape doesn't validate we unwrap
+    ONE such envelope and retry before surfacing the error. A no-op on well-formed input."""
+    try:
+        return schema.model_validate(inp)
+    except ValidationError:
+        if isinstance(inp, dict) and len(inp) == 1:
+            (only,) = inp.values()
+            if isinstance(only, dict):
+                return schema.model_validate(only)
+        raise
+
+
 class AnthropicLLMClient:
     def __init__(self, model: str = DEFAULT_MODEL, api_key: str | None = None,
                  max_tokens: int = 2048, max_retries: int = 3) -> None:
@@ -59,7 +76,7 @@ class AnthropicLLMClient:
         if on_text is not None:
             inp = await asyncio.to_thread(self._post_stream, {**payload, "stream": True}, on_text)
             try:
-                return schema.model_validate(inp)
+                return _coerce_input(schema, inp)
             except ValidationError:
                 # The streamed tool input came back empty/partial (e.g. the model emitted
                 # an empty `emit({})`). Fall through to one clean, non-streaming retry,
@@ -69,7 +86,7 @@ class AnthropicLLMClient:
         data = await asyncio.to_thread(self._post, payload)
         for block in data.get("content", []):
             if block.get("type") == "tool_use":
-                return schema.model_validate(block["input"])
+                return _coerce_input(schema, block["input"])
         raise RuntimeError("model did not emit the forced structured-output tool call")
 
     def _post_stream(self, payload: dict, on_text: TextSink) -> dict:
