@@ -64,6 +64,17 @@ def session_notes(events: list[Event]) -> list[dict]:
     return out
 
 
+def notebook_notes(events: list[Event]) -> list[str]:
+    """The DM's private notebook entries for the session in progress, oldest first (the
+    `dm_note` tool, W4). Working memory the DM feeds into its own context every turn — plans,
+    NPC true intentions, foreshadowing. Current-session only: a past session's threads are
+    carried forward by its wrap note (STORY SO FAR), so the notebook resets at wrap like beats.
+    Players never see these; prose only, never protected state."""
+    return [ev.payload.get("note", "")
+            for ev in current_session_events(events)
+            if ev.kind == EventKind.NOTEBOOK_NOTE.value and ev.payload.get("note")]
+
+
 def recent_beats(events: list[Event], limit: int) -> list[str]:
     """The last `limit` continuity beats from the session in progress — rehydrates the
     DM's short-term memory (`TurnLoop.history`) so a reload doesn't wipe recent context.

@@ -157,6 +157,18 @@ class ForceEndSession(BaseModel):
     reason: str = Field(description="a brief, honest reason for force-ending (logged, not shown as fiction)")
 
 
+class DmNote(BaseModel):
+    """Jot a PRIVATE note to your own DM notebook (W4) — your working memory for THIS session.
+    Use it for things you want to remember but that aren't protected state: a plan you're
+    building toward, an NPC's true intention or secret, foreshadowing you just planted, a
+    promise or lie left standing, a thread to follow up. These notes ride your context every
+    turn and the players NEVER see them. They are prose memory only — do NOT record gold/HP/XP
+    or any number here (code owns those; the give/transact/award_xp tools change them)."""
+
+    tool: Literal["dm_note"] = "dm_note"
+    note: str = Field(description="the private note to remember, a sentence or two")
+
+
 class SetEnvironment(BaseModel):
     """Report a CHANGE to the world's time-of-day and/or weather (engine-owned state
     that drives the audio soundscape). Emit this ONLY when the fiction has just turned
@@ -226,7 +238,7 @@ class AcceptQuest(BaseModel):
 ToolCall = Annotated[
     Union[Transact, Give, Take, AwardXp, CreateEntity, PromoteCanon, Travel,
           EndSession, ForceEndSession, StartQuest, UpdateQuest, AcceptQuest,
-          SetEnvironment],
+          SetEnvironment, DmNote],
     Field(discriminator="tool"),
 ]
 
@@ -236,5 +248,5 @@ ToolCall = Annotated[
 TOOL_MODELS: tuple[type[BaseModel], ...] = (
     Transact, Give, Take, AwardXp, CreateEntity, PromoteCanon, Travel,
     EndSession, ForceEndSession, StartQuest, UpdateQuest, AcceptQuest,
-    SetEnvironment,
+    SetEnvironment, DmNote,
 )

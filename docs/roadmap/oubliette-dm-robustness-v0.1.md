@@ -148,12 +148,21 @@ Build **both** flavors:
   (live: a contested trap ruling → 541 chars of reasoning; a routine "glance around" → 0).
   Tests: `test_resolve_streaming.py` (adaptive-thinking payload, canned-SSE thinking parse,
   tier→effort mapping, Brain passes per-turn effort). NOT persisted across turns.
-- **Persistent DM notebook (Stage 3 — NEXT):** a durable, DM-owned notes store (distinct from the
-  player's DM-invisible journal) that rides context each turn — the DM's own memory of
-  plans, foreshadowing, NPC intentions. Persisted via W2's durable record (its own
-  event kind or notebook table); the DM writes to it with a tool; it feeds back into
-  context. This is also the substrate for W5 (session notes = notebook entries the DM
-  writes at session end). Firewall: notebook is DM memory/prose, never protected state.
+- **Persistent DM notebook:** ✅ **BUILT 2026-07-01 (Stage 3), live-verified.** A `dm_note`
+  tool the DM calls to jot private working memory — plans, an NPC's true intention, foreshadowing
+  planted, a lie left standing. Recorded as a new `NOTEBOOK_NOTE` event (payload `{note}`, inert
+  on replay like NARRATION_RECORDED — the firewall pattern), fed back each turn as a **DM NOTEBOOK**
+  context block (`transcript.notebook_notes` → `build_context`). **Scoped to the current session**
+  (like beats): the DM's episodic working memory, durable across reloads within the session, reset
+  at wrap — its threads carry forward via STORY SO FAR (W5's per-session dm_private notes are the
+  semantic layer above it). Players NEVER see it (not in the transcript). Pieces: `EventKind.NOTEBOOK_NOTE`,
+  `Session.emit_notebook_note`, `DmNote` tool + TOOL_MODELS + dispatch (`ResolvedTool.note_text`),
+  loop apply-branch + beat summary, `transcript.notebook_notes`, `build_context` DM NOTEBOOK block,
+  `RESOLVE_SYSTEM` NOTEBOOK guidance. Live-verified: the DM recorded an NPC's secret allegiance to
+  the notebook, it reached the next turn's context, and the secret stayed OUT of the player narration.
+  Tests: `test_resolve_streaming.py` (dispatch, records+feeds-context+player-invisible, current-session
+  scoping + inert-on-replay). Full suite 2987 green. (Also fixed the stale `build_context` ENVIRONMENT
+  line — "report on your TurnResolution" → "emit set_environment when the story turns them".)
 
 ### W5 — Session wrap-up + two-faced notes  `[builds on W2/W3]  [BUILT 2026-07-01]`
 The episodic→semantic compaction. A **wrap** (distinct from a free pause = closing the
@@ -251,9 +260,16 @@ deltas + a `CreateEntity` witness and a `StartQuest`). Two follow-on fixes lande
      Native adaptive thinking, **per-turn effort by tier** (contested → high, routine → off).
      See W4 above for the empirical finding (thinking only fires at high effort on genuinely
      contested turns) and the wiring.
-   - **Stage 3 — W4 persistent DM notebook (NEXT):** a `dm_note` tool → durable inert-on-replay
-     event → "DM NOTEBOOK" context block; firewall: prose only.
+   - **Stage 3 — W4 persistent DM notebook.** ✅ BUILT + live-verified 2026-07-01 (2987 green).
+     `dm_note` tool → `NOTEBOOK_NOTE` inert-on-replay event → current-session "DM NOTEBOOK"
+     context block (resets at wrap, carried forward by STORY SO FAR); firewall: prose only,
+     player-invisible. See W4 above.
 6. **W1b — remaining context-drop cleanups** (opportunistic, as we go).
+
+**ARC STATUS 2026-07-01: W1a, W2, W3, W5, W6, and W4 (both flavors) all BUILT. The DM-robustness
+arc's planned workstreams are complete.** Remaining follow-ons (all deferred, none blocking): the
+canonization ceremony (promote provisional→confirmed canon at wrap), W1b opportunistic context-drop
+patches, and the interview-surfaced backlog (HP-outside-combat gap + small prompt fixes).
 
 **Session-memory model locked with OublietteDev (2026-07-01):** episodic vs. semantic memory.
 *Current session* → player gets full transcript replay, DM gets its beats window rehydrated

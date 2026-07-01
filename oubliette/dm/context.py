@@ -178,7 +178,8 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   ruleset=None, authored_quests: dict | None = None,
                   offerable: set | None = None, offered_here: set | None = None,
                   pending_rewards: list | None = None,
-                  past_notes: list[str] | None = None) -> str:
+                  past_notes: list[str] | None = None,
+                  notebook: list[str] | None = None) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -195,7 +196,7 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
         lines.append(f"SCENE: {scene}")
     if time_of_day or weather:
         lines.append(f"ENVIRONMENT: it is {time_of_day or 'day'}, weather {weather or 'clear'} "
-                     f"(report these back on your TurnResolution; keep them unless the story turns).")
+                     f"(these carry forward on their own; emit set_environment only when the story turns them).")
     party = repo.party()
     if len(party) == 1:
         lines.append(f"PARTY: {_party_line(party[0])}")
@@ -350,6 +351,15 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
         for i, note in enumerate(past_notes, 1):
             if note:
                 lines.append(f"  - Session {i}: {note}")
+    # The DM's own working notebook for THIS session (the dm_note tool, W4): plans,
+    # foreshadowing, an NPC's true intent, a lie left standing. The DM's private memory —
+    # players never see it — oldest first. Prose only, never a source of protected-state
+    # numbers. Resets at wrap (its threads carry forward via STORY SO FAR above).
+    if notebook:
+        lines.append("DM NOTEBOOK (your PRIVATE working notes this session — plans, secrets, "
+                     "foreshadowing; the players do NOT see these; add to them with dm_note):")
+        for note in notebook:
+            lines.append(f"  - {note}")
     # Short-term continuity: what just happened, so the DM honors established
     # fiction and successful checks instead of re-litigating each turn (gap G5).
     if recent:

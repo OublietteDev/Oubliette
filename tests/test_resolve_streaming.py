@@ -21,8 +21,9 @@ from oubliette.record.rng import Rng
 from oubliette.record.store import InMemoryEventStore
 from oubliette.runtime.loop import TurnLoop
 from oubliette.runtime.session import Session
+from oubliette.runtime.transcript import notebook_notes, transcript_turns
 from oubliette.tools.dispatch import Dispatcher
-from oubliette.tools.schemas import CreateEntity, SetEnvironment, Transact
+from oubliette.tools.schemas import CreateEntity, DmNote, SetEnvironment, Transact
 
 
 # --- the scripted double's act() --------------------------------------------
@@ -120,6 +121,46 @@ def test_loop_set_environment_noop_when_unchanged():
     asyncio.run(loop.take_turn("I glance at the sky."))
     assert (s.time_of_day, s.weather) == ("day", "clear")
     assert _env_events(s.store) == []               # no redundant environment event
+
+
+# --- the dm_note tool + DM notebook (W4 Stage 3) ----------------------------
+def test_dispatch_resolves_dm_note():
+    s = Session.open(InMemoryEventStore())
+    rt = Dispatcher(s.repo).resolve(DmNote(note="the innkeeper is secretly the thief"))
+    assert rt.note_text == "the innkeeper is secretly the thief"
+    assert rt.ops == []                                  # a note is prose, not protected state
+
+
+def test_dm_note_records_notebook_and_feeds_dm_context_only():
+    s = Session.open(InMemoryEventStore())
+    loop = TurnLoop(s, Rng(1, record=s.emit_log),
+                    _EnvBrain(ScriptedLLMClient(),
+                              [DmNote(note="The innkeeper is secretly the thief; pay it off later.")]))
+    asyncio.run(loop.take_turn("I chat with the innkeeper by the fire."))
+
+    notes = [e for e in s.store.read_all() if e.kind == EventKind.NOTEBOOK_NOTE]
+    assert len(notes) == 1 and "thief" in notes[0].payload["note"]      # durably recorded
+    ctx = loop._build_context("x")
+    assert "DM NOTEBOOK" in ctx and "secretly the thief" in ctx         # feeds the DM's context
+    # the players NEVER see it — not in the transcript the client replays
+    assert all("thief" not in t["text"] for t in transcript_turns(s.store.read_all()))
+    assert any("jotted a DM note" in b for b in loop.history)           # shows in the beat
+
+
+def test_notebook_is_current_session_only_and_inert_on_replay():
+    store = InMemoryEventStore()
+    s = Session.open(store)
+    loop = TurnLoop(s, Rng(1, record=s.emit_log),
+                    _EnvBrain(ScriptedLLMClient(), [DmNote(note="Plant the cursed-amulet clue.")]))
+    asyncio.run(loop.take_turn("I glance around the room."))
+    gold_before = s.repo.pc().gold
+    assert any("amulet" in n for n in notebook_notes(store.read_all()))
+
+    asyncio.run(loop.wrap_session(write_notes=False))    # wrap seals the session…
+    assert notebook_notes(store.read_all()) == []        # …and the notebook window resets
+
+    s2 = Session.open(store)                              # inert on replay: state unchanged
+    assert s2.repo.pc().gold == gold_before
 
 
 def _resolve_messages(content: str):
