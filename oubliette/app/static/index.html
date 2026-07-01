@@ -619,6 +619,11 @@
         <span class="combat-bar-text">⚔ A fight is upon you — the table waits.</span>
         <button id="enter-arena" type="button">⚔ Enter the Arena</button>
       </div>
+      <div id="wrap-bar" class="combat-bar hidden">
+        <span class="combat-bar-text">🌙 The Phantom offers a resting point — wrap up this session?</span>
+        <button id="wrap-confirm" type="button">Wrap up session</button>
+        <button id="wrap-dismiss" type="button">Keep playing</button>
+      </div>
       <div class="composer">
         <button id="ooc-toggle" class="ooc-toggle" type="button"
                 title="Switch between speaking as your character and speaking to the DM out-of-character">🎭 In character</button>
@@ -948,6 +953,7 @@
 const $ = (id) => document.getElementById(id);
 const log = $("log"), input = $("input"), sendBtn = $("send");
 const combatBar = $("combat-bar"), enterArenaBtn = $("enter-arena");
+const wrapBar = $("wrap-bar");
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -1262,6 +1268,7 @@ async function send(textOverride) {
   const text = (override ? textOverride : input.value).trim();
   if (!text || busy) return;
   if (!override) input.value = "";
+  hideWrapBar();                 // a fresh action supersedes any pending wrap proposal
   addMessage("You", text, "player");
   setBusy(true);
   const thinkRow = el("div", "row dm");
@@ -1291,6 +1298,7 @@ async function send(textOverride) {
       if (data.soundscape) setSoundscape(data.soundscape);   // travel may have changed the mix
       if (data.trade) openTrade(data.trade);
       (data.quest_beats || []).forEach(addQuestCard);
+      if (data.wrap_pending) showWrapBar();                  // the DM offered a resting point (W5)
     } else if (data.t === "error") {
       if (!removedThink) { thinkRow.remove(); removedThink = true; }
       addMessage("System", data.error || "something went wrong", "system");
@@ -1349,6 +1357,34 @@ async function enterArena() {
   }
 }
 enterArenaBtn.addEventListener("click", enterArena);
+
+// --- session wrap-up (W5): the DM proposes a resting point, or the player calls it ---
+function showWrapBar() { wrapBar.classList.remove("hidden"); scrollDown(); }
+function hideWrapBar() { wrapBar.classList.add("hidden"); }
+
+async function wrapSession(fromProposal) {
+  hideWrapBar();
+  if (busy || gameEnded || combatPending) return;
+  if (!fromProposal && !confirm(
+      "Wrap up this session? The Phantom records the tale, and you pick up fresh next time.")) return;
+  setBusy(true);
+  const rec = addMessage("System", "✍️ The Phantom is recording the tale — a moment…", "system");
+  const body = rec.querySelector(".body");
+  try {
+    const res = await fetch("/api/wrap", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) { body.textContent = data.error || "the session could not be wrapped."; return; }
+    if (!data.wrapped) { body.textContent = data.notice || "there's nothing to wrap yet."; return; }
+    body.textContent = "— session wrapped —";
+    if (data.player_facing) addMessage("The tale so far", data.player_facing, "system");
+    else addMessage("System", "The Phantom sets down the pen. (Offline Mode keeps no notes.)", "system");
+    if (data.state) renderState(data.state);
+  } catch (e) {
+    body.textContent = "Wrap failed: " + e;
+  } finally { setBusy(false); }
+}
+$("wrap-confirm").addEventListener("click", () => wrapSession(true));
+$("wrap-dismiss").addEventListener("click", hideWrapBar);
 
 sendBtn.addEventListener("click", () => send());
 input.addEventListener("keydown", (e) => {
@@ -1470,6 +1506,7 @@ async function beginNewGame(builds) {
   gameEnded = false;            // a fresh game clears any prior end-of-session lock
   combatPending = false;        // ...and any staged fight from the prior save
   combatBar.classList.add("hidden");
+  hideWrapBar();                // ...and any pending wrap proposal
   log.innerHTML = "";
   addMessage("System", `A new tale begins in ${ngPack.name}. Describe what you do.`, "system");
   renderState(data.state);
@@ -2344,6 +2381,7 @@ const MENU_ITEMS = [
   { key: "map",       label: "Map",              icon: "🗺️", enabled: true,  open: () => openWorldMap() },
   { key: "help",      label: "Help",             icon: "❓", enabled: true,  open: () => openHelp() },
   { key: "settings",  label: "Settings",         icon: "⚙️", enabled: true,  open: () => openSettings() },
+  { key: "wrap",      label: "Wrap up session",  icon: "🌙", enabled: true,  open: () => wrapSession(false) },
 ];
 const menuPop = $("menu-pop");
 function renderMenu() {
@@ -3345,6 +3383,11 @@ async function boot() {
   const tx = await txRes.json();
   await refreshConnection();      // sets the model badge + offline banner
   setSoundscape(data.soundscape);          // queued; plays once sound is enabled
+  // The chronicle: spoiler-free recaps of past wrapped sessions (W5), shown above the
+  // live chat as "Previously — Session N", so returning players have the story so far.
+  if (tx.chronicle && tx.chronicle.length) {
+    tx.chronicle.forEach(c => addMessage(`Previously — Session ${c.index}`, c.player_facing, "system"));
+  }
   // Replay the session-in-progress transcript so a reload lands you exactly where you
   // left off (W3), instead of a blank chat. A fresh game shows the opening prompt.
   if (tx.turns && tx.turns.length) {

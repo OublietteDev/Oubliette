@@ -50,6 +50,20 @@ def transcript_turns(events: list[Event]) -> list[dict]:
     return turns
 
 
+def session_notes(events: list[Event]) -> list[dict]:
+    """The two-faced notes from each WRAPPED (ended) session, oldest first, 1-indexed. The
+    DM's cumulative long-term memory: `dm_private` feeds its context every turn (§W5),
+    `player_facing` becomes the player's spoiler-free chronicle. The session in progress
+    has no note yet — it reaches the DM as beats (`recent_beats`), not notes."""
+    out: list[dict] = []
+    for ev in _ordered(events):
+        if ev.kind == EventKind.SESSION_MARKER.value and ev.payload.get("marker") == WRAP_MARKER:
+            out.append({"index": len(out) + 1,
+                        "player_facing": ev.payload.get("player_facing", ""),
+                        "dm_private": ev.payload.get("dm_private", "")})
+    return out
+
+
 def recent_beats(events: list[Event], limit: int) -> list[str]:
     """The last `limit` continuity beats from the session in progress — rehydrates the
     DM's short-term memory (`TurnLoop.history`) so a reload doesn't wipe recent context.

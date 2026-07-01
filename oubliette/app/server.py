@@ -35,7 +35,7 @@ from ..rules.levelup import (LevelUpChoice, LevelUpError, level_up, level_up_pla
                             xp_progress)
 from ..runtime.loop import TurnLoop
 from ..runtime.session import Session
-from ..runtime.transcript import transcript_turns
+from ..runtime.transcript import session_notes, transcript_turns
 from ..dm.brain import Brain
 from ..dm.context import region_root
 from ..enums import Ability, Skill
@@ -265,6 +265,7 @@ def _turn_payload(report) -> dict:
         "trade": report.trade_open.model_dump() if report.trade_open is not None else None,
         "meta_notice": report.meta_notice,
         "combat_pending": getattr(report, "combat_pending", False),
+        "wrap_pending": getattr(report, "wrap_pending", False),
         "session_force_ended": report.session_force_ended,
         "verb": report.assessment.intent.verb.value,
         "tier": report.assessment.tier.value,
@@ -294,10 +295,37 @@ async def get_state() -> JSONResponse:
 
 @app.get("/api/transcript")
 async def get_transcript() -> JSONResponse:
-    """The session-in-progress transcript — player messages + DM narration, in order —
-    so a reload replays the chat instead of starting blank (W3). Past sessions surface
-    as notes (W5), not here."""
-    return JSONResponse({"turns": transcript_turns(GAME.session.store.read_all())})
+    """The session-in-progress transcript — player messages + DM narration, in order — so a
+    reload replays the chat instead of starting blank (W3). Plus the `chronicle`: the
+    spoiler-free player-facing recap of each PAST wrapped session (W5), so the player sees
+    'Session 1: … Session 2: …' above the live chat. The DM's private notes never come here."""
+    events = GAME.session.store.read_all()
+    chronicle = [{"index": n["index"], "player_facing": n["player_facing"]}
+                 for n in session_notes(events) if n["player_facing"]]
+    return JSONResponse({"turns": transcript_turns(events), "chronicle": chronicle})
+
+
+@app.post("/api/wrap")
+async def post_wrap() -> JSONResponse:
+    """Wrap up the session in progress (the player's Wrap button, or their confirmation of
+    the DM's `end_session` proposal). The DM authors two-faced notes from the full transcript
+    — UNLESS Offline Mode (scripted), which writes none — the session seals, and play resumes
+    fresh. Returns the player-facing recap to show, and the refreshed state."""
+    if GAME.session.force_ended:
+        return JSONResponse({"error": "the DM has ended this session", "force_ended": True}, status_code=409)
+    if GAME.session.pending_combat is not None:
+        return JSONResponse({"error": "finish the fight before wrapping", "combat_pending": True},
+                            status_code=409)
+    async with GAME.lock:
+        write_notes = GAME.client_name != "scripted"   # Offline Mode writes no notes
+        report = await GAME.loop.wrap_session(write_notes=write_notes)
+    return JSONResponse({
+        "wrapped": report.wrapped,
+        "player_facing": report.player_facing,
+        "wrote_notes": bool(report.player_facing or report.dm_private),
+        "notice": report.notice,
+        "state": _snapshot(),
+    })
 
 
 @app.get("/api/table")

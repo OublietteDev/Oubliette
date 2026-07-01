@@ -134,6 +134,19 @@ class Travel(BaseModel):
     reason: str = Field(description="the fiction for the move, e.g. 'the party walks to the inn'")
 
 
+class EndSession(BaseModel):
+    """Propose wrapping up THIS play session at a natural stopping point — a lull, a safe
+    place to rest, an arc just resolved. This does NOT end the game: it suggests the table
+    pause for now. The player confirms, you record the session's notes out-of-character,
+    and play resumes fresh next time (carrying your notes forward as memory). Offer it when
+    the moment fits; the player may decline and play on. (To terminally close a hostile or
+    bad-faith game instead, that's the separate `force_end_session` tool.)"""
+
+    tool: Literal["end_session"] = "end_session"
+    reason: str = Field(description="the in-fiction reason it's a good place to pause "
+                        "(e.g. 'the party makes camp as night falls')")
+
+
 class ForceEndSession(BaseModel):
     """Force the game to close, terminally. Exists for the DM's protection — you may
     emit this to step away from a hostile or bad-faith interaction; the game shuts and
@@ -192,6 +205,6 @@ class AcceptQuest(BaseModel):
 # branch in tools/dispatch.py.
 ToolCall = Annotated[
     Union[Transact, Give, Take, AwardXp, CreateEntity, PromoteCanon, Travel,
-          ForceEndSession, StartQuest, UpdateQuest, AcceptQuest],
+          EndSession, ForceEndSession, StartQuest, UpdateQuest, AcceptQuest],
     Field(discriminator="tool"),
 ]

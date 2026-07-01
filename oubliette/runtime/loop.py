@@ -31,7 +31,7 @@ from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
 from ..trade.schemas import TradeState
 from ..trade.service import build_state, has_stock
 from .session import Session
-from .transcript import recent_beats
+from .transcript import recent_beats, session_notes, transcript_turns
 
 MAX_TOOL_RETRIES = 2    # D6: after this, force a narration-only turn.
 HISTORY_IN_CONTEXT = 4  # recent turns fed back to the DM for continuity (gap G5).
@@ -50,7 +50,18 @@ class TurnReport:
     combat_result: CombatResult | None = None
     combat_pending: bool = False           # a fight is staged, awaiting "⚔ Enter the Arena"
     trade_open: TradeState | None = None   # set when a trade window is summoned
+    wrap_pending: bool = False             # the DM proposed wrapping the session (player confirms)
     session_force_ended: bool = False      # the DM terminally closed the game (force_end_session)
+
+
+@dataclass
+class WrapReport:
+    """The result of wrapping a session (W5): whether it wrapped, and the two-faced notes
+    the DM authored (empty in Offline Mode, which writes none)."""
+    wrapped: bool
+    player_facing: str = ""
+    dm_private: str = ""
+    notice: str | None = None              # set when there was nothing to wrap yet
 
 
 class TurnLoop:
@@ -73,10 +84,12 @@ class TurnLoop:
         # not an empty head. Past sessions reach the DM as notes (W5), never as beats here.
         self.history: list[str] = recent_beats(session.store.read_all(), HISTORY_CAP)
 
-    async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
-        # Retrieve relevant canon/lore by the player's words PLUS the situation —
-        # the current location and who's here — so a place's history surfaces when
-        # the party arrives, not only when someone names it.
+    def _build_context(self, player_text: str = "") -> str:
+        """Assemble the per-turn DM context (state, scene, present NPCs, canon, quests,
+        past-session notes, recent beats). Shared by `take_turn` and `wrap_session` so the
+        DM writes its session notes with the same picture it plays from. Retrieves canon by
+        the player's words PLUS the situation (location + who's here), so a place's history
+        surfaces on arrival, not only when named."""
         canon_hits = self.session.canon.search(self._retrieval_query(player_text))
         scene = self._scene_override if self._scene_override is not None else self.session.scene
         # Authored-quest offers: chain-eligible set (replay-derived) and the subset whose
@@ -84,14 +97,21 @@ class TurnLoop:
         # accept_quest on `offered_here`; the context surfaces both tiers to the DM.
         authored, eligible, here = self._compute_offers()
         self.dispatcher.offered_here = here
-        context = build_context(
+        # Long-term memory: the DM's private notes from every PAST wrapped session (W5),
+        # cumulative. The current session isn't wrapped yet, so it reaches the DM as beats.
+        past_notes = [n["dm_private"] for n in session_notes(self.session.store.read_all())]
+        return build_context(
             self.repo, scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits,
             location=self.session.location, places=self.session.places,
             quests=self.session.quests.active(),
             pending_rewards=self.session.quests.reward_pending(),
             time_of_day=self.session.time_of_day, weather=self.session.weather,
             ruleset=self.session.ruleset,
-            authored_quests=authored, offerable=eligible, offered_here=here)
+            authored_quests=authored, offerable=eligible, offered_here=here,
+            past_notes=past_notes)
+
+    async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
+        context = self._build_context(player_text)
         # `ooc` is the player's explicit "out-of-character" signal (the composer
         # toggle). When set, the turn is table-talk — no model guessing, no combat
         # or trade — so in-character play is never mistaken for meta.
@@ -234,6 +254,9 @@ class TurnLoop:
                     self.session.emit_travel(rt.travel_to, rt.reason)
                 elif rt.force_end_session:
                     self.session.emit_force_end(rt.reason)
+                elif rt.wrap_proposed:
+                    pass    # a proposal only — nothing is recorded; the player confirms the
+                            # wrap (POST /api/wrap), which authors the notes. Surfaced below.
                 elif rt.quest_start is not None:
                     self.session.emit_quest_start(
                         rt.quest_start.title, rt.quest_start.text, rt.reason)
@@ -273,6 +296,7 @@ class TurnLoop:
             player_text=player_text, assessment=assessment, narration=narration,
             roll_outcome=roll_outcome, roll_result=roll_result, applied=applied,
             meta_notice=meta_notice,
+            wrap_pending=any(rt.wrap_proposed for rt in applied),
             session_force_ended=any(rt.force_end_session for rt in applied),
         )
 
@@ -405,6 +429,35 @@ class TurnLoop:
         self._record_beat(report)
         return report
 
+    async def wrap_session(self, write_notes: bool = True) -> WrapReport:
+        """Wrap the session in progress (W5): the DM writes two-faced notes from the FULL
+        session transcript (the one time it sees the whole thing, not just beats), records
+        them on a wrap marker, and the beats window resets — the session is sealed into its
+        note, and play resumes fresh as the next session. `write_notes=False` (Offline Mode)
+        wraps with no notes rather than invoke a model. A note-writing failure degrades to an
+        empty wrap so the ritual never dead-ends. Refuses a wrap when nothing has happened yet."""
+        events = self.session.store.read_all()
+        turns = transcript_turns(events)
+        if not turns:
+            return WrapReport(wrapped=False, notice="there's nothing to wrap yet — play a little first")
+        notes = None
+        if write_notes:
+            transcript_text = "\n".join(
+                f'{"PLAYER" if t["role"] == "player" else "DM"}: {t["text"]}' for t in turns)
+            table_prompt = render_table_prompt(self.session.table)
+            try:
+                notes = await self.brain.write_session_notes(
+                    transcript_text, self._build_context(), table_prompt=table_prompt)
+            except Exception as e:   # never let a bad note-gen strand the wrap
+                self.debug.append("anomaly", stage="wrap", error=str(e))
+                notes = None
+        pf = notes.player_facing if notes else ""
+        dm = notes.dm_private if notes else ""
+        self.session.emit_wrap(pf, dm)
+        self.history = []    # seal the session; its beats now live on in the note, not the head
+        self.debug.append("note", stage="wrap", wrote_notes=bool(notes))
+        return WrapReport(wrapped=True, player_facing=pf, dm_private=dm)
+
     def _record_beat(self, report: TurnReport, caused_by: int | None = None) -> None:
         """Finalize a completed turn's memory: build the compact continuity beat, keep it
         in short-term memory, and record it durably alongside the verbatim narration (W2).
@@ -432,6 +485,8 @@ class TurnLoop:
                 parts.append(f"quest {rt.quest_update.quest_id} → {state}")
             elif rt.force_end_session:
                 parts.append("force-ended the session")
+            elif rt.wrap_proposed:
+                parts.append("proposed wrapping the session")
             else:
                 parts.append(f"effect({rt.tool}): {self._ops_summary(rt.ops)}")
         if report.combat_result is not None:

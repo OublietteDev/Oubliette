@@ -58,6 +58,18 @@ class TurnAssessment(BaseModel):
     trade: TradeRequest | None = None
 
 
+class SessionNotes(BaseModel):
+    """The DM's out-of-character wrap-up of a play session (W5). Two faces: a spoiler-free
+    recap the players read next time ('Previously…'), and the DM's own private continuity
+    notes (open threads, NPC true intentions, foreshadowing planted, secrets not yet
+    revealed). Prose only — like all narration it is memory, NEVER protected state."""
+
+    player_facing: str = Field(description="a spoiler-free recap of what the PLAYERS "
+                               "experienced and accomplished this session; no secrets")
+    dm_private: str = Field(description="your own continuity notes: unresolved threads, "
+                            "NPC hidden intentions, foreshadowing, what to follow up next time")
+
+
 class TurnResolution(BaseModel):
     """Second model call of a turn: narrate the outcome and emit 0+ tool calls.
     `tool_calls` is the typed discriminated union from tools/schemas (gap G1), so

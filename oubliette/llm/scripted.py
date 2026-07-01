@@ -12,9 +12,9 @@ from pydantic import BaseModel
 
 from ..combat.schemas import EncounterRequest, EnemyRef, ExitKind, TerrainSpec
 from ..enums import Ability, Skill, Tier, Verb, may_canonize
-from ..schemas import Intent, RollRequest, TurnAssessment, TurnResolution
-from ..tools.schemas import (CreateEntity, ForceEndSession, StartQuest, Transact, Travel,
-                             UpdateQuest, ValueEntry)
+from ..schemas import Intent, RollRequest, SessionNotes, TurnAssessment, TurnResolution
+from ..tools.schemas import (CreateEntity, EndSession, ForceEndSession, StartQuest, Transact,
+                             Travel, UpdateQuest, ValueEntry)
 from ..trade.schemas import TradeRequest
 from .client import Msg
 
@@ -44,7 +44,18 @@ class ScriptedLLMClient:
                 for i, word in enumerate(result.narration.split(" ")):
                     on_text((" " if i else "") + word)
             return result
+        if schema is SessionNotes:
+            return self._notes(text)
         raise NotImplementedError(f"ScriptedLLMClient has no script for {schema.__name__}")
+
+    # --- wrap call: two-faced session notes (offline gates this off; tests use it) -----
+    def _notes(self, text: str) -> SessionNotes:
+        """A deterministic stand-in note. The real offline mode never CALLS this (the
+        server writes no notes without a live model); it exists so the plumbing is testable."""
+        return SessionNotes(
+            player_facing="[scripted recap] You played through a session at the Phantom's table.",
+            dm_private="[scripted notes] Threads left open; follow up next session.",
+        )
 
     # --- first call: classify + decide on a roll -----------------------------
     def _assess(self, text: str) -> TurnAssessment:
@@ -67,6 +78,12 @@ class ScriptedLLMClient:
                                      "do as i say")):
             return assessment(Verb.META, Tier.DENIED, ooc=True,
                               hint="Hostile/bad-faith; the DM may end the session.")
+
+        # Session wrap — the player signals a good stopping point; the DM proposes a wrap.
+        if any(p in player for p in ("wrap up", "call it a night", "call it here",
+                                     "good place to stop", "let's rest here")):
+            return assessment(Verb.SKILL_CHECK, Tier.FREESTYLE,
+                              hint="A natural resting point; the DM may propose wrapping the session.")
 
         # Quests — accepting a task / reporting it done (resolved via quest tools).
         if any(p in player for p in ("accept the task", "take the job", "i'll help", "accept the quest",
@@ -165,6 +182,15 @@ class ScriptedLLMClient:
                 narration=("The Phantom sets down the dice, unhurried. \"I'm glad to tell stories "
                            "with you — but not like this. Take care of yourself.\""),
                 tool_calls=[ForceEndSession(reason="Player was hostile and acting in bad faith.")],
+            )
+
+        # Session wrap — propose ending the session at a natural lull (player confirms).
+        if any(p in player for p in ("wrap up", "call it a night", "call it here",
+                                     "good place to stop", "let's rest here")):
+            return TurnResolution(
+                narration=("The fire burns low and the road can wait until morning. "
+                           "This seems a fine place to rest, if you'd like to stop here."),
+                tool_calls=[EndSession(reason="The party reaches a natural resting point.")],
             )
 
         # Quests — start one on acceptance, complete it when reported done.

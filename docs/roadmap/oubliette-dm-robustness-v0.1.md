@@ -142,11 +142,33 @@ Build **both** flavors:
   context. This is also the substrate for W5 (session notes = notebook entries the DM
   writes at session end). Firewall: notebook is DM memory/prose, never protected state.
 
-### W5 — End-of-session notes  `[builds on W2/W4]`
-On `end_session` (or on demand), the DM writes a durable session summary that reloads
-into the next session's context ("Last time on…"). Today `emit_end` records only a
-reason string that's never read back (`session.py:204-208`). Natural extension of the
-persistent notebook.
+### W5 — Session wrap-up + two-faced notes  `[builds on W2/W3]  [BUILT 2026-07-01]`
+The episodic→semantic compaction. A **wrap** (distinct from a free pause = closing the
+window) seals the session in progress: the DM authors `SessionNotes{player_facing,
+dm_private}` from the FULL session transcript — the one place it sees the whole thing,
+not just beats — recorded on a `SESSION_MARKER{marker:"wrap"}` (the segmentation boundary
+W3 already keys on). `dm_private` feeds the DM's context every turn thereafter (new
+**STORY SO FAR** block, cumulative, players never see it); `player_facing` becomes the
+player's spoiler-free **chronicle** ("Previously — Session N", rendered above the live
+chat on boot). The beats window resets on wrap — the session's episodic memory now lives
+in its note. **Trigger:** the DM PROPOSES via the freed `end_session` tool → transient
+`wrap_pending` flag → the client shows a wrap-bar (Wrap up / Keep playing); the player can
+also wrap directly (Menu → "Wrap up session"). Both hit `POST /api/wrap`. Mirrors the
+`combat_pending` staging pattern (DM proposes, player disposes). **Offline Mode writes no
+notes** (server gates on `client_name`); a note-gen failure degrades to an empty wrap so
+the ritual never dead-ends; a wrap with nothing to seal is refused. Firewall intact: notes
+are prose, inert on replay, never protected state. Pieces: `SessionNotes` schema +
+`EndSession` tool + `ResolvedTool.wrap_proposed`; `Brain.write_session_notes`/`WRAP_SYSTEM`;
+`Session.emit_wrap`; `transcript.session_notes`; `TurnLoop.wrap_session` + `_build_context`
+(shared, now carries `past_notes`); `build_context` STORY-SO-FAR block; `/api/wrap` +
+chronicle on `/api/transcript`; frontend wrap-bar + menu item + chronicle replay.
+Live-verified (scripted preview): DM proposal → bar → wrap → session sealed; chronicle
+render path confirmed. **Note CONTENT (real two-faced notes, STORY SO FAR reaching a live
+DM) needs the API key — for OublietteDev to confirm in live play.** Tests: `test_session_wrap.py`
+(+8) + server (+3). Full suite 558 green. **The canonization ceremony remains the deferred
+follow-on** (promote provisional→confirmed canon at wrap).
+
+Old note (superseded): `emit_end` recorded only a reason string that was never read back.
 
 ### W6 — Streaming redesign  `[folded; shares the W2/W4 resolve restructure]  [LOCKED: one-call, narration as text]`
 Restructure resolve so narration is a streaming assistant **text** channel and only
@@ -168,11 +190,10 @@ path for the test suite.
 1. **W1a — quest reward fix** (small, independent, real bug a playtester would hit). ✅ BUILT
 2. **W2 — durable narration** (keystone; unblocks the rest). ✅ BUILT
 3. **W3 — current-session continuity on reload** (the other real bug). ✅ BUILT
-4. **W5 — session wrap-up + two-faced notes** (the `end_session` wrap ritual; the protective
-   tool was renamed `force_end_session` to free the name). Then the **canonization ceremony**
-   as a follow-on. ← next
+4. **W5 — session wrap-up + two-faced notes** (the `end_session` wrap ritual). ✅ BUILT
+   (canonization ceremony still the deferred follow-on).
 5. **Resolve restructure = W6 + W4 together** (narration-as-streaming-text + scratchpad,
-   built in one pass so we don't rework the resolve path twice).
+   built in one pass so we don't rework the resolve path twice). ← next (the last arc piece)
 6. **W1b — remaining context-drop cleanups** (opportunistic, as we go).
 
 **Session-memory model locked with OublietteDev (2026-07-01):** episodic vs. semantic memory.

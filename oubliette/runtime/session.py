@@ -202,6 +202,18 @@ class Session:
         self.table = normalized
         return normalized
 
+    def emit_wrap(self, player_facing: str, dm_private: str,
+                  reason: str = "session wrapped") -> None:
+        """Wrap up the current session (the DM's `end_session` tool / the player's Wrap
+        button). Records a SESSION_MARKER{marker:"wrap"} carrying the two-faced notes: this
+        seals the session (the segmentation boundary transcript.py keys on) and makes the
+        notes durable cross-session memory — dm_private feeds the DM's context, player_facing
+        the player's chronicle. Inert on replay (notes are prose, never state). Does NOT end
+        the game: play resumes as a fresh session, carrying the notes forward."""
+        self.store.append(EventKind.SESSION_MARKER,
+                          {"marker": "wrap", "player_facing": player_facing,
+                           "dm_private": dm_private, "reason": reason})
+
     def emit_force_end(self, reason: str) -> None:
         """Terminally close the game (the DM's `force_end_session` tool). Records an end
         marker with the reason and flags the game force-ended (persists across reload).

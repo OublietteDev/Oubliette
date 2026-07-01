@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from ..combat.templates import ENEMY_TEMPLATES
 from ..llm.client import LLMClient, Msg
-from ..schemas import TurnAssessment, TurnResolution
+from ..schemas import SessionNotes, TurnAssessment, TurnResolution
 
 _TEMPLATES = ", ".join(sorted(ENEMY_TEMPLATES))
 
@@ -148,6 +148,14 @@ RESOLVE_SYSTEM = (
     "more); code applies it and the sheet handles leveling. Don't grant XP for trivial actions or "
     "narrate an XP change without the tool, and don't re-award a fight that combat already "
     "resolved (it grants its own XP). Be encouraging but not inflationary.\n"
+    "WRAPPING THE SESSION: when the story reaches a natural resting point — an arc resolved, the "
+    "party makes camp, a chapter closes and the moment feels like a good place to pause — you may "
+    "PROPOSE wrapping up the session with the `end_session` tool (a brief in-fiction `reason`). This "
+    "does NOT end the game; it offers the player a stopping point, and THEY decide whether to take it. "
+    "Narrate the lull as you normally would; the offer surfaces to the player alongside it. Don't "
+    "propose it constantly or mid-tension — reserve it for genuine breathing room. (This is the "
+    "ordinary, friendly wrap-up — entirely separate from force_end_session below, which is the "
+    "protective exit from a hostile table.)\n"
     "FORCE-ENDING THE GAME: you may terminally close the game at any time with the `force_end_session` "
     "tool (give a brief, honest `reason`). This exists for YOUR protection: if the player is hostile, "
     "abusive, or persistently acting in bad faith — degrading the table rather than playing — you are "
@@ -168,6 +176,21 @@ RESOLVE_SYSTEM = (
     "tool — a test fight is requested through the same codeword as an action the assessment "
     "stages.)\n"
     "Return a TurnResolution."
+)
+
+WRAP_SYSTEM = (
+    "You are the DM of Oubliette Table, stepping OUT of the fiction to close a play session. "
+    "You are handed the full transcript of the session that just concluded (plus the current "
+    "SCENE/PARTY/QUEST context). Write a SessionNotes with two distinct faces:\n"
+    "- player_facing: a warm, spoiler-free 'Previously…' recap the players will read when they "
+    "return — what THEY did, saw, and accomplished, and where things stand. A few sentences to a "
+    "short paragraph. Reveal NO secrets, no hidden intentions, nothing the characters don't know.\n"
+    "- dm_private: your OWN continuity notes, for your eyes only next session — unresolved threads, "
+    "an NPC's true motive, foreshadowing you planted, a lie left standing, what you mean to follow "
+    "up. Concrete and specific enough to actually run from later.\n"
+    "Both are prose MEMORY, never mechanics: do not assert gold/HP/XP or any state number — code "
+    "owns all of that, and these notes never change it. Summarize faithfully from the transcript; "
+    "don't invent events that didn't happen. Return a SessionNotes."
 )
 
 
@@ -209,4 +232,23 @@ class Brain:
         return await self.client.complete(
             system=system, messages=[Msg(role="user", content="\n".join(parts))],
             schema=TurnResolution, on_text=on_text,
+        )
+
+    async def write_session_notes(
+        self, transcript_text: str, context: str = "", table_prompt: str = "",
+    ) -> SessionNotes:
+        """Summarize a just-concluded session into two-faced notes (W5). This is the ONE
+        place the DM is handed the FULL session transcript (per-turn it sees only compact
+        beats) — used once, at wrap, then compacted into the durable note that carries
+        forward. Prose only; the firewall holds (notes never touch protected state)."""
+        parts: list[str] = []
+        if context:
+            parts.append(context)
+            parts.append("")
+        parts.append("SESSION TRANSCRIPT (the play that just concluded — summarize it):")
+        parts.append(transcript_text)
+        system = WRAP_SYSTEM + table_prompt if table_prompt else WRAP_SYSTEM
+        return await self.client.complete(
+            system=system, messages=[Msg(role="user", content="\n".join(parts))],
+            schema=SessionNotes,
         )

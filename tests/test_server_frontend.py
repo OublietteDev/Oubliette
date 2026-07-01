@@ -47,6 +47,28 @@ def test_transcript_endpoint_replays_the_session():
     assert turns[1]["text"].strip()
 
 
+def test_dm_wrap_proposal_surfaces_to_the_client():
+    _new()
+    d = client.post("/api/turn", json={"text": "let's call it a night here"}).json()
+    assert d["wrap_pending"] is True                 # the DM proposed; the client shows the bar
+
+
+def test_wrap_endpoint_seals_the_session():
+    _new()
+    client.post("/api/turn", json={"text": "I look around the market"})
+    w = client.post("/api/wrap").json()
+    assert w["wrapped"] is True
+    assert w["wrote_notes"] is False                 # Offline (scripted) writes no notes
+    # The session is sealed: the current-session transcript resets to empty.
+    assert client.get("/api/transcript").json()["turns"] == []
+
+
+def test_wrap_endpoint_refuses_when_nothing_to_wrap():
+    _new()
+    w = client.post("/api/wrap").json()
+    assert w["wrapped"] is False and w["notice"]
+
+
 def test_turn_sale_updates_surfaced_state():
     _new()
     r = client.post("/api/turn", json={"text": "Sold."})

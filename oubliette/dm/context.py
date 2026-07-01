@@ -177,7 +177,8 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   time_of_day: str | None = None, weather: str | None = None,
                   ruleset=None, authored_quests: dict | None = None,
                   offerable: set | None = None, offered_here: set | None = None,
-                  pending_rewards: list | None = None) -> str:
+                  pending_rewards: list | None = None,
+                  past_notes: list[str] | None = None) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -339,6 +340,16 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                 latest = (q.notes[-1] if q.notes else q.text) or "(recall what you offered them)"
                 hint = (latest[:160] + "…") if len(latest) > 160 else latest
             lines.append(f"  - [{q.id}] {q.title} — {hint}")
+    # Long-term memory: the DM's private notes from PAST wrapped sessions (W5), cumulative
+    # and oldest-first — the semantic layer above the current session's beats. The players
+    # never see these (they get a spoiler-free chronicle instead); they are the DM's own
+    # continuity across sessions. Prose only, never a source of protected-state numbers.
+    if past_notes:
+        lines.append("STORY SO FAR (your PRIVATE notes from past sessions — cumulative memory, "
+                     "oldest first; the players do NOT see these — carry threads forward):")
+        for i, note in enumerate(past_notes, 1):
+            if note:
+                lines.append(f"  - Session {i}: {note}")
     # Short-term continuity: what just happened, so the DM honors established
     # fiction and successful checks instead of re-litigating each turn (gap G5).
     if recent:
