@@ -138,7 +138,10 @@ class CombatLogPanel:
         if event.type == pygame.MOUSEWHEEL:
             mouse_pos = pygame.mouse.get_pos()
             if self.rect.collidepoint(mouse_pos):
-                self.scroll_offset = max(0, self.scroll_offset - event.y * 2)
+                # scroll_offset is anchored to the BOTTOM (0 = newest event, larger =
+                # further back in history), unlike the top-anchored creature-info panel.
+                # So wheel-up (event.y > 0) must INCREASE the offset to scroll back.
+                self.scroll_offset = max(0, self.scroll_offset + event.y * 2)
                 # Clamp upper bound so we can't scroll past the first event
                 self._clamp_scroll()
 

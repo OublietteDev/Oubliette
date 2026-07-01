@@ -3199,11 +3199,13 @@ document.getElementById("saveBtn").addEventListener("click", saveWorld);
 document.getElementById("newWorldBtn").addEventListener("click", newWorld);
 document.getElementById("mapBtn").addEventListener("click", openMap);
 document.getElementById("mapClose").addEventListener("click", closeMap);
-document.getElementById("scrim").addEventListener("click", e => { if (e.target.id === "scrim") closeEditor(); });
+// Editor modals hold WORK IN PROGRESS (a half-written description, a statblock mid-edit) —
+// they close ONLY via their own Cancel/Save buttons. A stray click on the scrim or an
+// accidental Escape must never throw the author's work away. The map overlay still closes
+// on Escape: it holds no unsaved typing (pins live in world state until Save world).
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
-  if (editorCtx) closeEditor();
-  else if (document.getElementById("mapScrim").classList.contains("open")) closeMap();
+  if (!editorCtx && document.getElementById("mapScrim").classList.contains("open")) closeMap();
 });
 window.addEventListener("resize", () => { if (document.getElementById("mapScrim").classList.contains("open")) layoutStage(); });
 document.getElementById("rootBadge").textContent = "reading from content/packs";

@@ -1160,8 +1160,11 @@ function doHaggle() {
 $("trade-done").addEventListener("click", closeTrade);
 $("trade-settle").addEventListener("click", settle);
 $("trade-haggle").addEventListener("click", doHaggle);
-$("trade-overlay").addEventListener("click", (e) => { if (e.target.id === "trade-overlay") closeTrade(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeTrade(); closeJournal(); closeInventory(); closeWorldMap(); closeMenu(); closeSettings(); closeNewGame(); closeAI(); } });
+// Overlays that hold WORK IN PROGRESS (a trade cart, a typed character description, a
+// pasted key, picked spells...) close ONLY via their own buttons — a stray click on the
+// scrim or an accidental Escape must never throw the player's work away. Read-only
+// viewers (sheet, bestiary, help, map, inventory) keep the convenient click-off close.
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeInventory(); closeWorldMap(); closeMenu(); } });
 
 let gameEnded = false;          // set when the DM ends the session (locks the composer)
 let combatPending = false;      // a tactical fight is staged, awaiting "Enter the Arena" (Stage 3c)
@@ -2149,7 +2152,7 @@ async function saveSettings() {
 }
 $("settings-cancel").addEventListener("click", closeSettings);
 $("settings-save").addEventListener("click", saveSettings);
-$("settings-overlay").addEventListener("click", (e) => { if (e.target.id === "settings-overlay") closeSettings(); });
+// settings holds table-contract edits — closes via its buttons only (no click-off)
 
 // --- start menu (front door) ---------------------------------------------
 function hideStart() { $("start-overlay").classList.add("hidden"); }
@@ -2235,7 +2238,7 @@ async function saveAI() {
 $("start-ai").addEventListener("click", openAI);
 $("ai-close").addEventListener("click", closeAI);
 $("ai-save").addEventListener("click", saveAI);
-$("ai-overlay").addEventListener("click", (e) => { if (e.target.id === "ai-overlay") closeAI(); });
+// ai-connect holds a half-typed key — closes via its buttons only (no click-off)
 $("offline-connect").addEventListener("click", openAI);
 $("reload-btn").addEventListener("click", async () => {
   if (busy) return;
@@ -2249,7 +2252,7 @@ $("reload-btn").addEventListener("click", async () => {
   finally { btn.disabled = false; }
 });
 $("newgame-cancel").addEventListener("click", closeNewGame);
-$("newgame-overlay").addEventListener("click", (e) => { if (e.target.id === "newgame-overlay") closeNewGame(); });
+// new-game/chargen holds the player's typed character — closes via Cancel only (no click-off)
 
 // --- portrait lightbox (click any view-only portrait to enlarge) -----------
 function openLightbox(src, alt) {
@@ -3137,13 +3140,13 @@ async function confirmPrepare() {
 function closePrepare() { $("prepare-overlay").classList.add("hidden"); }
 $("prepare-cancel").addEventListener("click", closePrepare);
 $("prepare-confirm").addEventListener("click", confirmPrepare);
-$("prepare-overlay").addEventListener("click", (e) => { if (e.target.id === "prepare-overlay") closePrepare(); });
+// prepare-spells holds the picked list — closes via its buttons only (no click-off)
 
 $("sheet-close").addEventListener("click", closeSheet);
 $("sheet-overlay").addEventListener("click", (e) => { if (e.target.id === "sheet-overlay") closeSheet(); });
 $("shortrest-cancel").addEventListener("click", closeShortRest);
 $("shortrest-confirm").addEventListener("click", confirmShortRest);
-$("shortrest-overlay").addEventListener("click", (e) => { if (e.target.id === "shortrest-overlay") closeShortRest(); });
+// short-rest holds entered hit-dice — closes via Cancel/Confirm only (no click-off)
 
 // --- level up (CS5) -------------------------------------------------------
 let luPlan = null, luCharId = "pc", lu = null;
@@ -3287,7 +3290,7 @@ async function confirmLevelUp() {
 }
 $("lu-cancel").addEventListener("click", closeLevelUp);
 $("lu-confirm").addEventListener("click", confirmLevelUp);
-$("levelup-overlay").addEventListener("click", (e) => { if (e.target.id === "levelup-overlay") closeLevelUp(); });
+// level-up holds the player's choices — closes via Cancel only (no click-off)
 
 // --- soundscape mixer (S2: inherited beds, crossfaded on travel; music/sfx buses) ---
 // Engine-resolved: the server hands us a flat list of beds for the current location (its
