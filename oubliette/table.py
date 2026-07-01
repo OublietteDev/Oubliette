@@ -83,5 +83,5 @@ def render_table_prompt(table: TableContract) -> str:
     if table.lines or table.veils:
         out.append(
             "If the player repeatedly forces past these agreed limits — not an honest in-fiction "
-            "turn, but bulldozing the boundary — that is bad faith, and end_session is available.")
+            "turn, but bulldozing the boundary — that is bad faith, and force_end_session is available.")
     return "\n".join(out)

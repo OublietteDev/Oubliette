@@ -1215,7 +1215,7 @@ function renderState(s) {
     }
   }
 
-  if (s.ended && !gameEnded) {
+  if (s.force_ended && !gameEnded) {
     gameEnded = true;
     addMessage("System", "— The Phantom has closed the table. This session has ended; start a New Game to play again. —", "system");
   }

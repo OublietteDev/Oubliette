@@ -147,7 +147,7 @@ def _snapshot() -> dict:
         quest = {"id": q.id, "title": q.title, "text": q.text, "notes": list(q.notes)}
     return {
         "scene": GAME.session.scene,
-        "ended": GAME.session.ended,
+        "force_ended": GAME.session.force_ended,
         "combat_pending": GAME.session.pending_combat is not None,
         "time_of_day": GAME.session.time_of_day,
         "weather": GAME.session.weather,
@@ -264,7 +264,7 @@ def _turn_payload(report) -> dict:
         "trade": report.trade_open.model_dump() if report.trade_open is not None else None,
         "meta_notice": report.meta_notice,
         "combat_pending": getattr(report, "combat_pending", False),
-        "session_ended": report.session_ended,
+        "session_force_ended": report.session_force_ended,
         "verb": report.assessment.intent.verb.value,
         "tier": report.assessment.tier.value,
         "state": _snapshot(),
@@ -500,8 +500,8 @@ async def post_turn(body: TurnIn) -> JSONResponse:
     text = body.text.strip()
     if not text:
         return JSONResponse({"error": "empty message"}, status_code=400)
-    if GAME.session.ended:
-        return JSONResponse({"error": "the DM has ended this session", "ended": True}, status_code=409)
+    if GAME.session.force_ended:
+        return JSONResponse({"error": "the DM has ended this session", "force_ended": True}, status_code=409)
     if GAME.session.pending_combat is not None:
         return JSONResponse(
             {"error": "a fight is underway — enter the Arena to resolve it", "combat_pending": True},
@@ -518,8 +518,8 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
     text = body.text.strip()
     if not text:
         return JSONResponse({"error": "empty message"}, status_code=400)
-    if GAME.session.ended:
-        return JSONResponse({"error": "the DM has ended this session", "ended": True}, status_code=409)
+    if GAME.session.force_ended:
+        return JSONResponse({"error": "the DM has ended this session", "force_ended": True}, status_code=409)
     if GAME.session.pending_combat is not None:
         return JSONResponse(
             {"error": "a fight is underway — enter the Arena to resolve it", "combat_pending": True},

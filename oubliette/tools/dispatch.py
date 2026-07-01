@@ -15,7 +15,7 @@ from ..canon.models import CanonDraft
 from ..canon.store import CanonStore
 from ..record.events import StateOp
 from ..state.repository import Repository, StateError
-from .schemas import (AcceptQuest, AwardXp, CreateEntity, EndSession, Give, PromoteCanon,
+from .schemas import (AcceptQuest, AwardXp, CreateEntity, ForceEndSession, Give, PromoteCanon,
                       StartQuest, Take, ToolCall, Transact, Travel, UpdateQuest, ValueEntry)
 
 
@@ -35,7 +35,7 @@ class ResolvedTool:
     canon_create: CanonDraft | None = None               # create_entity
     canon_promote: str | None = None                     # promote_canon -> entity id
     travel_to: str | None = None                         # travel -> destination place id
-    end_session: bool = False                            # end_session -> close the game
+    force_end_session: bool = False                      # force_end_session -> terminally close the game
     quest_start: "StartQuest | None" = None              # start_quest
     quest_update: "UpdateQuest | None" = None            # update_quest
     quest_accept: "AcceptQuest | None" = None            # accept_quest -> activate authored quest
@@ -77,8 +77,8 @@ class Dispatcher:
             return ResolvedTool(call.tool, call.reason, canon_promote=call.entity_id)
         if isinstance(call, Travel):
             return ResolvedTool(call.tool, call.reason, travel_to=self._resolve_place_id(call.to))
-        if isinstance(call, EndSession):
-            return ResolvedTool(call.tool, call.reason, end_session=True)
+        if isinstance(call, ForceEndSession):
+            return ResolvedTool(call.tool, call.reason, force_end_session=True)
         if isinstance(call, StartQuest):
             if self.quests is not None and self.quests.active():
                 raise ToolApplyError(

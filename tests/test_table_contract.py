@@ -38,14 +38,14 @@ def test_lines_veils_freeform_render():
     assert "LINES" in out and "graphic torture" in out
     assert "VEILS" in out and "romance" in out
     assert "keep it PG-13" in out
-    # boundaries present → the end_session backstop is mentioned
-    assert "end_session" in out
+    # boundaries present → the force_end_session backstop is mentioned
+    assert "force_end_session" in out
 
 
 def test_freeform_only_skips_boundary_backstop():
     out = render_table_prompt(TableContract(freeform="lots of tavern songs"))
     assert "lots of tavern songs" in out
-    assert "end_session" not in out   # no lines/veils → no boundary-enforcement note
+    assert "force_end_session" not in out   # no lines/veils → no boundary-enforcement note
 
 
 # --- normalization ----------------------------------------------------------

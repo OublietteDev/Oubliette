@@ -52,7 +52,8 @@ class Session:
         self.npc_statblocks: dict = {}      # {npc id -> StatBlock id} for the combat bridge (Phase 4a)
         self.world_map: str | None = None   # top-level map background image filename (pack)
         self.bestiary_gate = None           # per-world bestiary knowledge cutoff (manifest)
-        self.ended: bool = False            # the DM closed this session (end_session tool)
+        self.force_ended: bool = False      # the DM terminally closed the game (force_end_session tool);
+                                            # distinct from an ordinary session wrap-up, which continues play
         # A staged-but-unresolved tactical fight awaiting "⚔ Enter the Arena"
         # (combat Stage 3). Transient runtime state — set while a fight is pending,
         # cleared when the Arena returns; never event-sourced. While set, the turn
@@ -134,7 +135,7 @@ class Session:
         location = start_location
         time_of_day, weather = "day", "clear"
         table = DEFAULT_TABLE
-        ended = False
+        force_ended = False
         for event in sorted(events, key=lambda e: e.seq):
             if event.kind == EventKind.LOCATION_CHANGED.value:
                 location = event.payload.get("to", location)
@@ -144,7 +145,7 @@ class Session:
             elif event.kind == EventKind.CONTRACT_SET.value:
                 table = TableContract.model_validate(event.payload["table"])
             elif event.kind == EventKind.SESSION_MARKER.value and event.payload.get("marker") == "end":
-                ended = True
+                force_ended = True
 
         session = cls(store, repo, canon, quests)
         session.places = places
@@ -161,7 +162,7 @@ class Session:
         session.npc_statblocks = npc_statblocks
         session.world_map = world_map
         session.bestiary_gate = bestiary_gate
-        session.ended = ended
+        session.force_ended = force_ended
         session.table = table
         session.ruleset = ruleset
         session.authored_quests = authored_quests
@@ -201,11 +202,13 @@ class Session:
         self.table = normalized
         return normalized
 
-    def emit_end(self, reason: str) -> None:
-        """Close the session (the DM's `end_session` tool). Records an end marker
-        with the reason and flags the session ended (persists across reload)."""
+    def emit_force_end(self, reason: str) -> None:
+        """Terminally close the game (the DM's `force_end_session` tool). Records an end
+        marker with the reason and flags the game force-ended (persists across reload).
+        The persisted marker string stays "end" for save compatibility; the concept is the
+        protective force-end, NOT the ordinary session wrap-up (which continues play)."""
         self.store.append(EventKind.SESSION_MARKER, {"marker": "end", "reason": reason})
-        self.ended = True
+        self.force_ended = True
 
     def emit_quest_start(self, title: str, text: str, reason: str,
                          authored_id: str | None = None) -> Quest:

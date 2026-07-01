@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from ..combat.schemas import EncounterRequest, EnemyRef, ExitKind, TerrainSpec
 from ..enums import Ability, Skill, Tier, Verb, may_canonize
 from ..schemas import Intent, RollRequest, TurnAssessment, TurnResolution
-from ..tools.schemas import (CreateEntity, EndSession, StartQuest, Transact, Travel,
+from ..tools.schemas import (CreateEntity, ForceEndSession, StartQuest, Transact, Travel,
                              UpdateQuest, ValueEntry)
 from ..trade.schemas import TradeRequest
 from .client import Msg
@@ -62,7 +62,7 @@ class ScriptedLLMClient:
                 trade=trade,
             )
 
-        # Bad-faith / hostile out-of-character — the DM may step away (end_session).
+        # Bad-faith / hostile out-of-character — the DM may step away (force_end_session).
         if any(p in player for p in ("shut up and obey", "you're worthless", "stupid bot",
                                      "do as i say")):
             return assessment(Verb.META, Tier.DENIED, ooc=True,
@@ -158,13 +158,13 @@ class ScriptedLLMClient:
         roll_result = _field(text, "ROLL_RESULT")  # "success" | "failure" | ""
         player = _field(text, "PLAYER").lower()
 
-        # End the session gracefully in the face of hostility / bad faith.
+        # Force-end the game in the face of hostility / bad faith.
         if any(p in player for p in ("shut up and obey", "you're worthless", "stupid bot",
                                      "do as i say")):
             return TurnResolution(
                 narration=("The Phantom sets down the dice, unhurried. \"I'm glad to tell stories "
                            "with you — but not like this. Take care of yourself.\""),
-                tool_calls=[EndSession(reason="Player was hostile and acting in bad faith.")],
+                tool_calls=[ForceEndSession(reason="Player was hostile and acting in bad faith.")],
             )
 
         # Quests — start one on acceptance, complete it when reported done.

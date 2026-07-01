@@ -36,4 +36,4 @@ def test_empty_resolution_degrades_gracefully():
     assert report.meta_notice and "lost the thread" in report.meta_notice
     assert report.narration                         # the player never gets an empty bubble
     assert report.applied == []                     # a failed turn changes no state
-    assert not s.ended
+    assert not s.force_ended

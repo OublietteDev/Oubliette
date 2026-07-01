@@ -188,8 +188,8 @@ systems below are all shipped unless noted:
   active at a time; rewards are handed out through the normal `give`/`transact` tools so they can
   even be renegotiated. An **Active Quest** panel shows the current one.
 - **Quality-of-life** — token-by-token streaming narration; an explicit **Out-of-Character
-  toggle** (the sole signal for table-talk); an **`end_session`** tool that lets the DM gracefully
-  exit a hostile/bad-faith interaction (model welfare).
+  toggle** (the sole signal for table-talk); a **`force_end_session`** tool that lets the DM
+  terminally exit a hostile/bad-faith interaction (model welfare).
 
 ### Combat — "The Arena"
 Combat is **a separate tactical app, not prose.** The Arena is a mature ~45k-line hex-grid 5e

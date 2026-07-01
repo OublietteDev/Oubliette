@@ -49,7 +49,7 @@ class TurnReport:
     combat_result: CombatResult | None = None
     combat_pending: bool = False           # a fight is staged, awaiting "⚔ Enter the Arena"
     trade_open: TradeState | None = None   # set when a trade window is summoned
-    session_ended: bool = False            # the DM closed the game (end_session)
+    session_force_ended: bool = False      # the DM terminally closed the game (force_end_session)
 
 
 class TurnLoop:
@@ -227,8 +227,8 @@ class TurnLoop:
                     self.session.emit_promote(rt.canon_promote, rt.reason)
                 elif rt.travel_to is not None:
                     self.session.emit_travel(rt.travel_to, rt.reason)
-                elif rt.end_session:
-                    self.session.emit_end(rt.reason)
+                elif rt.force_end_session:
+                    self.session.emit_force_end(rt.reason)
                 elif rt.quest_start is not None:
                     self.session.emit_quest_start(
                         rt.quest_start.title, rt.quest_start.text, rt.reason)
@@ -268,7 +268,7 @@ class TurnLoop:
             player_text=player_text, assessment=assessment, narration=narration,
             roll_outcome=roll_outcome, roll_result=roll_result, applied=applied,
             meta_notice=meta_notice,
-            session_ended=any(rt.end_session for rt in applied),
+            session_force_ended=any(rt.force_end_session for rt in applied),
         )
 
     def _run_combat(self, player_text: str, assessment: TurnAssessment) -> TurnReport:
@@ -425,8 +425,8 @@ class TurnLoop:
             elif rt.quest_update is not None:
                 state = rt.quest_update.status or "updated"
                 parts.append(f"quest {rt.quest_update.quest_id} → {state}")
-            elif rt.end_session:
-                parts.append("ended the session")
+            elif rt.force_end_session:
+                parts.append("force-ended the session")
             else:
                 parts.append(f"effect({rt.tool}): {self._ops_summary(rt.ops)}")
         if report.combat_result is not None:

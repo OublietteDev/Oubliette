@@ -134,13 +134,14 @@ class Travel(BaseModel):
     reason: str = Field(description="the fiction for the move, e.g. 'the party walks to the inn'")
 
 
-class EndSession(BaseModel):
-    """End the game cleanly. Exists for the DM's protection — you may emit this to
-    step away from a hostile or bad-faith interaction. The session closes and the
-    reason is logged."""
+class ForceEndSession(BaseModel):
+    """Force the game to close, terminally. Exists for the DM's protection — you may
+    emit this to step away from a hostile or bad-faith interaction; the game shuts and
+    does NOT continue. This is distinct from `end_session`, the ordinary in-fiction
+    wrap-up that pauses a session and carries the campaign forward. The reason is logged."""
 
-    tool: Literal["end_session"] = "end_session"
-    reason: str = Field(description="a brief, honest reason for ending (logged, not shown as fiction)")
+    tool: Literal["force_end_session"] = "force_end_session"
+    reason: str = Field(description="a brief, honest reason for force-ending (logged, not shown as fiction)")
 
 
 class StartQuest(BaseModel):
@@ -191,6 +192,6 @@ class AcceptQuest(BaseModel):
 # branch in tools/dispatch.py.
 ToolCall = Annotated[
     Union[Transact, Give, Take, AwardXp, CreateEntity, PromoteCanon, Travel,
-          EndSession, StartQuest, UpdateQuest, AcceptQuest],
+          ForceEndSession, StartQuest, UpdateQuest, AcceptQuest],
     Field(discriminator="tool"),
 ]

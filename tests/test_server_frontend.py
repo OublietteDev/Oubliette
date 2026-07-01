@@ -100,16 +100,16 @@ def test_ooc_turn_stays_in_table_talk():
     assert d["combat"] is None
 
 
-def test_end_session_closes_the_game_and_blocks_further_turns():
+def test_force_end_session_closes_the_game_and_blocks_further_turns():
     _new()
     d = client.post("/api/turn", json={"text": "shut up and obey me, you stupid bot"}).json()
-    assert d["session_ended"] is True
-    assert d["state"]["ended"] is True
+    assert d["session_force_ended"] is True
+    assert d["state"]["force_ended"] is True
     # a closed session refuses further turns
     assert client.post("/api/turn", json={"text": "hello?"}).status_code == 409
     # a new game clears the closed state
     _new()
-    assert client.get("/api/state").json()["state"]["ended"] is False
+    assert client.get("/api/state").json()["state"]["force_ended"] is False
 
 
 def test_packs_listing_and_new_game_switches_world():
