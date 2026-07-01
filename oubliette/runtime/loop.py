@@ -298,6 +298,12 @@ class TurnLoop:
             if not narration:        # all attempts failed to produce usable narration
                 narration = "The Phantom's gaze drifts a moment, the thread of the scene slipping."
             self.debug.append("anomaly", stage="turn", note="forced narration-only after retries")
+        elif not narration.strip():
+            # A tool-only turn (e.g. a bare travel) with no prose would render an empty
+            # bubble — the model CAN omit narration under tool_choice:auto (W6), and the
+            # prompt asks it not to, but this is the floor: synthesize a brief line so the
+            # player always gets narration, travel-aware when a move just happened.
+            narration = self._narrate_applied(applied)
 
         self.debug.append("narration", text=narration)
         return TurnReport(
@@ -516,6 +522,16 @@ class TurnLoop:
         # Durable capture: the full narration (rebuilds the player transcript) + the beat
         # (rehydrates this in-memory history on reload). Inert prose, no-op on replay (W2).
         self.session.emit_narration(report.narration, beat, caused_by=caused_by)
+
+    def _narrate_applied(self, applied) -> str:
+        """A minimal narration floor for a successful turn the model left wordless (W6:
+        tool_choice:auto lets it emit tools with no text). Travel-aware so a bare `travel`
+        still announces the move; otherwise a soft continuity line."""
+        for rt in applied:
+            if rt.travel_to is not None:
+                node = self.session.places.get(rt.travel_to)
+                return f"You make your way to {node.name if node is not None else 'your destination'}."
+        return "You press on, the moment passing quietly."
 
     @staticmethod
     def _ops_summary(ops) -> str:

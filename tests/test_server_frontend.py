@@ -512,3 +512,31 @@ def test_saving_an_anthropic_key_brings_the_dm_online():
     # clear it again so the rest of the suite stays offline/deterministic
     client.post("/api/providers", json={"provider": "anthropic", "api_key": None})
     assert GAME.client_name == "scripted"
+
+
+def test_applied_chip_labels():
+    """Travel gets a real 'travelled to <place>' chip (it has no StateOps, so the old code
+    rendered 'travel: (none)'); dm_note / set_environment / wrap / force-end produce NO chip
+    (dm_note must not leak the DM's private note to the player)."""
+    from oubliette.app.server import _describe_applied
+    from oubliette.record.events import StateOp
+    from oubliette.tools.dispatch import ResolvedTool
+
+    _new()
+    dest = next(iter(GAME.session.places))
+    name = GAME.session.places[dest].name
+
+    travel = ResolvedTool("travel", "go", travel_to=dest)
+    assert _describe_applied(travel) == f"travelled to {name}"
+
+    note = ResolvedTool("dm_note", "note", note_text="the innkeeper is a spy")
+    assert _describe_applied(note) is None                 # private — never a player chip
+
+    env = ResolvedTool("set_environment", "dusk", env_time="night")
+    assert _describe_applied(env) is None                  # ambient — no chip
+
+    wrap = ResolvedTool("end_session", "rest", wrap_proposed=True)
+    assert _describe_applied(wrap) is None                 # surfaces via the wrap-bar
+
+    give = ResolvedTool("give", "reward", ops=[StateOp.gold("pc", 5)])
+    assert _describe_applied(give) and _describe_applied(give).startswith("give:")

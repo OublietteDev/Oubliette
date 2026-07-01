@@ -123,6 +123,38 @@ def test_loop_set_environment_noop_when_unchanged():
     assert _env_events(s.store) == []               # no redundant environment event
 
 
+class _EmptyNarrBrain(Brain):
+    """resolve returns tool calls but NO narration — the W6 tool-only-turn case."""
+
+    def __init__(self, client, tool_calls):
+        super().__init__(client)
+        self._tool_calls = tool_calls
+
+    async def resolve(self, *a, on_text=None, **k):
+        return ActResult(narration="", tool_calls=list(self._tool_calls))
+
+
+def test_empty_narration_floor_is_travel_aware():
+    from oubliette.tools.schemas import Travel
+    s = Session.open(InMemoryEventStore(), pack_id="brightvale")
+    # pick a real reachable place id from the pack
+    dest = next(iter(s.places))
+    loop = TurnLoop(s, Rng(1, record=s.emit_log),
+                    _EmptyNarrBrain(ScriptedLLMClient(), [Travel(to=dest, reason="go")]))
+    report = asyncio.run(loop.take_turn("I head off somewhere."))
+    assert report.narration.strip()                      # never an empty bubble
+    assert s.places[dest].name in report.narration       # travel-aware floor names the place
+
+
+def test_empty_narration_floor_generic_when_no_travel():
+    s = Session.open(InMemoryEventStore())
+    loop = TurnLoop(s, Rng(1, record=s.emit_log),
+                    _EmptyNarrBrain(ScriptedLLMClient(),
+                                    [DmNote(note="a private thought")]))
+    report = asyncio.run(loop.take_turn("I think to myself."))
+    assert report.narration.strip()                      # floor fires even for a lone dm_note
+
+
 # --- the dm_note tool + DM notebook (W4 Stage 3) ----------------------------
 def test_dispatch_resolves_dm_note():
     s = Session.open(InMemoryEventStore())
