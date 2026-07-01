@@ -58,10 +58,13 @@ rewrites. Everything runs with a **scripted (offline) DM** — no API key requir
   (which caps what they'll pay). Buying/selling are ordinary code-validated
   `transact`s at merchant-set prices, so the firewall holds for free. Verified
   live: the model summons the window on a browse request.
-- **Phase 6** (tag `phase-6`): **streaming + UI polish**. The DM's narration now
-  streams token-by-token over SSE (the `narration` field is pulled out of the
-  partial structured-output JSON as it generates), with a blinking cursor,
-  markdown (bold/italic/paragraphs), and message fade-ins.
+- **Phase 6** (tag `phase-6`): **streaming plumbing + UI polish**. The DM's
+  narration is delivered over SSE, with the `narration` field extracted from the
+  partial structured-output JSON as it arrives, a blinking cursor, markdown
+  (bold/italic/paragraphs), and message fade-ins. (Caveat: because the narration
+  rides inside a forced structured-output tool call, in practice it lands in a
+  burst near the end of generation rather than smoothly token-by-token — a
+  progressive-streaming redesign is deferred to the DM-robustness work.)
 - **Phase 7** (tag `phase-7`): **trade basket + haggle**. The trade window now has
   quantity steppers on both sides and a running net total; **Settle** executes the
   whole basket as one validated transact at listed prices, while **Haggle** sends
@@ -153,8 +156,10 @@ python -m oubliette.app.repl             # interactive REPL — uses the REAL mo
 
 ## What this does NOT do yet
 
-The *tactical* combat internals (only the boundary + an auto-resolve placeholder
-exist) and streaming responses are still to come. Canon quarantine is modeled
+Truly *progressive* (token-by-token) narration streaming is still to come: the
+SSE plumbing exists, but structured-output tool calls flush the narration near the
+end of generation rather than streaming it smoothly (see the Phase 6 caveat above).
+Canon quarantine is modeled
 (provisional vs confirmed) but quest-dependency auto-promotion isn't wired yet.
 Also note: RNG *state* isn't persisted across reload (past rolls
 are in the log; post-reload rolls restart from the base seed) — fine for
