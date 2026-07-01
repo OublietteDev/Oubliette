@@ -269,18 +269,18 @@ class TurnLoop:
                         note=rt.quest_update.note, outcome=rt.quest_update.outcome,
                         reward_settled=rt.quest_update.reward_settled,
                         reason=rt.reason)
+                elif rt.env_time is not None or rt.env_weather is not None:
+                    # set_environment (W6): the DM turned time/weather. Record only an
+                    # ACTUAL change so we don't needlessly re-cue the soundscape.
+                    s = self.session
+                    nt = rt.env_time if rt.env_time and rt.env_time != s.time_of_day else None
+                    nw = rt.env_weather if rt.env_weather and rt.env_weather != s.weather else None
+                    if nt or nw:
+                        s.emit_environment(nt, nw, reason=rt.reason)
                 else:
                     self.session.emit_state(
                         EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
             applied = resolved
-            # The DM reports the current environment each turn; record only an ACTUAL
-            # change (it carries the values forward unchanged otherwise) so we don't log
-            # every turn or needlessly re-cue the soundscape.
-            s = self.session
-            new_time = resolution.time_of_day if resolution.time_of_day and resolution.time_of_day != s.time_of_day else None
-            new_weather = resolution.weather if resolution.weather and resolution.weather != s.weather else None
-            if new_time or new_weather:
-                s.emit_environment(new_time, new_weather, reason="dm report")
             success = True
             break
 
@@ -487,6 +487,9 @@ class TurnLoop:
                 parts.append("force-ended the session")
             elif rt.wrap_proposed:
                 parts.append("proposed wrapping the session")
+            elif rt.env_time is not None or rt.env_weather is not None:
+                parts.append("environment → " + ", ".join(
+                    v for v in (rt.env_time, rt.env_weather) if v))
             else:
                 parts.append(f"effect({rt.tool}): {self._ops_summary(rt.ops)}")
         if report.combat_result is not None:

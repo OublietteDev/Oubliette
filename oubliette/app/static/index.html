@@ -1276,31 +1276,76 @@ async function send(textOverride) {
   think.innerHTML = `<div class="thinking"><span>The Phantom considers</span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
   thinkRow.appendChild(think); log.appendChild(thinkRow); scrollDown();
 
-  let bubble = null, body = null, acc = "", removedThink = false;
+  // Typewriter smoothing: the API delivers narration in a few fat, clause-sized
+  // lurches (~60 chars every ~360ms), which reads as choppy. So we don't render deltas
+  // as they land — we buffer them in `pending` and reveal at a steady, TIME-based rate
+  // (frame-rate independent), decoupling the on-screen cadence from network jitter. The
+  // steady speed is tuned near the model's own generation rate so the buffer neither
+  // starves nor lags; a large backlog speeds up proportionally so we never fall far
+  // behind. Tune REVEAL_CPS to taste (higher = faster typing).
+  const REVEAL_CPS = 190;        // steady reveal speed, chars/second (~model gen rate)
+  const CATCHUP_BACKLOG = 220;   // above this many buffered chars, speed up to catch up
+  let bubble = null, body = null, acc = "", pending = "", removedThink = false;
+  let streamDone = false, finalized = false, rafId = null, doneData = null, lastTick = null;
   function ensureBubble() {
     if (bubble) return;
     if (!removedThink) { thinkRow.remove(); removedThink = true; }
     bubble = addMessage("The Phantom", "", "dm");
     body = bubble.querySelector(".body");
   }
+  function render(withCursor) {
+    if (body) body.innerHTML = md(acc) + (withCursor ? '<span class="cursor"></span>' : '');
+  }
+  function finalize() {
+    if (finalized) return;
+    finalized = true;
+    render(false);
+    const data = doneData;
+    if (!data) return;
+    addChips(bubble, data);
+    if (data.state) renderState(data.state);
+    if (data.soundscape) setSoundscape(data.soundscape);   // travel may have changed the mix
+    if (data.trade) openTrade(data.trade);
+    (data.quest_beats || []).forEach(addQuestCard);
+    if (data.wrap_pending) showWrapBar();                  // the DM offered a resting point (W5)
+  }
+  function pump(ts) {
+    rafId = null;
+    if (lastTick === null) lastTick = ts;
+    const dt = Math.max(0, ts - lastTick);                 // ms since last frame (rate-independent)
+    lastTick = ts;
+    if (pending.length) {
+      let rate = REVEAL_CPS;
+      if (pending.length > CATCHUP_BACKLOG) rate *= pending.length / CATCHUP_BACKLOG;
+      const n = Math.max(1, Math.round(dt * rate / 1000));
+      acc += pending.slice(0, n);
+      pending = pending.slice(n);
+      render(true);
+      scrollDown();
+    }
+    if (pending.length || !streamDone) rafId = requestAnimationFrame(pump);
+    else finalize();                                       // drained AND stream closed
+  }
+  function startPump() { if (rafId === null && !finalized) rafId = requestAnimationFrame(pump); }
   function handle(data) {
     if (data.t === "delta") {
       ensureBubble();
-      acc += data.v;
-      body.innerHTML = md(acc) + '<span class="cursor"></span>';
-      scrollDown();
+      pending += data.v;                                   // buffer; the pump reveals it
+      startPump();
     } else if (data.t === "done") {
       ensureBubble();
-      acc = data.narration || acc;
-      body.innerHTML = md(acc);
-      addChips(bubble, data);
-      if (data.state) renderState(data.state);
-      if (data.soundscape) setSoundscape(data.soundscape);   // travel may have changed the mix
-      if (data.trade) openTrade(data.trade);
-      (data.quest_beats || []).forEach(addQuestCard);
-      if (data.wrap_pending) showWrapBar();                  // the DM offered a resting point (W5)
+      doneData = data;
+      // The final narration is authoritative (covers any retry that rewrote the text).
+      // Normally it just extends what we've streamed, so reveal only the unshown tail;
+      // if a retry diverged (acc isn't a prefix), snap to the final text.
+      const full = (data.narration != null) ? data.narration : (acc + pending);
+      if (full.startsWith(acc)) { pending = full.slice(acc.length); }
+      else { acc = full; pending = ""; }
+      streamDone = true;
+      startPump();
     } else if (data.t === "error") {
       if (!removedThink) { thinkRow.remove(); removedThink = true; }
+      streamDone = true;                                   // let any running pump stop
       addMessage("System", data.error || "something went wrong", "system");
     }
   }
@@ -1325,6 +1370,7 @@ async function send(textOverride) {
     }
   } catch (e) {
     if (!removedThink) thinkRow.remove();
+    streamDone = true;                       // stop the reveal pump if the socket dropped mid-stream
     addMessage("System", "Connection lost: " + e, "system");
   } finally { setBusy(false); }
 }

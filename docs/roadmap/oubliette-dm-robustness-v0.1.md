@@ -170,7 +170,7 @@ follow-on** (promote provisional→confirmed canon at wrap).
 
 Old note (superseded): `emit_end` recorded only a reason string that was never read back.
 
-### W6 — Streaming redesign  `[folded; shares the W2/W4 resolve restructure]  [LOCKED: one-call, narration as text]`
+### W6 — Streaming redesign  `[folded; shares the W2/W4 resolve restructure]  [LOCKED: one-call, narration as text]  [BUILT 2026-07-01]`
 Restructure resolve so narration is a streaming assistant **text** channel and only
 state-changing actions go through tool calls (`tool_choice: auto`, not forced `emit`).
 One model call, real token-by-token streaming, narration leaves the validated schema
@@ -183,6 +183,45 @@ covering all three. Risk to manage: the whole loop + tests are built around the 
 the highest-touch change in the arc — stage it behind tests and keep the non-streaming
 path for the test suite.
 
+**BUILT (Stage 1 of the resolve restructure):** a second seam method `LLMClient.act(system,
+messages, tools, on_text) -> ActResult{narration, tool_calls, thinking}` (`llm/client.py`).
+`AnthropicLLMClient.act` uses `tool_choice: auto`, registers each tool model by its `tool`
+literal (`_tool_def` strips the discriminator from the input schema), streams assistant
+**text** deltas straight to `on_text` (genuine token-by-token — `_post_stream_act`), and
+accumulates `tool_use` blocks (validated via the shared `_coerce_input` envelope-unwrap).
+The forced-`emit` streaming path it replaced (`_post_stream` + `llm/streaming.py`
+`extract_string_field` + `test_streaming_extract.py`) is DELETED; `complete()` is now
+assess/wrap-only (forced structured output, no streaming). `Brain.resolve` calls `act` with
+`TOOL_MODELS` and returns `ActResult` (empty-narration-AND-no-tools → raises → the loop's
+existing retry/D6 fallback catches it). Environment left the `TurnResolution` schema and
+became a `set_environment` tool (`tools/schemas.py`, dispatch branch → `ResolvedTool.env_time/
+env_weather`, loop emits `ENVIRONMENT_CHANGED` only on an ACTUAL change). `ScriptedLLMClient.act`
+reuses its `_resolve` and unpacks. Tests: `test_resolve_streaming.py` (+9: scripted act, the
+Anthropic pure helpers `_tool_def`/`_collect_act`, a canned-SSE parse of `_post_stream_act`,
+and `set_environment` through the loop) + `test_table_contract` capturing-client updated to
+`act`; `test_resolve_robustness` unchanged (still catches the raised empty resolution). Full
+suite 2979 green. **Stage 2 (W4 per-turn thinking) + Stage 3 (W4 notebook) deferred to the
+reassess after live-verifying Stage 1 streaming with the real key.** Live Anthropic behavior
+(does `tool_choice: auto` stream text deltas as expected; sonnet-5 quirks) still needs OublietteDev's
+key to confirm in live play — same handoff as W5.
+
+**LIVE-VERIFIED by Claude with OublietteDev's key (2026-07-01, sandboxed preview):** `act()` streams real
+text deltas and returns validated tool calls (a fountain call-out produced ~1.3k chars over ~20
+deltas + a `CreateEntity` witness and a `StartQuest`). Two follow-on fixes landed from the live run:
+1. **Choppiness smoothing (frontend).** The API delivers narration in ~11 fat, clause-sized lurches
+   (~60 chars every ~360ms). The client no longer renders deltas as they land — it buffers them and
+   reveals at a steady, frame-rate-independent ~190 chars/sec (a `requestAnimationFrame` pump using
+   elapsed-time, with proportional catch-up above a 220-char backlog), decoupling on-screen cadence
+   from network jitter. `index.html` `send()`: `pump`/`startPump`/`finalize`, `REVEAL_CPS`/
+   `CATCHUP_BACKLOG`. Chips/state/quest-cards now apply on `finalize` (after the reveal drains), not
+   at `done`. (Frame-level smoothness is a focused-browser eyeball check — automated preview tabs
+   throttle timers when unfocused, so headless measurement only shows ~1/sec granularity.)
+2. **Empty-`emit` hardening (`complete`).** Sonnet-5 intermittently returns an empty forced call
+   `emit({})`; the live run caught it crashing **assess** with "2 validation errors for
+   TurnAssessment" (assess/wrap have no upstream retry loop, unlike resolve). `complete` now
+   regenerates a few times on a validation failure before surfacing it. Test:
+   `test_resolve_streaming.py::test_complete_retries_on_empty_forced_emit`. Full suite 2980 green.
+
 ---
 
 ## 4. Proposed build order
@@ -192,8 +231,14 @@ path for the test suite.
 3. **W3 — current-session continuity on reload** (the other real bug). ✅ BUILT
 4. **W5 — session wrap-up + two-faced notes** (the `end_session` wrap ritual). ✅ BUILT
    (canonization ceremony still the deferred follow-on).
-5. **Resolve restructure = W6 + W4 together** (narration-as-streaming-text + scratchpad,
-   built in one pass so we don't rework the resolve path twice). ← next (the last arc piece)
+5. **Resolve restructure = W6 + W4.** Staged, not one pass:
+   - **Stage 1 — W6 streaming** (narration-as-streaming-text, actions/env as `tool_choice:auto`
+     tools). ✅ BUILT 2026-07-01 (2979 green). Live-verify streaming with the real key, then:
+   - **Stage 2 — W4 per-turn thinking** (native extended thinking recommended over a prompted
+     scratchpad — API hides it, better reasoning per token, composes with `tool_choice:auto`;
+     cost = a short pre-narration pause). Decide at reassess with live streaming data in hand.
+   - **Stage 3 — W4 persistent DM notebook** (a `dm_note` tool → durable inert-on-replay event
+     → "DM NOTEBOOK" context block; firewall: prose only).
 6. **W1b — remaining context-drop cleanups** (opportunistic, as we go).
 
 **Session-memory model locked with OublietteDev (2026-07-01):** episodic vs. semantic memory.

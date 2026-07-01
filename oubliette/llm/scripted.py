@@ -16,7 +16,7 @@ from ..schemas import Intent, RollRequest, SessionNotes, TurnAssessment, TurnRes
 from ..tools.schemas import (CreateEntity, EndSession, ForceEndSession, StartQuest, Transact,
                              Travel, UpdateQuest, ValueEntry)
 from ..trade.schemas import TradeRequest
-from .client import Msg
+from .client import ActResult, Msg
 
 
 def _joined(messages: list[Msg]) -> str:
@@ -47,6 +47,17 @@ class ScriptedLLMClient:
         if schema is SessionNotes:
             return self._notes(text)
         raise NotImplementedError(f"ScriptedLLMClient has no script for {schema.__name__}")
+
+    async def act(self, *, system: str, messages: list[Msg],
+                  tools: list[type[BaseModel]] | None = None, on_text=None) -> ActResult:
+        """The restructured resolve turn (W6). The scripted double still builds a whole
+        TurnResolution internally (its `_resolve` is unchanged); `act` just unpacks it into
+        narration TEXT + tool calls, and simulates the token-by-token stream word-by-word."""
+        result = self._resolve(_joined(messages))
+        if on_text is not None:
+            for i, word in enumerate(result.narration.split(" ")):
+                on_text((" " if i else "") + word)
+        return ActResult(narration=result.narration, tool_calls=list(result.tool_calls))
 
     # --- wrap call: two-faced session notes (offline gates this off; tests use it) -----
     def _notes(self, text: str) -> SessionNotes:

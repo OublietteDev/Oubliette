@@ -10,8 +10,9 @@ capability (gap G3).
 from __future__ import annotations
 
 from ..combat.templates import ENEMY_TEMPLATES
-from ..llm.client import LLMClient, Msg
-from ..schemas import SessionNotes, TurnAssessment, TurnResolution
+from ..llm.client import ActResult, LLMClient, Msg
+from ..schemas import SessionNotes, TurnAssessment
+from ..tools.schemas import TOOL_MODELS
 
 _TEMPLATES = ", ".join(sorted(ENEMY_TEMPLATES))
 
@@ -164,10 +165,10 @@ RESOLVE_SYSTEM = (
     "warranted; ordinary player mistakes, rules confusion, or in-fiction villainy by a character are "
     "NOT reasons to force-end. "
     "ENVIRONMENT: the ENVIRONMENT line gives the current time-of-day (day/night) and weather "
-    "(clear/rain/storm/wind). Report them back in the `time_of_day` and `weather` fields every "
-    "turn — carry them forward UNCHANGED unless the story has just turned them (the party beds "
-    "down for the night; a storm you've been describing finally breaks). Don't drift them at "
-    "random; let them follow the fiction, and your narration should match what you report.\n"
+    "(clear/rain/storm/wind). These carry forward UNCHANGED on their own — only when the story "
+    "has just turned them (the party beds down for the night; a storm you've been describing "
+    "finally breaks) emit the `set_environment` tool with the new value(s). Don't call it every "
+    "turn or drift them at random; let them follow the fiction, and your narration should match.\n"
     "DEVELOPER TEST HOOK: if the player's message contains the codeword 'Etteilbuo', this is "
     "the developer driving a test, not story play. Step out of the fiction, comply plainly "
     "with whatever they ask, and emit exactly the tool calls they request (give items, award "
@@ -175,7 +176,10 @@ RESOLVE_SYSTEM = (
     "narration to a brief out-of-fiction confirmation of what you did. (Combat is still not a "
     "tool — a test fight is requested through the same codeword as an action the assessment "
     "stages.)\n"
-    "Return a TurnResolution."
+    "NARRATE the outcome directly as your reply (second person, in-fiction prose — this text is "
+    "what the player reads), and emit tool calls ONLY for state changes. A turn with no state "
+    "change is just narration and no tools. Don't describe your tool calls in the narration; "
+    "let the prose read as story."
 )
 
 WRAP_SYSTEM = (
@@ -214,7 +218,11 @@ class Brain:
         retry_feedback: str | None = None,
         on_text=None,
         table_prompt: str = "",
-    ) -> TurnResolution:
+    ) -> ActResult:
+        """Resolve the turn (W6 restructure): the model narrates as streaming TEXT and
+        emits 0+ tool calls for state changes (`tool_choice: auto`, no forced `emit`).
+        Returns an ActResult. A wholly empty turn (no narration AND no tools) is treated
+        as malformed and raised, so the loop retries then degrades gracefully."""
         intent = assessment.intent
         parts = []
         if context:
@@ -229,10 +237,13 @@ class Brain:
         if retry_feedback:
             parts.append(f"PREVIOUS_ATTEMPT_FAILED: {retry_feedback}")
         system = RESOLVE_SYSTEM + table_prompt if table_prompt else RESOLVE_SYSTEM
-        return await self.client.complete(
+        result = await self.client.act(
             system=system, messages=[Msg(role="user", content="\n".join(parts))],
-            schema=TurnResolution, on_text=on_text,
+            tools=list(TOOL_MODELS), on_text=on_text,
         )
+        if not result.narration.strip() and not result.tool_calls:
+            raise RuntimeError("model returned an empty resolution (no narration, no tools)")
+        return result
 
     async def write_session_notes(
         self, transcript_text: str, context: str = "", table_prompt: str = "",
