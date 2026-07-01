@@ -3340,12 +3340,21 @@ document.addEventListener("click", (e) => {
 updateSoundBtn();
 
 async function boot() {
-  const res = await fetch("/api/state");
-  const data = await res.json();
+  const [stateRes, txRes] = await Promise.all([fetch("/api/state"), fetch("/api/transcript")]);
+  const data = await stateRes.json();
+  const tx = await txRes.json();
   await refreshConnection();      // sets the model badge + offline banner
-  renderState(data.state);
   setSoundscape(data.soundscape);          // queued; plays once sound is enabled
-  addMessage("System", "The Phantom waits at the head of the table. Describe what you do to begin.", "system");
+  // Replay the session-in-progress transcript so a reload lands you exactly where you
+  // left off (W3), instead of a blank chat. A fresh game shows the opening prompt.
+  if (tx.turns && tx.turns.length) {
+    tx.turns.forEach(t => addMessage(t.role === "player" ? "You" : "The Phantom",
+                                     t.text, t.role === "player" ? "player" : "dm"));
+    addMessage("System", "— resumed where you left off —", "system");
+  } else {
+    addMessage("System", "The Phantom waits at the head of the table. Describe what you do to begin.", "system");
+  }
+  renderState(data.state);        // after the replay, so a force-ended note lands last
   // Front door: Continue resumes only a game already underway (at least one turn taken).
   const cont = $("start-continue");
   cont.disabled = !data.has_progress;

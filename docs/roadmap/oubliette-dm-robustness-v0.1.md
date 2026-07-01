@@ -100,7 +100,24 @@ save file, one `open()` path; W3/W5 build directly on this. Store enough per tur
 rebuild both the DM's recent-beats recap and the player transcript (narration text +
 turn linkage; player message already stored).
 
-### W3 — Save/load continuity  `[builds on W2]`
+### W3 — Save/load continuity  `[builds on W2]  [BUILT 2026-07-01]`
+**Current-session continuity on reload, for both parties.** New `runtime/transcript.py`
+holds the **session-segmentation primitive** both W3 and W5 stand on: a session is the
+span of events since the last `SESSION_MARKER{marker:"wrap"}` (W5's wrap; none yet → the
+whole log is "the session in progress"); force-ends (`marker:"end"`) are terminal and do
+NOT segment. `current_session_events` / `transcript_turns` (ordered player+DM bubbles) /
+`recent_beats`. Wiring: `TurnLoop.__init__` rehydrates `self.history` from the last
+HISTORY_CAP durable beats of the current session, so a reloaded DM resumes with the same
+short-term memory (not an empty head); new `GET /api/transcript` returns the current
+session's bubbles and `boot()` replays them into the chat ("— resumed where you left off
+—"), falling back to the opening prompt for a fresh game. **Design decisions locked with
+OublietteDev:** the DM gets its *beats window* rehydrated (NOT the full verbatim transcript — that
+would blow context); the *player* gets the full transcript. Past ended sessions will reach
+the DM as **notes** and the player as spoiler-free per-session summaries (that's W5).
+Live-verified (scripted preview): reload restores the full chat; fresh game shows the
+opening prompt. Tests: `tests/test_transcript_replay.py` (+6) + transcript endpoint in
+`test_server_frontend.py` (+1). Full suite 547 green.
+
 Once narration is durable:
 - **Rehydrate the DM's short-term memory** on `Session.open`: rebuild
   `TurnLoop.history` from the last N durable turns instead of starting empty
@@ -150,11 +167,23 @@ path for the test suite.
 
 1. **W1a — quest reward fix** (small, independent, real bug a playtester would hit). ✅ BUILT
 2. **W2 — durable narration** (keystone; unblocks the rest). ✅ BUILT
-3. **W3 — continuity/recap on reload** (the other real bug). ← next
-4. **Resolve restructure = W6 + W4 together** (narration-as-streaming-text + scratchpad,
+3. **W3 — current-session continuity on reload** (the other real bug). ✅ BUILT
+4. **W5 — session wrap-up + two-faced notes** (the `end_session` wrap ritual; the protective
+   tool was renamed `force_end_session` to free the name). Then the **canonization ceremony**
+   as a follow-on. ← next
+5. **Resolve restructure = W6 + W4 together** (narration-as-streaming-text + scratchpad,
    built in one pass so we don't rework the resolve path twice).
-5. **W5 — end-of-session notes.**
-6. **W1b — remaining context-drop cleanups** (as needed).
+6. **W1b — remaining context-drop cleanups** (opportunistic, as we go).
+
+**Session-memory model locked with OublietteDev (2026-07-01):** episodic vs. semantic memory.
+*Current session* → player gets full transcript replay, DM gets its beats window rehydrated
+(W3, done). *Past ended sessions* → DM gets all session notes cumulatively; player gets
+spoiler-free per-session summaries (W5). **Pause** (close the window) = zero ceremony, resume
+exactly. **Wrap** (`end_session`) = explicit ritual: a narrative arc wrapped AND the player
+stops; player-initiated button OR the DM *proposes* via the tool (surfaces a confirm — player
+disposes, mirroring `combat_pending`). Wrap seals the session into a note (the ONE place the
+full transcript is fed to the model), resets the beats window, and starts session N+1.
+Offline Mode writes no notes (it's a UI demo, not real play).
 
 ## 5. Decisions
 

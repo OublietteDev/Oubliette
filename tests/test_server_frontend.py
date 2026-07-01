@@ -37,6 +37,16 @@ def test_state_endpoint_reports_scripted_and_seed():
     assert any(n["id"] == "merchant_thom" for n in d["state"]["npcs"])
 
 
+def test_transcript_endpoint_replays_the_session():
+    _new()
+    assert client.get("/api/transcript").json()["turns"] == []   # fresh game: nothing to replay
+    client.post("/api/turn", json={"text": "I look around the market"})
+    turns = client.get("/api/transcript").json()["turns"]
+    assert [t["role"] for t in turns] == ["player", "dm"]
+    assert turns[0]["text"] == "I look around the market"
+    assert turns[1]["text"].strip()
+
+
 def test_turn_sale_updates_surfaced_state():
     _new()
     r = client.post("/api/turn", json={"text": "Sold."})

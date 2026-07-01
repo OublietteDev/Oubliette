@@ -35,6 +35,7 @@ from ..rules.levelup import (LevelUpChoice, LevelUpError, level_up, level_up_pla
                             xp_progress)
 from ..runtime.loop import TurnLoop
 from ..runtime.session import Session
+from ..runtime.transcript import transcript_turns
 from ..dm.brain import Brain
 from ..dm.context import region_root
 from ..enums import Ability, Skill
@@ -289,6 +290,14 @@ async def index() -> FileResponse:
 async def get_state() -> JSONResponse:
     return JSONResponse({"state": _snapshot(), "model": GAME.client_name,
                          "has_progress": _has_progress(), "soundscape": _soundscape()})
+
+
+@app.get("/api/transcript")
+async def get_transcript() -> JSONResponse:
+    """The session-in-progress transcript — player messages + DM narration, in order —
+    so a reload replays the chat instead of starting blank (W3). Past sessions surface
+    as notes (W5), not here."""
+    return JSONResponse({"turns": transcript_turns(GAME.session.store.read_all())})
 
 
 @app.get("/api/table")

@@ -31,6 +31,7 @@ from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
 from ..trade.schemas import TradeState
 from ..trade.service import build_state, has_stock
 from .session import Session
+from .transcript import recent_beats
 
 MAX_TOOL_RETRIES = 2    # D6: after this, force a narration-only turn.
 HISTORY_IN_CONTEXT = 4  # recent turns fed back to the DM for continuity (gap G5).
@@ -66,7 +67,11 @@ class TurnLoop:
         self.dispatcher = Dispatcher(session.repo, session.canon, session.places,
                                      session.quests, ruleset=session.ruleset,
                                      authored_quests=session.authored_quests)
-        self.history: list[str] = []   # short-term continuity beats (gap G5)
+        # Short-term continuity beats (gap G5). Rehydrated from the durable record on
+        # construction (W3): a reload rebuilds the DM's recent memory of THIS session from
+        # the stored beats, so it resumes with the same short-term context it had before —
+        # not an empty head. Past sessions reach the DM as notes (W5), never as beats here.
+        self.history: list[str] = recent_beats(session.store.read_all(), HISTORY_CAP)
 
     async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
         # Retrieve relevant canon/lore by the player's words PLUS the situation —
