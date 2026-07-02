@@ -9,8 +9,9 @@ from __future__ import annotations
 import pygame
 
 from arena.gui.icons import get_icon
+from arena.gui.popup_base import Popup
 from arena.gui.renderer import get_font
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
 
 # Entry definitions
@@ -41,7 +42,7 @@ _STABILIZE_ENTRY = ("Stabilize", "DC 10 Medicine check to stabilize a dying ally
 _MOVEMENT_ENTRIES = {"stand up"}
 
 
-class TacticsPopup:
+class TacticsPopup(Popup):
     """Rectangular popup listing the standard tactical actions."""
 
     ENTRY_HEIGHT = 28
@@ -52,15 +53,14 @@ class TacticsPopup:
     def __init__(
         self,
         action_used: bool,
-        screen_width: int = 1280,
-        screen_height: int = 720,
+        screen_width: int = LAYOUT["screen_width"],
+        screen_height: int = LAYOUT["screen_height"],
         grappled: bool = False,
         prone: bool = False,
         can_stabilize: bool = False,
     ) -> None:
+        super().__init__(screen_width, screen_height)
         self.action_used = action_used
-        self._screen_width = screen_width
-        self._screen_height = screen_height
         self._entries = list(_TACTICS)
         if grappled:
             self._entries.append(_ESCAPE_ENTRY)
@@ -149,7 +149,7 @@ class TacticsPopup:
         )
 
         # Title
-        font = get_font(14)
+        font = get_font(FONT_SIZES["label"])
         title_surf = font.render("Tactics", True, parse_color(COLORS["text_primary"]))
         surface.blit(
             title_surf,
@@ -157,7 +157,7 @@ class TacticsPopup:
         )
 
         # Entries
-        entry_font = get_font(13)
+        entry_font = get_font(FONT_SIZES["content"])
         y = self.rect.y + self.TITLE_HEIGHT
         for i, (name, _desc) in enumerate(self._entries):
             enabled = self._entry_enabled(name.lower())
@@ -170,11 +170,7 @@ class TacticsPopup:
 
             # Hover highlight
             if i == self.hovered_index and enabled:
-                pygame.draw.rect(
-                    surface,
-                    parse_color(COLORS["hex_hover"]),
-                    entry_rect,
-                )
+                self.draw_hover_highlight(surface, entry_rect)
 
             # Icon + Text
             text_x = entry_rect.x + 8
@@ -202,7 +198,7 @@ class TacticsPopup:
             return
 
         lines = self._hovered_tooltip_lines
-        font = get_font(13)
+        font = get_font(FONT_SIZES["content"])
         padding = 6
         line_height = 17
 

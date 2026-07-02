@@ -15,8 +15,9 @@ from __future__ import annotations
 import pygame
 
 from arena.combat.ready_action import TriggerType
+from arena.gui.popup_base import Popup
 from arena.gui.renderer import get_font
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
 
 # Trigger options, in display order. (label, TriggerType)
@@ -74,7 +75,7 @@ def readyable_actions(creature) -> list:
     return [a for a in creature.actions if is_readyable(a)]
 
 
-class ReadyPopup:
+class ReadyPopup(Popup):
     """Two-stage modal: choose an action to ready, then choose its trigger."""
 
     WIDTH = 280
@@ -85,12 +86,11 @@ class ReadyPopup:
     def __init__(
         self,
         actions: list,
-        screen_width: int = 1280,
-        screen_height: int = 720,
+        screen_width: int = LAYOUT["screen_width"],
+        screen_height: int = LAYOUT["screen_height"],
     ) -> None:
+        super().__init__(screen_width, screen_height)
         self._actions = actions
-        self._screen_width = screen_width
-        self._screen_height = screen_height
 
         self.stage = "action"  # "action" -> "trigger"
         self.selected_action = None
@@ -112,25 +112,14 @@ class ReadyPopup:
             + len(self._rows()) * self.ROW_HEIGHT
             + self.PADDING * 2
         )
-        center = getattr(self, "rect", None)
+        # The base __init__ leaves a zero-height placeholder rect; only a
+        # rect that has been laid out before keeps its position on re-layout
+        # (stage change resizes around the same center).
+        prev = self.rect if self.rect.height else None
         self.rect = pygame.Rect(0, 0, self.WIDTH, total_h)
-        if center is not None:
-            self.rect.center = center.center
-            self._clamp()
-
-    def reposition(self, center: tuple[int, int]) -> None:
-        self.rect.center = center
-        self._clamp()
-
-    def _clamp(self) -> None:
-        if self.rect.left < 4:
-            self.rect.left = 4
-        if self.rect.right > self._screen_width - 4:
-            self.rect.right = self._screen_width - 4
-        if self.rect.top < 4:
-            self.rect.top = 4
-        if self.rect.bottom > self._screen_height - 4:
-            self.rect.bottom = self._screen_height - 4
+        if prev is not None:
+            self.rect.center = prev.center
+            self.clamp_to_screen()
 
     def _row_rect(self, index: int) -> pygame.Rect:
         y = self.rect.y + self.TITLE_HEIGHT + self.PADDING + index * self.ROW_HEIGHT
@@ -191,29 +180,19 @@ class ReadyPopup:
     # ── Rendering ─────────────────────────────────────────────────────
 
     def render(self, surface: pygame.Surface) -> None:
-        bg = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        bg.fill((30, 24, 18, 240))
-        surface.blit(bg, self.rect.topleft)
-        pygame.draw.rect(surface, parse_color(COLORS["border_accent"]), self.rect, 2)
-
-        font = get_font(13)
-        gold = parse_color(COLORS["text_gold"])
-        white = parse_color(COLORS["text_primary"])
-
         if self.stage == "action":
             title = "Ready which action?"
         else:
             name = self.selected_action.name if self.selected_action else ""
             title = f"Ready {name} — trigger?"
-        title_surf = font.render(title, True, gold)
-        tx = self.rect.x + (self.WIDTH - title_surf.get_width()) // 2
-        surface.blit(title_surf, (tx, self.rect.y + 8))
+        self.render_frame(surface, title)
+
+        font = get_font(FONT_SIZES["content"])
+        white = parse_color(COLORS["text_primary"])
 
         for i, label in enumerate(self._rows()):
             rect = self._row_rect(i)
             if self.hovered_index == i:
-                hl = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-                hl.fill((80, 70, 50, 80))
-                surface.blit(hl, rect.topleft)
+                self.draw_hover_highlight(surface, rect)
             label_surf = font.render(label, True, white)
             surface.blit(label_surf, (rect.x + 8, rect.y + 7))

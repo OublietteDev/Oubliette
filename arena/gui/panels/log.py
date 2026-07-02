@@ -7,23 +7,15 @@ import pygame
 from arena.combat.events import CombatLog, CombatEventType
 from arena.gui.renderer import draw_panel, draw_scrollbar, get_font
 from arena.gui.tray_backgrounds import draw_tray_background
-from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
+from arena.util.constants import (
+    COLORS, FONT_SIZES, LAYOUT, LOG_COLORS, parse_color,
+)
 
 
-# Dark color palette for combat log text (readable on light parchment tray).
-# Same hue relationships as the main COLORS palette, but much darker.
+# The log's dark-on-parchment palette now lives beside the main palette in
+# constants.LOG_COLORS; parse once at import.
 _LOG_COLORS: dict[str, tuple[int, int, int]] = {
-    "text_primary":     (40, 32, 24),       # dark brown (was #f0e6d2)
-    "text_secondary":   (90, 78, 62),       # muted brown (was #a89880)
-    "text_gold":        (120, 88, 20),      # dark gold (was #d4a847)
-    "team_player":      (24, 100, 28),      # dark green (was #4CAF50)
-    "team_enemy":       (140, 28, 20),      # dark red (was #c43030)
-    "hp_full":          (24, 100, 28),      # dark green
-    "hp_critical":      (140, 28, 20),      # dark red
-    "condition_neutral": (30, 70, 130),     # dark blue (was #5090d0)
-    "condition_debuff": (140, 28, 20),      # dark red
-    "condition_buff":   (24, 100, 28),      # dark green
-    "ai_thinking":      (80, 50, 110),      # dark purple (was #9070b0)
+    key: parse_color(value) for key, value in LOG_COLORS.items()
 }
 
 # Color mapping for different event types (keys into _LOG_COLORS)

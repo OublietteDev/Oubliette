@@ -9,14 +9,15 @@ from typing import TYPE_CHECKING
 
 import pygame
 
+from arena.gui.popup_base import Popup
 from arena.gui.renderer import get_font
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
 if TYPE_CHECKING:
     from arena.models.actions import Action
 
 
-class LairActionPopup:
+class LairActionPopup(Popup):
     """Modal popup for choosing a lair action during combat.
 
     Displays available lair actions (those not used last round).
@@ -34,15 +35,19 @@ class LairActionPopup:
     PASS_HEIGHT = 32
     PADDING = 6
 
+    # Lair identity — dark gold tint with a gold border; title keeps the
+    # default gold.
+    BG_RGBA = (35, 28, 15, 240)
+    BORDER_RGB = (200, 170, 50)
+
     def __init__(
         self,
         available_actions: list[Action],
-        screen_width: int = 1280,
-        screen_height: int = 720,
+        screen_width: int = LAYOUT["screen_width"],
+        screen_height: int = LAYOUT["screen_height"],
     ) -> None:
+        super().__init__(screen_width, screen_height)
         self.actions = available_actions
-        self._screen_width = screen_width
-        self._screen_height = screen_height
         self.hovered_index: int | None = None
         self._hovered_pass: bool = False
 
@@ -53,18 +58,6 @@ class LairActionPopup:
             + self.PADDING * 2
         )
         self.rect = pygame.Rect(0, 0, self.WIDTH, total_h)
-
-    def reposition(self, center: tuple[int, int]) -> None:
-        """Center the popup at the given screen position."""
-        self.rect.center = center
-        if self.rect.left < 4:
-            self.rect.left = 4
-        if self.rect.right > self._screen_width - 4:
-            self.rect.right = self._screen_width - 4
-        if self.rect.top < 4:
-            self.rect.top = 4
-        if self.rect.bottom > self._screen_height - 4:
-            self.rect.bottom = self._screen_height - 4
 
     def _get_action_rect(self, index: int) -> pygame.Rect:
         """Get the clickable rect for an action row."""
@@ -122,25 +115,12 @@ class LairActionPopup:
 
     def render(self, surface: pygame.Surface) -> None:
         """Render the lair action popup."""
-        # Background — dark gold tint
-        bg = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        bg.fill((35, 28, 15, 240))
-        surface.blit(bg, self.rect.topleft)
+        self.render_frame(surface, "Lair Action")
 
-        # Gold border
-        border_color = (200, 170, 50)
-        pygame.draw.rect(surface, border_color, self.rect, 2)
-
-        font = get_font(13)
-        font_small = get_font(11)
-        gold = parse_color(COLORS["text_gold"])
+        font = get_font(FONT_SIZES["content"])
+        font_small = get_font(FONT_SIZES["small"])
         white = parse_color(COLORS["text_primary"])
         gray = parse_color(COLORS["text_secondary"])
-
-        # Title
-        title = font.render("Lair Action", True, gold)
-        tx = self.rect.x + (self.WIDTH - title.get_width()) // 2
-        surface.blit(title, (tx, self.rect.y + 6))
 
         # Subtitle
         sub = font_small.render(
@@ -152,12 +132,8 @@ class LairActionPopup:
         # Action rows
         for i, action in enumerate(self.actions):
             rect = self._get_action_rect(i)
-            is_hovered = self.hovered_index == i
-
-            if is_hovered:
-                hl = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-                hl.fill((100, 80, 30, 80))
-                surface.blit(hl, rect.topleft)
+            if self.hovered_index == i:
+                self.draw_hover_highlight(surface, rect, (100, 80, 30, 80))
 
             label_surf = font.render(action.name, True, white)
             surface.blit(label_surf, (rect.x + 6, rect.y + 4))
@@ -173,9 +149,7 @@ class LairActionPopup:
         # Pass button
         pass_rect = self._get_pass_rect()
         if self._hovered_pass:
-            hl = pygame.Surface((pass_rect.width, pass_rect.height), pygame.SRCALPHA)
-            hl.fill((100, 80, 30, 80))
-            surface.blit(hl, pass_rect.topleft)
+            self.draw_hover_highlight(surface, pass_rect, (100, 80, 30, 80))
 
         pass_text = font.render("Pass", True, gray)
         px = pass_rect.x + (pass_rect.width - pass_text.get_width()) // 2

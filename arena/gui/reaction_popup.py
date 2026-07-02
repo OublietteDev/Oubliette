@@ -10,8 +10,9 @@ from dataclasses import dataclass
 
 import pygame
 
+from arena.gui.popup_base import Popup
 from arena.gui.renderer import get_font
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
 
 @dataclass
@@ -22,7 +23,7 @@ class ReactionChoice:
     used: bool
 
 
-class ReactionPopup:
+class ReactionPopup(Popup):
     """Modal popup offering a damage reduction reaction.
 
     Shows the feature name, reduction preview, and Use/Skip buttons.
@@ -40,8 +41,8 @@ class ReactionPopup:
         self,
         target_name: str,
         options: list[tuple],
-        screen_width: int = 1280,
-        screen_height: int = 720,
+        screen_width: int = LAYOUT["screen_width"],
+        screen_height: int = LAYOUT["screen_height"],
     ) -> None:
         """
         Args:
@@ -52,10 +53,9 @@ class ReactionPopup:
             screen_width: Viewport width for clamping.
             screen_height: Viewport height for clamping.
         """
+        super().__init__(screen_width, screen_height)
         self.target_name = target_name
         self.options = options
-        self._screen_width = screen_width
-        self._screen_height = screen_height
         self.hovered_index: int | None = None
         self._hovered_skip: bool = False
 
@@ -68,18 +68,6 @@ class ReactionPopup:
             + self.PADDING * 2
         )
         self.rect = pygame.Rect(0, 0, self.WIDTH, total_h)
-
-    def reposition(self, center: tuple[int, int]) -> None:
-        """Centre the popup at the given screen position."""
-        self.rect.center = center
-        if self.rect.left < 4:
-            self.rect.left = 4
-        if self.rect.right > self._screen_width - 4:
-            self.rect.right = self._screen_width - 4
-        if self.rect.top < 4:
-            self.rect.top = 4
-        if self.rect.bottom > self._screen_height - 4:
-            self.rect.bottom = self._screen_height - 4
 
     # ── geometry helpers ─────────────────────────────────────────────
 
@@ -152,25 +140,12 @@ class ReactionPopup:
 
     def render(self, surface: pygame.Surface) -> None:
         """Render the reaction popup."""
-        # Background
-        bg = pygame.Surface(
-            (self.rect.width, self.rect.height), pygame.SRCALPHA,
-        )
-        bg.fill((30, 24, 18, 240))
-        surface.blit(bg, self.rect.topleft)
-        border_color = parse_color(COLORS["border_accent"])
-        pygame.draw.rect(surface, border_color, self.rect, 2)
+        self.render_frame(surface, "Use Reaction?")
 
-        font = get_font(13)
-        font_small = get_font(11)
-        gold = parse_color(COLORS["text_gold"])
+        font = get_font(FONT_SIZES["content"])
+        font_small = get_font(FONT_SIZES["small"])
         white = parse_color(COLORS["text_primary"])
         gray = parse_color(COLORS["text_secondary"])
-
-        # Title
-        title = font.render("Use Reaction?", True, gold)
-        tx = self.rect.x + (self.WIDTH - title.get_width()) // 2
-        surface.blit(title, (tx, self.rect.y + 8))
 
         # Info line
         info = font_small.render(
@@ -185,11 +160,7 @@ class ReactionPopup:
             is_hovered = self.hovered_index == i
 
             if is_hovered:
-                hl = pygame.Surface(
-                    (rect.width, rect.height), pygame.SRCALPHA,
-                )
-                hl.fill((80, 70, 50, 80))
-                surface.blit(hl, rect.topleft)
+                self.draw_hover_highlight(surface, rect)
 
             if reduction == -1:
                 desc = "halve damage"
@@ -212,11 +183,7 @@ class ReactionPopup:
         # Skip button
         skip_rect = self._get_skip_rect()
         if self._hovered_skip:
-            hl = pygame.Surface(
-                (skip_rect.width, skip_rect.height), pygame.SRCALPHA,
-            )
-            hl.fill((80, 70, 50, 80))
-            surface.blit(hl, skip_rect.topleft)
+            self.draw_hover_highlight(surface, skip_rect)
 
         skip_text = font.render("Skip", True, gray)
         sx = skip_rect.x + (skip_rect.width - skip_text.get_width()) // 2

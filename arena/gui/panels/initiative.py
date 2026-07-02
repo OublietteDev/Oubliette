@@ -189,7 +189,7 @@ class InitiativePanel:
                 COLORS.get(team_key, COLORS["text_secondary"])
             )
             if not is_conscious:
-                team_color = (100, 100, 100)
+                team_color = parse_color(COLORS["text_disabled"])
 
             # HP indicator dot
             if is_conscious:
@@ -206,8 +206,9 @@ class InitiativePanel:
             else:
                 # Dead/unconscious: X marker
                 cx, cy = self.rect.x + 16, y + line_height // 2
-                pygame.draw.line(surface, (100, 100, 100), (cx - 3, cy - 3), (cx + 3, cy + 3), 2)
-                pygame.draw.line(surface, (100, 100, 100), (cx + 3, cy - 3), (cx - 3, cy + 3), 2)
+                x_color = parse_color(COLORS["text_disabled"])
+                pygame.draw.line(surface, x_color, (cx - 3, cy - 3), (cx + 3, cy + 3), 2)
+                pygame.draw.line(surface, x_color, (cx + 3, cy - 3), (cx - 3, cy + 3), 2)
 
             # Turn arrow prefix
             prefix = "> " if is_current else "  "

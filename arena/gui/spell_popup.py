@@ -10,8 +10,9 @@ import pygame
 
 from arena.models.actions import Action
 from arena.gui.icons import get_icon
+from arena.gui.popup_base import Popup
 from arena.gui.renderer import get_font
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
 
 # Ordinal level labels
@@ -61,7 +62,7 @@ class _SpellEntry:
         self.level = level
 
 
-class SpellPopup:
+class SpellPopup(Popup):
     """Rectangular popup listing leveled spells organized by level."""
 
     ENTRY_HEIGHT = 24
@@ -76,14 +77,13 @@ class SpellPopup:
         spells: list[Action],
         creature,
         action_used: bool,
-        screen_width: int = 1280,
-        screen_height: int = 720,
+        screen_width: int = LAYOUT["screen_width"],
+        screen_height: int = LAYOUT["screen_height"],
         max_resources: dict[str, int] | None = None,
     ) -> None:
+        super().__init__(screen_width, screen_height)
         self.creature = creature
         self.action_used = action_used
-        self._screen_width = screen_width
-        self._screen_height = screen_height
         self._max_resources = max_resources
 
         self.hovered_index: int | None = None  # index into _entries
@@ -231,7 +231,7 @@ class SpellPopup:
         )
 
         # Title
-        font = get_font(14)
+        font = get_font(FONT_SIZES["label"])
         title_surf = font.render("Spells", True, parse_color(COLORS["text_primary"]))
         surface.blit(
             title_surf,
@@ -248,8 +248,8 @@ class SpellPopup:
         surface.set_clip(content_rect)
 
         # Entries
-        header_font = get_font(11)
-        entry_font = get_font(13)
+        header_font = get_font(FONT_SIZES["small"])
+        entry_font = get_font(FONT_SIZES["content"])
         y = content_rect.y - self.scroll_offset
         visible_idx = 0
 
@@ -275,11 +275,7 @@ class SpellPopup:
 
                     # Hover highlight
                     if i == self.hovered_index and not self.action_used:
-                        pygame.draw.rect(
-                            surface,
-                            parse_color(COLORS["hex_hover"]),
-                            entry_rect,
-                        )
+                        self.draw_hover_highlight(surface, entry_rect)
 
                     # Icon + Text
                     text_x = entry_rect.x + 14
@@ -334,7 +330,7 @@ class SpellPopup:
             return
 
         lines = self._hovered_tooltip_lines
-        font = get_font(13)
+        font = get_font(FONT_SIZES["content"])
         padding = 6
         line_height = 17
 

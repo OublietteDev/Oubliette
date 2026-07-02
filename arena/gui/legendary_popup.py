@@ -9,14 +9,15 @@ from typing import TYPE_CHECKING
 
 import pygame
 
+from arena.gui.popup_base import Popup
 from arena.gui.renderer import get_font
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
 if TYPE_CHECKING:
     from arena.models.actions import Action
 
 
-class LegendaryActionPopup:
+class LegendaryActionPopup(Popup):
     """Modal popup for choosing a legendary action.
 
     Displays the creature name, remaining legendary action points,
@@ -35,19 +36,23 @@ class LegendaryActionPopup:
     PASS_HEIGHT = 32
     PADDING = 6
 
+    # Legendary purple — dark tint, bright border, lighter title.
+    BG_RGBA = (25, 18, 35, 240)
+    BORDER_RGB = (180, 120, 255)
+    TITLE_RGB = (200, 150, 255)
+
     def __init__(
         self,
         creature_name: str,
         remaining_points: int,
         available_actions: list[Action],
-        screen_width: int = 1280,
-        screen_height: int = 720,
+        screen_width: int = LAYOUT["screen_width"],
+        screen_height: int = LAYOUT["screen_height"],
     ) -> None:
+        super().__init__(screen_width, screen_height)
         self.creature_name = creature_name
         self.remaining_points = remaining_points
         self.actions = available_actions
-        self._screen_width = screen_width
-        self._screen_height = screen_height
         self.hovered_index: int | None = None
         self._hovered_pass: bool = False
 
@@ -58,18 +63,6 @@ class LegendaryActionPopup:
             + self.PADDING * 2
         )
         self.rect = pygame.Rect(0, 0, self.WIDTH, total_h)
-
-    def reposition(self, center: tuple[int, int]) -> None:
-        """Center the popup at the given screen position."""
-        self.rect.center = center
-        if self.rect.left < 4:
-            self.rect.left = 4
-        if self.rect.right > self._screen_width - 4:
-            self.rect.right = self._screen_width - 4
-        if self.rect.top < 4:
-            self.rect.top = 4
-        if self.rect.bottom > self._screen_height - 4:
-            self.rect.bottom = self._screen_height - 4
 
     def _get_action_rect(self, index: int) -> pygame.Rect:
         """Get the clickable rect for an action row."""
@@ -127,26 +120,13 @@ class LegendaryActionPopup:
 
     def render(self, surface: pygame.Surface) -> None:
         """Render the legendary action popup."""
-        # Background
-        bg = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        bg.fill((25, 18, 35, 240))  # Dark purple tint
-        surface.blit(bg, self.rect.topleft)
+        self.render_frame(surface, "Legendary Action")
 
-        # Purple border for legendary
-        border_color = (180, 120, 255)
-        pygame.draw.rect(surface, border_color, self.rect, 2)
-
-        font = get_font(13)
-        font_small = get_font(11)
-        purple = (200, 150, 255)
+        font = get_font(FONT_SIZES["content"])
+        font_small = get_font(FONT_SIZES["small"])
         white = parse_color(COLORS["text_primary"])
         gray = parse_color(COLORS["text_secondary"])
         gold = parse_color(COLORS["text_gold"])
-
-        # Title: creature name
-        title = font.render(f"Legendary Action", True, purple)
-        tx = self.rect.x + (self.WIDTH - title.get_width()) // 2
-        surface.blit(title, (tx, self.rect.y + 6))
 
         # Subtitle: remaining points
         sub = font_small.render(
@@ -160,12 +140,8 @@ class LegendaryActionPopup:
         # Action rows
         for i, action in enumerate(self.actions):
             rect = self._get_action_rect(i)
-            is_hovered = self.hovered_index == i
-
-            if is_hovered:
-                hl = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-                hl.fill((80, 60, 100, 80))
-                surface.blit(hl, rect.topleft)
+            if self.hovered_index == i:
+                self.draw_hover_highlight(surface, rect, (80, 60, 100, 80))
 
             cost = action.legendary_action_cost
             label = f"{action.name}"
@@ -188,9 +164,7 @@ class LegendaryActionPopup:
         # Pass button
         pass_rect = self._get_pass_rect()
         if self._hovered_pass:
-            hl = pygame.Surface((pass_rect.width, pass_rect.height), pygame.SRCALPHA)
-            hl.fill((80, 60, 100, 80))
-            surface.blit(hl, pass_rect.topleft)
+            self.draw_hover_highlight(surface, pass_rect, (80, 60, 100, 80))
 
         pass_text = font.render("Pass", True, gray)
         px = pass_rect.x + (pass_rect.width - pass_text.get_width()) // 2

@@ -17,7 +17,9 @@ from arena.combat.stat_modifiers import (
 )
 from arena.gui.renderer import draw_panel, draw_scrollbar, get_font
 from arena.gui.tray_backgrounds import draw_tray_background
-from arena.util.constants import COLORS, CONDITION_DISPLAY, FONT_SIZES, parse_color
+from arena.util.constants import (
+    COLORS, CONDITION_DISPLAY, FONT_SIZES, TOOLTIP_BG_RGBA, parse_color,
+)
 
 # Ability abbreviations in display order
 ABILITY_NAMES = [
@@ -153,7 +155,10 @@ class CreatureInfoPanel:
         # --- HP bar ---
         bar_width = panel_w - 24
         bar_height = 8
-        pygame.draw.rect(surface, (40, 40, 40), (x, y, bar_width, bar_height))
+        pygame.draw.rect(
+            surface, parse_color(COLORS["bar_track"]),
+            (x, y, bar_width, bar_height),
+        )
         hp_pct = c.hp_percent
         fill_w = int(bar_width * hp_pct)
         if hp_pct > 0.5:
@@ -193,7 +198,7 @@ class CreatureInfoPanel:
             pip_r = 4
             green = parse_color(COLORS["hp_full"])
             red = parse_color(COLORS["hp_critical"])
-            dark = (40, 40, 40)
+            dark = parse_color(COLORS["bar_track"])
             ds_successes = getattr(c, "death_save_successes", 0)
             ds_failures = getattr(c, "death_save_failures", 0)
             for i in range(3):
@@ -237,7 +242,10 @@ class CreatureInfoPanel:
                 bar_w = panel_w - 24
                 bar_h = 4
                 y += 14
-                pygame.draw.rect(surface, (40, 40, 40), (x, y, bar_w, bar_h))
+                pygame.draw.rect(
+                    surface, parse_color(COLORS["bar_track"]),
+                    (x, y, bar_w, bar_h),
+                )
                 if max_val > 0:
                     fill = int(bar_w * current_val / max_val)
                     if fill > 0:
@@ -255,7 +263,9 @@ class CreatureInfoPanel:
                     cond_name, (cond_name[:2].upper(), "condition_neutral")
                 )
                 cond_color = parse_color(COLORS[color_key])
-                text_surf = font_small.render(abbrev, True, (0, 0, 0))
+                text_surf = font_small.render(
+                    abbrev, True, parse_color(COLORS["badge_text"])
+                )
                 badge_w = text_surf.get_width() + 6
                 badge_h = text_surf.get_height() + 2
                 if cond_x + badge_w > panel_x + panel_w - 10:
@@ -502,7 +512,7 @@ class CreatureInfoPanel:
         # Draw background
         bg_rect = pygame.Rect(tx, ty, tooltip_w, tooltip_h)
         bg_surface = pygame.Surface((tooltip_w, tooltip_h), pygame.SRCALPHA)
-        bg_surface.fill((30, 24, 18, 235))
+        bg_surface.fill(TOOLTIP_BG_RGBA)
         surface.blit(bg_surface, (tx, ty))
         border_color = parse_color(COLORS["border_accent"])
         pygame.draw.rect(surface, border_color, bg_rect, 1)

@@ -10,8 +10,9 @@ from dataclasses import dataclass
 
 import pygame
 
+from arena.gui.popup_base import Popup
 from arena.gui.renderer import get_font
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
 
 @dataclass
@@ -22,7 +23,7 @@ class CounterspellChoice:
     cast_level: int | None = None  # Spell slot level used
 
 
-class CounterspellPopup:
+class CounterspellPopup(Popup):
     """Modal popup for counterspell reaction.
 
     Shows the spell being cast and available counterspell slot levels.
@@ -36,6 +37,10 @@ class CounterspellPopup:
     SKIP_HEIGHT = 32
     PADDING = 6
 
+    # Dark arcane blue with a purple border — counterspell's own identity.
+    BG_RGBA = (20, 18, 40, 240)
+    BORDER_RGB = (120, 80, 200)
+
     def __init__(
         self,
         spell_name: str,
@@ -43,16 +48,15 @@ class CounterspellPopup:
         counterspeller_name: str,
         counterspeller_id: str,
         available_slots: dict[int, int],  # level -> count
-        screen_width: int = 1280,
-        screen_height: int = 720,
+        screen_width: int = LAYOUT["screen_width"],
+        screen_height: int = LAYOUT["screen_height"],
     ) -> None:
+        super().__init__(screen_width, screen_height)
         self.spell_name = spell_name
         self.spell_level = spell_level
         self.counterspeller_name = counterspeller_name
         self.counterspeller_id = counterspeller_id
         self.available_slots = available_slots
-        self._screen_width = screen_width
-        self._screen_height = screen_height
         self.hovered_index: int | None = None
         self._hovered_skip: bool = False
 
@@ -74,18 +78,6 @@ class CounterspellPopup:
             + self.PADDING * 2
         )
         self.rect = pygame.Rect(0, 0, self.WIDTH, total_h)
-
-    def reposition(self, center: tuple[int, int]) -> None:
-        """Center the popup at the given screen position."""
-        self.rect.center = center
-        if self.rect.left < 4:
-            self.rect.left = 4
-        if self.rect.right > self._screen_width - 4:
-            self.rect.right = self._screen_width - 4
-        if self.rect.top < 4:
-            self.rect.top = 4
-        if self.rect.bottom > self._screen_height - 4:
-            self.rect.bottom = self._screen_height - 4
 
     def _get_slot_rect(self, index: int) -> pygame.Rect:
         y = self.rect.y + self.TITLE_HEIGHT + self.PADDING + index * self.ROW_HEIGHT
@@ -141,24 +133,13 @@ class CounterspellPopup:
 
     def render(self, surface: pygame.Surface) -> None:
         """Render the counterspell popup."""
-        # Background
-        bg = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        bg.fill((20, 18, 40, 240))
-        surface.blit(bg, self.rect.topleft)
-        border_color = (120, 80, 200)  # Purple for counterspell
-        pygame.draw.rect(surface, border_color, self.rect, 2)
-
-        font = get_font(12)
-        title_font = get_font(13)
-        gold = parse_color(COLORS["text_gold"])
-        white = parse_color(COLORS["text_primary"])
-        dim = (160, 160, 160)
-
         # Title: "Counterspell [Fireball] (Lvl 3)?"
         title_text = f"Counter {self.spell_name} (Lvl {self.spell_level})?"
-        title_surf = title_font.render(title_text, True, gold)
-        tx = self.rect.x + (self.WIDTH - title_surf.get_width()) // 2
-        surface.blit(title_surf, (tx, self.rect.y + 6))
+        self.render_frame(surface, title_text)
+
+        font = get_font(FONT_SIZES["body"])
+        white = parse_color(COLORS["text_primary"])
+        dim = (160, 160, 160)
 
         # Subtitle: counterspeller name
         sub_text = f"{self.counterspeller_name}'s reaction"
@@ -169,12 +150,8 @@ class CounterspellPopup:
         # Slot rows
         for i, (lvl, _count, label) in enumerate(self.slot_rows):
             rect = self._get_slot_rect(i)
-            is_hovered = self.hovered_index == i
-
-            if is_hovered:
-                hl = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-                hl.fill((80, 60, 120, 80))
-                surface.blit(hl, rect.topleft)
+            if self.hovered_index == i:
+                self.draw_hover_highlight(surface, rect, (80, 60, 120, 80))
 
             label_surf = font.render(label, True, white)
             lx = rect.x + (rect.width - label_surf.get_width()) // 2
@@ -183,9 +160,7 @@ class CounterspellPopup:
         # Skip button
         skip_rect = self._get_skip_rect()
         if self._hovered_skip:
-            hl = pygame.Surface((skip_rect.width, skip_rect.height), pygame.SRCALPHA)
-            hl.fill((60, 40, 40, 80))
-            surface.blit(hl, skip_rect.topleft)
+            self.draw_hover_highlight(surface, skip_rect, (60, 40, 40, 80))
 
         skip_surf = font.render("Skip", True, dim)
         sx = skip_rect.x + (skip_rect.width - skip_surf.get_width()) // 2

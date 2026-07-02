@@ -35,9 +35,12 @@ from arena.gui.panels.initiative import InitiativePanel
 from arena.gui.panels.log import CombatLogPanel
 from arena.gui.panels.creature_info import CreatureInfoPanel
 from arena.gui.radial_menu import RadialMenu, RadialMenuState
+from arena.gui.popup_base import draw_modal_dim
 from arena.gui.renderer import get_font, draw_hex_highlight
 from arena.models.encounter import Encounter, TerrainType
-from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, TERRAIN_NAMES, parse_color
+from arena.util.constants import (
+    COLORS, FONT_SIZES, LAYOUT, TERRAIN_NAMES, TOOLTIP_BG_RGBA, parse_color,
+)
 from arena.util.settings import get_settings
 
 from arena.ai.controller import AIController, TurnPlan, TurnStep, TurnStepType
@@ -1995,6 +1998,17 @@ class CombatScreen(Screen):
         if self.radial_menu.state != RadialMenuState.CLOSED:
             self.radial_menu.render_tooltip(surface)
 
+        # Modal dim: input is already blocked while any decision popup is
+        # open — make that visible so the board behind it doesn't look live.
+        # (Lair/legendary allow camera panning while open, so they stay
+        # undimmed — the player is often inspecting the board to decide.)
+        if any(p is not None for p in (
+            self._rider_popup, self._oa_popup, self._reaction_popup,
+            self._reroll_popup, self._bardic_popup, self._shove_popup,
+            self._ready_popup, self._passenger_popup, self._counterspell_popup,
+        )):
+            draw_modal_dim(surface)
+
         # Rider popup (above panels, below end overlay)
         if self._rider_popup is not None:
             self._rider_popup.render(surface)
@@ -2043,7 +2057,9 @@ class CombatScreen(Screen):
         if self._legendary_selected_action is not None:
             hint_font = get_font(FONT_SIZES["label"])
             hint_text = f"Select target for {self._legendary_selected_action.name} (ESC to cancel)"
-            hint_surf = hint_font.render(hint_text, True, (200, 150, 255))
+            hint_surf = hint_font.render(
+                hint_text, True, parse_color(COLORS["legendary_accent"])
+            )
             hx = (self.screen_width - hint_surf.get_width()) // 2
             surface.blit(hint_surf, (hx, 8))
 
@@ -3517,7 +3533,7 @@ class CombatScreen(Screen):
         tooltip_bg = pygame.Surface(
             (tooltip_width, tooltip_height), pygame.SRCALPHA
         )
-        tooltip_bg.fill((30, 24, 18, 235))
+        tooltip_bg.fill(TOOLTIP_BG_RGBA)
         surface.blit(tooltip_bg, (tooltip_x, tooltip_y))
 
         # Border
@@ -3569,7 +3585,7 @@ class CombatScreen(Screen):
         tooltip_bg = pygame.Surface(
             (tooltip_width, tooltip_height), pygame.SRCALPHA,
         )
-        tooltip_bg.fill((30, 24, 18, 235))
+        tooltip_bg.fill(TOOLTIP_BG_RGBA)
         surface.blit(tooltip_bg, (tooltip_x, tooltip_y))
 
         # Border

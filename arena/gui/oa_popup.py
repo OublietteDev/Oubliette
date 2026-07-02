@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import pygame
 
+from arena.gui.popup_base import Popup
 from arena.gui.renderer import get_font
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
 
-class OpportunityAttackPopup:
+class OpportunityAttackPopup(Popup):
     """Modal Attack/Skip prompt for a single opportunity attack."""
 
     WIDTH = 300
@@ -25,25 +26,17 @@ class OpportunityAttackPopup:
         self,
         reactor_name: str,
         mover_name: str,
-        screen_width: int = 1280,
-        screen_height: int = 720,
+        screen_width: int = LAYOUT["screen_width"],
+        screen_height: int = LAYOUT["screen_height"],
     ) -> None:
+        super().__init__(screen_width, screen_height)
         self.reactor_name = reactor_name
         self.mover_name = mover_name
-        self._screen_width = screen_width
-        self._screen_height = screen_height
         self._hover_attack = False
         self._hover_skip = False
         total_h = (self.TITLE_HEIGHT + self.INFO_HEIGHT + self.BTN_HEIGHT
                    + self.PADDING * 3)
         self.rect = pygame.Rect(0, 0, self.WIDTH, total_h)
-
-    def reposition(self, center: tuple[int, int]) -> None:
-        self.rect.center = center
-        self.rect.left = max(4, self.rect.left)
-        self.rect.top = max(4, self.rect.top)
-        self.rect.right = min(self._screen_width - 4, self.rect.right)
-        self.rect.bottom = min(self._screen_height - 4, self.rect.bottom)
 
     # ── geometry ─────────────────────────────────────────────────────
     def _attack_rect(self) -> pygame.Rect:
@@ -75,20 +68,10 @@ class OpportunityAttackPopup:
 
     # ── render ───────────────────────────────────────────────────────
     def render(self, surface: pygame.Surface) -> None:
-        bg = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        bg.fill((30, 24, 18, 240))
-        surface.blit(bg, self.rect.topleft)
-        pygame.draw.rect(surface, parse_color(COLORS["border_accent"]), self.rect, 2)
+        self.render_frame(surface, "Opportunity Attack?")
 
-        font = get_font(13)
-        small = get_font(11)
-        gold = parse_color(COLORS["text_gold"])
-        white = parse_color(COLORS["text_primary"])
+        small = get_font(FONT_SIZES["small"])
         gray = parse_color(COLORS["text_secondary"])
-
-        title = font.render("Opportunity Attack?", True, gold)
-        surface.blit(title, (self.rect.x + (self.WIDTH - title.get_width()) // 2,
-                             self.rect.y + 8))
         info = small.render(f"{self.reactor_name} vs fleeing {self.mover_name}",
                             True, gray)
         surface.blit(info, (self.rect.x + (self.WIDTH - info.get_width()) // 2,
@@ -98,11 +81,4 @@ class OpportunityAttackPopup:
             (self._attack_rect(), "Attack", self._hover_attack),
             (self._skip_rect(), "Skip", self._hover_skip),
         ):
-            if hover:
-                hl = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-                hl.fill((80, 70, 50, 90))
-                surface.blit(hl, rect.topleft)
-            pygame.draw.rect(surface, parse_color(COLORS["border_accent"]), rect, 1)
-            txt = font.render(label, True, white)
-            surface.blit(txt, (rect.x + (rect.width - txt.get_width()) // 2,
-                               rect.y + 8))
+            self.draw_button(surface, rect, label, hovered=hover)

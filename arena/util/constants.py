@@ -72,6 +72,37 @@ COLORS = {
     "hex_zone_enemy": "#803060",
     # AoE placement preview
     "hex_aoe_preview": "#d4a847",
+    # Semantic UI aliases (Stage 4a) — names for tuples that used to be
+    # hardcoded at their call sites
+    "text_disabled": "#646464",       # grayed labels, unconscious entries
+    "button_disabled": "#3c3c3c",     # disabled action-bar buttons
+    "button_bonus": "#325a32",        # bonus-action button tint
+    "button_standard": "#323c5a",     # standard-action button tint
+    "bar_track": "#282828",           # empty track behind HP/resource bars
+    "token_outline": "#ffffff",       # selection/turn outline on tokens
+    "badge_text": "#000000",          # text on filled condition badges
+    "legendary_accent": "#c896ff",    # legendary-action hint/title purple
+}
+
+# Overlay backgrounds carry alpha, which the hex COLORS table can't express.
+TOOLTIP_BG_RGBA: tuple[int, int, int, int] = (30, 24, 18, 235)
+POPUP_BG_RGBA: tuple[int, int, int, int] = (30, 24, 18, 240)
+
+# Combat-log palette — the log sits on a LIGHT parchment tray, so it inverts
+# the main scheme: same hue relationships, much darker values. Keys mirror
+# their COLORS counterparts so event->color mappings can use either table.
+LOG_COLORS = {
+    "text_primary": "#282018",       # dark brown (vs #f0e6d2)
+    "text_secondary": "#5a4e3e",     # muted brown (vs #a89880)
+    "text_gold": "#785814",          # dark gold (vs #d4a847)
+    "team_player": "#18641c",        # dark green (vs #4CAF50)
+    "team_enemy": "#8c1c14",         # dark red (vs #c43030)
+    "hp_full": "#18641c",
+    "hp_critical": "#8c1c14",
+    "condition_neutral": "#1e4682",  # dark blue (vs #5090d0)
+    "condition_debuff": "#8c1c14",
+    "condition_buff": "#18641c",
+    "ai_thinking": "#50326e",        # dark purple (vs #9070b0)
 }
 
 # Terrain type to COLORS key mapping

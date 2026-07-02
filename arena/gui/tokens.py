@@ -322,7 +322,9 @@ def draw_token(
 
     # Selection ring
     if is_selected:
-        pygame.draw.polygon(surface, (255, 255, 255), int_polygon, 2)
+        pygame.draw.polygon(
+            surface, parse_color(COLORS["token_outline"]), int_polygon, 2
+        )
 
     # Body fill + optional token image clipped to polygon
     token_img = None
@@ -555,7 +557,9 @@ def _draw_single_hex_token(
 
     # Selection ring
     if is_selected:
-        pygame.draw.circle(surface, (255, 255, 255), center, radius + 2, 2)
+        pygame.draw.circle(
+            surface, parse_color(COLORS["token_outline"]), center, radius + 2, 2
+        )
 
     # Token body
     token_img = None
@@ -746,7 +750,10 @@ def _draw_hp_bar(
     bar_y = center[1] + radius + 2
 
     # Background (dark)
-    pygame.draw.rect(surface, (40, 40, 40), (bar_x, bar_y, bar_width, bar_height))
+    pygame.draw.rect(
+        surface, parse_color(COLORS["bar_track"]),
+        (bar_x, bar_y, bar_width, bar_height),
+    )
 
     # Fill based on HP percentage
     hp_pct = display_hp_pct if display_hp_pct is not None else creature.hp_percent

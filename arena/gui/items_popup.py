@@ -11,11 +11,12 @@ import pygame
 
 from arena.models.actions import Action, ActionType
 from arena.gui.icons import get_icon
+from arena.gui.popup_base import Popup
 from arena.gui.renderer import get_font
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
 
-class ItemsPopup:
+class ItemsPopup(Popup):
     """Rectangular popup listing consumable and utility actions."""
 
     ENTRY_HEIGHT = 28
@@ -28,16 +29,15 @@ class ItemsPopup:
         items: list[Action],
         action_used: bool,
         bonus_used: bool,
-        screen_width: int = 1280,
-        screen_height: int = 720,
+        screen_width: int = LAYOUT["screen_width"],
+        screen_height: int = LAYOUT["screen_height"],
         title: str = "Items",
     ) -> None:
+        super().__init__(screen_width, screen_height)
         self.title = title
         self.items = list(items)
         self.action_used = action_used
         self.bonus_used = bonus_used
-        self._screen_width = screen_width
-        self._screen_height = screen_height
 
         self.hovered_index: int | None = None
         self._hovered_tooltip_lines: list[str] | None = None
@@ -113,7 +113,7 @@ class ItemsPopup:
         )
 
         # Title
-        font = get_font(14)
+        font = get_font(FONT_SIZES["label"])
         title_surf = font.render(self.title, True, parse_color(COLORS["text_primary"]))
         surface.blit(
             title_surf,
@@ -121,7 +121,7 @@ class ItemsPopup:
         )
 
         # Entries
-        entry_font = get_font(13)
+        entry_font = get_font(FONT_SIZES["content"])
         y = self.rect.y + self.TITLE_HEIGHT
         for i, item in enumerate(self.items):
             entry_rect = pygame.Rect(
@@ -134,11 +134,7 @@ class ItemsPopup:
 
             # Hover highlight
             if i == self.hovered_index and not disabled:
-                pygame.draw.rect(
-                    surface,
-                    parse_color(COLORS["hex_hover"]),
-                    entry_rect,
-                )
+                self.draw_hover_highlight(surface, entry_rect)
 
             # Icon + Text
             text_x = entry_rect.x + 8
@@ -178,7 +174,7 @@ class ItemsPopup:
             return
 
         lines = self._hovered_tooltip_lines
-        font = get_font(13)
+        font = get_font(FONT_SIZES["content"])
         padding = 6
         line_height = 17
 

@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import pygame
 
+from arena.gui.popup_base import Popup
 from arena.gui.renderer import get_font
+from arena.util.constants import FONT_SIZES, LAYOUT
 
 
-class PassengerPopup:
+class PassengerPopup(Popup):
     """Modal popup asking the player to pick a passenger or teleport solo.
 
     Shown when a teleport action has ``teleport_passenger=True`` and at
@@ -23,10 +25,10 @@ class PassengerPopup:
     PADDING = 6
 
     # Cyan / teleport theme
-    _BG_COLOR = (15, 25, 40, 240)
-    _BORDER_COLOR = (100, 180, 255)
+    BG_RGBA = (15, 25, 40, 240)
+    BORDER_RGB = (100, 180, 255)
+    TITLE_RGB = (100, 180, 255)
     _HOVER_COLOR = (50, 80, 120, 80)
-    _TITLE_COLOR = (100, 180, 255)
     _TEXT_COLOR = (240, 230, 210)
     _SUBTITLE_COLOR = (160, 150, 135)
     _SOLO_COLOR = (160, 150, 135)
@@ -35,8 +37,8 @@ class PassengerPopup:
         self,
         candidates: list[tuple[str, str]],
         caster_name: str,
-        screen_width: int = 1280,
-        screen_height: int = 720,
+        screen_width: int = LAYOUT["screen_width"],
+        screen_height: int = LAYOUT["screen_height"],
     ) -> None:
         """
         Args:
@@ -44,10 +46,9 @@ class PassengerPopup:
                 eligible passenger (same-team allies within 5 ft).
             caster_name: Name of the caster, shown in the subtitle.
         """
+        super().__init__(screen_width, screen_height)
         self.candidates = candidates
         self.caster_name = caster_name
-        self._screen_width = screen_width
-        self._screen_height = screen_height
         self.hovered_index: int | None = None
         self._hovered_solo: bool = False
 
@@ -58,22 +59,6 @@ class PassengerPopup:
             + self.PADDING * 2
         )
         self.rect = pygame.Rect(0, 0, self.WIDTH, total_h)
-
-    # ------------------------------------------------------------------
-    # Positioning
-    # ------------------------------------------------------------------
-
-    def reposition(self, center: tuple[int, int]) -> None:
-        """Center the popup at *center*, clamped to the screen."""
-        self.rect.center = center
-        if self.rect.left < 4:
-            self.rect.left = 4
-        if self.rect.right > self._screen_width - 4:
-            self.rect.right = self._screen_width - 4
-        if self.rect.top < 4:
-            self.rect.top = 4
-        if self.rect.bottom > self._screen_height - 4:
-            self.rect.bottom = self._screen_height - 4
 
     # ------------------------------------------------------------------
     # Rect helpers
@@ -146,23 +131,14 @@ class PassengerPopup:
 
     def render(self, surface: pygame.Surface) -> None:
         """Draw the passenger selection popup."""
-        # Background
-        bg = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        bg.fill(self._BG_COLOR)
-        surface.blit(bg, self.rect.topleft)
-        pygame.draw.rect(surface, self._BORDER_COLOR, self.rect, 2)
+        self.render_frame(surface, "Bring a Passenger?")
 
-        font = get_font(13)
-        font_small = get_font(11)
-
-        # Title
-        title = font.render("Bring a Passenger?", True, self._TITLE_COLOR)
-        tx = self.rect.x + (self.WIDTH - title.get_width()) // 2
-        surface.blit(title, (tx, self.rect.y + 8))
+        font = get_font(FONT_SIZES["content"])
+        font_small = get_font(FONT_SIZES["small"])
 
         # Subtitle
         subtitle = font_small.render(
-            f"{self.caster_name} \u2014 Dimension Door",
+            f"{self.caster_name} — Dimension Door",
             True, self._SUBTITLE_COLOR,
         )
         sx = self.rect.x + (self.WIDTH - subtitle.get_width()) // 2
@@ -171,12 +147,8 @@ class PassengerPopup:
         # Candidate rows
         for i, (_cid, name) in enumerate(self.candidates):
             rect = self._get_candidate_rect(i)
-            is_hovered = self.hovered_index == i
-
-            if is_hovered:
-                hl = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-                hl.fill(self._HOVER_COLOR)
-                surface.blit(hl, rect.topleft)
+            if self.hovered_index == i:
+                self.draw_hover_highlight(surface, rect, self._HOVER_COLOR)
 
             label = font.render(name, True, self._TEXT_COLOR)
             surface.blit(label, (rect.x + 10, rect.y + 6))
@@ -184,9 +156,7 @@ class PassengerPopup:
         # Solo button
         solo_rect = self._get_solo_rect()
         if self._hovered_solo:
-            hl = pygame.Surface((solo_rect.width, solo_rect.height), pygame.SRCALPHA)
-            hl.fill(self._HOVER_COLOR)
-            surface.blit(hl, solo_rect.topleft)
+            self.draw_hover_highlight(surface, solo_rect, self._HOVER_COLOR)
 
         solo_text = font.render("Teleport Solo", True, self._SOLO_COLOR)
         stx = solo_rect.x + (solo_rect.width - solo_text.get_width()) // 2

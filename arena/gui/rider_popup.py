@@ -11,8 +11,9 @@ from dataclasses import dataclass
 
 import pygame
 
+from arena.gui.popup_base import Popup
 from arena.gui.renderer import get_font
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 from arena.models.character import Feature, OnHitRider
 from arena.combat.riders import get_rider_dice_preview, get_available_spell_slots
 
@@ -26,7 +27,7 @@ class RiderChoice:
     slot_level: int | None = None  # For spell-slot riders
 
 
-class RiderPopup:
+class RiderPopup(Popup):
     """Modal popup for a single on-hit rider.
 
     For spell-slot riders: shows available slot levels with dice previews.
@@ -44,14 +45,13 @@ class RiderPopup:
         feature: Feature,
         rider: OnHitRider,
         creature,
-        screen_width: int = 1280,
-        screen_height: int = 720,
+        screen_width: int = LAYOUT["screen_width"],
+        screen_height: int = LAYOUT["screen_height"],
     ) -> None:
+        super().__init__(screen_width, screen_height)
         self.feature = feature
         self.rider = rider
         self.creature = creature
-        self._screen_width = screen_width
-        self._screen_height = screen_height
         self.hovered_index: int | None = None
         self._hovered_skip: bool = False
         self._hovered_use: bool = False
@@ -74,18 +74,6 @@ class RiderPopup:
             + self.PADDING * 2
         )
         self.rect = pygame.Rect(0, 0, self.WIDTH, total_h)
-
-    def reposition(self, center: tuple[int, int]) -> None:
-        """Center the popup at the given screen position."""
-        self.rect.center = center
-        if self.rect.left < 4:
-            self.rect.left = 4
-        if self.rect.right > self._screen_width - 4:
-            self.rect.right = self._screen_width - 4
-        if self.rect.top < 4:
-            self.rect.top = 4
-        if self.rect.bottom > self._screen_height - 4:
-            self.rect.bottom = self._screen_height - 4
 
     def _get_row_rect(self, index: int) -> pygame.Rect:
         y = self.rect.y + self.TITLE_HEIGHT + self.PADDING + index * self.ROW_HEIGHT
@@ -156,24 +144,13 @@ class RiderPopup:
 
     def render(self, surface: pygame.Surface) -> None:
         """Render the rider popup."""
-        # Background
-        bg = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        bg.fill((30, 24, 18, 240))
-        surface.blit(bg, self.rect.topleft)
-        border_color = parse_color(COLORS["border_accent"])
-        pygame.draw.rect(surface, border_color, self.rect, 2)
+        self.render_frame(surface, f"{self.feature.name}?")
 
-        font = get_font(13)
-        font_small = get_font(11)
-        gold = parse_color(COLORS["text_gold"])
+        font = get_font(FONT_SIZES["content"])
+        font_small = get_font(FONT_SIZES["small"])
         white = parse_color(COLORS["text_primary"])
         gray = parse_color(COLORS["text_secondary"])
         dim = (80, 70, 60)
-
-        # Title
-        title = font.render(f"{self.feature.name}?", True, gold)
-        tx = self.rect.x + (self.WIDTH - title.get_width()) // 2
-        surface.blit(title, (tx, self.rect.y + 8))
 
         if self.is_spell_slot:
             self._render_spell_slot_rows(surface, font, font_small, white, gray, dim)
@@ -183,9 +160,7 @@ class RiderPopup:
         # Skip button
         skip_rect = self._get_skip_rect()
         if self._hovered_skip:
-            hl = pygame.Surface((skip_rect.width, skip_rect.height), pygame.SRCALPHA)
-            hl.fill((80, 70, 50, 80))
-            surface.blit(hl, skip_rect.topleft)
+            self.draw_hover_highlight(surface, skip_rect)
 
         skip_text = font.render("Skip", True, gray)
         sx = skip_rect.x + (skip_rect.width - skip_text.get_width()) // 2
@@ -201,9 +176,7 @@ class RiderPopup:
             is_hovered = (self.hovered_index == i) and available
 
             if is_hovered:
-                hl = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-                hl.fill((80, 70, 50, 80))
-                surface.blit(hl, rect.topleft)
+                self.draw_hover_highlight(surface, rect)
 
             preview = get_rider_dice_preview(self.rider, level)
             label = f"Level {level}  ({preview})"
@@ -228,9 +201,7 @@ class RiderPopup:
         rect = self._get_row_rect(0)
 
         if self._hovered_use:
-            hl = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-            hl.fill((80, 70, 50, 80))
-            surface.blit(hl, rect.topleft)
+            self.draw_hover_highlight(surface, rect)
 
         # Build cost description
         rider = self.rider

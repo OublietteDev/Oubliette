@@ -44,13 +44,13 @@ class ActionButton:
     def render(self, surface: pygame.Surface) -> None:
         """Render the button."""
         if self.is_disabled:
-            color = (60, 60, 60)
+            color = parse_color(COLORS["button_disabled"])
         elif self.is_hovered:
             color = parse_color(COLORS["button_hover"])
         elif self.btn_type == "bonus":
-            color = (50, 90, 50)  # Slightly different for bonus actions
+            color = parse_color(COLORS["button_bonus"])
         elif self.btn_type == "standard":
-            color = (50, 60, 90)  # Slightly different for standard actions
+            color = parse_color(COLORS["button_standard"])
         else:
             color = parse_color(COLORS["button_normal"])
 
@@ -66,7 +66,7 @@ class ActionButton:
         font = get_font(FONT_SIZES["body"])
         text_color = parse_color(COLORS["text_primary"])
         if self.is_disabled:
-            text_color = (100, 100, 100)
+            text_color = parse_color(COLORS["text_disabled"])
         text_surf = font.render(self.label, True, text_color)
         text_rect = text_surf.get_rect(center=self.rect.center)
         surface.blit(text_surf, text_rect)

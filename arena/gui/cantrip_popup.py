@@ -11,11 +11,12 @@ import pygame
 
 from arena.models.actions import Action, ActionType
 from arena.gui.icons import get_icon
+from arena.gui.popup_base import Popup
 from arena.gui.renderer import get_font
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
 
-class CantripPopup:
+class CantripPopup(Popup):
     """Rectangular popup listing the creature's cantrips."""
 
     ENTRY_HEIGHT = 28
@@ -28,14 +29,13 @@ class CantripPopup:
         cantrips: list[Action],
         creature,
         action_used: bool,
-        screen_width: int = 1280,
-        screen_height: int = 720,
+        screen_width: int = LAYOUT["screen_width"],
+        screen_height: int = LAYOUT["screen_height"],
     ) -> None:
+        super().__init__(screen_width, screen_height)
         self.creature = creature
         self.cantrips = list(cantrips)
         self.action_used = action_used
-        self._screen_width = screen_width
-        self._screen_height = screen_height
 
         self.hovered_index: int | None = None
         self._hovered_tooltip_lines: list[str] | None = None
@@ -107,7 +107,7 @@ class CantripPopup:
         )
 
         # Title
-        font = get_font(14)
+        font = get_font(FONT_SIZES["label"])
         title_surf = font.render("Cantrips", True, parse_color(COLORS["text_primary"]))
         surface.blit(
             title_surf,
@@ -115,7 +115,7 @@ class CantripPopup:
         )
 
         # Entries
-        entry_font = get_font(13)
+        entry_font = get_font(FONT_SIZES["content"])
         y = self.rect.y + self.TITLE_HEIGHT
         for i, cantrip in enumerate(self.cantrips):
             entry_rect = pygame.Rect(
@@ -127,11 +127,7 @@ class CantripPopup:
 
             # Hover highlight
             if i == self.hovered_index and not self.action_used:
-                pygame.draw.rect(
-                    surface,
-                    parse_color(COLORS["hex_hover"]),
-                    entry_rect,
-                )
+                self.draw_hover_highlight(surface, entry_rect)
 
             # Icon + Text
             text_x = entry_rect.x + 8
@@ -159,7 +155,7 @@ class CantripPopup:
             return
 
         lines = self._hovered_tooltip_lines
-        font = get_font(13)
+        font = get_font(FONT_SIZES["content"])
         padding = 6
         line_height = 17
 
