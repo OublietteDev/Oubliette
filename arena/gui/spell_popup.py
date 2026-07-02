@@ -9,8 +9,9 @@ from __future__ import annotations
 import pygame
 
 from arena.models.actions import Action
+from arena.combat.upcast import can_upcast, get_available_upcast_levels
 from arena.gui.icons import get_icon
-from arena.gui.popup_base import Popup
+from arena.gui.popup_base import Popup, wrap_text
 from arena.gui.renderer import get_font
 from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
@@ -89,6 +90,11 @@ class SpellPopup(Popup):
         self.hovered_index: int | None = None  # index into _entries
         self._hovered_tooltip_lines: list[str] | None = None
         self.scroll_offset: int = 0
+
+        # Chosen cast level per upcastable spell (name -> level). Absent =
+        # base level. Reset every time the popup is (re)built, so a changed
+        # mind only persists while the menu is open.
+        self.cast_levels: dict[str, int] = {}
 
         # Build entries grouped by level
         self._entries: list[_SpellEntry] = self._build_entries(
@@ -173,13 +179,71 @@ class SpellPopup(Popup):
         y = max(4, min(self._screen_height - self.rect.height - 4, y))
         self.rect.topleft = (x, y)
 
+    # ── Upcasting ────────────────────────────────────────────────────
+
+    # Right-side column reserved for the upcast level + arrows
+    UPCAST_ZONE_W = 34
+
+    def _castable_levels(self, action: Action) -> list[int]:
+        """Slot levels this spell may be cast at, base first.
+
+        Base level is always offered (the engine refuses the cast if the
+        slot is spent); higher levels only while a slot remains.
+        """
+        base = _spell_level(action)
+        higher = [
+            lvl for lvl in get_available_upcast_levels(action, self.creature)
+            if lvl > base
+        ]
+        return [base] + higher
+
+    def chosen_level(self, action: Action) -> int:
+        """The currently selected cast level for a spell (base if untouched)."""
+        return self.cast_levels.get(action.name, _spell_level(action))
+
+    def _step_cast_level(self, action: Action, delta: int) -> None:
+        """Move the chosen cast level up/down through the castable levels."""
+        levels = self._castable_levels(action)
+        current = self.chosen_level(action)
+        idx = levels.index(current) if current in levels else 0
+        idx = max(0, min(len(levels) - 1, idx + delta))
+        self.cast_levels[action.name] = levels[idx]
+
+    def _upcast_zone(self, entry_index: int) -> pygame.Rect | None:
+        """The screen rect of an entry's upcast control column, if any."""
+        entry = self._entries[entry_index]
+        if entry.is_header or entry.action is None:
+            return None
+        if not can_upcast(entry.action) or len(self._castable_levels(entry.action)) < 2:
+            return None
+        y = self._entry_y(entry_index)
+        if y is None:
+            return None
+        return pygame.Rect(
+            self.rect.right - self.UPCAST_ZONE_W - 2, y,
+            self.UPCAST_ZONE_W, self.ENTRY_HEIGHT,
+        )
+
+    def _upcast_arrow_at(self, pos: tuple[int, int]) -> tuple[Action, int] | None:
+        """If *pos* hits an upcast control, return (action, +1/-1)."""
+        entry = self._entry_at(pos)
+        if entry is None or entry.is_header or entry.action is None:
+            return None
+        idx = self._entries.index(entry)
+        zone = self._upcast_zone(idx)
+        if zone is None or not zone.collidepoint(pos):
+            return None
+        delta = 1 if pos[1] < zone.centery else -1
+        return (entry.action, delta)
+
     # ── Event Handling ───────────────────────────────────────────────
 
     def handle_event(self, event: pygame.event.Event) -> str | None:
         """Handle events for the popup.
 
         Returns:
-            ``"action:<name>"`` when a spell is clicked.
+            ``"action:<name>"`` when a spell is clicked (with an
+            ``"@<level>"`` suffix when cast above its base level).
             ``"__close__"`` when the popup should close.
             ``None`` otherwise.
         """
@@ -199,6 +263,15 @@ class SpellPopup(Popup):
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             if not self.rect.collidepoint(event.pos):
                 return "__close__"
+            if not self.action_used:
+                # Upcast arrows adjust the level without casting
+                arrow_hit = self._upcast_arrow_at(event.pos)
+                if arrow_hit is not None:
+                    action, delta = arrow_hit
+                    self._step_cast_level(action, delta)
+                    # Refresh the tooltip so the preview tracks the level
+                    self._update_hover(event.pos)
+                    return None
             entry = self._entry_at(event.pos)
             if (
                 entry is not None
@@ -208,6 +281,9 @@ class SpellPopup(Popup):
             ):
                 from arena.audio.manager import get_sound_manager
                 get_sound_manager().play_sfx("button_click")
+                level = self.chosen_level(entry.action)
+                if level != _spell_level(entry.action):
+                    return f"action:{entry.action.name}@{level}"
                 return f"action:{entry.action.name}"
 
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -286,19 +362,23 @@ class SpellPopup(Popup):
                         text_x = entry_rect.x + 28
 
                     text_color = (
-                        (100, 100, 100)
+                        parse_color(COLORS["text_disabled"])
                         if self.action_used
                         else parse_color(COLORS["text_primary"])
                     )
                     text_surf = entry_font.render(entry.label, True, text_color)
                     surface.blit(text_surf, (text_x, y + 3))
 
+                    # Upcast controls: chosen level + stacked up/down arrows
+                    if not self.action_used:
+                        self._render_upcast_controls(surface, i, y)
+
             y += h
             visible_idx += 1
 
         surface.set_clip(None)
 
-        # Scroll indicators
+        # Scroll indicators (below, after clip release)
         if self.scroll_offset > 0:
             indicator_color = parse_color(COLORS["text_secondary"])
             pygame.draw.polygon(
@@ -321,6 +401,51 @@ class SpellPopup(Popup):
                     (content_rect.centerx, content_rect.bottom),
                 ],
             )
+
+    def _render_upcast_controls(
+        self, surface: pygame.Surface, entry_index: int, y: int
+    ) -> None:
+        """Draw the cast-level readout + up/down arrows for an entry row."""
+        zone = self._upcast_zone(entry_index)
+        if zone is None:
+            return
+        entry = self._entries[entry_index]
+        action = entry.action
+        levels = self._castable_levels(action)
+        chosen = self.chosen_level(action)
+        base = _spell_level(action)
+
+        # Level readout — gold once raised above base
+        label_color = (
+            parse_color(COLORS["text_gold"]) if chosen > base
+            else parse_color(COLORS["text_secondary"])
+        )
+        font = get_font(FONT_SIZES["small"])
+        label = font.render(str(chosen), True, label_color)
+        surface.blit(
+            label,
+            (zone.x + 8 - label.get_width() // 2, y + (self.ENTRY_HEIGHT - label.get_height()) // 2),
+        )
+
+        # Stacked arrows; dim an arrow when it can't step further
+        ax = zone.x + 22
+        up_ok = chosen < levels[-1]
+        down_ok = chosen > levels[0]
+        up_color = (
+            parse_color(COLORS["text_primary"]) if up_ok
+            else parse_color(COLORS["text_disabled"])
+        )
+        down_color = (
+            parse_color(COLORS["text_primary"]) if down_ok
+            else parse_color(COLORS["text_disabled"])
+        )
+        mid = y + self.ENTRY_HEIGHT // 2
+        pygame.draw.polygon(surface, up_color, [
+            (ax - 5, mid - 2), (ax + 5, mid - 2), (ax, mid - 9),
+        ])
+        pygame.draw.polygon(surface, down_color, [
+            (ax - 5, mid + 2), (ax + 5, mid + 2), (ax, mid + 9),
+        ])
 
     def render_tooltip(self, surface: pygame.Surface) -> None:
         """Render tooltip for the hovered spell entry."""
@@ -429,12 +554,10 @@ class SpellPopup(Popup):
         }.get(action.action_type.value, "Action")
         lines.append(f"{type_label} \u2022 {economy}")
 
-        # Spell description
+        # Spell description — wrapped, not truncated
         if action.description:
-            desc = action.description
-            if len(desc) > 60:
-                desc = desc[:57] + "..."
-            lines.append(desc)
+            font = get_font(FONT_SIZES["content"])
+            lines.extend(wrap_text(action.description, font, 300))
 
         # Attack info
         if action.attack:
@@ -475,5 +598,15 @@ class SpellPopup(Popup):
         # Concentration
         if action.requires_concentration:
             lines.append("Concentration")
+
+        # Upcast scaling + current selection
+        if can_upcast(action):
+            scale = action.upcast_damage_dice or action.upcast_healing_dice
+            step = action.upcast_damage_per_levels
+            per = "slot level" if step == 1 else f"{step} slot levels"
+            lines.append(f"Upcast: +{scale} per {per}")
+            chosen = self.chosen_level(action)
+            if chosen > level:
+                lines.append(f"Casting with a level {chosen} slot")
 
         return lines if lines else [action.name]

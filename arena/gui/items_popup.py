@@ -11,7 +11,7 @@ import pygame
 
 from arena.models.actions import Action, ActionType
 from arena.gui.icons import get_icon
-from arena.gui.popup_base import Popup
+from arena.gui.popup_base import Popup, wrap_text
 from arena.gui.renderer import get_font
 from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
@@ -270,12 +270,10 @@ class ItemsPopup(Popup):
         else:
             lines.append(economy)
 
-        # Description
+        # Description — wrapped, not truncated
         if action.description:
-            desc = action.description
-            if len(desc) > 60:
-                desc = desc[:57] + "..."
-            lines.append(desc)
+            font = get_font(FONT_SIZES["content"])
+            lines.extend(wrap_text(action.description, font, 300))
 
         # Healing
         if action.healing:

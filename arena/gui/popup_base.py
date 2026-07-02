@@ -145,6 +145,42 @@ class Popup:
         surface.blit(surf, surf.get_rect(center=rect.center))
 
 
+def wrap_text(
+    text: str,
+    font: pygame.font.Font,
+    max_width: int,
+    max_lines: int = 8,
+) -> list[str]:
+    """Word-wrap *text* to fit *max_width* pixels in *font*.
+
+    Long descriptions wrap across lines instead of truncating mid-sentence;
+    only past *max_lines* does an ellipsis cut in.
+    """
+    def _width(s: str) -> int:
+        try:
+            return font.size(s)[0]
+        except pygame.error:
+            # A cached font can outlive its pygame lifecycle in tests
+            # (fixtures quit/re-init pygame); estimate rather than crash.
+            return len(s) * 7
+
+    lines: list[str] = []
+    current = ""
+    for word in text.split():
+        trial = f"{current} {word}".strip()
+        if not current or _width(trial) <= max_width:
+            current = trial
+        else:
+            lines.append(current)
+            current = word
+        if len(lines) == max_lines:
+            lines[-1] += " …"
+            return lines
+    if current:
+        lines.append(current)
+    return lines
+
+
 def draw_modal_dim(
     surface: pygame.Surface,
     alpha: int = 100,

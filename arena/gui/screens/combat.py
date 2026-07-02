@@ -1557,6 +1557,14 @@ class CombatScreen(Screen):
 
         elif result.startswith("action:"):
             action_name = result[7:]
+            # Optional "@<level>" suffix carries an upcast slot choice from
+            # the spell popup (e.g. "action:Web@3").
+            cast_level: int | None = None
+            if "@" in action_name:
+                maybe_name, _, lvl_str = action_name.rpartition("@")
+                if lvl_str.isdigit():
+                    action_name = maybe_name
+                    cast_level = int(lvl_str)
             active = self.combat.active_combatant
             if active:
                 for action in active.creature.actions:
@@ -1564,12 +1572,12 @@ class CombatScreen(Screen):
                         if action.is_wall:
                             # Wall placement (D-WALL-1): enter two-click line mode
                             # — first click anchors one end, second draws the wall.
-                            self.combat.select_action(action)
+                            self.combat.select_action(action, cast_level=cast_level)
                             self._pending_wall = True
                             self._wall_anchor = None
                             self.combat.turn_phase = TurnPhase.SELECTING_TARGET
                         elif action.summon_creature:
-                            self.combat.select_action(action)
+                            self.combat.select_action(action, cast_level=cast_level)
                             if action.is_wild_shape and active.position:
                                 # Wild Shape transforms in-place — no hex click needed
                                 self.combat.execute_summon(active.position)
@@ -1577,7 +1585,7 @@ class CombatScreen(Screen):
                                 # Enter summon placement mode (click a hex)
                                 self._pending_summon = True
                         elif action.teleport_range is not None:
-                            self.combat.select_action(action)
+                            self.combat.select_action(action, cast_level=cast_level)
                             if action.teleport_passenger:
                                 self._try_show_passenger_popup(action)
                             else:
@@ -1595,14 +1603,14 @@ class CombatScreen(Screen):
                             # zone — so cast immediately, no hex to pick. Lines
                             # and cones are excluded: they EMANATE in a chosen
                             # direction, so they need the aim step below.
-                            self.combat.select_action(action)
+                            self.combat.select_action(action, cast_level=cast_level)
                             self.combat.execute_effect_at_hex(
                                 active.position,
                                 clicked_target_id=active.creature_id,
                             )
                             self._check_pending_counterspell()
                         else:
-                            self.combat.select_action(action)
+                            self.combat.select_action(action, cast_level=cast_level)
                         break
 
         elif result == "drop_concentration":

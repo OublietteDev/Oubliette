@@ -416,6 +416,15 @@ class RadialMenu:
         if dist <= ring_outer:
             return True
 
+        # Pagination arrows sit centered ON the ring boundary, so their
+        # outer half is beyond ring_outer — without this check a click
+        # there paginates and then reads as "outside", closing the menu.
+        if self.total_pages > 1:
+            if self._point_in_arrow(pos, self._next_arrow_center):
+                return True
+            if self._point_in_arrow(pos, self._prev_arrow_center):
+                return True
+
         # Check popup area
         if self.state == RadialMenuState.SPELL_POPUP and self.spell_popup is not None:
             if self.spell_popup.rect.collidepoint(pos):
@@ -1125,10 +1134,14 @@ class RadialMenu:
     def _point_in_arrow(
         self, pos: tuple[int, int], arrow_center: tuple[int, int]
     ) -> bool:
-        """Check if pos is inside a pagination arrow circle."""
+        """Check if pos is inside a pagination arrow circle.
+
+        A few pixels of grace beyond the drawn circle — these are small
+        targets and a near-miss should page, not close the menu.
+        """
         dx = pos[0] - arrow_center[0]
         dy = pos[1] - arrow_center[1]
-        return math.hypot(dx, dy) <= self._arrow_radius
+        return math.hypot(dx, dy) <= self._arrow_radius + 4
 
     def _update_hover(self, pos: tuple[int, int]) -> None:
         """Update hover state for slots and arrows."""
