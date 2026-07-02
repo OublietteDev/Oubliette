@@ -385,6 +385,7 @@ class CombatScreen(Screen):
         self._impact_source: str | None = None  # acting creature of that group
         self._hp_credit: dict[str, int] = {}  # damage dealt but not yet shown
         self._downed_hold: set[str] = set()  # render upright until impact lands
+        self._log_reveal_index: int = 0  # log lines visible so far (chronological)
 
         # Programmatic visual effects (code-drawn, not PNG frame sequences)
         self._visual_effects: list[AoEBlastEffect | ZoneCreationPulse | SpawnEffect] = []
@@ -536,6 +537,8 @@ class CombatScreen(Screen):
         self._impact_source = None
         self._hp_credit.clear()
         self._downed_hold.clear()
+        self._log_reveal_index = len(self.combat.log.events)
+        self.log_panel.reveal_count = self._log_reveal_index
 
         # Select the first active creature
         active = self.combat.active_combatant
@@ -1939,6 +1942,9 @@ class CombatScreen(Screen):
         # Fire animation beats that are due (travel finished → impact, etc.)
         self._director.update(pygame.time.get_ticks())
 
+        # The log only shows lines whose beat has visually played
+        self.log_panel.reveal_count = self._log_reveal_index
+
         # Animate display HP toward actual HP each frame. Damage that
         # hasn't visually landed yet (queued impact beats) stays "credited"
         # so the bar doesn't drop before the projectile arrives.
@@ -2479,12 +2485,12 @@ class CombatScreen(Screen):
         now = pygame.time.get_ticks()
         hex_size = get_settings().display.default_hex_size
 
-        for event in events[self._last_event_index:]:
-            self._sequence_event(event, hex_size, now)
+        for idx in range(self._last_event_index, len(events)):
+            self._sequence_event(events[idx], idx, hex_size, now)
 
         self._last_event_index = len(events)
 
-    def _sequence_event(self, event, hex_size: int, now: int) -> None:
+    def _sequence_event(self, event, idx: int, hex_size: int, now: int) -> None:
         """Route one combat event's visuals: into beats or immediate."""
         # World position of the target (visual anchor for most cues)
         wx: float | None = None
@@ -2503,7 +2509,11 @@ class CombatScreen(Screen):
                 lambda t, e=event, x=wx, y=wy:
                 self._try_spawn_animation(e, x, y, hex_size, t)
             )
-            self._director.enqueue(Beat(cues=[anim_cue], duration_ms=hold_ms))
+            # The action's log line ("X attacks Y") reveals with the swing
+            reveal_cue = lambda t, i=idx: self._reveal_log_to(i + 1)
+            self._director.enqueue(
+                Beat(cues=[anim_cue, reveal_cue], duration_ms=hold_ms)
+            )
             self._pending_impact = self._director.enqueue(
                 Beat(duration_ms=IMPACT_BEAT_MS)
             )
@@ -2515,6 +2525,18 @@ class CombatScreen(Screen):
             self._impact_source = None
 
         beat = self._open_impact_beat_for(event)
+
+        # Log reveal: an event's line shows when its visuals land. Events
+        # outside the group still wait for any pending impact ahead of
+        # them, so the log never runs ahead of the action chronologically.
+        if hold_ms is None or wx is None:
+            reveal_beat = beat if beat is not None else self._pending_impact
+            if reveal_beat is not None and not reveal_beat.fired:
+                reveal_beat.add_cue(
+                    lambda t, i=idx: self._reveal_log_to(i + 1)
+                )
+            else:
+                self._reveal_log_to(idx + 1)
 
         # Programmatic visual effects (blast rings, shove trails, spawn
         # glows): land with the group's impact when part of one.
@@ -2567,6 +2589,11 @@ class CombatScreen(Screen):
                 pending.add_cue(
                     lambda t, cid=target_id: self._downed_hold.discard(cid)
                 )
+
+    def _reveal_log_to(self, idx: int) -> None:
+        """Advance the log's visible-line cap (monotonic)."""
+        if idx > self._log_reveal_index:
+            self._log_reveal_index = idx
 
     def _open_impact_beat_for(self, event) -> Beat | None:
         """The open impact beat this event's visuals belong to, if any.
@@ -2875,6 +2902,8 @@ class CombatScreen(Screen):
         self._impact_source = None
         self._hp_credit.clear()
         self._downed_hold.clear()
+        self._log_reveal_index = len(self.combat.log.events)
+        self.log_panel.reveal_count = self._log_reveal_index
 
         # Select the active combatant
         active = self.combat.active_combatant

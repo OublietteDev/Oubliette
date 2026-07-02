@@ -105,6 +105,11 @@ class CombatLogPanel:
         self.combat_log: CombatLog | None = None
         self.scroll_offset: int = 0
         self._last_event_count: int = 0
+        # Reveal cap set by the combat screen's animation sequencing:
+        # events past this index exist in the log but haven't visually
+        # "happened" yet, so they stay hidden (and silent) until their
+        # beat plays. None = show everything (no sequencing active).
+        self.reveal_count: int | None = None
         # Optional creature_id -> team resolver (set by the combat screen);
         # enables the team-colored actor chip in front of each line.
         self.team_resolver = None
@@ -119,14 +124,22 @@ class CombatLogPanel:
         self.combat_log = combat_log
         self._last_event_count = len(combat_log.events)
 
-    def _get_filtered_events(self) -> list:
-        """Get events matching the active filter."""
+    def _revealed_events(self) -> list:
+        """All events that have visually happened (reveal cap applied)."""
         if self.combat_log is None:
             return []
+        events = self.combat_log.events
+        if self.reveal_count is None:
+            return events
+        return events[: self.reveal_count]
+
+    def _get_filtered_events(self) -> list:
+        """Get revealed events matching the active filter."""
+        events = self._revealed_events()
         if self.active_filter == LogFilter.ALL:
-            return self.combat_log.events
+            return events
         allowed = FILTER_TYPES.get(self.active_filter, set())
-        return [e for e in self.combat_log.events if e.event_type in allowed]
+        return [e for e in events if e.event_type in allowed]
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """Handle scroll and filter click events."""
@@ -176,13 +189,16 @@ class CombatLogPanel:
         """
         from arena.util.settings import get_settings
 
-        if self.combat_log and len(self.combat_log.events) != self._last_event_count:
+        # Newly REVEALED events (not newly logged): sounds and the
+        # auto-scroll wait until an event's beat has visually played.
+        revealed = self._revealed_events()
+        if self.combat_log and len(revealed) != self._last_event_count:
             # Play sounds for new events
             from arena.audio.events import play_event_sound
-            for event in self.combat_log.events[self._last_event_count:]:
+            for event in revealed[self._last_event_count:]:
                 play_event_sound(event.event_type, event.details)
 
-            self._last_event_count = len(self.combat_log.events)
+            self._last_event_count = len(revealed)
             if get_settings().system.auto_scroll_combat_log:
                 self.scroll_offset = 0  # Snap to bottom on new event
 

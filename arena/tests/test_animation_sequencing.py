@@ -155,6 +155,7 @@ def _make_screen(monkeypatch, frames=8, fps=20):
     screen._downed_hold = set()
     screen._flash_until = {}
     screen._floating_texts = []
+    screen._log_reveal_index = 0
 
     screen.spawned_anims = []
     screen.spawned_effects = []
@@ -183,9 +184,9 @@ def _ranged_hit(source="archer", target="goblin", damage=6, crit=False):
     ]
 
 
-def _feed(screen, events, now):
-    for event in events:
-        screen._sequence_event(event, HEX_SIZE, now)
+def _feed(screen, events, now, start_idx=0):
+    for offset, event in enumerate(events):
+        screen._sequence_event(event, start_idx + offset, HEX_SIZE, now)
 
 
 class TestAttackGrouping:
@@ -408,6 +409,37 @@ class TestEffectDeferral:
         assert [e.event_type for e, _ in screen.spawned_effects] == [
             CombatEventType.TELEPORT
         ]
+
+
+class TestLogRevealSync:
+    def test_log_lines_reveal_with_their_beats(self, monkeypatch):
+        # Batch: attack(0), damage(1), turn_end(2). The attack line
+        # shows at the swing, damage at impact, and the trailing
+        # turn-end line must not run ahead of the impact.
+        screen = _make_screen(monkeypatch)
+        events = _ranged_hit() + [
+            CombatEvent(CombatEventType.TURN_END, "turn ends"),
+        ]
+        _feed(screen, events, now=1000)
+        assert screen._log_reveal_index == 0
+
+        screen._director.update(1000)  # swing launches
+        assert screen._log_reveal_index == 1  # attack line only
+
+        screen._director.update(1000 + PROJECTILE_TRAVEL_MS)  # impact
+        assert screen._log_reveal_index == 3  # damage + turn-end lines
+
+    def test_groupless_events_reveal_immediately(self, monkeypatch):
+        screen = _make_screen(monkeypatch)
+        event = CombatEvent(CombatEventType.TURN_START, "turn starts")
+        screen._sequence_event(event, 5, HEX_SIZE, 1000)
+        assert screen._log_reveal_index == 6
+
+    def test_reveal_is_monotonic(self, monkeypatch):
+        screen = _make_screen(monkeypatch)
+        screen._reveal_log_to(10)
+        screen._reveal_log_to(3)
+        assert screen._log_reveal_index == 10
 
 
 class TestHealing:
