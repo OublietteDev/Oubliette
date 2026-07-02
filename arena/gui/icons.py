@@ -1,8 +1,9 @@
-"""Procedural icon generation for radial menu slots.
+"""Icon lookup for radial menu slots and popup rows.
 
-Generates small pygame Surface icons for D&D actions, weapons, spells,
-cantrips, and standard actions. Icons are drawn using pygame primitives
-and cached after first creation.
+Art-first with a procedural fallback: a PNG named ``<icon_id>.png`` in
+``assets/ui/icons/`` wins; otherwise the icon is drawn with pygame
+primitives. Both paths cache per (icon_id, size), so dropping new art in
+the folder upgrades the UI with no code change (next Arena launch).
 
 Each icon is a square SRCALPHA surface rendered at a requested size.
 """
@@ -13,8 +14,39 @@ import math
 
 import pygame
 
+from arena.paths import ASSETS_DIR
+
+# PNG art directory — files are <icon_id>.png (64x64, transparent bg)
+_PNG_ICON_DIR = ASSETS_DIR / "ui" / "icons"
+
 # Icon cache: (icon_id, size) -> Surface
 _icon_cache: dict[tuple[str, int], pygame.Surface] = {}
+
+# Raw PNG cache: icon_id -> full-size Surface (None = no art on disk)
+_png_raw_cache: dict[str, pygame.Surface | None] = {}
+
+
+def _load_png_icon(icon_id: str, size: int) -> pygame.Surface | None:
+    """The PNG art for an icon id, scaled to *size* — or None if absent."""
+    if icon_id not in _png_raw_cache:
+        path = _PNG_ICON_DIR / f"{icon_id}.png"
+        raw: pygame.Surface | None = None
+        if path.is_file():
+            try:
+                raw = pygame.image.load(str(path))
+                try:
+                    raw = raw.convert_alpha()
+                except pygame.error:
+                    pass  # no display yet — unconverted surface still blits
+            except (pygame.error, OSError):
+                raw = None
+        _png_raw_cache[icon_id] = raw
+    raw = _png_raw_cache[icon_id]
+    if raw is None:
+        return None
+    if raw.get_size() == (size, size):
+        return raw
+    return pygame.transform.smoothscale(raw, (size, size))
 
 
 def get_icon(name: str, size: int) -> pygame.Surface | None:
@@ -29,11 +61,19 @@ def get_icon(name: str, size: int) -> pygame.Surface | None:
 
     key = (icon_id, size)
     if key not in _icon_cache:
-        surf = _render_icon(icon_id, size)
+        surf = _load_png_icon(icon_id, size)
+        if surf is None:
+            surf = _render_icon(icon_id, size)
         if surf is None:
             return None
         _icon_cache[key] = surf
     return _icon_cache[key]
+
+
+def clear_icon_cache() -> None:
+    """Drop all cached icons (art and procedural) — new PNGs load fresh."""
+    _icon_cache.clear()
+    _png_raw_cache.clear()
 
 
 # ── Name → icon ID mapping ──────────────────────────────────────────
@@ -251,6 +291,10 @@ _EXACT_MAP: dict[str, str] = {
     "tactics": "tactics_group",
     "end turn": "end_turn",
     "off-hand": "offhand",
+    "items": "items_group",
+    "use item": "items_group",
+    "use new item": "items_group",
+    "abilities": "ability_group",
 }
 
 # Keyword fallbacks — checked if no exact match
