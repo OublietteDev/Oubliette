@@ -394,9 +394,21 @@ class AIController:
                 attack_this_turn=False,  # the action is spent on Dash
             )
         elif needs_approach or (not best_action) or best_action.action_category == "standard":
-            # Move before acting
+            # Move before acting. An approach for an attack/effect must walk
+            # at the ACTION's target — preferred_target is the threat
+            # ranking's winner and can be a different creature entirely,
+            # which walked the attacker one way while its swing was aimed
+            # another ("out of range" whiff on a planned attack).
+            move_target = preferred_target
+            if (needs_approach and best_action is not None
+                    and best_action.target_id is not None):
+                move_target = next(
+                    (e for e in context.enemies
+                     if e.creature_id == best_action.target_id),
+                    preferred_target,
+                )
             self._plan_movement(
-                plan, profile, context, manager, preferred_target
+                plan, profile, context, manager, move_target
             )
 
         # ── Action ────────────────────────────────────────────────────

@@ -63,6 +63,15 @@ def score_attack_action(
     if distance_hexes > action_range_hexes:
         base -= (distance_hexes - action_range_hexes) * 10
 
+    # Unattackable THIS turn (can't close the gap even with full movement):
+    # a decisive penalty, not a gentle slope. Without it a high-threat far
+    # target can outbid an adjacent one — the creature then walks at the
+    # far target, whiffs "out of range", and ignores the enemy at its feet
+    # (OublietteDev's triceratops/Gore report, 2026-07-02).
+    move_hexes = context.remaining_movement // 5
+    if distance_hexes > action_range_hexes + move_hexes:
+        base -= 150.0
+
     # Melee/ranged alignment with profile
     is_melee_action = action.attack and action.attack.attack_type.startswith("melee")
     if is_melee_action and not profile.prefers_melee:
@@ -134,6 +143,10 @@ def score_effect_action(
     action_range_hexes = _get_action_range_hexes(action)
     if distance_hexes > action_range_hexes:
         base -= (distance_hexes - action_range_hexes) * 10
+
+    # Unattackable this turn — same decisive penalty as attack scoring
+    if distance_hexes > action_range_hexes + context.remaining_movement // 5:
+        base -= 150.0
 
     # Area effects: real geometry (B5). Measure the blast from its ACTUAL center.
     # A non-concentration burst (Fireball, breath) is placed on the target hex

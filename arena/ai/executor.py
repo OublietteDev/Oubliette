@@ -161,36 +161,72 @@ def _execute_select_action(
     return None
 
 
+def _selected_action_range_hexes(manager: CombatManager) -> int | None:
+    """The selected action's range in hexes, or None if no action is selected."""
+    action = manager.selected_action
+    if action is None:
+        return None
+    attack = getattr(action, "attack", None)
+    if attack is not None:
+        if getattr(attack, "range_normal", None):
+            return attack.range_normal // 5
+        return max(1, (attack.reach or 5) // 5)
+    return max(1, (action.range or 5) // 5)
+
+
 def _resolve_attack_target(
     manager: CombatManager, target_id: str | None
 ) -> str | None:
-    """Return a valid (living, hostile) target id for the active attacker.
+    """Return a valid (living, hostile, in-range) target id for the attacker.
 
     Multiattack swings are planned up front against one chosen target. If an
     earlier swing drops that target, the remaining swings would otherwise
-    flail at a corpse — so when the planned target is gone or unconscious,
-    redirect to the nearest living enemy instead of wasting the attack.
+    flail at a corpse. And the planned target can end up OUT OF RANGE at
+    swing time (the approach fell short, or the plan chased a far target
+    while another enemy stood adjacent) — the swing then whiffed "out of
+    range" and the turn was wasted. So: keep the planned target if it's
+    alive and reachable; otherwise redirect to the nearest living enemy the
+    selected action can actually reach; if nobody is reachable, skip the
+    swing (None) rather than attack air.
     """
+    from arena.grid.footprint import min_distance_between
+
     attacker = manager.active_combatant
     if attacker is None:
         return target_id
 
+    range_hexes = _selected_action_range_hexes(manager)
+
+    def _dist(c) -> int | None:
+        if c.position is None or attacker.position is None:
+            return None
+        return min_distance_between(
+            attacker.position, attacker.creature.size,
+            c.position, c.creature.size,
+        )
+
+    def _in_range(c) -> bool:
+        if range_hexes is None:
+            return True  # no action selected — keep legacy behavior
+        d = _dist(c)
+        return d is None or d <= range_hexes
+
     planned = manager.combatants.get(target_id) if target_id else None
     if (planned is not None
             and planned.team != attacker.team
-            and planned.creature.is_conscious):
+            and planned.creature.is_conscious
+            and _in_range(planned)):
         return target_id  # original target still valid
 
-    # Redirect to the nearest conscious enemy.
+    # Redirect to the nearest conscious enemy the action can reach.
     best_id: str | None = None
     best_dist = None
     for cid, c in manager.combatants.items():
         if c.team == attacker.team or not c.creature.is_conscious:
             continue
-        if c.position is None or attacker.position is None:
-            dist = 0
-        else:
-            dist = attacker.position.distance_to(c.position)
+        if not _in_range(c):
+            continue
+        dist = _dist(c) or 0
         if best_dist is None or dist < best_dist:
             best_dist = dist
             best_id = cid

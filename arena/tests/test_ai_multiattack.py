@@ -180,3 +180,38 @@ def test_resolve_target_none_when_no_enemies_left():
     _advance_to(cm, "beast")
     cm.combatants["hero"].creature.current_hit_points = 0
     assert _resolve_attack_target(cm, "hero") is None
+
+
+def test_resolve_target_redirects_from_out_of_range():
+    """OublietteDev's triceratops report (2026-07-02): the planned target ended
+    out of the selected action's reach while another enemy stood adjacent
+    — the swing whiffed 'out of range' and the adjacent enemy was ignored.
+    With a melee action selected, the swing redirects to the reachable
+    enemy instead."""
+    cm = _start([
+        CombatantEntry(creature_id="beast", creature_data=_monster(extra_attacks=0),
+                       team="enemy", starting_position=(3, 3)),
+        CombatantEntry(creature_id="near", creature_data=_player("Near"),
+                       team="player", starting_position=(4, 3)),   # adjacent
+        CombatantEntry(creature_id="far", creature_data=_player("Far"),
+                       team="player", starting_position=(11, 11)),  # way out
+    ])
+    _advance_to(cm, "beast")
+    cm.select_action(cm.combatants["beast"].creature.actions[0])  # Claw, reach 5
+
+    assert _resolve_attack_target(cm, "far") == "near"
+
+
+def test_resolve_target_skips_when_nobody_in_reach():
+    """Planned target out of reach and no reachable alternative: the swing
+    is skipped (None) instead of whiffing 'out of range' into the log."""
+    cm = _start([
+        CombatantEntry(creature_id="beast", creature_data=_monster(extra_attacks=0),
+                       team="enemy", starting_position=(3, 3)),
+        CombatantEntry(creature_id="far", creature_data=_player("Far"),
+                       team="player", starting_position=(11, 11)),
+    ])
+    _advance_to(cm, "beast")
+    cm.select_action(cm.combatants["beast"].creature.actions[0])
+
+    assert _resolve_attack_target(cm, "far") is None
