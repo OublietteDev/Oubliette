@@ -179,3 +179,101 @@ def test_charge_rider_no_prone_on_successful_save():
         rr = resolve_rider(feat, feat.on_hit_rider, boar, target)
     assert rr.condition_to_apply is None
     assert rr.bonus_damage  # damage still applies regardless of the save
+
+
+# ── The GUI-facing charge marker (animation sequencing) ───────────────────────
+
+def test_resolve_rider_marks_charge_riders():
+    boar = _boar()
+    target = Creature(name="Hero", max_hit_points=30, ability_scores=AbilityScores())
+    feat = boar.special_abilities[0]
+    with patch("arena.combat.riders.roll_die", return_value=20):
+        rr = resolve_rider(feat, feat.on_hit_rider, boar, target)
+    assert rr.from_charge is True
+
+    plain = OnHitRider(trigger=RiderTrigger.AUTOMATIC, damage_dice="1d6",
+                       damage_type="radiant")
+    plain_feat = Feature(name="Smitey", description="x", on_hit_rider=plain)
+    rr2 = resolve_rider(plain_feat, plain, boar, target)
+    assert rr2.from_charge is False
+
+
+def test_charge_hit_stamps_damage_event():
+    """complete_attack stamps `charged: True` on the damage event when a
+    move-then-strike rider fired, so the GUI can play the hit as a charge."""
+    from arena.combat.actions import resolve_attack_hit
+    from arena.combat.events import CombatEventType
+
+    boar = _boar()
+    hero = Creature(name="Hero", max_hit_points=40, current_hit_points=40,
+                    armor_class=1, ability_scores=AbilityScores(strength=6),
+                    is_player_controlled=False)
+    enc = Encounter(name="adj", grid_width=10, grid_height=10, combatants=[
+        CombatantEntry(creature_id="hero", creature_data=hero, team="player",
+                       starting_position=(0, 0)),
+        CombatantEntry(creature_id="boar", creature_data=boar, team="enemy",
+                       starting_position=(1, 0)),
+    ])
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("."))
+    with patch("arena.combat.manager.roll_die", side_effect=[20, 10]):
+        cm.roll_initiative()
+    cm.begin_combat()
+    boar_id = next(k for k, v in cm.combatants.items() if v.team == "enemy")
+    hero_id = next(k for k, v in cm.combatants.items() if v.team == "player")
+
+    with patch("arena.combat.actions.roll_die", return_value=20):
+        hr = resolve_attack_hit(
+            boar, boar_id, cm.combatants[hero_id].creature, hero_id,
+            boar.actions[0], cm.grid, combatants=cm.combatants,
+            attacker_pos=cm.combatants[boar_id].position,
+            target_pos=cm.combatants[hero_id].position)
+    assert hr.hit
+    feat = boar.special_abilities[0]
+    with patch("arena.combat.riders.roll_die", return_value=1):
+        rr = resolve_rider(feat, feat.on_hit_rider, boar,
+                           cm.combatants[hero_id].creature)
+    cm.complete_attack(hr, rider_results=[rr])
+
+    dmg_events = [e for e in cm.log.events
+                  if e.event_type == CombatEventType.DAMAGE
+                  and e.target_id == hero_id]
+    assert dmg_events and dmg_events[0].details.get("charged") is True
+
+
+def test_plain_hit_does_not_stamp_charged():
+    """No rider → no charge marker on the damage event."""
+    from arena.combat.actions import resolve_attack_hit
+    from arena.combat.events import CombatEventType
+
+    boar = _boar()
+    hero = Creature(name="Hero", max_hit_points=40, current_hit_points=40,
+                    armor_class=1, ability_scores=AbilityScores(strength=6),
+                    is_player_controlled=False)
+    enc = Encounter(name="adj", grid_width=10, grid_height=10, combatants=[
+        CombatantEntry(creature_id="hero", creature_data=hero, team="player",
+                       starting_position=(0, 0)),
+        CombatantEntry(creature_id="boar", creature_data=boar, team="enemy",
+                       starting_position=(1, 0)),
+    ])
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("."))
+    with patch("arena.combat.manager.roll_die", side_effect=[20, 10]):
+        cm.roll_initiative()
+    cm.begin_combat()
+    boar_id = next(k for k, v in cm.combatants.items() if v.team == "enemy")
+    hero_id = next(k for k, v in cm.combatants.items() if v.team == "player")
+
+    with patch("arena.combat.actions.roll_die", return_value=20):
+        hr = resolve_attack_hit(
+            boar, boar_id, cm.combatants[hero_id].creature, hero_id,
+            boar.actions[0], cm.grid, combatants=cm.combatants,
+            attacker_pos=cm.combatants[boar_id].position,
+            target_pos=cm.combatants[hero_id].position)
+    assert hr.hit
+    cm.complete_attack(hr)
+
+    dmg_events = [e for e in cm.log.events
+                  if e.event_type == CombatEventType.DAMAGE
+                  and e.target_id == hero_id]
+    assert dmg_events and "charged" not in dmg_events[0].details

@@ -31,6 +31,8 @@ class RiderResult:
     save_dc: int | None = None
     save_ability: str | None = None  # For the condition's save_to_end
     log_message: str | None = None  # Human-readable description
+    from_charge: bool = False  # Fired via a move-then-strike gate (Charge/
+    # Pounce) — lets the GUI give the hit its charge visual
 
 
 # ── Discovery ────────────────────────────────────────────────────────
@@ -275,7 +277,10 @@ def resolve_rider(
     Returns:
         RiderResult with all resolved effects.
     """
-    result = RiderResult(feature_name=feature.name, used=True, slot_level=slot_level)
+    result = RiderResult(
+        feature_name=feature.name, used=True, slot_level=slot_level,
+        from_charge=rider.requires_charge_ft > 0,
+    )
 
     # Deduct resource
     if not deduct_rider_resource(attacker, rider, slot_level):

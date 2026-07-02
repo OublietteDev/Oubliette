@@ -362,3 +362,47 @@ class TestBackwardCompatibility:
         assert result is not None
         assert result.success
         assert cm.combatants[wiz_id].creature.current_hit_points > 10
+
+
+# ── aoe_hexes on the effect-use event (GUI telegraph metadata) ──────
+
+
+class TestAoEHexesInjection:
+    def test_placed_blast_event_carries_true_shape(self):
+        """The effect-use INFO event lists the blast's exact hexes so the
+        GUI can telegraph the real shape (not a center+radius guess)."""
+        cm, wiz_id = _setup_combat(player_actions=[_fireball_action()])
+        cm.select_action(cm.combatants[wiz_id].creature.actions[0])
+
+        target_hex = HexCoord(7, 5)  # enemy stands here
+        result = cm.execute_effect_at_hex(target_hex)
+        assert result is not None and result.success
+
+        info = next(
+            e for e in result.events
+            if e.event_type == CombatEventType.INFO
+            and e.details.get("is_effect_use")
+        )
+        hexes = info.details.get("aoe_hexes")
+        assert hexes, "effect-use event should carry the blast shape"
+        assert (7, 5) in hexes  # center is inside its own blast
+        assert len(hexes) > 1  # a 20ft sphere covers more than one hex
+        assert info.details.get("aoe_center_hex") == (7, 5)
+
+    def test_empty_blast_event_carries_shape_too(self):
+        """Fireball into empty space still telegraphs its area."""
+        cm, wiz_id = _setup_combat(
+            player_actions=[_fireball_action()], enemy_pos=(15, 10),
+        )
+        cm.select_action(cm.combatants[wiz_id].creature.actions[0])
+
+        result = cm.execute_effect_at_hex(HexCoord(3, 3))
+        assert result is not None and result.success
+
+        info = next(
+            e for e in result.events
+            if e.event_type == CombatEventType.INFO
+            and e.details.get("is_effect_use")
+        )
+        hexes = info.details.get("aoe_hexes")
+        assert hexes and (3, 3) in hexes

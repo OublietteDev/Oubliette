@@ -2073,6 +2073,20 @@ class CombatManager:
             or self._attacker_charged(hit_result, rider.requires_charge_ft)
         ]
 
+    def _aoe_hex_list(
+        self, action: Action, combatant, center: HexCoord,
+    ) -> list[tuple[int, int]]:
+        """The AoE's true affected hexes as (q, r) tuples.
+
+        Logged on the effect-use event so the GUI can telegraph the
+        exact blast shape (sphere/cube placed on the center, cone/line
+        emanating from the caster toward it) before the impact lands.
+        """
+        from arena.grid.aoe_shapes import aoe_hexes
+
+        origin = combatant.position or center
+        return [(h.q, h.r) for h in aoe_hexes(action, origin, center, self.grid)]
+
     def _attacker_charged(self, hit_result: AttackHitResult, min_ft: int) -> bool:
         """Whether the attacker moved at least `min_ft` toward the target this
         turn — approximated as 'closed at least that distance' (which on the grid
@@ -2721,6 +2735,17 @@ class CombatManager:
             damage_reduction=damage_reduction,
         )
 
+        # Stamp the damage event when a move-then-strike rider (Charge/
+        # Pounce) fired, so the GUI can play the hit as a charge instead
+        # of an ordinary swing. Display metadata only — damage totals
+        # already include the rider dice.
+        if rider_results and any(rr.used and rr.from_charge for rr in rider_results):
+            for event in result.events[len(hit_result.events):]:
+                if (event.event_type == CombatEventType.DAMAGE
+                        and event.target_id == hit_result.target_id):
+                    event.details["charged"] = True
+                    break
+
         # Apply pending forced movement from the attack result
         attacker_c = self.combatants.get(hit_result.attacker_id)
         if result.success and attacker_c and attacker_c.position is not None:
@@ -3331,6 +3356,9 @@ class CombatManager:
                     if combatant.position is not None:
                         evt.details["aoe_center_hex"] = (combatant.position.q, combatant.position.r)
                         evt.details["area_size"] = action.area_size or action.range
+                        evt.details["aoe_hexes"] = self._aoe_hex_list(
+                            action, combatant, combatant.position,
+                        )
                         if action.saving_throw and action.saving_throw.damage_on_fail:
                             evt.details["aoe_damage_type"] = action.saving_throw.damage_on_fail[0].damage_type.value
                     break
@@ -4358,6 +4386,7 @@ class CombatManager:
                     "is_effect_use": True,
                     "aoe_center_hex": (target_hex.q, target_hex.r),
                     "area_size": action.area_size or action.range,
+                    "aoe_hexes": self._aoe_hex_list(action, combatant, target_hex),
             }
             if action.saving_throw and action.saving_throw.damage_on_fail:
                 aoe_details["aoe_damage_type"] = action.saving_throw.damage_on_fail[0].damage_type.value
@@ -4434,6 +4463,9 @@ class CombatManager:
                 if evt.event_type == CombatEventType.INFO and evt.details.get("is_effect_use"):
                     evt.details["aoe_center_hex"] = (target_hex.q, target_hex.r)
                     evt.details["area_size"] = action.area_size or action.range
+                    evt.details["aoe_hexes"] = self._aoe_hex_list(
+                        action, combatant, target_hex,
+                    )
                     if action.saving_throw and action.saving_throw.damage_on_fail:
                         evt.details["aoe_damage_type"] = action.saving_throw.damage_on_fail[0].damage_type.value
                     break

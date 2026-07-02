@@ -84,6 +84,18 @@ PROJECTILE_TRAVEL_MS = 300  # How long a ranged projectile travels before impact
 # Animation sequencing (beat) constants
 IMPACT_BEAT_MS = 250  # hold after an impact before the next beat plays
 MELEE_IMPACT_DELAY_MS = 150  # swing wind-up before melee damage lands
+TELEGRAPH_MS = 550  # AI AoE danger-zone telegraph before the cast plays
+LUNGE_EXTENT = 0.45  # how far toward the target a charge lunge reaches
+
+
+@dataclass
+class TelegraphState:
+    """A pulsing danger-zone overlay for an incoming AI AoE."""
+
+    hexes: list  # [(q, r), ...] — the blast's true shape from the engine
+    color: tuple[int, int, int]
+    spawn_time: int
+    duration: int
 
 
 @dataclass
@@ -383,9 +395,13 @@ class CombatScreen(Screen):
         self._director = AnimationDirector()
         self._pending_impact: Beat | None = None  # open group's impact beat
         self._impact_source: str | None = None  # acting creature of that group
+        self._pending_anim: Beat | None = None  # open group's swing/travel beat
+        self._pending_anim_hold: int = 0  # that beat's pre-impact hold (ms)
         self._hp_credit: dict[str, int] = {}  # damage dealt but not yet shown
         self._downed_hold: set[str] = set()  # render upright until impact lands
         self._log_reveal_index: int = 0  # log lines visible so far (chronological)
+        self._lunge_animations: dict[str, tuple] = {}  # charge lunge per creature
+        self._active_telegraphs: list[TelegraphState] = []
 
         # Programmatic visual effects (code-drawn, not PNG frame sequences)
         self._visual_effects: list[AoEBlastEffect | ZoneCreationPulse | SpawnEffect] = []
@@ -535,8 +551,11 @@ class CombatScreen(Screen):
         self._director.clear(pygame.time.get_ticks())
         self._pending_impact = None
         self._impact_source = None
+        self._pending_anim = None
         self._hp_credit.clear()
         self._downed_hold.clear()
+        self._lunge_animations.clear()
+        self._active_telegraphs.clear()
         self._log_reveal_index = len(self.combat.log.events)
         self.log_panel.reveal_count = self._log_reveal_index
 
@@ -2006,6 +2025,9 @@ class CombatScreen(Screen):
             # Persistent AoE zone overlays (below movement/attack range overlays)
             self._render_aoe_zones(surface)
 
+            # Incoming-AoE danger telegraphs (same layer as zone overlays)
+            self._render_telegraphs(surface)
+
             # Placed wall spells (Wall of Force/Fire/Stone/...) — a barrier you
             # can't see is confusing even when it's narratively invisible.
             self._render_active_walls(surface)
@@ -2501,19 +2523,49 @@ class CombatScreen(Screen):
             if combatant is not None and combatant.position is not None:
                 wx, wy = combatant.position.to_pixel(hex_size)
 
+        # AoE casts have no single target: anchor their beats (and the
+        # cast animation) on the blast center instead.
+        anchor_x, anchor_y = wx, wy
+        if anchor_x is None:
+            center = event.details.get("aoe_center_hex")
+            if center is not None:
+                anchor_x, anchor_y = HexCoord(
+                    center[0], center[1]
+                ).to_pixel(hex_size)
+
         # An animation-bearing event opens a new group: a travel/swing
         # beat, then an impact beat that later cues attach to.
         hold_ms = self._animation_hold_ms(event)
-        if hold_ms is not None and wx is not None:
+        if hold_ms is not None and anchor_x is not None:
+            # Incoming AI AoE: telegraph the true blast shape first, so
+            # the player can see what a breath/burst covers before it
+            # lands. (The player aimed their own casts — no telegraph.)
+            aoe_shape = event.details.get("aoe_hexes")
+            if aoe_shape and self.ai_runner.is_active:
+                color = get_damage_color(
+                    event.details.get("aoe_damage_type", "force")
+                )
+                telegraph_cue = (
+                    lambda t, hexes=list(aoe_shape), c=color,
+                    dur=TELEGRAPH_MS + hold_ms:
+                    self._active_telegraphs.append(
+                        TelegraphState(hexes, c, t, dur)
+                    )
+                )
+                self._director.enqueue(
+                    Beat(cues=[telegraph_cue], duration_ms=TELEGRAPH_MS)
+                )
+
             anim_cue = (
-                lambda t, e=event, x=wx, y=wy:
+                lambda t, e=event, x=anchor_x, y=anchor_y:
                 self._try_spawn_animation(e, x, y, hex_size, t)
             )
             # The action's log line ("X attacks Y") reveals with the swing
             reveal_cue = lambda t, i=idx: self._reveal_log_to(i + 1)
-            self._director.enqueue(
+            self._pending_anim = self._director.enqueue(
                 Beat(cues=[anim_cue, reveal_cue], duration_ms=hold_ms)
             )
+            self._pending_anim_hold = hold_ms
             self._pending_impact = self._director.enqueue(
                 Beat(duration_ms=IMPACT_BEAT_MS)
             )
@@ -2529,7 +2581,7 @@ class CombatScreen(Screen):
         # Log reveal: an event's line shows when its visuals land. Events
         # outside the group still wait for any pending impact ahead of
         # them, so the log never runs ahead of the action chronologically.
-        if hold_ms is None or wx is None:
+        if hold_ms is None or anchor_x is None:
             reveal_beat = beat if beat is not None else self._pending_impact
             if reveal_beat is not None and not reveal_beat.fired:
                 reveal_beat.add_cue(
@@ -2563,6 +2615,15 @@ class CombatScreen(Screen):
                     beat.add_cue(self._make_damage_cue(
                         target_id, wx, wy, amount, is_crit, deferred=True,
                     ))
+                    # Charge/Pounce hit: the attacker lunges into the
+                    # target with the swing, apex right at the impact
+                    if event.details.get("charged") and event.source_id:
+                        anim_beat = self._pending_anim
+                        if anim_beat is not None and not anim_beat.fired:
+                            anim_beat.add_cue(self._make_lunge_cue(
+                                event.source_id, wx, wy,
+                                self._pending_anim_hold * 2,
+                            ))
                 else:
                     self._make_damage_cue(
                         target_id, wx, wy, amount, is_crit, deferred=False,
@@ -2589,6 +2650,26 @@ class CombatScreen(Screen):
                 pending.add_cue(
                     lambda t, cid=target_id: self._downed_hold.discard(cid)
                 )
+
+    def _make_lunge_cue(
+        self, attacker_id: str, target_wx: float, target_wy: float,
+        duration_ms: int,
+    ):
+        """Build the cue that starts a charge lunge toward the target.
+
+        The attacker's position is read at fire time (it may still be
+        mid-walk when the beats are built).
+        """
+        def cue(t: int) -> None:
+            c = self.combat.combatants.get(attacker_id)
+            if c is None or c.position is None:
+                return
+            hex_size = get_settings().display.default_hex_size
+            fx, fy = c.position.to_pixel(hex_size)
+            self._lunge_animations[attacker_id] = (
+                fx, fy, target_wx, target_wy, t, max(80, duration_ms),
+            )
+        return cue
 
     def _reveal_log_to(self, idx: int) -> None:
         """Advance the log's visible-line cap (monotonic)."""
@@ -2853,6 +2934,35 @@ class CombatScreen(Screen):
                 spawn_time=now, is_wild_shape=is_ws,
             ))
 
+    def _render_telegraphs(self, surface: pygame.Surface) -> None:
+        """Render pulsing danger-zone overlays for incoming AI AoEs."""
+        if not self._active_telegraphs or self.grid_view is None:
+            return
+
+        now = pygame.time.get_ticks()
+        hex_size = get_settings().display.default_hex_size
+        scaled_size = hex_size * self.grid_view.camera.zoom
+        ox, oy = self.grid_view.origin
+        alive: list[TelegraphState] = []
+
+        for tg in self._active_telegraphs:
+            elapsed = now - tg.spawn_time
+            if elapsed >= tg.duration:
+                continue
+            alive.append(tg)
+            # Urgent pulse (~2 Hz) so the zone reads as danger, not decor
+            pulse = 0.5 + 0.5 * math.sin(elapsed / 80.0)
+            alpha = int(45 + 75 * pulse)
+            for q, r in tg.hexes:
+                wx, wy = HexCoord(q, r).to_pixel(hex_size)
+                sx, sy = self.grid_view.camera.world_to_screen(wx, wy)
+                draw_hex_highlight(
+                    surface, (sx + ox, sy + oy), scaled_size,
+                    tg.color, alpha=alpha,
+                )
+
+        self._active_telegraphs = alive
+
     def _render_visual_effects(self, surface: pygame.Surface) -> None:
         """Render programmatic visual effects (AoE blasts, spawn glows, etc.)."""
         if not self._visual_effects or self.grid_view is None:
@@ -2900,8 +3010,11 @@ class CombatScreen(Screen):
         self._director.clear(pygame.time.get_ticks())
         self._pending_impact = None
         self._impact_source = None
+        self._pending_anim = None
         self._hp_credit.clear()
         self._downed_hold.clear()
+        self._lunge_animations.clear()
+        self._active_telegraphs.clear()
         self._log_reveal_index = len(self.combat.log.events)
         self.log_panel.reveal_count = self._log_reveal_index
 
@@ -3444,6 +3557,7 @@ class CombatScreen(Screen):
 
         now = pygame.time.get_ticks()
         expired: list[str] = []
+        lunge_expired: list[str] = []
 
         for cid, combatant in self.combat.combatants.items():
             # Compute interpolated position if a hop animation is active
@@ -3458,6 +3572,17 @@ class CombatScreen(Screen):
                     # Ease-out quadratic for a snappy hop feel
                     t = 1.0 - (1.0 - t) ** 2
                     pixel_override = (sx + (ex - sx) * t, sy + (ey - sy) * t)
+
+            # Charge lunge: dart toward the target and back (apex at the
+            # midpoint, where the impact beat lands)
+            if pixel_override is None and cid in self._lunge_animations:
+                fx, fy, tx, ty, start_time, duration = self._lunge_animations[cid]
+                elapsed = now - start_time
+                if elapsed >= duration:
+                    lunge_expired.append(cid)
+                else:
+                    k = math.sin(math.pi * (elapsed / duration)) * LUNGE_EXTENT
+                    pixel_override = (fx + (tx - fx) * k, fy + (ty - fy) * k)
 
             # Animated HP percentage
             display_hp_pct: float | None = None
@@ -3489,6 +3614,8 @@ class CombatScreen(Screen):
 
         for cid in expired:
             del self._move_animations[cid]
+        for cid in lunge_expired:
+            del self._lunge_animations[cid]
 
     def _render_action_animations(self, surface: pygame.Surface) -> None:
         """Render active action/spell animations (impacts and projectiles)."""

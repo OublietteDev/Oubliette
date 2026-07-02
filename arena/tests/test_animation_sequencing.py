@@ -9,6 +9,7 @@ multiattack, volleys) — per the test-the-real-path rule.
 """
 
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 
 import pytest
 
@@ -20,6 +21,7 @@ from arena.gui.screens.combat import (
     IMPACT_BEAT_MS,
     MELEE_IMPACT_DELAY_MS,
     PROJECTILE_TRAVEL_MS,
+    TELEGRAPH_MS,
 )
 
 
@@ -151,11 +153,16 @@ def _make_screen(monkeypatch, frames=8, fps=20):
     screen._director = AnimationDirector()
     screen._pending_impact = None
     screen._impact_source = None
+    screen._pending_anim = None
+    screen._pending_anim_hold = 0
     screen._hp_credit = {}
     screen._downed_hold = set()
     screen._flash_until = {}
     screen._floating_texts = []
     screen._log_reveal_index = 0
+    screen._lunge_animations = {}
+    screen._active_telegraphs = []
+    screen.ai_runner = SimpleNamespace(is_active=False)
 
     screen.spawned_anims = []
     screen.spawned_effects = []
@@ -440,6 +447,106 @@ class TestLogRevealSync:
         screen._reveal_log_to(10)
         screen._reveal_log_to(3)
         assert screen._log_reveal_index == 10
+
+
+def _aoe_cast(source="archer", hexes=None):
+    """An AoE effect-use INFO event as the engine emits it (no target)."""
+    details = {
+        "animation": "fireball",
+        "is_effect_use": True,
+        "aoe_center_hex": (4, 0),
+        "area_size": 20,
+        "aoe_damage_type": "fire",
+    }
+    if hexes is not None:
+        details["aoe_hexes"] = hexes
+    return CombatEvent(
+        CombatEventType.INFO, "casts Fireball",
+        source_id=source, target_id=None, details=details,
+    )
+
+
+class TestAoESequencing:
+    def test_aoe_cast_groups_on_blast_center(self, monkeypatch):
+        # No target_id on the cast event — beats anchor on the center
+        # hex, and every target's damage lands with the blast.
+        screen = _make_screen(monkeypatch)
+        events = [
+            _aoe_cast(),
+            CombatEvent(CombatEventType.DAMAGE, "damage",
+                        source_id="archer", target_id="goblin",
+                        details={"damage": 18}),
+            CombatEvent(CombatEventType.DAMAGE, "damage",
+                        source_id="archer", target_id="wolf",
+                        details={"damage": 9}),
+        ]
+        _feed(screen, events, now=1000)
+        screen._director.update(1000)  # cast animation fires
+        assert len(screen.spawned_anims) == 1
+        assert screen._floating_texts == []
+        assert screen._hp_credit == {"goblin": 18, "wolf": 9}
+
+        hold = screen._animation_hold_ms(_aoe_cast())
+        screen._director.update(1000 + hold)
+        assert sorted(ft.text for ft in screen._floating_texts) == ["-18", "-9"]
+        assert screen._hp_credit == {}
+
+    def test_ai_aoe_shows_telegraph_before_cast(self, monkeypatch):
+        screen = _make_screen(monkeypatch)
+        screen.ai_runner.is_active = True
+        shape = [(4, 0), (5, 0), (3, 0)]
+        _feed(screen, [_aoe_cast(hexes=shape)], now=1000)
+
+        screen._director.update(1000)
+        # Telegraph is up; the cast hasn't played yet
+        assert len(screen._active_telegraphs) == 1
+        assert screen._active_telegraphs[0].hexes == shape
+        assert screen.spawned_anims == []
+
+        screen._director.update(1000 + TELEGRAPH_MS)
+        assert len(screen.spawned_anims) == 1
+
+    def test_player_aoe_has_no_telegraph(self, monkeypatch):
+        # The player aimed the blast themselves — no telegraph beat
+        screen = _make_screen(monkeypatch)
+        _feed(screen, [_aoe_cast(hexes=[(4, 0)])], now=1000)
+        screen._director.update(1000)
+        assert screen._active_telegraphs == []
+        assert len(screen.spawned_anims) == 1  # cast plays immediately
+
+
+class TestChargeLunge:
+    def _charge_events(self, charged=True):
+        details = {"damage": 7}
+        if charged:
+            details["charged"] = True
+        return [
+            CombatEvent(
+                CombatEventType.ATTACK_ROLL, "hits",
+                source_id="wolf", target_id="goblin",
+                details={"animation": "bite", "attack_type": "melee_weapon"},
+            ),
+            CombatEvent(
+                CombatEventType.DAMAGE, "damage",
+                source_id="wolf", target_id="goblin",
+                details=details,
+            ),
+        ]
+
+    def test_charged_hit_lunges_with_the_swing(self, monkeypatch):
+        screen = _make_screen(monkeypatch)
+        _feed(screen, self._charge_events(charged=True), now=1000)
+        screen._director.update(1000)  # swing beat fires
+        assert "wolf" in screen._lunge_animations
+        # Apex at the impact: duration = 2 × the swing's pre-impact hold
+        duration = screen._lunge_animations["wolf"][5]
+        assert duration == 2 * MELEE_IMPACT_DELAY_MS
+
+    def test_plain_hit_does_not_lunge(self, monkeypatch):
+        screen = _make_screen(monkeypatch)
+        _feed(screen, self._charge_events(charged=False), now=1000)
+        screen._director.update(1000)
+        assert screen._lunge_animations == {}
 
 
 class TestHealing:
