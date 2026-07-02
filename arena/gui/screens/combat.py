@@ -86,6 +86,10 @@ IMPACT_BEAT_MS = 250  # hold after an impact before the next beat plays
 MELEE_IMPACT_DELAY_MS = 150  # swing wind-up before melee damage lands
 TELEGRAPH_MS = 550  # AI AoE danger-zone telegraph before the cast plays
 LUNGE_EXTENT = 0.45  # how far toward the target a charge lunge reaches
+# NOTE (2026-07-02): OublietteDev tried 1.45 here and saw NO visible difference —
+# the charge lunge may not be rendering at all. Deferred (his call, not
+# worth delaying v1.0); when animation polish resumes, verify the lunge
+# cue actually fires and draws before tuning this number.
 
 
 @dataclass
