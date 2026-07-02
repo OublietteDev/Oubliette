@@ -155,6 +155,39 @@ def test_dash_movement_actually_spent_on_execution():
     assert HexCoord(0, 5).distance_to(final) > 6
 
 
+# ── Fix 3 (2026-07-02): Dash must not outbid a reachable attack ──────
+
+
+def test_charger_attacks_now_instead_of_dashing_to_the_line():
+    """OublietteDev's 'I never see a charge' report: at 6 hexes out with 40 ft
+    of speed the boar's guaranteed charge turn was spent Dashing to the
+    hold line (Dash 48 vs Tusk 47), handing the player a turn to close
+    the gap and deny the run-up for the rest of the fight. A reachable
+    target must outrank Dash."""
+    beast = _monster(actions=[_tusk()], charge=True)
+    beast.speed["walk"] = 40  # 8 hexes: adjacency at dist 6 is reachable
+    cm = _start(beast, beast_pos=(3, 5), hero_pos=(9, 5))
+    plan = _plan(cm)
+
+    types = _step_types(plan)
+    assert TurnStepType.EXECUTE_ATTACK in types
+    dest = _move_target(plan)
+    assert dest.distance_to(HexCoord(9, 5)) <= 1  # full run-in, rider arms
+
+
+def test_plain_melee_monster_attacks_instead_of_dashing_when_reachable():
+    """Same bug without the charge rider: any melee monster within
+    (speed + reach) should swing this turn, not Dash past the enemy's
+    face and attack a round late."""
+    cm = _start(_monster(actions=[_tusk()], charge=False),
+                beast_pos=(4, 5), hero_pos=(9, 5))  # 5 out, 6 hexes speed
+    plan = _plan(cm)
+
+    types = _step_types(plan)
+    assert TurnStepType.EXECUTE_ATTACK in types
+    assert TurnStepType.STANDARD_ACTION not in types
+
+
 # ── Fix 2: chargers hold at charge distance ──────────────────────────
 
 

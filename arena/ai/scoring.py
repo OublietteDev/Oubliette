@@ -210,7 +210,14 @@ def score_standard_action(
             return 5.0
         min_dist = _min_enemy_distance(context)
         if profile.prefers_melee and min_dist > 2:
-            return 30.0 + min_dist * 3
+            # Only worth the action when no enemy is reachable this turn:
+            # dashing instead of a reachable attack wastes the swing — and
+            # for a Charge/Pounce creature it burns the one turn the run-up
+            # is guaranteed (dash-hold invites the player to close the gap
+            # and deny the rider for the whole fight).
+            reach_hexes = context.remaining_movement // 5 + 1
+            if min_dist > reach_hexes:
+                return 30.0 + min_dist * 3
         # For retreat scenarios
         if context.me.hp_percent < profile.retreat_threshold and profile.will_flee:
             return 40.0
