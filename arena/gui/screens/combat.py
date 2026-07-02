@@ -2083,6 +2083,34 @@ class CombatScreen(Screen):
             hx = (self.screen_width - hint_surf.get_width()) // 2
             surface.blit(hint_surf, (hx, 8))
 
+        # General targeting hint — the cancel key is otherwise invisible
+        elif (
+            self.combat.state == CombatState.IN_COMBAT
+            and self.combat.turn_phase == TurnPhase.SELECTING_TARGET
+            and not self.ai_runner.is_active
+        ):
+            hint_font = get_font(FONT_SIZES["label"])
+            selected = self.combat.selected_action
+            what = f"{selected.name} — " if selected is not None else ""
+            hint_surf = hint_font.render(
+                f"{what}Backspace to cancel", True,
+                parse_color(COLORS["text_secondary"]),
+            )
+            hx = (self.screen_width - hint_surf.get_width()) // 2
+            surface.blit(hint_surf, (hx, 8))
+
+        # Corner nudge toward the shortcuts overlay
+        if not self._show_shortcuts_help:
+            corner_font = get_font(FONT_SIZES["small"])
+            corner = corner_font.render(
+                "? shortcuts", True, parse_color(COLORS["text_secondary"]),
+            )
+            surface.blit(
+                corner,
+                (self.grid_rect.right - corner.get_width() - 10,
+                 self.grid_rect.bottom - corner.get_height() - 6),
+            )
+
         # Victory/Defeat overlay
         if self.combat.state == CombatState.COMBAT_ENDED:
             self._render_end_overlay(surface)
