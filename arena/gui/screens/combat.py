@@ -47,6 +47,7 @@ from arena.ai.controller import AIController, TurnPlan, TurnStep, TurnStepType
 from arena.ai.executor import execute_step
 from arena.combat.events import CombatEventType
 from arena.gui.animation_cache import get_animation_frames, get_animation_fps
+from arena.gui.animation_director import AnimationDirector, Beat
 from arena.gui.visual_effects import (
     AoEBlastEffect, ZoneCreationPulse, ZoneDamageFlash,
     ZoneShimmerState, SpawnEffect,
@@ -79,6 +80,10 @@ HP_LERP_SPEED = 0.15  # per-frame blend factor
 # Action animation constants
 ACTION_ANIM_BASE_SIZE = 64  # Base pixel size for animation frames (before zoom)
 PROJECTILE_TRAVEL_MS = 300  # How long a ranged projectile travels before impact
+
+# Animation sequencing (beat) constants
+IMPACT_BEAT_MS = 250  # hold after an impact before the next beat plays
+MELEE_IMPACT_DELAY_MS = 150  # swing wind-up before melee damage lands
 
 
 @dataclass
@@ -373,6 +378,14 @@ class CombatScreen(Screen):
         self._floating_texts: list[FloatingText] = []
         self._active_animations: list[ActiveAnimation] = []
 
+        # Animation sequencing: attack visuals play as ordered beats
+        # (travel/swing → impact) instead of all spawning in one frame.
+        self._director = AnimationDirector()
+        self._pending_impact: Beat | None = None  # open group's impact beat
+        self._impact_source: str | None = None  # acting creature of that group
+        self._hp_credit: dict[str, int] = {}  # damage dealt but not yet shown
+        self._downed_hold: set[str] = set()  # render upright until impact lands
+
         # Programmatic visual effects (code-drawn, not PNG frame sequences)
         self._visual_effects: list[AoEBlastEffect | ZoneCreationPulse | SpawnEffect] = []
         self._zone_shimmer_states: dict[str, ZoneShimmerState] = {}
@@ -518,6 +531,11 @@ class CombatScreen(Screen):
         self._visual_effects.clear()
         self._zone_shimmer_states.clear()
         self._zone_damage_flashes.clear()
+        self._director.clear(pygame.time.get_ticks())
+        self._pending_impact = None
+        self._impact_source = None
+        self._hp_credit.clear()
+        self._downed_hold.clear()
 
         # Select the first active creature
         active = self.combat.active_combatant
@@ -1874,9 +1892,11 @@ class CombatScreen(Screen):
         if self._oa_popup is None and self.combat._pending_oa is not None:
             self._show_oa_popup()
 
-        # Drive AI turn runner (pause while a reaction / OA popup is showing)
+        # Drive AI turn runner (pause while a reaction / OA popup is showing,
+        # or while earlier beats are still playing out on the director)
         if (self.ai_runner.is_active and self._reaction_popup is None
-                and self._oa_popup is None):
+                and self._oa_popup is None
+                and not self._director.is_busy):
             current_time = pygame.time.get_ticks()
             finished = self.ai_runner.update(self.combat, current_time)
             if finished:
@@ -1916,9 +1936,18 @@ class CombatScreen(Screen):
         # Process new combat events for visual effects (damage flash, floaters)
         self._process_new_combat_events()
 
-        # Animate display HP toward actual HP each frame
+        # Fire animation beats that are due (travel finished → impact, etc.)
+        self._director.update(pygame.time.get_ticks())
+
+        # Animate display HP toward actual HP each frame. Damage that
+        # hasn't visually landed yet (queued impact beats) stays "credited"
+        # so the bar doesn't drop before the projectile arrives.
         for cid, combatant in self.combat.combatants.items():
             actual = float(combatant.creature.current_hit_points or 0)
+            credit = self._hp_credit.get(cid, 0)
+            if credit:
+                max_hp = float(combatant.creature.max_hit_points or 0)
+                actual = min(actual + credit, max_hp) if max_hp else actual
             current = self._display_hp.get(cid, actual)
             if abs(current - actual) < 0.5:
                 self._display_hp[cid] = actual
@@ -2433,7 +2462,16 @@ class CombatScreen(Screen):
         self._player_move_next_time = current_time + MOVE_ANIM_DURATION_MS
 
     def _process_new_combat_events(self) -> None:
-        """Scan the combat log for new events and spawn visual effects."""
+        """Scan the combat log for new events and sequence their visuals.
+
+        Animation-bearing events (attacks, spell effects) open a beat
+        group on the director: a travel/swing beat, then a mutable
+        impact beat. Damage numbers, flashes, blast rings, KO slumps
+        and HP-bar drops belonging to that action attach to the impact
+        beat, so they land when the projectile does instead of the
+        frame the engine resolved. Everything outside a group spawns
+        immediately, exactly as before.
+        """
         events = self.combat.log.events
         if self._last_event_index >= len(events):
             return
@@ -2442,48 +2480,170 @@ class CombatScreen(Screen):
         hex_size = get_settings().display.default_hex_size
 
         for event in events[self._last_event_index:]:
-            # Programmatic visual effects (don't require target_id)
-            self._try_spawn_visual_effect(event, hex_size, now)
-
-            target_id = event.target_id
-            if target_id is None:
-                continue
-            combatant = self.combat.combatants.get(target_id)
-            if combatant is None or combatant.position is None:
-                continue
-
-            wx, wy = combatant.position.to_pixel(hex_size)
-
-            if event.event_type == CombatEventType.DAMAGE:
-                amount = event.details.get("damage", 0)
-                if amount > 0:
-                    # Damage flash
-                    self._flash_until[target_id] = now + FLASH_DURATION_MS
-                    # Floating number
-                    is_crit = event.details.get("critical", False)
-                    if is_crit:
-                        text = f"CRIT! -{amount}"
-                        color = (255, 215, 0)  # gold
-                    else:
-                        text = f"-{amount}"
-                        color = (255, 60, 60)  # red
-                    self._floating_texts.append(
-                        FloatingText(text, wx, wy, color, now)
-                    )
-
-            elif event.event_type == CombatEventType.HEALING:
-                amount = event.details.get("healing", 0)
-                if amount > 0:
-                    text = f"+{amount}"
-                    color = (60, 255, 60)  # green
-                    self._floating_texts.append(
-                        FloatingText(text, wx, wy, color, now)
-                    )
-
-            # --- Action animations ---
-            self._try_spawn_animation(event, wx, wy, hex_size, now)
+            self._sequence_event(event, hex_size, now)
 
         self._last_event_index = len(events)
+
+    def _sequence_event(self, event, hex_size: int, now: int) -> None:
+        """Route one combat event's visuals: into beats or immediate."""
+        # World position of the target (visual anchor for most cues)
+        wx: float | None = None
+        wy: float | None = None
+        target_id = event.target_id
+        if target_id is not None:
+            combatant = self.combat.combatants.get(target_id)
+            if combatant is not None and combatant.position is not None:
+                wx, wy = combatant.position.to_pixel(hex_size)
+
+        # An animation-bearing event opens a new group: a travel/swing
+        # beat, then an impact beat that later cues attach to.
+        hold_ms = self._animation_hold_ms(event)
+        if hold_ms is not None and wx is not None:
+            anim_cue = (
+                lambda t, e=event, x=wx, y=wy:
+                self._try_spawn_animation(e, x, y, hex_size, t)
+            )
+            self._director.enqueue(Beat(cues=[anim_cue], duration_ms=hold_ms))
+            self._pending_impact = self._director.enqueue(
+                Beat(duration_ms=IMPACT_BEAT_MS)
+            )
+            self._impact_source = event.source_id
+        elif event.event_type == CombatEventType.ATTACK_ROLL:
+            # A new attack that can't animate closes the previous group:
+            # its visuals must not glue onto the earlier swing's impact.
+            self._pending_impact = None
+            self._impact_source = None
+
+        beat = self._open_impact_beat_for(event)
+
+        # Programmatic visual effects (blast rings, shove trails, spawn
+        # glows): land with the group's impact when part of one.
+        effect_cue = (
+            lambda t, e=event: self._try_spawn_visual_effect(e, hex_size, t)
+        )
+        if beat is not None:
+            beat.add_cue(effect_cue)
+        else:
+            effect_cue(now)
+
+        if wx is None:
+            return
+
+        if event.event_type == CombatEventType.DAMAGE:
+            amount = event.details.get("damage", 0)
+            if amount > 0:
+                is_crit = event.details.get("critical", False)
+                if beat is not None:
+                    # Freeze the HP bar at its pre-hit value until impact
+                    self._hp_credit[target_id] = (
+                        self._hp_credit.get(target_id, 0) + amount
+                    )
+                    beat.add_cue(self._make_damage_cue(
+                        target_id, wx, wy, amount, is_crit, deferred=True,
+                    ))
+                else:
+                    self._make_damage_cue(
+                        target_id, wx, wy, amount, is_crit, deferred=False,
+                    )(now)
+
+        elif event.event_type == CombatEventType.HEALING:
+            amount = event.details.get("healing", 0)
+            if amount > 0:
+                text = f"+{amount}"
+                color = (60, 255, 60)  # green
+                self._floating_texts.append(
+                    FloatingText(text, wx, wy, color, now)
+                )
+
+        elif event.event_type == CombatEventType.CREATURE_DOWNED:
+            # Keep the token upright until the blow that downed it lands
+            pending = self._pending_impact
+            if (
+                pending is not None
+                and not pending.fired
+                and self._hp_credit.get(target_id)
+            ):
+                self._downed_hold.add(target_id)
+                pending.add_cue(
+                    lambda t, cid=target_id: self._downed_hold.discard(cid)
+                )
+
+    def _open_impact_beat_for(self, event) -> Beat | None:
+        """The open impact beat this event's visuals belong to, if any.
+
+        An event joins the open group when the group's impact beat
+        hasn't fired yet and the event comes from the same acting
+        creature (source-less events ride along — e.g. follow-up
+        bookkeeping the engine logs without a source).
+        """
+        beat = self._pending_impact
+        if beat is None or beat.fired:
+            return None
+        if event.source_id is not None and event.source_id != self._impact_source:
+            return None
+        return beat
+
+    def _animation_hold_ms(self, event) -> int | None:
+        """How long this event's animation delays its impact visuals.
+
+        Returns None when the event won't spawn an animation (same
+        checks as _try_spawn_animation), so no beat group opens and
+        visuals spawn instantly — the pre-sequencer behavior.
+        """
+        anim_name = event.details.get("animation")
+        if not anim_name:
+            return None
+        if event.event_type == CombatEventType.INFO:
+            if not event.details.get("is_effect_use"):
+                return None
+        frames = get_animation_frames(anim_name, ACTION_ANIM_BASE_SIZE)
+        if not frames:
+            return None
+
+        # Ranged attacks: impact lands when the projectile travel ends
+        attack_type = event.details.get("attack_type", "")
+        if "ranged" in attack_type and event.source_id:
+            source = self.combat.combatants.get(event.source_id)
+            if source is not None and source.position is not None:
+                return PROJECTILE_TRAVEL_MS
+
+        # Melee swings / spell effects: land partway into the animation
+        fps = get_animation_fps(anim_name)
+        total_ms = len(frames) * 1000.0 / max(1, fps)
+        return int(min(MELEE_IMPACT_DELAY_MS, total_ms / 2))
+
+    def _make_damage_cue(
+        self,
+        target_id: str,
+        wx: float,
+        wy: float,
+        amount: int,
+        is_crit: bool,
+        deferred: bool,
+    ):
+        """Build the cue that shows one hit landing: flash + number.
+
+        Deferred cues also release the target's HP credit so the bar
+        starts draining exactly when the number pops.
+        """
+        def cue(t: int) -> None:
+            if deferred:
+                remaining = self._hp_credit.get(target_id, 0) - amount
+                if remaining > 0:
+                    self._hp_credit[target_id] = remaining
+                else:
+                    self._hp_credit.pop(target_id, None)
+            self._flash_until[target_id] = t + FLASH_DURATION_MS
+            if is_crit:
+                text = f"CRIT! -{amount}"
+                color = (255, 215, 0)  # gold
+            else:
+                text = f"-{amount}"
+                color = (255, 60, 60)  # red
+            self._floating_texts.append(
+                FloatingText(text, wx, wy, color, t)
+            )
+        return cue
 
     def _try_spawn_animation(
         self,
@@ -2710,6 +2870,11 @@ class CombatScreen(Screen):
         self._visual_effects.clear()
         self._zone_shimmer_states.clear()
         self._zone_damage_flashes.clear()
+        self._director.clear(pygame.time.get_ticks())
+        self._pending_impact = None
+        self._impact_source = None
+        self._hp_credit.clear()
+        self._downed_hold.clear()
 
         # Select the active combatant
         active = self.combat.active_combatant
@@ -3290,6 +3455,7 @@ class CombatScreen(Screen):
                 pixel_override=pixel_override,
                 display_hp_pct=display_hp_pct,
                 flash_alpha=flash_alpha,
+                appear_conscious=(cid in self._downed_hold),
             )
 
         for cid in expired:

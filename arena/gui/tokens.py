@@ -233,6 +233,7 @@ def draw_token(
     pixel_override: tuple[float, float] | None = None,
     display_hp_pct: float | None = None,
     flash_alpha: int = 0,
+    appear_conscious: bool = False,
 ) -> None:
     """Draw a creature token on the hex grid.
 
@@ -252,6 +253,9 @@ def draw_token(
         display_hp_pct: Optional animated HP percentage (0.0-1.0) for
             smooth HP bar transitions. Uses actual HP if None.
         flash_alpha: Red damage flash intensity (0-255). 0 = no flash.
+        appear_conscious: Suppress the unconscious dim overlay. Used by
+            animation sequencing so a creature doesn't slump before the
+            blow that downed it visually lands.
     """
     if combatant.position is None:
         return
@@ -267,6 +271,7 @@ def draw_token(
         _draw_single_hex_token(
             surface, combatant, camera, is_selected, is_active_turn,
             origin, pixel_override, display_hp_pct, flash_alpha,
+            appear_conscious,
         )
         return
 
@@ -394,7 +399,7 @@ def draw_token(
         _draw_condition_icons(surface, icon_center, icon_half_w, creature, camera.zoom)
 
     # Dim overlay for unconscious creatures
-    if not creature.is_conscious:
+    if not creature.is_conscious and not appear_conscious:
         _draw_polygon_alpha(surface, int_polygon, (0, 0, 0, 128))
 
 
@@ -513,6 +518,7 @@ def _draw_single_hex_token(
     pixel_override: tuple[float, float] | None = None,
     display_hp_pct: float | None = None,
     flash_alpha: int = 0,
+    appear_conscious: bool = False,
 ) -> None:
     """Draw a single-hex creature token (circle or image)."""
     if combatant.position is None:
@@ -613,7 +619,7 @@ def _draw_single_hex_token(
         _draw_condition_icons(surface, center, radius, creature, camera.zoom)
 
     # Unconscious overlay
-    if not creature.is_conscious:
+    if not creature.is_conscious and not appear_conscious:
         dim_surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
         pygame.draw.circle(dim_surf, (0, 0, 0, 128), (radius, radius), radius)
         surface.blit(dim_surf, (center[0] - radius, center[1] - radius))
