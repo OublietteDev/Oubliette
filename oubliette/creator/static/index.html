@@ -180,6 +180,7 @@
   .cue-gap input { width: 52px; font-size: 13px; }
   .cue-when { font-size: 12px; color: var(--faint); align-self: center; }
   .loot-row { display: grid; grid-template-columns: 1fr 70px auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .bgeq-row { display: grid; grid-template-columns: 1fr 1fr 70px auto; gap: 8px; margin-bottom: 8px; align-items: center; }
   .shop-row { display: grid; grid-template-columns: 1fr 64px 80px auto; gap: 8px; margin-bottom: 8px; align-items: center; }
   .ability-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .ability-grid .field { margin-bottom: 0; }
@@ -369,13 +370,14 @@
 
 <script>
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const EDITABLE = new Set(["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios", "ai_profiles"]);
+const EDITABLE = new Set(["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios", "ai_profiles", "backgrounds"]);
 const SINGULAR = { items: "item", statblocks: "creature", npcs: "character", places: "place",
-                   lore: "lore entry", quests: "quest", scenarios: "opening", ai_profiles: "personality" };
+                   lore: "lore entry", quests: "quest", scenarios: "opening", ai_profiles: "personality",
+                   backgrounds: "background" };
 const TITLES = { items: "Items", statblocks: "Creatures", npcs: "Characters & NPCs",
                  places: "Places", lore: "Lore", quests: "Quests", scenarios: "Opening setup",
-                 ai_profiles: "AI Personalities" };
-const ORDER = ["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios", "ai_profiles"];
+                 ai_profiles: "AI Personalities", backgrounds: "Backgrounds" };
+const ORDER = ["items", "statblocks", "npcs", "backgrounds", "places", "lore", "quests", "scenarios", "ai_profiles"];
 const CATEGORIES = ["weapon", "armor", "gear", "consumable", "treasure", "misc"];
 const SLOTS = ["", "main_hand", "off_hand", "body", "feet", "hands", "waist", "head", "neck", "ring"];
 const ARMOR_TYPES = ["light", "medium", "heavy", "shield"];
@@ -507,6 +509,15 @@ function describe(kind, e) {
     const about = (e.subjects || []).length ? `about ${(e.subjects || []).join(", ")} — ` : "";
     const body = (e.text || "").replace(/\s+/g, " ");
     return about + (body.length > 120 ? body.slice(0, 120) + "…" : body);
+  }
+  if (kind === "backgrounds") {
+    const bits = [];
+    if ((e.skill_proficiencies || []).length) bits.push(e.skill_proficiencies.join(", ").replace(/_/g, " "));
+    if (e.languages) bits.push(`${e.languages} language(s)`);
+    if (e.starting_gold) bits.push(`${e.starting_gold}g`);
+    if ((e.equipment || []).length) bits.push(`${e.equipment.length} item grant(s)`);
+    if (e.feature && e.feature.name) bits.push(`feature: ${e.feature.name}`);
+    return bits.join(" · ");
   }
   if (kind === "quests") {
     const src = e.giver_npc ? `given by ${npcName(e.giver_npc)}`
@@ -720,10 +731,11 @@ function openEditor(kind, index) {
   if (kind === "statblocks") { editorCtx.loot = ((original?.loot) || []).filter(l => l.item).map(l => ({ item: l.item, qty: l.qty || 1 })); editorCtx.statblockId = original?.id || null; }
   if (kind === "npcs") { editorCtx.inv = buildInvRows(original); editorCtx.original = original; editorCtx.statBlockSel = original?.stat_block || ""; }
   if (kind === "quests") editorCtx.branches = ((original?.branches) || []).map(b => ({ ...b }));
+  if (kind === "backgrounds") editorCtx.bgeq = ((original?.equipment) || []).map(g => ({ item: g.item, qty: g.qty || 1 }));
 
-  const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, lore: loreForm, quests: questForm, scenarios: scenarioForm, ai_profiles: aiProfileForm };
-  const WIRES = { statblocks: wireStatblockForm, npcs: wireNpcForm, places: wirePlaceForm, items: wireItemForm, quests: wireQuestForm, ai_profiles: wireAiProfileForm };
-  const CONFIRMS = { items: confirmItem, statblocks: confirmStatblock, npcs: confirmNpc, places: confirmPlace, lore: confirmLore, quests: confirmQuest, scenarios: confirmScenario, ai_profiles: confirmAiProfile };
+  const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, lore: loreForm, quests: questForm, scenarios: scenarioForm, ai_profiles: aiProfileForm, backgrounds: backgroundForm };
+  const WIRES = { statblocks: wireStatblockForm, npcs: wireNpcForm, places: wirePlaceForm, items: wireItemForm, quests: wireQuestForm, ai_profiles: wireAiProfileForm, backgrounds: wireBackgroundForm };
+  const CONFIRMS = { items: confirmItem, statblocks: confirmStatblock, npcs: confirmNpc, places: confirmPlace, lore: confirmLore, quests: confirmQuest, scenarios: confirmScenario, ai_profiles: confirmAiProfile, backgrounds: confirmBackground };
 
   const modal = document.getElementById("modal");
   modal.innerHTML = FORMS[kind](original);
@@ -999,6 +1011,125 @@ function confirmItem(original) {
   if (base.consumable || base.poison) base.mechanics = "structured";
 
   commitEntry("items", original, base);
+}
+
+// ---- background form (module-kit S2) ----
+// A pack-authored chargen background: proficiencies + starting kit + feature +
+// flavor tables, mirroring srd_schemas.Background. The chargen endpoints merge
+// these into the wizard's pickers when called with ?pack=<id>.
+function backgroundForm(bg) {
+  const v = bg || {};
+  const f = v.feature || {};
+  const lines = a => esc((a || []).join("\n"));
+  return `
+    <div class="mhead">${bg ? "Edit background" : "New background"}</div>
+    <div class="mbody">
+      ${field(req("Name"), `<input id="f_name" value="${esc(v.name || "")}" placeholder="Silverfin Dockhand" />`,
+              "Where this character came from — shows up in the character builder.")}
+      <div class="subform">
+        <div class="sftitle">Proficiencies</div>
+        ${field("Skills", checklist("f_bg_skills", SKILLS, v.skill_proficiencies),
+                "Backgrounds conventionally grant exactly two.")}
+        <div class="row2">
+          ${field("Tools", `<input id="f_bg_tools" value="${esc((v.tool_proficiencies || []).join(", "))}" placeholder="fishing tackle, water vehicles" />`,
+                  "Comma-separated; free-form.")}
+          ${field("Free language picks", `<input id="f_bg_langs" type="number" min="0" value="${v.languages || 0}" />`,
+                  "How many languages of the player's choice.")}
+        </div>
+      </div>
+      <div class="subform">
+        <div class="sftitle">Starting kit</div>
+        <div id="bgEqList"></div>
+        <button class="btn mini" type="button" id="addBgEq">+ Add an item grant</button>
+        <div class="help" style="margin-top:8px">Pick one of this world's items, or type an SRD gear id (e.g. <b>rope_hempen</b>) in the second box instead.</div>
+        ${field("Starting gold", `<input id="f_bg_gold" type="number" min="0" value="${v.starting_gold || 0}" />`)}
+      </div>
+      <div class="subform">
+        <div class="sftitle">Feature <span style="font-weight:400;opacity:.6">— optional</span></div>
+        ${field("Feature name", `<input id="f_bg_fname" value="${esc(f.name || "")}" placeholder="Dockside Contacts" />`)}
+        ${field("What it does", `<textarea id="f_bg_ftext" placeholder="Reference text — the DM narrates it; no numbers needed.">${esc(f.text || "")}</textarea>`)}
+      </div>
+      <div class="subform">
+        <div class="sftitle">Flavor tables <span style="font-weight:400;opacity:.6">— one per line, players roll or pick</span></div>
+        <div class="row2">
+          ${field("Personality traits", `<textarea id="f_bg_traits">${lines(v.personality_traits)}</textarea>`)}
+          ${field("Ideals", `<textarea id="f_bg_ideals">${lines(v.ideals)}</textarea>`)}
+        </div>
+        <div class="row2">
+          ${field("Bonds", `<textarea id="f_bg_bonds">${lines(v.bonds)}</textarea>`)}
+          ${field("Flaws", `<textarea id="f_bg_flaws">${lines(v.flaws)}</textarea>`)}
+        </div>
+      </div>
+      <div class="invalid" id="f_err"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" data-confirm>${bg ? "Update" : "Add"} background</button>
+    </div>`;
+}
+// Starting-kit rows: a pack-item dropdown OR a free-typed id (SRD gear lives
+// server-side only, so the id box is the escape hatch — the pack validator
+// catches typos). Whichever side was touched last wins; the other clears.
+function renderBgEquip() {
+  const box = gid("bgEqList");
+  const packIds = new Set(listOf("items").map(x => x.id));
+  box.innerHTML = editorCtx.bgeq.map((g, i) => {
+    const inPack = packIds.has(g.item);
+    return `
+    <div class="bgeq-row">
+      <select data-bgeq-sel="${i}">${optionList("items", inPack ? g.item : "", "(pick a world item)")}</select>
+      <input data-bgeq-id="${i}" value="${esc(inPack ? "" : (g.item || ""))}" placeholder="…or an SRD id" />
+      <input data-bgeq-qty="${i}" type="number" min="1" value="${g.qty || 1}" />
+      <button class="btn mini danger" type="button" data-bgeq-del="${i}">✕</button>
+    </div>`;
+  }).join("") || '<div class="nothing" style="margin:6px 0">No starting items.</div>';
+  box.querySelectorAll("[data-bgeq-sel]").forEach(s => s.addEventListener("change", e => {
+    const i = +e.target.dataset.bgeqSel;
+    editorCtx.bgeq[i].item = e.target.value;
+    box.querySelector(`[data-bgeq-id="${i}"]`).value = "";
+  }));
+  box.querySelectorAll("[data-bgeq-id]").forEach(inp => inp.addEventListener("input", e => {
+    const i = +e.target.dataset.bgeqId;
+    editorCtx.bgeq[i].item = e.target.value.trim();
+    box.querySelector(`[data-bgeq-sel="${i}"]`).value = "";
+  }));
+  box.querySelectorAll("[data-bgeq-qty]").forEach(inp => inp.addEventListener("input", e =>
+    editorCtx.bgeq[+e.target.dataset.bgeqQty].qty = Number(e.target.value || 1)));
+  box.querySelectorAll("[data-bgeq-del]").forEach(b => b.addEventListener("click", e => {
+    editorCtx.bgeq.splice(+e.target.dataset.bgeqDel, 1); renderBgEquip(); }));
+}
+function wireBackgroundForm() {
+  renderBgEquip();
+  gid("addBgEq").addEventListener("click", () => { editorCtx.bgeq.push({ item: "", qty: 1 }); renderBgEquip(); });
+}
+function confirmBackground(original) {
+  const name = gid("f_name").value.trim();
+  if (!name) { fieldInvalid("f_name", "Please give it a name."); return; }
+  const fname = gid("f_bg_fname").value.trim();
+  const ftext = gid("f_bg_ftext").value.trim();
+  if (ftext && !fname) { fieldInvalid("f_bg_fname", "Give the feature a name."); return; }
+  const base = original ? { ...original } : {};
+  if (!base.id) {
+    // "acolyte" is reserved: the loader refuses ids that shadow an SRD background
+    const taken = new Set(listOf("backgrounds").map(x => x.id)); taken.add("acolyte");
+    base.id = uniqueId(slugify(name), taken);
+  }
+  base.name = name;
+  const setOrDel = (key, val) => { if (val == null || !val.length) delete base[key]; else base[key] = val; };
+  setOrDel("skill_proficiencies", readChecklist("f_bg_skills"));
+  setOrDel("tool_proficiencies", csv(gid("f_bg_tools").value));
+  const langs = Number(gid("f_bg_langs").value || 0);
+  if (langs > 0) base.languages = langs; else delete base.languages;
+  setOrDel("equipment", editorCtx.bgeq.filter(g => g.item).map(g => ({ item: g.item, qty: g.qty || 1 })));
+  const gold = Number(gid("f_bg_gold").value || 0);
+  if (gold > 0) base.starting_gold = gold; else delete base.starting_gold;
+  if (fname) base.feature = { name: fname, level: 1, text: ftext }; else delete base.feature;
+  const perLine = id => gid(id).value.split("\n").map(x => x.trim()).filter(Boolean);
+  setOrDel("personality_traits", perLine("f_bg_traits"));
+  setOrDel("ideals", perLine("f_bg_ideals"));
+  setOrDel("bonds", perLine("f_bg_bonds"));
+  setOrDel("flaws", perLine("f_bg_flaws"));
+  commitEntry("backgrounds", original, base);
 }
 
 // ---- place form ----
@@ -2320,7 +2451,11 @@ function el(tag, cls, text) {
 }
 function gid(id) { return document.getElementById(id); }
 
-let cgOpt = null;          // ruleset options from the server (cached)
+let cgOpt = null;          // ruleset options from the server (cached per pack)
+let cgOptPack = null;      // which pack cgOpt was fetched for (its backgrounds/items merge in)
+// module-kit S2: every chargen call carries the OPEN pack, so its own
+// backgrounds + items join the pickers and the firewall validates against them.
+const cgApi = path => state.id ? `${path}?pack=${encodeURIComponent(state.id)}` : path;
 let cg = null;             // the build state being edited
 let cgNpcId = null;        // the NPC this character is being built for
 let cgTimer = null, cgSeq = 0;
@@ -2345,8 +2480,8 @@ function npcBuildCharacter() {
 
 async function openChargenView(npcId, npcName) {
   cgNpcId = npcId;
-  if (!cgOpt) {
-    try { cgOpt = await (await fetch("/api/chargen/options")).json(); }
+  if (!cgOpt || cgOptPack !== state.id) {
+    try { cgOpt = await (await fetch(cgApi("/api/chargen/options"))).json(); cgOptPack = state.id; }
     catch (e) { toast("Couldn't load the character options."); return; }
   }
   cgInit(npcName || "");
@@ -2796,18 +2931,18 @@ function mergeChoice(def, stored) {
 // {ok, errors, character, preview, plans} — plans (each level's requirements) feed
 // the manual-leveling editors. Used by both the live preview and save.
 async function cgEvaluate() {
-  const base = await _post("/api/chargen/build", cgBuild());
+  const base = await _post(cgApi("/api/chargen/build"), cgBuild());
   if (!base.ok) return { ok: false, errors: base.errors, character: null, preview: null, plans: [] };
   let char = base.character, preview = base.preview, level = 1;
   const target = Math.max(1, Math.min(20, cg.level || 1));
   const plans = [];
   while (level < target) {
-    const plan = await _post("/api/chargen/levelup/plan", char);
+    const plan = await _post(cgApi("/api/chargen/levelup/plan"), char);
     if (!plan.can_level) return { ok: false, errors: [plan.reason || `can't reach level ${level + 1}`], character: char, preview, plans };
     plans.push({ level: level + 1, plan });
     const def = cgDefaultChoice(plan, preview);
     const choice = cg.mode === "manual" ? mergeChoice(def, cg.levelChoices[level + 1]) : def;
-    const up = await _post("/api/chargen/levelup", { character: char, choice });
+    const up = await _post(cgApi("/api/chargen/levelup"), { character: char, choice });
     if (!up.ok) return { ok: false, errors: up.errors, character: char, preview, plans };
     char = up.character; preview = up.preview; level++;
   }
@@ -2984,10 +3119,10 @@ function renderSheetCard(root, p, label) {
 
 // Review a built person-NPC's sheet read-only (no rebuild) — Phase 4b-4c.
 async function openSheetView(npcId) {
-  if (!cgOpt) { try { cgOpt = await (await fetch("/api/chargen/options")).json(); } catch (e) {} }
+  if (!cgOpt || cgOptPack !== state.id) { try { cgOpt = await (await fetch(cgApi("/api/chargen/options"))).json(); cgOptPack = state.id; } catch (e) {} }
   const sc = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/character/${encodeURIComponent(npcId)}`)).json();
   if (!sc.ok) { toast("No character built yet."); return; }
-  const data = await _post("/api/chargen/sheet", sc.character);
+  const data = await _post(cgApi("/api/chargen/sheet"), sc.character);
   if (!data.ok) { toast("Couldn't render the sheet."); return; }
   const c = sc.character, sh = c.sheet || {};
   const raceName = ((cgOpt.races || []).find(x => x.id === sh.race) || {}).name || sh.race || "—";

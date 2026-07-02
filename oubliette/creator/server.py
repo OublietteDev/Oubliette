@@ -26,12 +26,15 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+from dataclasses import replace
+
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from ..content.loader import PackValidationError, load_pack
 from ..content.ruleset import load_ruleset
+from ..content.srd_schemas import Background
 from ..rules.chargen import (CharacterBuild, ChargenError, _project_srd_item,
                              build_character)
 from ..rules.chargen_view import chargen_options, preview_payload
@@ -41,10 +44,12 @@ from ..state.models import Character
 
 STATIC = Path(__file__).parent / "static"
 _DEFAULT_PACKS_ROOT = Path(__file__).parent.parent / "content" / "packs"
-_TYPES = ["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios", "ai_profiles"]
+_TYPES = ["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios",
+          "ai_profiles", "backgrounds"]
 _TYPE_WORD = {"items": "items", "statblocks": "creatures", "npcs": "characters",
               "places": "places", "lore": "lore entries", "quests": "quests",
-              "scenarios": "opening setups", "ai_profiles": "AI personalities"}
+              "scenarios": "opening setups", "ai_profiles": "AI personalities",
+              "backgrounds": "backgrounds"}
 
 
 def _slug(name: str) -> str:
@@ -52,7 +57,7 @@ def _slug(name: str) -> str:
 
 # The per-type files a pack is made of (the world recipe).
 PACK_FILES = ["pack", "items", "statblocks", "npcs", "places", "lore", "quests",
-              "scenarios", "ai_profiles"]
+              "scenarios", "ai_profiles", "backgrounds"]
 
 app = FastAPI(title="Oubliette: The Forge")
 
@@ -602,12 +607,47 @@ def _ruleset():
     return _ruleset_cache
 
 
+def _chargen_ruleset(pack: str | None):
+    """The ruleset a chargen request runs against: the SRD, plus the named pack's
+    own backgrounds and items (module-kit S2) — so a person-NPC authored inside
+    Atria can BE a Silverfin dockhand carrying dockhand boots. The pack is read
+    from disk leniently: it may be mid-edit, so entries that don't validate are
+    simply skipped here (the pack validator panel is where they're reported)."""
+    rs = _ruleset()
+    d = _pack_dir(pack) if pack else None
+    if d is None:
+        return rs
+    from ..content.loader import _project_mechanics
+    from ..content.schemas import Item as PackItem
+
+    def entries(filename: str) -> list:
+        data = _read_json(d / filename)
+        return data if isinstance(data, list) else []
+
+    backgrounds = dict(rs.backgrounds)
+    for raw in entries("backgrounds.json"):
+        try:
+            b = Background(**raw)
+        except (ValidationError, TypeError):
+            continue
+        backgrounds[b.id] = b
+    equipment = dict(rs.equipment)
+    for raw in entries("items.json"):
+        try:
+            it = PackItem(**raw)
+        except (ValidationError, TypeError):
+            continue
+        equipment[it.id] = _project_mechanics(it)
+    return replace(rs, backgrounds=backgrounds, equipment=equipment)
+
+
 @app.get("/api/chargen/options")
-async def get_chargen_options() -> JSONResponse:
+async def get_chargen_options(pack: str | None = None) -> JSONResponse:
     """Everything the person-NPC character builder renders — classes, races,
-    backgrounds, spell lists, ability methods — straight from the SRD ruleset, the
-    same projection the play app's chargen wizard uses (rules.chargen_view)."""
-    return JSONResponse(chargen_options(_ruleset()))
+    backgrounds, spell lists, ability methods — the same projection the play
+    app's chargen wizard uses (rules.chargen_view). With `?pack=`, the pack's
+    own backgrounds/items join the pickers (module-kit S2)."""
+    return JSONResponse(chargen_options(_chargen_ruleset(pack)))
 
 
 def _equipped_items(char: Character, rs):
@@ -629,11 +669,11 @@ def _grant_level_xp(char: Character) -> Character:
 
 
 @app.post("/api/chargen/preview")
-async def post_chargen_preview(body: CharacterBuild) -> JSONResponse:
+async def post_chargen_preview(body: CharacterBuild, pack: str | None = None) -> JSONResponse:
     """Run the chargen firewall on an in-progress build and return either the
     aggregated errors or the fully-derived preview sheet — live wizard feedback,
     nothing persisted."""
-    rs = _ruleset()
+    rs = _chargen_ruleset(pack)
     try:
         char, items = build_character(body, rs)
     except ChargenError as e:
@@ -642,11 +682,11 @@ async def post_chargen_preview(body: CharacterBuild) -> JSONResponse:
 
 
 @app.post("/api/chargen/build")
-async def post_chargen_build(body: CharacterBuild) -> JSONResponse:
+async def post_chargen_build(body: CharacterBuild, pack: str | None = None) -> JSONResponse:
     """Build the level-1 character for real and return the full `Character` snapshot
     (what a person-NPC stores, 4b-3) alongside the preview. Same firewall as
     /preview."""
-    rs = _ruleset()
+    rs = _chargen_ruleset(pack)
     try:
         char, items = build_character(body, rs)
     except ChargenError as e:
@@ -657,11 +697,11 @@ async def post_chargen_build(body: CharacterBuild) -> JSONResponse:
 
 
 @app.post("/api/chargen/levelup/plan")
-async def post_chargen_levelup_plan(character: Character) -> JSONResponse:
+async def post_chargen_levelup_plan(character: Character, pack: str | None = None) -> JSONResponse:
     """What the character's NEXT level requires (HP, ASI/feat, subclass, new
     spells) — drives the wizard's per-level choices. Operates on the transient
     character in the body; no repo. XP is granted so authoring isn't gated by it."""
-    return JSONResponse(level_up_plan(_grant_level_xp(character), _ruleset()))
+    return JSONResponse(level_up_plan(_grant_level_xp(character), _chargen_ruleset(pack)))
 
 
 class _ForgeLevelUpIn(BaseModel):
@@ -670,11 +710,11 @@ class _ForgeLevelUpIn(BaseModel):
 
 
 @app.post("/api/chargen/levelup")
-async def post_chargen_levelup(body: _ForgeLevelUpIn) -> JSONResponse:
+async def post_chargen_levelup(body: _ForgeLevelUpIn, pack: str | None = None) -> JSONResponse:
     """Advance the transient character one level and return the new snapshot. Unlike
     the play app this isn't event-sourced (authoring, not a live game), so a "roll"
     HP method without an explicit value just rolls here."""
-    rs = _ruleset()
+    rs = _chargen_ruleset(pack)
     char, choice = _grant_level_xp(body.character), body.choice
     cc = rs.classes.get(char.sheet.char_class) if char.sheet else None
     if choice.hp_method == "roll" and choice.hp_roll is None and cc is not None:
@@ -690,10 +730,10 @@ async def post_chargen_levelup(body: _ForgeLevelUpIn) -> JSONResponse:
 
 
 @app.post("/api/chargen/sheet")
-async def post_chargen_sheet(character: Character) -> JSONResponse:
+async def post_chargen_sheet(character: Character, pack: str | None = None) -> JSONResponse:
     """Render an already-built Character into the same derived sheet the build
     preview shows — so a person-NPC can be reviewed without rebuilding it."""
-    rs = _ruleset()
+    rs = _chargen_ruleset(pack)
     return JSONResponse({"ok": True, "preview": preview_payload(character, _equipped_items(character, rs), rs)})
 
 

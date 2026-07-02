@@ -16,7 +16,7 @@ old `seed.seed_world()`. Authored canon for NPCs/places is a later step.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
@@ -25,10 +25,10 @@ from ..canon.models import CanonRecord
 from ..enums import Ability
 from ..state.models import Character, Item as StateItem, ItemStack
 from ..state.repository import InMemoryRepository
-from .ruleset import Ruleset, load_ruleset
+from .ruleset import _VALID_SKILLS, Ruleset, load_ruleset
 from .schemas import (NPC, AiProfile, AuthoredQuest, BestiaryGate, Item, Lore,
                       Place, PackManifest, Scenario, StatBlock)
-from .srd_schemas import SrdEquipment
+from .srd_schemas import Background, SrdEquipment
 
 DEFAULT_PACK = "brightvale"
 _PACKS_ROOT = Path(__file__).parent / "packs"
@@ -245,6 +245,27 @@ def _lint_quests(quests: list[AuthoredQuest], npcs: list[NPC], item_ids: set[str
             errors.append(f"quests: {q.id} is unreachable — it is not a root and no branch unlocks it")
 
 
+def _lint_backgrounds(backgrounds: list[Background], items: list[Item],
+                      ruleset: Ruleset, errors: list[str]) -> None:
+    """Pack-authored backgrounds (module-kit S2): ids unique and non-shadowing
+    (a pack ADDS character options, it never silently replaces an SRD one),
+    skills real, and equipment grants resolving against the pack's items OR the
+    SRD catalog (the merged session ruleset serves both at chargen time)."""
+    _dup_ids(backgrounds, "backgrounds", errors)
+    item_ids = {i.id for i in items}
+    for b in backgrounds:
+        if b.id in ruleset.backgrounds:
+            errors.append(f"backgrounds: {b.id!r} shadows an SRD background — "
+                          "give the pack's own background a new id")
+        for sk in b.skill_proficiencies:
+            if sk not in _VALID_SKILLS:
+                errors.append(f"backgrounds: {b.id} lists unknown skill {sk!r}")
+        for g in b.equipment:
+            if g.item not in item_ids and g.item not in ruleset.equipment:
+                errors.append(f"backgrounds: {b.id}.equipment references unknown "
+                              f"item {g.item!r}")
+
+
 def _lint_default_party(sc: Scenario, item_ids: set[str], errors: list[str]) -> None:
     """A default party is a list of state.Character dicts (the chargen stopgap).
     Validate each parses and that its inventory/equipped reference real items."""
@@ -450,10 +471,16 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     scenarios = _parse_list(base / "scenarios.json", Scenario, "scenarios.json", errors)
     quests = _parse_list(base / "quests.json", AuthoredQuest, "quests.json", errors)
     ai_profiles = _parse_list(base / "ai_profiles.json", AiProfile, "ai_profiles.json", errors)
+    backgrounds = _parse_list(base / "backgrounds.json", Background, "backgrounds.json", errors)
+
+    # The SRD layer loads BEFORE the lint: pack backgrounds are checked against
+    # its background/equipment sets (S2), and the merged ruleset is built below.
+    ruleset = load_ruleset()
 
     _lint(manifest, items, statblocks, npcs, places, scenarios, quests, errors)
     _dup_ids(lore, "lore", errors)        # subjects are free-form, so only ids are checked
     _dup_ids(ai_profiles, "ai_profiles", errors)
+    _lint_backgrounds(backgrounds, items, ruleset, errors)
     person_chars = _load_person_characters(base, npcs, errors)   # Phase 4b sidecars
 
     if errors:
@@ -479,7 +506,18 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
                                    sounds=tuple(c.model_dump() for c in p.sounds))
                    for p in places}
 
-    ruleset = load_ruleset()      # the global SRD layer (shared by every world)
+    # The session plays with a PACK-MERGED ruleset (module-kit S2): the pack's
+    # backgrounds join the SRD's (collisions are lint errors above), and the
+    # equipment map IS the merged mechanics catalog — so chargen can grant
+    # pack items (a background's dockhand boots) and every consumer of
+    # `ruleset.equipment` sees one consistent set. `load_ruleset()` returns a
+    # fresh instance per call, so this never mutates another world's ruleset.
+    merged_equipment = mechanics_catalog(ruleset, items)
+    ruleset = replace(
+        ruleset,
+        backgrounds={**ruleset.backgrounds, **{b.id: b for b in backgrounds}},
+        equipment=merged_equipment,
+    )
     return LoadedWorld(
         repository=repo, canon=_authored_canon(npcs, places, lore), scene=scene,
         location=scenario.start_location, places=place_nodes,
@@ -489,5 +527,5 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
         bestiary_gate=manifest.bestiary_gate, quests=tuple(quests),
         ai_profiles=tuple(ai_profiles),
         npc_statblocks={n.id: n.stat_block for n in npcs if n.stat_block},
-        mechanics_catalog=mechanics_catalog(ruleset, items),
+        mechanics_catalog=merged_equipment,
     )

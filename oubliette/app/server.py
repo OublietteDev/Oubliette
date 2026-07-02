@@ -867,8 +867,9 @@ async def get_packs() -> JSONResponse:
 
 # --- chargen (CS2): serialize the ruleset for the wizard, and validate live ---
 def _ruleset() -> Ruleset:
-    """The SRD ruleset for chargen — the session's (global, pack-independent), with a
-    load fallback for the custom-seed case."""
+    """The ruleset for chargen — the SESSION's, which since module-kit S2 is
+    pack-merged (the world's own backgrounds and items ride alongside the SRD),
+    with a bare-SRD load fallback for the custom-seed case."""
     return GAME.session.ruleset or load_ruleset()
 
 
