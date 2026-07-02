@@ -105,6 +105,9 @@ class CombatLogPanel:
         self.combat_log: CombatLog | None = None
         self.scroll_offset: int = 0
         self._last_event_count: int = 0
+        # Optional creature_id -> team resolver (set by the combat screen);
+        # enables the team-colored actor chip in front of each line.
+        self.team_resolver = None
 
         # Filter state
         self.active_filter = LogFilter.ALL
@@ -158,7 +161,7 @@ class CombatLogPanel:
     def _clamp_scroll(self) -> None:
         """Ensure scroll_offset stays within valid bounds."""
         line_height = LAYOUT["log_line_height"]
-        content_rect_height = self.rect.height - 24  # title bar area
+        content_rect_height = self.rect.height - 28  # title bar + bottom pad
         max_lines = content_rect_height // line_height
         filtered_events = self._get_filtered_events()
         total = len(filtered_events)
@@ -188,26 +191,33 @@ class CombatLogPanel:
         if self.combat_log is None:
             return
 
-        # Background — dark leather tray with draw_panel fallback
-        if not draw_tray_background(surface, self.rect, variant="combatlog"):
+        # Background — parchment sheet with draw_panel fallback. The sheet is
+        # square, so the full-width strip uses cover-fit (fill + center crop)
+        # rather than a 10:1 stretch that smears it into fake wood grain.
+        if not draw_tray_background(
+            surface, self.rect, variant="combatlog", fit="cover"
+        ):
             draw_panel(surface, self.rect, bg_color="bg_dark")
+
+        inset = LAYOUT["log_inset_x"]
 
         # Title
         title_font = get_font(FONT_SIZES["label"], "heading")
         title = title_font.render(
             "Combat Log", True, _LOG_COLORS["text_gold"]
         )
-        surface.blit(title, (self.rect.x + 8, self.rect.y + 4))
+        surface.blit(title, (self.rect.x + inset, self.rect.y + 4))
 
         # Filter tabs (right of title)
         self._render_filter_tabs(surface)
 
-        # Content area below title
+        # Content area below title, inset from the tray edge, with a little
+        # bottom padding so the last line doesn't sit flush on the edge
         content_rect = pygame.Rect(
-            self.rect.x + 4,
+            self.rect.x + inset,
             self.rect.y + 20,
-            self.rect.width - 8,
-            self.rect.height - 24,
+            self.rect.width - inset * 2,
+            self.rect.height - 28,
         )
 
         font = get_font(FONT_SIZES["content"])
@@ -226,6 +236,18 @@ class CombatLogPanel:
             event = filtered_events[i]
             color_key = EVENT_COLORS.get(event.event_type, "text_secondary")
             color = _LOG_COLORS.get(color_key, _LOG_COLORS["text_primary"])
+
+            # Actor chip: a small team-colored tick in the inset gutter, so
+            # whose action a line is can be read without parsing the text
+            if event.source_id and self.team_resolver is not None:
+                team = self.team_resolver(event.source_id)
+                chip = _LOG_COLORS.get(f"team_{team}") if team else None
+                if chip is not None:
+                    pygame.draw.rect(
+                        surface, chip,
+                        (content_rect.x - 9, y + 3,
+                         3, line_height - 6),
+                    )
 
             text = f"> {event.message}"
             text_surf = font.render(text, True, color)
@@ -260,7 +282,7 @@ class CombatLogPanel:
         tab_padding = 6
 
         # Start tabs from the right side to avoid collision with title
-        tab_x = self.rect.x + 100
+        tab_x = self.rect.x + LAYOUT["log_inset_x"] + 100
 
         self._filter_rects.clear()
 

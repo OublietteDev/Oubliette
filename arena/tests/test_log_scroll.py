@@ -50,12 +50,13 @@ def test_wheel_down_at_the_tail_stays_at_the_tail(monkeypatch):
 
 
 def test_wheel_up_clamps_at_the_oldest_event(monkeypatch):
-    # A 120px panel shows 6 lines (96px content / 16px lines): 10 events leave
-    # exactly 4 lines of history to scroll back through, and no further.
+    # A 120px panel shows 5 lines (92px content — title bar + bottom pad —
+    # / 16px lines): 10 events leave exactly 5 lines of history to scroll
+    # back through, and no further.
     panel = _panel(events=10)
     for _ in range(50):
         _wheel(panel, +1, monkeypatch)
-    assert panel.scroll_offset == 4
+    assert panel.scroll_offset == 5
 
     panel = _panel(events=3)                # everything fits -> nothing to scroll
     for _ in range(50):

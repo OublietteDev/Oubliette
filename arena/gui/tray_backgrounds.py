@@ -1,7 +1,7 @@
 """Tray background rendering for UI panels.
 
-Provides two tray image variants — a light parchment tray for standard
-panels (initiative, creature info) and a dark leather tray for the
+Provides two tray image variants — a framed dark-leather tray for standard
+panels (initiative, creature info) and a light parchment sheet for the
 combat log.  Images are scaled and cached at each requested size.
 """
 
@@ -38,9 +38,18 @@ def _load_raw(path: Path) -> pygame.Surface | None:
         return None
 
 
-def _get_scaled(path: Path, width: int, height: int) -> pygame.Surface | None:
-    """Return a cached, scaled copy of the tray image."""
-    key = (path, width, height)
+def _get_scaled(
+    path: Path, width: int, height: int, fit: str = "stretch"
+) -> pygame.Surface | None:
+    """Return a cached, scaled copy of the tray image.
+
+    ``fit="stretch"`` distorts the image to the rect — right for framed art
+    whose border must survive on all four sides (a stretch is a poor man's
+    9-slice). ``fit="cover"`` scales to fill and center-crops the overflow —
+    right for extreme aspect targets (the full-width log strip), where a
+    stretch would smear the texture beyond recognition.
+    """
+    key = (path, width, height, fit)
     if key in _scaled_cache:
         return _scaled_cache[key]
 
@@ -49,7 +58,24 @@ def _get_scaled(path: Path, width: int, height: int) -> pygame.Surface | None:
         _scaled_cache[key] = None
         return None
 
-    scaled = pygame.transform.smoothscale(raw, (width, height))
+    if fit == "cover":
+        # Trim the art's ragged border first — cover mode is for texture
+        # fill, and a surviving edge band reads as a dark smear.
+        rw, rh = raw.get_size()
+        trim_x, trim_y = int(rw * 0.06), int(rh * 0.06)
+        inner = raw.subsurface(
+            pygame.Rect(trim_x, trim_y, rw - trim_x * 2, rh - trim_y * 2)
+        )
+        rw, rh = inner.get_size()
+        scale = max(width / rw, height / rh)
+        sw, sh = max(width, round(rw * scale)), max(height, round(rh * scale))
+        big = pygame.transform.smoothscale(inner, (sw, sh))
+        scaled = pygame.Surface((width, height), pygame.SRCALPHA)
+        scaled.blit(big, (0, 0),
+                    area=pygame.Rect((sw - width) // 2, (sh - height) // 2,
+                                     width, height))
+    else:
+        scaled = pygame.transform.smoothscale(raw, (width, height))
     _scaled_cache[key] = scaled
     return scaled
 
@@ -63,6 +89,7 @@ def draw_tray_background(
     rect: pygame.Rect,
     *,
     variant: str = "standard",
+    fit: str = "stretch",
 ) -> bool:
     """Draw a tray background image into *rect*.
 
@@ -73,8 +100,10 @@ def draw_tray_background(
     rect : pygame.Rect
         Position and size of the panel.
     variant : str
-        ``"standard"`` for the light parchment tray, ``"combatlog"``
-        for the dark leather tray.
+        ``"standard"`` for the framed dark-leather tray, ``"combatlog"``
+        for the light parchment sheet.
+    fit : str
+        ``"stretch"`` (default) or ``"cover"`` — see ``_get_scaled``.
 
     Returns
     -------
@@ -84,7 +113,7 @@ def draw_tray_background(
         ``draw_panel()`` style.
     """
     path = _COMBATLOG_PATH if variant == "combatlog" else _STANDARD_PATH
-    img = _get_scaled(path, rect.width, rect.height)
+    img = _get_scaled(path, rect.width, rect.height, fit)
     if img is not None:
         surface.blit(img, rect.topleft)
         return True

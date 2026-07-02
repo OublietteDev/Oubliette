@@ -507,6 +507,7 @@ class CombatScreen(Screen):
         self.creature_info_panel.set_combat(self.combat)
         self.radial_menu.set_combat(self.combat)
         self.log_panel.set_log(self.combat.log)
+        self.log_panel.team_resolver = self._log_team_for
 
         # Roll initiative and start combat
         self.combat.roll_initiative()
@@ -525,6 +526,11 @@ class CombatScreen(Screen):
 
         # Check if the first turn is an AI turn
         self._check_ai_turn()
+
+    def _log_team_for(self, creature_id: str) -> str | None:
+        """Resolve a log event's source creature to its team (actor chips)."""
+        combatant = self.combat.get_creature(creature_id) if self.combat else None
+        return combatant.team if combatant is not None else None
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """Process events, delegating to sub-components."""
@@ -2655,6 +2661,7 @@ class CombatScreen(Screen):
         self.creature_info_panel.set_combat(self.combat)
         self.radial_menu.set_combat(self.combat)
         self.log_panel.set_log(self.combat.log)
+        self.log_panel.team_resolver = self._log_team_for
 
         # Skip existing log events so they don't replay as visual effects
         self._last_event_index = len(self.combat.log.events)

@@ -96,7 +96,9 @@ LOG_COLORS = {
     "text_secondary": "#5a4e3e",     # muted brown (vs #a89880)
     "text_gold": "#785814",          # dark gold (vs #d4a847)
     "team_player": "#18641c",        # dark green (vs #4CAF50)
+    "team_ally": "#1e4682",          # dark blue (vs #5090d0)
     "team_enemy": "#8c1c14",         # dark red (vs #c43030)
+    "team_neutral": "#4a4a44",       # dark gray (vs #9E9E9E)
     "hp_full": "#18641c",
     "hp_critical": "#8c1c14",
     "condition_neutral": "#1e4682",  # dark blue (vs #5090d0)
@@ -164,6 +166,7 @@ LAYOUT = {
     # Panel text rhythm
     "initiative_line_height": 22,
     "log_line_height": 16,
+    "log_inset_x": 16,   # keep log text off the parchment tray's edge
     "panel_title_pad": 6,
     # Radial menu geometry
     "radial_inner_radius": 40,

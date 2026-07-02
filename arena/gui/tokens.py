@@ -309,11 +309,15 @@ def draw_token(
     # Team color
     team_color_key = f"team_{combatant.team}"
     team_color = parse_color(COLORS.get(team_color_key, COLORS["team_neutral"]))
-    body_color = parse_color(creature.token_color)
+    body_color = _body_color(creature, team_color)
 
-    # Active turn glow
+    # Active turn glow (per-creature phase so the pulse doesn't visibly
+    # "reset" to the same brightness every time the turn passes)
     if is_active_turn:
-        pulse_t = math.sin(pygame.time.get_ticks() / 1500.0 * math.tau)
+        pulse_t = math.sin(
+            pygame.time.get_ticks() / 1500.0 * math.tau
+            + _glow_phase(creature.name)
+        )
         pulse_01 = (pulse_t + 1.0) / 2.0
         glow_alpha = int(100 + 155 * pulse_01)
         # Draw a slightly inflated polygon outline
@@ -375,7 +379,8 @@ def draw_token(
         # _draw_hp_bar places the bar at center.y + radius + 2, so
         # set center.y so the bar sits just below the polygon bottom.
         bar_center = (bar_cx, max_y - bar_half_w)
-        _draw_hp_bar(surface, bar_center, bar_half_w, creature, display_hp_pct)
+        _draw_hp_bar(surface, bar_center, bar_half_w, creature, display_hp_pct,
+                     show_number=True)
 
     # Condition icons above the highest point
     if radius >= 6 and creature.active_conditions:
@@ -469,6 +474,7 @@ def _draw_decoy_ghosts(
     center: tuple[int, int],
     radius: int,
     count: int,
+    body_color: tuple[int, int, int] | None = None,
 ) -> None:
     """Draw translucent duplicate tokens behind the real one (Mirror Image)."""
     ghost_img = None
@@ -478,7 +484,8 @@ def _draw_decoy_ghosts(
             ghost_img = img.copy()
             ghost_img.set_alpha(110)
 
-    body_color = parse_color(creature.token_color)
+    if body_color is None:
+        body_color = parse_color(creature.token_color)
     for dx, dy in _GHOST_OFFSETS[:count]:
         gcx = int(center[0] + dx * radius)
         gcy = int(center[1] + dy * radius)
@@ -526,18 +533,22 @@ def _draw_single_hex_token(
 
     team_color_key = f"team_{combatant.team}"
     team_color = parse_color(COLORS.get(team_color_key, COLORS["team_neutral"]))
-    body_color = parse_color(creature.token_color)
+    body_color = _body_color(creature, team_color)
 
     # Mirror Image duplicates (C4): translucent ghost copies fanned out
     # behind the real token, one per remaining image — they vanish as
     # attacks shatter them (the buff's charges count down).
     ghost_count = _decoy_image_count(creature)
     if ghost_count:
-        _draw_decoy_ghosts(surface, creature, center, radius, ghost_count)
+        _draw_decoy_ghosts(surface, creature, center, radius, ghost_count,
+                           body_color)
 
-    # Active turn glow
+    # Active turn glow (per-creature phase — see multi-hex note)
     if is_active_turn:
-        pulse_t = math.sin(pygame.time.get_ticks() / 1500.0 * math.tau)
+        pulse_t = math.sin(
+            pygame.time.get_ticks() / 1500.0 * math.tau
+            + _glow_phase(creature.name)
+        )
         pulse_01 = (pulse_t + 1.0) / 2.0
         glow_alpha = int(100 + 155 * pulse_01)
         glow_extra = 3 + int(3 * pulse_01)
@@ -736,12 +747,36 @@ def _get_initials(name: str) -> str:
     return name[0].upper() if name else "?"
 
 
+_DEFAULT_TOKEN_COLOR = "#808080"  # the model's placeholder fallback
+
+
+def _glow_phase(name: str) -> float:
+    """A stable per-creature phase offset for the turn-glow pulse."""
+    return (sum(name.encode()) % 100) / 100.0 * math.tau
+
+
+def _body_color(creature, team_color: tuple[int, int, int]) -> tuple[int, int, int]:
+    """The disc color for an image-less token.
+
+    An authored ``token_color`` is respected; the model's gray placeholder
+    is replaced with a dark team tint so fallback discs still read as
+    friend/foe at a glance.
+    """
+    if creature.token_color.lower() != _DEFAULT_TOKEN_COLOR:
+        return parse_color(creature.token_color)
+    bg = parse_color(COLORS["bg_medium"])
+    return tuple(
+        int(t * 0.45 + b * 0.55) for t, b in zip(team_color, bg)
+    )
+
+
 def _draw_hp_bar(
     surface: pygame.Surface,
     center: tuple[int, int],
     radius: int,
     creature,
     display_hp_pct: float | None = None,
+    show_number: bool = False,
 ) -> None:
     """Draw a small HP bar below the token."""
     bar_width = radius * 2
@@ -780,6 +815,18 @@ def _draw_hp_bar(
                 surface, temp_color,
                 (bar_x + fill_width, bar_y, temp_w, bar_height),
             )
+
+    # HP numbers (large tokens only — their wide bar has room for text)
+    if show_number and bar_height >= 9 and bar_width >= 40:
+        font = get_font(max(9, bar_height - 2), "body_bold")
+        hp_text = f"{creature.current_hit_points}/{creature.max_hit_points}"
+        text = font.render(hp_text, True, parse_color(COLORS["text_primary"]))
+        shadow = font.render(hp_text, True, (0, 0, 0))
+        pos = text.get_rect(
+            center=(center[0], bar_y + bar_height // 2)
+        )
+        surface.blit(shadow, (pos.x + 1, pos.y + 1))
+        surface.blit(text, pos)
 
 
 def _draw_condition_icons(
