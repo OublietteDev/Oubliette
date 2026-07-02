@@ -682,6 +682,12 @@ class CombatScreen(Screen):
             if menu_result is not None:
                 self._handle_radial_result(menu_result)
                 return
+            # The wheel belongs to the menu while it's open (sub-popup
+            # lists scroll with it) — never let it also zoom the grid,
+            # or scrolling a long spell list zooms the battle all the
+            # way out underneath the popup.
+            if event.type == pygame.MOUSEWHEEL:
+                return
             # Swallow clicks inside the menu area
             if event.type in (
                 pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP
