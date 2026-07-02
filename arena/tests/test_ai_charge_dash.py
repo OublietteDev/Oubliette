@@ -21,7 +21,9 @@ from arena.combat.manager import CombatManager
 from arena.grid.coordinates import HexCoord
 from arena.models.abilities import AbilityScores
 from arena.models.actions import Action, ActionType, Attack, DamageRoll, DamageType
-from arena.models.character import Creature, Feature, OnHitRider, RiderTrigger
+from arena.models.character import (
+    Creature, CreatureSize, Feature, OnHitRider, RiderTrigger,
+)
 from arena.models.encounter import CombatantEntry, Encounter
 from arena.models.monster import Monster
 
@@ -51,13 +53,14 @@ def _charge_rider():
     )
 
 
-def _monster(actions=None, charge=False):
+def _monster(actions=None, charge=False, size=CreatureSize.MEDIUM):
     special = []
     if charge:
         special = [Feature(name="Charge", description="x",
                            on_hit_rider=_charge_rider())]
     return Monster(
         name="Beast", max_hit_points=40, armor_class=13,  # default speed: 30 ft
+        size=size,
         ability_scores=AbilityScores(strength=16, dexterity=12),
         proficiency_bonus=2, is_player_controlled=False,
         ai_profile="berserker",  # melee, aggressive, never flees
@@ -192,6 +195,42 @@ def test_dashing_charger_holds_line():
     assert TurnStepType.STANDARD_ACTION in types  # it does dash
     dest = _move_target(plan)
     assert dest.distance_to(HexCoord(14, 5)) >= 5
+
+
+def test_charger_inside_line_walks_in_and_attacks():
+    """OublietteDev's triceratops freeze (2026-07-02): a charger that STARTS
+    inside the charge line can never charge (no run-up exists), so the
+    hold must disengage — old behavior penalized every closer hex and
+    'stand still' won, leaving the beast frozen and attacking air."""
+    cm = _start(_monster(actions=[_tusk()], charge=True),
+                beast_pos=(6, 5), hero_pos=(9, 5))  # 3 hexes = 15 ft out
+    plan = _plan(cm)
+
+    types = _step_types(plan)
+    assert TurnStepType.MOVE in types  # it moves — no freeze
+    assert TurnStepType.EXECUTE_ATTACK in types
+    dest = _move_target(plan)
+    assert dest.distance_to(HexCoord(9, 5)) <= 1
+
+
+def test_large_charger_inside_line_does_not_freeze():
+    """Same freeze, Large edition: adjacency checks must be footprint-
+    aware for the mover (a Large anchor sits 2 hexes out when its body
+    is adjacent), or the hold misfires on every big charger."""
+    from arena.grid.footprint import min_distance_between
+
+    cm = _start(_monster(actions=[_tusk()], charge=True,
+                         size=CreatureSize.LARGE),
+                beast_pos=(6, 5), hero_pos=(9, 5))
+    plan = _plan(cm)
+
+    types = _step_types(plan)
+    assert TurnStepType.MOVE in types
+    assert TurnStepType.EXECUTE_ATTACK in types
+    dest = _move_target(plan)
+    assert min_distance_between(
+        dest, CreatureSize.LARGE, HexCoord(9, 5), CreatureSize.MEDIUM,
+    ) <= 1
 
 
 def test_non_charger_still_closes_to_melee():

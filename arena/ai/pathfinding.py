@@ -140,21 +140,30 @@ def find_best_movement(
 
     # Charge-aware hold: only bite when no attack can land this turn —
     # if the target is reachable, closing in and hitting NOW beats
-    # posturing for next turn.
+    # posturing for next turn. Distances are footprint-aware for the
+    # MOVER too (pos_to_creature_distance assumes a medium mover, which
+    # made Large chargers misjudge adjacency).
     hold_hexes = 0
     if (
         charge_hold_hexes > 0
         and preferred_target is not None
         and preferred_target.position is not None
     ):
-        can_attack = attack_this_turn and (
-            pos_to_creature_distance(current_pos, preferred_target) <= 1
-            or any(
-                pos_to_creature_distance(HexCoord(q, r), preferred_target) <= 1
-                for (q, r) in reachable
+        def _target_dist(hex_coord: HexCoord) -> int:
+            return min_distance_between(
+                hex_coord, creature_size,
+                preferred_target.position, preferred_target.size,
             )
+
+        current_dist = _target_dist(current_pos)
+        can_attack = attack_this_turn and (
+            current_dist <= 1
+            or any(_target_dist(HexCoord(q, r)) <= 1 for (q, r) in reachable)
         )
-        if not can_attack:
+        # Already inside the line: no run-up exists from here, so a
+        # charge is impossible this turn AND next — holding would just
+        # freeze the creature in place. Walk in and fight normally.
+        if not can_attack and current_dist >= charge_hold_hexes:
             hold_hexes = charge_hold_hexes
 
     # Score current position
@@ -174,10 +183,7 @@ def find_best_movement(
 
         # Inside the charge hold line: decisive penalty (outweighs the
         # +40 adjacency bonus so nothing positional can override it)
-        if (
-            hold_hexes
-            and pos_to_creature_distance(hex_coord, preferred_target) < hold_hexes
-        ):
+        if hold_hexes and _target_dist(hex_coord) < hold_hexes:
             score -= 100.0
 
         # Determine purpose
