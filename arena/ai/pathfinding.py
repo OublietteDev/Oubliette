@@ -113,6 +113,8 @@ def find_best_movement(
     creature_id: str | None = None,
     dead_creature_ids: set[str] | None = None,
     blocked_hexes: set[tuple[int, int]] | None = None,
+    charge_hold_hexes: int = 0,
+    attack_this_turn: bool = True,
 ) -> MovementGoal:
     """Determine the best hex to move to.
 
@@ -120,6 +122,13 @@ def find_best_movement(
     1. Get all reachable hexes within movement budget
     2. Score each reachable hex using evaluate_position
     3. Return the best-scoring hex, or "stay" if current position is best
+
+    ``charge_hold_hexes``: for move-then-strike attackers (Charge/
+    Pounce). When set and the creature can't attack this turn anyway,
+    hexes closer than the hold line to the preferred target are heavily
+    penalized — creeping adjacent guarantees next turn's hit has no
+    run-up and the charge rider never fires. ``attack_this_turn`` is
+    False when the action is already committed elsewhere (e.g. Dash).
     """
     # Get reachable positions (in feet budget)
     reachable = get_reachable_hexes(
@@ -128,6 +137,25 @@ def find_best_movement(
         dead_creature_ids=dead_creature_ids,
         blocked_hexes=blocked_hexes,
     )
+
+    # Charge-aware hold: only bite when no attack can land this turn —
+    # if the target is reachable, closing in and hitting NOW beats
+    # posturing for next turn.
+    hold_hexes = 0
+    if (
+        charge_hold_hexes > 0
+        and preferred_target is not None
+        and preferred_target.position is not None
+    ):
+        can_attack = attack_this_turn and (
+            pos_to_creature_distance(current_pos, preferred_target) <= 1
+            or any(
+                pos_to_creature_distance(HexCoord(q, r), preferred_target) <= 1
+                for (q, r) in reachable
+            )
+        )
+        if not can_attack:
+            hold_hexes = charge_hold_hexes
 
     # Score current position
     current_score = evaluate_position(
@@ -143,6 +171,14 @@ def find_best_movement(
             continue
 
         score = evaluate_position(hex_coord, profile, context, grid, preferred_target)
+
+        # Inside the charge hold line: decisive penalty (outweighs the
+        # +40 adjacency bonus so nothing positional can override it)
+        if (
+            hold_hexes
+            and pos_to_creature_distance(hex_coord, preferred_target) < hold_hexes
+        ):
+            score -= 100.0
 
         # Determine purpose
         purpose = "approach_enemy"

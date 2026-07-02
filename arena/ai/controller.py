@@ -372,14 +372,35 @@ class AIController:
                     needs_approach = True
 
         # ── Movement ──────────────────────────────────────────────────
-        if needs_approach or (not best_action) or best_action.action_category == "standard":
+        # Dash grants its extra movement when it EXECUTES, so it must be
+        # planned before the walk. The old order walked on the base
+        # budget, then dashed, then ended the turn — the action was paid
+        # and the granted movement was never spent.
+        is_dash = (
+            best_action is not None
+            and best_action.action_category == "standard"
+            and best_action.action_name.lower() == "dash"
+        )
+        if is_dash:
+            self._plan_action(plan, best_action, profile, context)
+            from arena.combat.condition_effects import get_movement_multiplier
+            from arena.combat.stat_modifiers import get_effective_speed
+            dash_bonus = int(
+                get_effective_speed(creature) * get_movement_multiplier(creature)
+            )
+            self._plan_movement(
+                plan, profile, context, manager, preferred_target,
+                extra_movement=dash_bonus,
+                attack_this_turn=False,  # the action is spent on Dash
+            )
+        elif needs_approach or (not best_action) or best_action.action_category == "standard":
             # Move before acting
             self._plan_movement(
                 plan, profile, context, manager, preferred_target
             )
 
         # ── Action ────────────────────────────────────────────────────
-        if best_action:
+        if best_action and not is_dash:
             # Multiattack: a creature with extra attacks (a dragon's bite +
             # two claws, a martial's Extra Attack) gets to swing that many
             # times per Attack action. The engine already enforces the
@@ -468,11 +489,21 @@ class AIController:
         manager: CombatManager,
         preferred_target: CreatureView | None,
         post_action: bool = False,
+        extra_movement: int = 0,
+        attack_this_turn: bool = True,
     ) -> None:
-        """Add movement step to the plan if beneficial."""
+        """Add movement step to the plan if beneficial.
+
+        ``extra_movement`` extends the planning budget for movement the
+        plan grants before the walk executes (Dash). ``attack_this_turn``
+        is False when the action is already spent on something that
+        isn't an attack — a charge-capable creature then holds at charge
+        distance instead of creeping adjacent.
+        """
         if manager.grid is None or context.me.position is None:
             return
-        if context.remaining_movement <= 0:
+        budget = context.remaining_movement + extra_movement
+        if budget <= 0:
             return
 
         # Don't add duplicate movement steps
@@ -482,12 +513,14 @@ class AIController:
 
         goal = find_best_movement(
             profile, context, manager.grid,
-            context.me.position, context.remaining_movement,
+            context.me.position, budget,
             preferred_target,
             creature_size=context.me.size,
             creature_id=context.me.creature_id,
             dead_creature_ids=manager.movement.dead_creature_ids,
             blocked_hexes=manager.movement.blocked_hexes,
+            charge_hold_hexes=self._charge_hold_hexes(manager),
+            attack_this_turn=attack_this_turn,
         )
 
         if goal.purpose != "stay" and goal.target_hex != context.me.position:
@@ -498,6 +531,34 @@ class AIController:
             plan.thinking_log.append(
                 f"Move: {goal.purpose} to ({goal.target_hex.q}, {goal.target_hex.r})"
             )
+
+    @staticmethod
+    def _charge_hold_hexes(manager: CombatManager) -> int:
+        """Approach cap (in hexes) for a move-then-strike attacker.
+
+        A Charge/Pounce rider needs the attacker to CLOSE its threshold
+        distance in the turn of the hit. Attacking from reach 1 means
+        the run-up must start at threshold + 1 hexes out — any closer
+        and the charge can never fire. Returns 0 for non-chargers.
+        """
+        combatant = manager.active_combatant
+        if combatant is None:
+            return 0
+        creature = combatant.creature
+        feats = (
+            list(getattr(creature, "features", []) or [])
+            + list(getattr(creature, "special_abilities", []) or [])
+        )
+        charge_ft = max(
+            (
+                f.on_hit_rider.requires_charge_ft
+                for f in feats if f.on_hit_rider is not None
+            ),
+            default=0,
+        )
+        if charge_ft <= 0:
+            return 0
+        return charge_ft // 5 + 1
 
     def _plan_action(
         self,
