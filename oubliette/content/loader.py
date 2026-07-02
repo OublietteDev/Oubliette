@@ -293,6 +293,8 @@ def _project_mechanics(it: Item) -> SrdEquipment:
         item_type=it.item_type, rarity=it.rarity, magic_bonus=it.magic_bonus,
         requires_attunement=it.requires_attunement, mechanics=it.mechanics,
         consumable=it.consumable, poison=it.poison,
+        grants_resistances=list(it.grants_resistances),
+        grants_immunities=list(it.grants_immunities),
     )
 
 

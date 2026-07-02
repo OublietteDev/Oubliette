@@ -294,6 +294,30 @@ def equipped_magic(
     return weapon_bonus, ac_bonus
 
 
+def equipped_wards(
+    char: Character, catalog: dict[str, SrdEquipment] | None
+) -> tuple[list[str], list[str]]:
+    """(resistances, immunities) granted by the character's EQUIPPED items
+    (module-kit S1.5 — Armor of Fire Resistance, a Ring of Poison Immunity).
+    Deduplicated, first-seen order kept for a stable encounter file; the caller
+    merges them with whatever the character already carries (racial traits)."""
+    resist: list[str] = []
+    immune: list[str] = []
+    if not catalog:
+        return resist, immune
+    for item_id in char.equipped:
+        item = catalog.get(item_id)
+        if item is None:
+            continue
+        for dt in getattr(item, "grants_resistances", ()) or ():
+            if dt not in resist:
+                resist.append(dt)
+        for dt in getattr(item, "grants_immunities", ()) or ():
+            if dt not in immune:
+                immune.append(dt)
+    return resist, immune
+
+
 def _drink_action(item: SrdEquipment, qty: int) -> Action:
     """One self-targeted "drink it" Action for a mapped consumable. The entry
     invariant of the handoff-v2 contract is set HERE: the action enters combat with
@@ -478,6 +502,17 @@ def weapon_kit_actions(
     str_mod = char.ability_mod(Ability.STR)
     dex_mod = char.ability_mod(Ability.DEX)
 
+    # The weapon behind the sheet's basic "Attack" — the FIRST equipped weapon
+    # with damage dice, mirroring the derivation rule (chargen._apply_weapon).
+    # Its plain swing is already action #1 with the solved numbers and the B3
+    # magic bake, so the kit skips that duplicate (its thrown variant still
+    # stages — the basic Attack is melee-only).
+    basic_source = next(
+        (iid for iid in char.equipped
+         if (it := catalog.get(iid)) is not None and it.category == "weapon"
+         and it.weapon is not None and it.weapon.damage),
+        None)
+
     qty_by_id: dict[str, int] = {}
     for stack in char.inventory:
         qty_by_id[stack.item_id] = qty_by_id.get(stack.item_id, 0) + stack.qty
@@ -544,13 +579,16 @@ def weapon_kit_actions(
 
         if is_ranged:
             # Pure ranged weapon: one action. Thrown ones (darts) consume.
+            # Never skipped as the basic-attack source: the basic "Attack" is
+            # melee-shaped (reach 5), so the kit's ranged action IS the bow.
             out.append(_attack_action(
                 item.name, "ranged_weapon",
                 rng=rng or 30, rng_long=rng_long,
                 consumes=thrown_prop is not None,
             ))
         else:
-            out.append(_attack_action(item.name, "melee_weapon"))
+            if item_id != basic_source:
+                out.append(_attack_action(item.name, "melee_weapon"))
             if thrown_prop is not None and rng:
                 out.append(_attack_action(
                     f"{item.name} (thrown)", "ranged_weapon",
@@ -673,6 +711,10 @@ def character_to_player(
     # engine's carrier+prof roll lands on the boosted number exactly; the AC
     # bonus joins the story-derived AC (the story derivation ignores magic).
     weapon_bonus, ac_bonus = equipped_magic(char, catalog)
+    # Worn wards (S1.5): equipped resistance/immunity gear lands on the Arena
+    # creature directly — the same fields monsters use, so the damage-packet
+    # pipeline applies them with zero special-casing.
+    ward_resist, ward_immune = equipped_wards(char, catalog)
     to_hit = char.attack_bonus + weapon_bonus
     carrier, prof = _solve_to_hit(short, to_hit)
     sheet = char.sheet
@@ -714,6 +756,8 @@ def character_to_player(
         race=race,
         is_player_controlled=True,
         speed={"walk": sheet.speed if sheet else 30},
+        damage_resistances=ward_resist,
+        damage_immunities=ward_immune,
         saving_throw_proficiencies=save_profs,
         spellcasting_ability=casting_ability,
         spell_slots=slots_max,

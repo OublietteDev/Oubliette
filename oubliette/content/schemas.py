@@ -129,6 +129,11 @@ class Item(_Strict):
     mechanics: Literal["none", "structured"] = "none"  # does `consumable`/`poison` carry combat data?
     consumable: ConsumableMechanics | None = None
     poison: PoisonMechanics | None = None
+    # Worn boons (module-kit S1.5): damage types this item wards WHILE EQUIPPED
+    # (Armor of Fire Resistance, a Ring of Poison Immunity). The bridge folds
+    # them into the PC's Arena resistances/immunities alongside racial ones.
+    grants_resistances: list[str] = Field(default_factory=list)
+    grants_immunities: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _magic_shape(self) -> "Item":
@@ -146,6 +151,11 @@ class Item(_Strict):
         if self.magic_bonus is not None and self.item_type not in _EQUIPPABLE_MAGIC:
             raise ValueError(f"magic_bonus needs an equippable item_type "
                              f"({'/'.join(_EQUIPPABLE_MAGIC)}), not {self.item_type!r}")
+        if ((self.grants_resistances or self.grants_immunities)
+                and self.item_type not in _EQUIPPABLE_MAGIC):
+            raise ValueError("worn resistances/immunities need an equippable item_type "
+                             "(they apply while the item is equipped) — for a drinkable "
+                             "effect use the consumable's grants_resistance instead")
         if self.item_type in ("potion", "scroll") and self.category != "consumable":
             raise ValueError(f"a {self.item_type} must have category 'consumable' "
                              "so it can actually be used up (use_item)")

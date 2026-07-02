@@ -474,6 +474,16 @@
   .inv-row button { font: inherit; font-size: 12px; cursor: pointer; border-radius: 7px; padding: 6px 12px; border: 1px solid var(--line); background: #2a231d; color: var(--ink); }
   .inv-row button:hover { border-color: var(--accent); }
   .inv-empty { color: var(--faint); font-style: italic; font-size: 13px; }
+  /* item hover-card: what the thing actually does (details from /api/inventory) */
+  .item-tip { position: fixed; z-index: 90; width: 280px; background: var(--panel-2); border: 1px solid var(--accent);
+    border-radius: 10px; padding: 11px 13px; box-shadow: var(--shadow); pointer-events: none; display: none; }
+  .item-tip.show { display: block; }
+  .item-tip .t-name { font-family: var(--serif); color: var(--gold); font-size: 14.5px; }
+  .item-tip .t-kind { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent-2); margin-top: 2px; }
+  .item-tip .t-line { font-size: 12.5px; color: var(--ink); margin-top: 5px; line-height: 1.4; }
+  .item-tip .t-desc { font-size: 12px; color: var(--muted); font-style: italic; margin-top: 7px; padding-top: 7px;
+    border-top: 1px solid var(--line); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+  .item-tip .t-val { font-size: 11.5px; color: var(--faint); margin-top: 6px; }
 
   /* --- bestiary (SRD monster reference) --- */
   .bestiary-modal { width: min(920px, 96vw); height: 88vh; }
@@ -2707,7 +2717,74 @@ async function openInventory() {
   renderInventory(data);
   $("inv-overlay").classList.remove("hidden");
 }
-function closeInventory() { $("inv-overlay").classList.add("hidden"); }
+function closeInventory() { hideItemTip(); $("inv-overlay").classList.add("hidden"); }
+
+// --- item hover-card: the details map ships with /api/inventory (ids the party carries) ---
+let invDetails = {};
+const itemTip = el("div", "item-tip");
+document.body.appendChild(itemTip);
+const TIP_ABILITY = { str: "Strength", dex: "Dexterity", con: "Constitution",
+                      int: "Intelligence", wis: "Wisdom", cha: "Charisma" };
+function ordLevel(n) { return n === 0 ? "cantrip" : ({1:"1st",2:"2nd",3:"3rd"}[n] || n + "th") + " level"; }
+function buildItemTip(name, d) {
+  itemTip.innerHTML = "";
+  itemTip.appendChild(el("div", "t-name", name));
+  const kind = [];
+  if (d.rarity) kind.push(d.rarity);
+  if (d.item_type) kind.push(d.item_type);
+  if (d.requires_attunement) kind.push("requires attunement");
+  if (kind.length) itemTip.appendChild(el("div", "t-kind", kind.join(" · ")));
+  const line = t => itemTip.appendChild(el("div", "t-line", t));
+  if (d.weapon) {
+    let t = "Damage " + d.weapon.damage;
+    if (d.weapon.attack_bonus) t += " · +" + d.weapon.attack_bonus + " to hit";
+    if (d.weapon.properties && d.weapon.properties.length) t += " · " + d.weapon.properties.join(", ");
+    line(t);
+  }
+  if (d.armor) {
+    if (d.armor.type === "shield") line("+" + d.armor.base_ac + " AC (shield)");
+    else {
+      const bits = [];
+      if (d.armor.type) bits.push(d.armor.type);
+      if (d.armor.dex_cap != null) bits.push("Dex max +" + d.armor.dex_cap);
+      line("AC " + d.armor.base_ac + (bits.length ? " (" + bits.join(", ") + ")" : ""));
+    }
+  }
+  if (d.magic_bonus) line("+" + d.magic_bonus + " magic bonus");
+  const c = d.consumable;
+  if (c) {
+    const dur = c.duration ? " (" + c.duration + ")" : "";
+    if (c.healing) line("Heals " + c.healing);
+    if (c.grants_resistance) line("Grants resistance: " + c.grants_resistance + dur);
+    if (c.ability_set) Object.entries(c.ability_set).forEach(([k, v]) =>
+      line("Sets " + (TIP_ABILITY[k] || k.toUpperCase()) + " to " + v + dur));
+    if (c.casts_spell_level != null) line("Casts its spell at " + ordLevel(c.casts_spell_level));
+    if (c.duration && !c.grants_resistance && !c.ability_set) line("Lasts " + c.duration);
+    if (c.action) line("Consumed as a " + c.action);
+  }
+  const p = d.poison;
+  if (p) {
+    line(cap(p.type) + " poison — DC " + p.save_dc + " " + (p.save_ability || "con").toUpperCase() + " save");
+    if (p.damage) line(p.damage + " " + (p.damage_type || "poison") + " damage on a failed save");
+    if (p.conditions && p.conditions.length)
+      line("Inflicts: " + p.conditions.join(", ") + (p.duration ? " (" + p.duration + ")" : ""));
+  }
+  if (d.grants_resistances && d.grants_resistances.length) line("Resistance: " + d.grants_resistances.join(", "));
+  if (d.grants_immunities && d.grants_immunities.length) line("Immunity: " + d.grants_immunities.join(", "));
+  if (d.description) itemTip.appendChild(el("div", "t-desc", d.description));
+  if (d.value != null) itemTip.appendChild(el("div", "t-val", "worth ~" + d.value + "g"));
+}
+function showItemTip(row, name, d) {
+  buildItemTip(name, d);
+  itemTip.classList.add("show");
+  const r = row.getBoundingClientRect(), tw = itemTip.offsetWidth, th = itemTip.offsetHeight;
+  let x = r.right + 12;                              // beside the modal, off the list
+  if (x + tw > window.innerWidth - 8) x = r.left - tw - 12;
+  if (x < 8) x = Math.max(8, window.innerWidth - tw - 8);
+  const y = Math.max(8, Math.min(r.top, window.innerHeight - th - 8));
+  itemTip.style.left = x + "px"; itemTip.style.top = y + "px";
+}
+function hideItemTip() { itemTip.classList.remove("show"); }
 
 function invRow(it, memberId) {
   const row = el("div", "inv-row");
@@ -2724,6 +2801,11 @@ function invRow(it, memberId) {
     const btn = el("button", null, it.equipped ? "Unequip" : "Equip");
     btn.addEventListener("click", () => equipToggle(memberId, it.item_id, !it.equipped));
     row.appendChild(btn);
+  }
+  const d = invDetails[it.item_id];
+  if (d) {
+    row.addEventListener("mouseenter", () => showItemTip(row, it.name, d));
+    row.addEventListener("mouseleave", hideItemTip);
   }
   return row;
 }
@@ -2746,6 +2828,8 @@ function invGroup(label, items, memberId, isEquipped) {
   return g;
 }
 function renderInventory(data) {
+  hideItemTip();
+  invDetails = data.details || {};
   const body = $("inv-body"); body.innerHTML = "";
   if (!data.party || !data.party.length) { body.appendChild(el("div", "inv-empty", "no party members")); return; }
   data.party.forEach(m => {

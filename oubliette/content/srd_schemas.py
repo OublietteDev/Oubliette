@@ -106,6 +106,11 @@ class SrdEquipment(_Strict):
     mechanics: Literal["none", "structured"] = "none"  # does `consumable`/`magic_bonus`/`poison` carry combat data?
     consumable: ConsumableMechanics | None = None
     poison: PoisonMechanics | None = None
+    # Worn boons (module-kit S1.5, same contract as content.Item): damage types
+    # warded WHILE EQUIPPED. SRD entries ship empty (the generator never
+    # structured them — a later backfill can); pack items author them directly.
+    grants_resistances: list[str] = Field(default_factory=list)
+    grants_immunities: list[str] = Field(default_factory=list)
 
 
 # --- spells -------------------------------------------------------------------

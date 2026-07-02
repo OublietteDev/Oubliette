@@ -179,14 +179,19 @@ def _has_progress() -> bool:
 
 
 def _build_inventory() -> dict:
-    """Per party-member inventory with item details for the inventory panel."""
+    """Per party-member inventory with item details for the inventory panel. Also
+    ships `details`: a compact {item_id: hover-card} map covering ONLY the ids the
+    party actually carries (never the whole catalog), so the panel can show what an
+    item actually does."""
     repo = GAME.session.repo
     party = []
+    carried: set[str] = set()
     for c in repo.party():
         items = []
         rs = _ruleset()
         for s in c.inventory:
             it = repo.get_item(s.item_id)
+            carried.add(s.item_id)
             items.append({
                 "item_id": s.item_id, "name": _stack_label(rs, s), "category": it.category,
                 "qty": s.qty, "value": it.base_value, "armor_class": it.armor_class,
@@ -195,7 +200,121 @@ def _build_inventory() -> dict:
                 "spell_level": s.spell_level,
             })
         party.append({"id": c.id, "name": c.name, "items": items})
-    return {"party": party}
+    details = {}
+    for iid in sorted(carried):
+        d = _item_details(iid)
+        if d:
+            details[iid] = d
+    return {"party": party, "details": details}
+
+
+def _item_details(item_id: str) -> dict | None:
+    """The hover-card facts for one carried item — only fields that exist, so the
+    front-end renders exactly what's true of the item and nothing else. Prefers the
+    session's merged mechanics catalog (SRD + pack, pack wins); falls back to the
+    campaign's repo item (which carries only the basic sheet numbers)."""
+    catalog = getattr(GAME.session, "mechanics_catalog", None) or {}
+    eq = catalog.get(item_id)
+    if eq is None:
+        return _item_details_fallback(item_id)
+    d: dict = {}
+    if eq.description:
+        d["description"] = eq.description
+    if eq.base_value is not None:
+        d["value"] = eq.base_value
+    if eq.weapon is not None:
+        w: dict = {"damage": eq.weapon.damage}
+        if eq.weapon.properties:
+            w["properties"] = list(eq.weapon.properties)
+        if eq.weapon.attack_bonus:
+            w["attack_bonus"] = eq.weapon.attack_bonus
+        d["weapon"] = w
+    if eq.armor is not None:
+        a: dict = {"base_ac": eq.armor.base_ac, "type": eq.armor.type}
+        if eq.armor.dex_cap is not None:
+            a["dex_cap"] = eq.armor.dex_cap
+        d["armor"] = a
+    # magic-item family line: "rare · weapon · requires attunement"
+    if eq.item_type != "mundane":
+        d["item_type"] = eq.item_type
+    if eq.rarity:
+        d["rarity"] = eq.rarity
+    if eq.magic_bonus:
+        d["magic_bonus"] = eq.magic_bonus
+    if eq.requires_attunement:
+        d["requires_attunement"] = True
+    c = eq.consumable
+    if c is not None:
+        cd = {k: v for k, v in (("healing", c.healing),
+                                ("ability_set", c.ability_set),
+                                ("grants_resistance", c.grants_resistance),
+                                ("casts_spell_level", c.casts_spell_level),
+                                ("duration", c.duration)) if v is not None}
+        if c.action and c.action != "action":
+            cd["action"] = c.action
+        if cd:
+            d["consumable"] = cd
+    p = eq.poison
+    if p is not None:
+        pd: dict = {"type": p.poison_type, "save_dc": p.save_dc,
+                    "save_ability": p.save_ability}
+        if p.damage:
+            pd["damage"] = p.damage
+            pd["damage_type"] = p.damage_type
+        if p.conditions:
+            pd["conditions"] = list(p.conditions)
+        if p.duration:
+            pd["duration"] = p.duration
+        d["poison"] = pd
+    # worn boons — fields landing in a parallel work-stream; read them if present
+    # so this works on either side of that merge.
+    res = getattr(eq, "grants_resistances", None)
+    imm = getattr(eq, "grants_immunities", None)
+    if res:
+        d["grants_resistances"] = list(res)
+    if imm:
+        d["grants_immunities"] = list(imm)
+    return d or None
+
+
+def _item_details_fallback(item_id: str) -> dict | None:
+    """Details from the campaign's repo catalog for an item outside the mechanics
+    catalog (e.g. a DM-invented item registered mid-session)."""
+    try:
+        it = GAME.session.repo.get_item(item_id)
+    except StateError:
+        return None
+    d: dict = {}
+    if it.base_value is not None:
+        d["value"] = it.base_value
+    if it.damage:
+        d["weapon"] = {"damage": it.damage}
+    if it.armor_class is not None:
+        a: dict = {"base_ac": it.armor_class}
+        if it.armor_type:
+            a["type"] = it.armor_type
+        if it.dex_cap is not None:
+            a["dex_cap"] = it.dex_cap
+        d["armor"] = a
+    return d or None
+
+
+def _ops_chip(ops) -> str:
+    """TurnLoop._ops_summary with item ids resolved to display names — this string
+    lands in a player-facing chip (the DM's own history beats keep the raw ids)."""
+    bits = []
+    for o in ops:
+        if o.op == "gold":
+            bits.append(f"{o.char} {o.delta:+d}g")
+        elif o.op == "item":
+            bits.append(f"{o.char} {o.delta:+d} {_item_name(_ruleset(), o.item_id)}")
+        elif o.op == "hp_set":
+            bits.append(f"{o.char} hp={o.value}")
+        elif o.op == "xp":
+            bits.append(f"{o.char} +{o.delta}xp")
+        elif o.op == "conditions":
+            bits.append(f"{o.char} conditions={o.conditions}")
+    return ", ".join(bits) or "(none)"
 
 
 def _describe_applied(rt) -> str | None:
@@ -214,7 +333,7 @@ def _describe_applied(rt) -> str | None:
             or rt.force_end_session or rt.env_time is not None or rt.env_weather is not None:
         return None
     if rt.ops:
-        return f"{rt.tool}: {TurnLoop._ops_summary(rt.ops)}"
+        return f"{rt.tool}: {_ops_chip(rt.ops)}"
     return None
 
 
@@ -754,8 +873,16 @@ def _ruleset() -> Ruleset:
 
 
 def _item_name(rs: Ruleset, item_id: str) -> str:
+    """Display name for an item id: the campaign catalog first (pack items and
+    DM-registered gear live there — the SRD ruleset alone would leave them as raw
+    ids), then the SRD catalog, then a title-cased id. Player-facing lines must
+    never read `tickle_bat` where 'Tickle Bat' will do."""
+    try:
+        return GAME.session.repo.get_item(item_id).name
+    except StateError:
+        pass
     it = rs.equipment.get(item_id)
-    return it.name if it is not None else item_id
+    return it.name if it is not None else item_id.replace("_", " ").title()
 
 
 def _spell_name(rs: Ruleset, spell_id: str | None) -> str | None:

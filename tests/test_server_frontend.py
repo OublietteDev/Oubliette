@@ -540,3 +540,51 @@ def test_applied_chip_labels():
 
     give = ResolvedTool("give", "reward", ops=[StateOp.gold("pc", 5)])
     assert _describe_applied(give) and _describe_applied(give).startswith("give:")
+
+
+def test_item_grant_chip_shows_display_name_not_raw_id():
+    """A granted item's chip reads its display name — `tickle_bat` never reaches the
+    player, whether the item is in the catalog, the SRD ruleset, or nowhere at all."""
+    from oubliette.app.server import _describe_applied
+    from oubliette.record.events import StateOp
+    from oubliette.tools.dispatch import ResolvedTool
+
+    _new()
+    give = ResolvedTool("give_item", "reward",
+                        ops=[StateOp.item("pc", "potion_of_healing", 1)])
+    chip = _describe_applied(give)
+    assert "Potion of Healing" in chip and "potion_of_healing" not in chip
+    # an id known nowhere still reads cleanly (title-cased fallback)
+    stray = ResolvedTool("give_item", "reward",
+                         ops=[StateOp.item("pc", "tickle_bat_9999", 1)])
+    assert "Tickle Bat 9999" in _describe_applied(stray)
+
+
+# --- inventory item details (the hover-card payload) --------------------------
+def test_inventory_details_cover_carried_ids_only():
+    """/api/inventory ships a compact {item_id: facts} map for the ids the party
+    actually carries — never the whole catalog — sourced from the mechanics catalog."""
+    _new()
+    d = client.get("/api/inventory").json()
+    carried = {it["item_id"] for m in d["party"] for it in m["items"]}
+    assert carried and set(d["details"]) <= carried
+    boots = d["details"]["boots"]                   # a pack item, through the merged catalog
+    assert boots["value"] == 2 and boots["description"].startswith("Scuffed")
+    knife = d["details"]["knife"]
+    assert knife["weapon"]["damage"] == "1d4"
+    assert knife["weapon"]["properties"] == ["finesse", "light"]
+
+
+def test_inventory_details_carry_magic_item_facts():
+    _new()
+    GAME.session.repo.add_item("pc", "potion_of_healing", 1)
+    GAME.session.repo.add_item("pc", "dagger_of_venom", 1)
+    det = client.get("/api/inventory").json()["details"]
+    pot = det["potion_of_healing"]
+    assert pot["item_type"] == "potion" and pot["rarity"] == "common"
+    assert pot["consumable"]["healing"] == "2d4+2"
+    assert "requires_attunement" not in pot          # only true facts ship (compact map)
+    dag = det["dagger_of_venom"]
+    assert dag["item_type"] == "weapon" and dag["rarity"] == "rare"
+    assert dag["magic_bonus"] == 1 and dag["value"] == 4000 and dag["description"]
+    _new()                                           # reset the shared save for other tests

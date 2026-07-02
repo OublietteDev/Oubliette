@@ -839,6 +839,14 @@ function itemForm(it) {
           </div>
           ${field("Attunement", `<label style="display:flex;align-items:center;gap:6px;font-weight:400"><input id="f_attune" type="checkbox" ${v.requires_attunement ? "checked" : ""}/> requires attunement</label>`)}
         </div>
+        <div id="wornGrantsBox" style="display:none">
+          <div class="row2">
+            ${field("Grants resistance to (worn)", `<input id="f_gres" value="${esc((v.grants_resistances || []).join(", "))}" placeholder="fire, cold" />`,
+                    "While equipped. Comma-separated damage types.")}
+            ${field("Grants immunity to (worn)", `<input id="f_gimm" value="${esc((v.grants_immunities || []).join(", "))}" placeholder="poison" />`,
+                    "While equipped. Comma-separated damage types.")}
+          </div>
+        </div>
       </div>
       <div id="consumBox" class="subform" style="display:none">
         <div class="sftitle">When it's used <span style="font-weight:400;opacity:.6">— leave everything blank for a prose-only item</span></div>
@@ -898,8 +906,9 @@ function wireItemForm() {
     const c = catSel.value;
     document.getElementById("armorBox").style.display = c === "armor" ? "block" : "none";
     document.getElementById("weaponBox").style.display = c === "weapon" ? "block" : "none";
-    // +N only means something on worn/wielded families (schema rule)
+    // +N / worn grants only mean something on worn/wielded families (schema rule)
     document.getElementById("bonusBox").style.display = MAGIC_EQUIPPABLE.has(t) ? "block" : "none";
+    document.getElementById("wornGrantsBox").style.display = MAGIC_EQUIPPABLE.has(t) ? "block" : "none";
     document.getElementById("consumBox").style.display = c === "consumable" && t !== "poison" ? "block" : "none";
     document.getElementById("poisonBox").style.display = t === "poison" ? "block" : "none";
   };
@@ -940,10 +949,14 @@ function confirmItem(original) {
   setOrDel("rarity", document.getElementById("f_rarity").value);
   if (document.getElementById("f_attune").checked) base.requires_attunement = true;
   else delete base.requires_attunement;
-  delete base.magic_bonus;
-  if (MAGIC_EQUIPPABLE.has(itype)) {                 // schema: +N needs an equippable family
+  delete base.magic_bonus; delete base.grants_resistances; delete base.grants_immunities;
+  if (MAGIC_EQUIPPABLE.has(itype)) {                 // schema: +N / worn grants need an equippable family
     const mb = document.getElementById("f_mbonus").value;
     if (mb !== "") base.magic_bonus = Number(mb);
+    const gres = csv(document.getElementById("f_gres").value);
+    if (gres.length) base.grants_resistances = gres;
+    const gimm = csv(document.getElementById("f_gimm").value);
+    if (gimm.length) base.grants_immunities = gimm;
   }
   if (itype === "potion" || itype === "scroll") base.category = "consumable";  // schema rule (the form locks this too)
 

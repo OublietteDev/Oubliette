@@ -653,10 +653,13 @@ def test_non_weapons_and_unknown_items_are_skipped():
 
 
 def test_equipped_but_unstacked_weapon_still_stages():
+    # The equipped handaxe is the basic-attack source, so its melee swing is
+    # the sheet's "Attack" (module-kit S1.5: no double-listing) — but the kit
+    # still stages its thrown variant, which the melee-shaped Attack can't cover.
     pc = _pc()
     pc.equipped.append("handaxe")
     names = [a.name for a in weapon_kit_actions(pc, RS.equipment)]
-    assert "Handaxe" in names and "Handaxe (thrown)" in names
+    assert "Handaxe" not in names and "Handaxe (thrown)" in names
 
 
 def test_kit_rides_into_the_staged_player_after_the_basic_attack():

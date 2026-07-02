@@ -13,7 +13,9 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from oubliette.combat.arena_bridge import consumable_actions, equipped_magic
+from oubliette.combat.arena_bridge import (character_to_player, consumable_actions,
+                                           equipped_magic, equipped_wards,
+                                           weapon_kit_actions)
 from oubliette.content.loader import _project_mechanics, load_pack, mechanics_catalog
 from oubliette.content.ruleset import load_ruleset
 from oubliette.content.schemas import (ConsumableMechanics, Item as PackItem,
@@ -199,6 +201,91 @@ def test_pack_potion_becomes_an_arena_drink_action():
     assert drink.healing == "1d4+1"
     assert drink.source_item_id == "veilberry_tonic"
     assert drink.current_uses == drink.uses_per_rest == 2
+
+
+# --- worn wards (S1.5): equipped resistance/immunity gear ----------------------
+
+def _ward_armor() -> PackItem:
+    return PackItem(id="emberplate", name="Emberplate", category="armor",
+                    slot="body", item_type="armor", rarity="rare",
+                    grants_resistances=["fire"], grants_immunities=["poison"])
+
+
+def test_worn_wards_need_an_equippable_family():
+    with pytest.raises(ValidationError, match="equippable"):
+        PackItem(id="x", name="x", category="consumable", item_type="potion",
+                 mechanics="structured",
+                 consumable=ConsumableMechanics(healing="2d4+2"),
+                 grants_resistances=["fire"])
+
+
+def test_projection_carries_worn_wards():
+    entry = _project_mechanics(_ward_armor())
+    assert entry.grants_resistances == ["fire"]
+    assert entry.grants_immunities == ["poison"]
+
+
+def test_equipped_wards_only_count_worn_items():
+    cat = mechanics_catalog(RS, [_ward_armor()])
+    worn = _pc(inventory=[ItemStack(item_id="emberplate", qty=1)],
+               equipped=["emberplate"])
+    carried = _pc(inventory=[ItemStack(item_id="emberplate", qty=1)])
+    assert equipped_wards(worn, cat) == (["fire"], ["poison"])
+    assert equipped_wards(carried, cat) == ([], [])
+
+
+def test_worn_wards_land_on_the_arena_creature():
+    cat = mechanics_catalog(RS, [_ward_armor()])
+    pc = _pc(inventory=[ItemStack(item_id="emberplate", qty=1)],
+             equipped=["emberplate"])
+    player = character_to_player(pc, catalog=cat)
+    assert player.damage_resistances == ["fire"]
+    assert player.damage_immunities == ["poison"]
+
+
+# --- the weapon kit no longer double-lists the basic-attack weapon --------------
+
+def _weapons() -> list[PackItem]:
+    return [
+        PackItem(id="dock_sword", name="Dockhand's Sword", category="weapon",
+                 slot="main_hand", weapon=WeaponProfile(damage="1d8")),
+        PackItem(id="tickle_bat", name="Tickle Bat", category="weapon",
+                 slot="main_hand", weapon=WeaponProfile(damage="1d2")),
+    ]
+
+
+def test_kit_skips_the_equipped_basic_attack_weapon():
+    cat = mechanics_catalog(RS, _weapons())
+    pc = _pc(inventory=[ItemStack(item_id="dock_sword", qty=1),
+                        ItemStack(item_id="tickle_bat", qty=1)],
+             equipped=["dock_sword"])
+    names = [a.name for a in weapon_kit_actions(pc, cat)]
+    # The sword IS the basic "Attack" (first equipped weapon) — no duplicate;
+    # the carried bat stays available (5e free object interaction, C5).
+    assert "Dockhand's Sword" not in names
+    assert "Tickle Bat" in names
+
+
+def test_kit_keeps_every_carried_weapon_when_nothing_is_equipped():
+    cat = mechanics_catalog(RS, _weapons())
+    pc = _pc(inventory=[ItemStack(item_id="dock_sword", qty=1),
+                        ItemStack(item_id="tickle_bat", qty=1)])
+    names = [a.name for a in weapon_kit_actions(pc, cat)]
+    assert {"Dockhand's Sword", "Tickle Bat"} <= set(names)
+
+
+def test_kit_keeps_the_thrown_variant_of_the_basic_attack_weapon():
+    javelin = PackItem(id="javelin", name="Javelin", category="weapon",
+                       slot="main_hand",
+                       weapon=WeaponProfile(damage="1d6",
+                                            properties=["thrown (range 30/120)"]))
+    cat = mechanics_catalog(RS, [javelin])
+    pc = _pc(inventory=[ItemStack(item_id="javelin", qty=3)],
+             equipped=["javelin"])
+    names = [a.name for a in weapon_kit_actions(pc, cat)]
+    # The melee swing is the basic Attack (skipped); the throw is NOT covered
+    # by it (the basic Attack is melee-shaped) so it must survive.
+    assert names == ["Javelin (thrown)"]
 
 
 # --- session wiring -------------------------------------------------------------
