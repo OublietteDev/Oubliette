@@ -181,6 +181,37 @@ def _error_result(message: str) -> dict:
             "rounds": None, "combatants": [], "error": message}
 
 
+LOG_DUMP_PATH = ARENA_ROOT / "last_combat_log.txt"
+
+
+def dump_log(cm: Any, path: Path = LOG_DUMP_PATH) -> Path | None:
+    """Write the fight's full combat log as readable text (diagnostics).
+
+    One file, overwritten per run — "what happened last fight" lives in
+    exactly one place. Each line is the event type + message; events with
+    details append them as JSON so a run can be audited after the window
+    closes (e.g. ``"charged": true`` on a Charge/Pounce damage event).
+    Never raises — a failed dump must not break the handoff contract.
+    """
+    try:
+        log = getattr(cm, "log", None)
+        events = getattr(log, "events", None) or []
+        lines = []
+        for ev in events:
+            etype = getattr(ev.event_type, "name", str(ev.event_type))
+            line = f"{etype:<22} {ev.message or ''}"
+            if ev.details:
+                try:
+                    line += "  || " + json.dumps(ev.details, default=str)
+                except (TypeError, ValueError):
+                    pass
+            lines.append(line)
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return path
+    except OSError:
+        return None
+
+
 def play_encounter(encounter_path: str | Path, result_path: str | Path) -> dict:
     """Launch The Arena directly into ``encounter_path`` and, when the player exits,
     write the resolved result to ``result_path``. Returns the result dict.
@@ -217,6 +248,9 @@ def play_encounter(encounter_path: str | Path, result_path: str | Path) -> dict:
 
     # Write from the FINAL manager state — covers every exit path uniformly (a clean
     # win/defeat, or an abort where winner is still None → outcome "unresolved").
+    dumped = dump_log(screen.combat)
+    if dumped is not None:
+        print(f"Combat log dumped to {dumped}")
     return write_result(screen.combat, result_path)
 
 

@@ -241,6 +241,57 @@ def test_charge_hit_stamps_damage_event():
     assert dmg_events and dmg_events[0].details.get("charged") is True
 
 
+def test_charge_hit_brands_log_lines_for_the_combat_filter():
+    """OublietteDev (2026-07-02): charges were invisible in the in-game log — the
+    damage line read like an ordinary swing and the rider's proc line was
+    an INFO event, which the log panel's Combat filter hides (INFO lives
+    in the Sys bucket). Now the damage message is branded with the rider's
+    feature name and the save line logs as SAVING_THROW."""
+    from arena.combat.actions import resolve_attack_hit
+    from arena.combat.events import CombatEventType
+
+    boar = _boar()
+    hero = Creature(name="Hero", max_hit_points=40, current_hit_points=40,
+                    armor_class=1, ability_scores=AbilityScores(strength=6),
+                    is_player_controlled=False)
+    enc = Encounter(name="adj", grid_width=10, grid_height=10, combatants=[
+        CombatantEntry(creature_id="hero", creature_data=hero, team="player",
+                       starting_position=(0, 0)),
+        CombatantEntry(creature_id="boar", creature_data=boar, team="enemy",
+                       starting_position=(1, 0)),
+    ])
+    cm = CombatManager()
+    cm.load_encounter(enc, Path("."))
+    with patch("arena.combat.manager.roll_die", side_effect=[20, 10]):
+        cm.roll_initiative()
+    cm.begin_combat()
+    boar_id = next(k for k, v in cm.combatants.items() if v.team == "enemy")
+    hero_id = next(k for k, v in cm.combatants.items() if v.team == "player")
+
+    with patch("arena.combat.actions.roll_die", return_value=20):
+        hr = resolve_attack_hit(
+            boar, boar_id, cm.combatants[hero_id].creature, hero_id,
+            boar.actions[0], cm.grid, combatants=cm.combatants,
+            attacker_pos=cm.combatants[boar_id].position,
+            target_pos=cm.combatants[hero_id].position)
+    assert hr.hit
+    feat = boar.special_abilities[0]
+    with patch("arena.combat.riders.roll_die", return_value=1):
+        rr = resolve_rider(feat, feat.on_hit_rider, boar,
+                           cm.combatants[hero_id].creature)
+    cm.complete_attack(hr, rider_results=[rr])
+
+    dmg = next(e for e in cm.log.events
+               if e.event_type == CombatEventType.DAMAGE
+               and e.target_id == hero_id)
+    assert dmg.message.startswith("Charge! ")
+
+    save_lines = [e for e in cm.log.events
+                  if e.event_type == CombatEventType.SAVING_THROW
+                  and e.message and e.message.startswith("Charge:")]
+    assert save_lines  # visible on the log panel's Combat filter
+
+
 def test_plain_hit_does_not_stamp_charged():
     """No rider → no charge marker on the damage event."""
     from arena.combat.actions import resolve_attack_hit

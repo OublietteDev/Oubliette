@@ -2740,10 +2740,18 @@ class CombatManager:
         # of an ordinary swing. Display metadata only — damage totals
         # already include the rider dice.
         if rider_results and any(rr.used and rr.from_charge for rr in rider_results):
+            charge_name = next(
+                rr.feature_name for rr in rider_results
+                if rr.used and rr.from_charge
+            )
             for event in result.events[len(hit_result.events):]:
                 if (event.event_type == CombatEventType.DAMAGE
                         and event.target_id == hit_result.target_id):
                     event.details["charged"] = True
+                    # Brand the log line too — the damage line otherwise
+                    # reads like an ordinary swing, and the rider's own
+                    # message can be filtered out of the log panel.
+                    event.message = f"{charge_name}! {event.message}"
                     break
 
         # Apply pending forced movement from the attack result
@@ -2789,10 +2797,15 @@ class CombatManager:
                             self.log.add(cond_event)
                             result.events.append(cond_event)
 
-                # Log rider messages
+                # Log rider messages. A rider that forced a save (Charge's
+                # prone, Stunning Strike) logs as SAVING_THROW, not INFO —
+                # INFO lines land in the log panel's "Sys" filter bucket,
+                # so the proc would vanish from the Combat tab entirely.
                 if rr.used and rr.log_message:
                     event = CombatEvent(
-                        event_type=CombatEventType.INFO,
+                        event_type=(CombatEventType.SAVING_THROW
+                                    if rr.save_dc is not None
+                                    else CombatEventType.INFO),
                         source_id=hit_result.attacker_id,
                         target_id=hit_result.target_id,
                         message=rr.log_message,

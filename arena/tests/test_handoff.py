@@ -191,3 +191,36 @@ def test_write_result_roundtrip(tmp_path):
     assert on_disk == returned
     assert on_disk["schema"] == RESULT_SCHEMA
     assert len(on_disk["combatants"]) == 2
+
+
+def test_dump_log_writes_readable_lines_with_details(tmp_path):
+    """The per-run diagnostics dump: every log event becomes one line of
+    'TYPE message', with details appended as JSON (so a charged hit can be
+    audited after the window closes)."""
+    from arena.combat.events import CombatEvent, CombatEventType
+    from arena.handoff import dump_log
+
+    cm = _loaded_manager()
+    cm.log.add(CombatEvent(event_type=CombatEventType.ROUND_START,
+                           message="--- Round 1 ---"))
+    cm.log.add(CombatEvent(event_type=CombatEventType.DAMAGE,
+                           message="Charge! Hero takes 9 slashing damage",
+                           target_id="hero",
+                           details={"damage": 9, "charged": True}))
+    out = tmp_path / "last_combat_log.txt"
+    assert dump_log(cm, out) == out
+
+    text = out.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    assert any(l.startswith("ROUND_START") and "--- Round 1 ---" in l for l in lines)
+    charged = next(l for l in lines if l.startswith("DAMAGE"))
+    assert "Charge! Hero takes 9 slashing damage" in charged
+    assert '"charged": true' in charged
+
+
+def test_dump_log_never_raises(tmp_path):
+    """A failed dump must not break the handoff contract."""
+    from arena.handoff import dump_log
+
+    assert dump_log(object(), tmp_path / "x.txt") is not None  # no log attr -> empty dump
+    assert dump_log(_loaded_manager(), tmp_path / "no_dir" / "x.txt") is None

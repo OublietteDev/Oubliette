@@ -27,6 +27,9 @@ arena/assets/
 # Combat handoff: the transient Arena→Oubliette result JSON (runtime output).
 result.json
 
+# Per-run combat log dump (diagnostics; overwritten every fight).
+arena/last_combat_log.txt
+
 # Player-uploaded PC portraits — per-save runtime data, lives beside the save DB.
 character-portraits/
 
