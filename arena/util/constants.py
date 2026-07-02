@@ -100,6 +100,54 @@ TERRAIN_NAMES: dict[TerrainType, str] = {
     TerrainType.COVER_FULL: "Full Cover",
 }
 
+# Typography scale — semantic names for every font size the GUI uses.
+# Pair with a style: get_font(FONT_SIZES["title"], "heading") for display
+# text, get_font(FONT_SIZES["content"]) for readable body text.
+FONT_SIZES = {
+    "tiny": 10,     # badges, pagination icons
+    "small": 11,    # filter tabs, secondary labels
+    "body": 12,     # action-bar labels, tooltips, small stats
+    "content": 13,  # popup entries, log lines (the workhorse size)
+    "label": 14,    # popup titles, section headers
+    "list": 15,     # initiative entries
+    "title": 18,    # panel titles
+}
+
+# Layout scale — every load-bearing pixel number in one place. The GUI was
+# built against a 1280x720 window; these names make that layout auditable
+# instead of scattering magic numbers across fifteen files.
+LAYOUT = {
+    "screen_width": 1280,
+    "screen_height": 720,
+    # Screen-edge margin popups clamp to
+    "popup_margin": 4,
+    # Right-hand column (initiative + creature info) and bottom log strip
+    "side_panel_width": 260,
+    "initiative_height": 280,
+    "log_height": 120,
+    # Action bar buttons
+    "action_button_width": 80,
+    "action_button_height": 28,
+    "action_small_button_width": 70,
+    "action_bar_padding": 4,
+    # Panel text rhythm
+    "initiative_line_height": 22,
+    "log_line_height": 16,
+    "panel_title_pad": 6,
+    # Radial menu geometry
+    "radial_inner_radius": 40,
+    "radial_outer_radius": 90,
+    "radial_slot_radius": 22,
+    "radial_arrow_radius": 12,
+    # Popup shared metrics (per-popup WIDTH/row constants stay class-level;
+    # these are the recipes every popup shares)
+    "popup_padding": 6,
+    "popup_row_height": 30,
+    "popup_title_height": 34,
+    "popup_button_height": 32,
+    "popup_border_width": 2,
+}
+
 # Interaction constants
 DRAG_THRESHOLD = 5  # Pixels of movement before drag activates
 ZOOM_FACTOR = 1.1  # Multiplier per scroll tick

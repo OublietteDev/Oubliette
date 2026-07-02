@@ -7,7 +7,7 @@ from arena.combat.actions import check_resource_cost
 from arena.combat.stat_modifiers import get_weapon_attack_bonus
 from arena.models.actions import Action
 from arena.gui.renderer import get_font
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
 # Tooltip descriptions for standard actions
 STANDARD_TOOLTIPS: dict[str, list[str]] = {
@@ -63,7 +63,7 @@ class ActionButton:
             border_radius=4,
         )
 
-        font = get_font(12)
+        font = get_font(FONT_SIZES["body"])
         text_color = parse_color(COLORS["text_primary"])
         if self.is_disabled:
             text_color = (100, 100, 100)
@@ -113,10 +113,10 @@ class ActionBar:
         self._last_action_state = self.combat.has_used_action
 
         creature = combatant.creature
-        btn_width = 80
-        btn_height = 28
-        small_btn_width = 70
-        padding = 4
+        btn_width = LAYOUT["action_button_width"]
+        btn_height = LAYOUT["action_button_height"]
+        small_btn_width = LAYOUT["action_small_button_width"]
+        padding = LAYOUT["action_bar_padding"]
         x = self.rect.x + padding
         y = self.rect.y + (self.rect.height - btn_height) // 2 + 6
 
@@ -281,7 +281,7 @@ class ActionBar:
             self.rebuild_buttons()
 
         # Info text at top of bar
-        font = get_font(12)
+        font = get_font(FONT_SIZES["body"])
         info_parts = [f"{combatant.creature.name}'s turn"]
 
         if self.combat.turn_phase == TurnPhase.SELECTING_TARGET:

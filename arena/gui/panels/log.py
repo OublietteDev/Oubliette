@@ -7,7 +7,7 @@ import pygame
 from arena.combat.events import CombatLog, CombatEventType
 from arena.gui.renderer import draw_panel, draw_scrollbar, get_font
 from arena.gui.tray_backgrounds import draw_tray_background
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
 
 # Dark color palette for combat log text (readable on light parchment tray).
@@ -165,7 +165,7 @@ class CombatLogPanel:
 
     def _clamp_scroll(self) -> None:
         """Ensure scroll_offset stays within valid bounds."""
-        line_height = 16
+        line_height = LAYOUT["log_line_height"]
         content_rect_height = self.rect.height - 24  # title bar area
         max_lines = content_rect_height // line_height
         filtered_events = self._get_filtered_events()
@@ -201,7 +201,7 @@ class CombatLogPanel:
             draw_panel(surface, self.rect, bg_color="bg_dark")
 
         # Title
-        title_font = get_font(14)
+        title_font = get_font(FONT_SIZES["label"], "heading")
         title = title_font.render(
             "Combat Log", True, _LOG_COLORS["text_gold"]
         )
@@ -218,8 +218,8 @@ class CombatLogPanel:
             self.rect.height - 24,
         )
 
-        font = get_font(13)
-        line_height = 16
+        font = get_font(FONT_SIZES["content"])
+        line_height = LAYOUT["log_line_height"]
         max_lines = content_rect.height // line_height
 
         filtered_events = self._get_filtered_events()
@@ -261,7 +261,7 @@ class CombatLogPanel:
 
     def _render_filter_tabs(self, surface: pygame.Surface) -> None:
         """Render the filter tab buttons in the title bar area."""
-        font = get_font(11)
+        font = get_font(FONT_SIZES["small"])
         tab_height = 16
         tab_y = self.rect.y + 2
         tab_gap = 2
@@ -274,8 +274,7 @@ class CombatLogPanel:
 
         for filt in LogFilter:
             label = FILTER_LABELS[filt]
-            text_surf = font.render(label, True, (0, 0, 0))
-            tab_w = text_surf.get_width() + tab_padding * 2
+            tab_w = font.size(label)[0] + tab_padding * 2
 
             tab_rect = pygame.Rect(tab_x, tab_y, tab_w, tab_height)
             self._filter_rects.append((tab_rect, filt))

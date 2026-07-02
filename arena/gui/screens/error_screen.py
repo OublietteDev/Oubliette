@@ -70,6 +70,7 @@ class ErrorScreen(Screen):
             (self.screen_width // 2, self.screen_height // 2 - 60),
             parse_color(COLORS["hp_critical"]),
             font_size=32,
+            style="heading",
         )
 
         # Detail message — wrap long lines

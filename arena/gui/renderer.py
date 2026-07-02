@@ -5,41 +5,47 @@ import os
 
 import pygame
 
+from arena.paths import ASSETS_DIR
 from arena.models.encounter import TerrainType
 from arena.util.constants import COLORS, parse_color
 
 
-# Font paths - relative to project root
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_FONT_DIR = os.path.join(_PROJECT_ROOT, "assets", "fonts")
-_FONT_MEDIEVAL = os.path.join(_FONT_DIR, "MedievalSharp-Regular.ttf")
+# Typography: MedievalSharp carries the fantasy flavor in headings; PT Serif
+# (a lining-figure body serif in the spirit of the web apps' --serif stack)
+# keeps logs, popups, and dice numbers readable at small sizes.
+_FONT_DIR = ASSETS_DIR / "fonts"
+_FONT_FILES = {
+    "heading": _FONT_DIR / "MedievalSharp-Regular.ttf",
+    "body": _FONT_DIR / "PTSerif-Regular.ttf",
+    "body_bold": _FONT_DIR / "PTSerif-Bold.ttf",
+}
 
 # Font cache to avoid re-creating font objects every frame
 _font_cache: dict[tuple[str, int], pygame.font.Font] = {}
 
-# Resolved font path (None = pygame default, set on first use)
-_resolved_font_path: str | None = None
-_font_path_resolved: bool = False
+# Resolved font paths (None = pygame default), filled on first use per style
+_resolved_font_paths: dict[str, str | None] = {}
 
 
-def _get_font_path() -> str | None:
-    """Resolve the fantasy font path, falling back to default if missing."""
-    global _resolved_font_path, _font_path_resolved
-    if not _font_path_resolved:
-        if os.path.isfile(_FONT_MEDIEVAL):
-            _resolved_font_path = _FONT_MEDIEVAL
-        else:
-            _resolved_font_path = None
-        _font_path_resolved = True
-    return _resolved_font_path
+def _get_font_path(style: str) -> str | None:
+    """Resolve a font style's file path, falling back to default if missing."""
+    if style not in _resolved_font_paths:
+        path = _FONT_FILES.get(style)
+        _resolved_font_paths[style] = (
+            str(path) if path is not None and path.is_file() else None
+        )
+    return _resolved_font_paths[style]
 
 
-def get_font(size: int) -> pygame.font.Font:
-    """Get a cached fantasy-themed font of the given size."""
-    font_path = _get_font_path()
-    key = ("body", size)
+def get_font(size: int, style: str = "body") -> pygame.font.Font:
+    """Get a cached themed font of the given size.
+
+    ``style`` is one of ``"body"`` (readable serif — the default), ``"body_bold"``,
+    or ``"heading"`` (the MedievalSharp display face for titles).
+    """
+    key = (style, size)
     if key not in _font_cache:
-        _font_cache[key] = pygame.font.Font(font_path, size)
+        _font_cache[key] = pygame.font.Font(_get_font_path(style), size)
     return _font_cache[key]
 
 
@@ -120,9 +126,10 @@ def draw_text_centered(
     center: tuple[int, int],
     color: tuple[int, int, int],
     font_size: int = 16,
+    style: str = "body",
 ) -> None:
     """Draw text centered at the given position."""
-    font = get_font(font_size)
+    font = get_font(font_size, style)
     text_surface = font.render(text, True, color)
     text_rect = text_surface.get_rect(center=center)
     surface.blit(text_surface, text_rect)

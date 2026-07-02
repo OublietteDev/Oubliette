@@ -37,7 +37,7 @@ from arena.gui.panels.creature_info import CreatureInfoPanel
 from arena.gui.radial_menu import RadialMenu, RadialMenuState
 from arena.gui.renderer import get_font, draw_hex_highlight
 from arena.models.encounter import Encounter, TerrainType
-from arena.util.constants import COLORS, TERRAIN_NAMES, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, TERRAIN_NAMES, parse_color
 from arena.util.settings import get_settings
 
 from arena.ai.controller import AIController, TurnPlan, TurnStep, TurnStepType
@@ -59,10 +59,10 @@ if TYPE_CHECKING:
     from arena.gui.app import App
 
 
-# Layout constants (for 1280x720)
-SIDE_PANEL_WIDTH = 260
-INITIATIVE_HEIGHT = 280
-LOG_HEIGHT = 120
+# Layout constants (sourced from the shared LAYOUT scale; built for 1280x720)
+SIDE_PANEL_WIDTH = LAYOUT["side_panel_width"]
+INITIATIVE_HEIGHT = LAYOUT["initiative_height"]
+LOG_HEIGHT = LAYOUT["log_height"]
 
 # Duration (ms) for the smooth hop animation between hexes.
 MOVE_ANIM_DURATION_MS = 120
@@ -2041,7 +2041,7 @@ class CombatScreen(Screen):
 
         # Legendary targeting hint
         if self._legendary_selected_action is not None:
-            hint_font = get_font(14)
+            hint_font = get_font(FONT_SIZES["label"])
             hint_text = f"Select target for {self._legendary_selected_action.name} (ESC to cancel)"
             hint_surf = hint_font.render(hint_text, True, (200, 150, 255))
             hx = (self.screen_width - hint_surf.get_width()) // 2
@@ -3346,8 +3346,8 @@ class CombatScreen(Screen):
             ("?", "Toggle This Help"),
         ]
 
-        font = get_font(14)
-        title_font = get_font(18)
+        font = get_font(FONT_SIZES["label"])
+        title_font = get_font(FONT_SIZES["title"], "heading")
         padding = 16
         line_height = 22
         col_gap = 20
@@ -3398,7 +3398,7 @@ class CombatScreen(Screen):
         overlay.fill((20, 16, 10, 180))
         surface.blit(overlay, (0, 0))
 
-        font = get_font(48)
+        font = get_font(48, "heading")
         if self.combat.winner == "player":
             text = "VICTORY!"
             color = parse_color(COLORS["text_gold"])
@@ -3494,7 +3494,7 @@ class CombatScreen(Screen):
             )
 
         # Render layout
-        font = get_font(14)
+        font = get_font(FONT_SIZES["label"])
         padding = 6
         line_height = 18
 
@@ -3545,7 +3545,7 @@ class CombatScreen(Screen):
             self._hovered_terrain_type, "Unknown Terrain"
         )
 
-        font = get_font(14)
+        font = get_font(FONT_SIZES["label"])
         padding = 6
 
         text_surf = font.render(

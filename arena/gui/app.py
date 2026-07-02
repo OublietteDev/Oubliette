@@ -8,7 +8,7 @@ from arena.gui.screens.base import Screen
 from arena.gui.screens.combat import CombatScreen
 from arena.gui.background_slideshow import BackgroundSlideshow
 from arena.gui.custom_cursor import CustomCursorManager
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, LAYOUT, parse_color
 from arena.util.loader import load_encounter
 from arena.util.settings import load_settings
 
@@ -33,10 +33,10 @@ class App:
                 width = int(w_str)
                 height = int(h_str)
             except (ValueError, AttributeError):
-                width, height = 1280, 720
+                width, height = LAYOUT["screen_width"], LAYOUT["screen_height"]
         else:
-            width = width or 1280
-            height = height or 720
+            width = width or LAYOUT["screen_width"]
+            height = height or LAYOUT["screen_height"]
 
         pygame.init()
 

@@ -17,7 +17,7 @@ from arena.combat.stat_modifiers import (
 )
 from arena.gui.renderer import draw_panel, draw_scrollbar, get_font
 from arena.gui.tray_backgrounds import draw_tray_background
-from arena.util.constants import COLORS, CONDITION_DISPLAY, parse_color
+from arena.util.constants import COLORS, CONDITION_DISPLAY, FONT_SIZES, parse_color
 
 # Ability abbreviations in display order
 ABILITY_NAMES = [
@@ -138,9 +138,9 @@ class CreatureInfoPanel:
         white = parse_color(COLORS["text_primary"])
         gray = parse_color(COLORS["text_secondary"])
         gold = parse_color(COLORS["text_gold"])
-        font_title = get_font(18)
-        font_body = get_font(14)
-        font_small = get_font(12)
+        font_title = get_font(FONT_SIZES["title"], "heading")
+        font_body = get_font(FONT_SIZES["label"])
+        font_small = get_font(FONT_SIZES["body"])
 
         # --- Team color indicator + Name ---
         team_key = f"team_{combatant.team}"
@@ -469,7 +469,7 @@ class CreatureInfoPanel:
         if not breakdown:
             return
 
-        font = get_font(12)
+        font = get_font(FONT_SIZES["body"])
         padding = 6
         line_height = 17
         separator_height = 4

@@ -5,7 +5,7 @@ import pygame
 from arena.combat.manager import CombatManager, CombatState, TurnPhase
 from arena.gui.renderer import draw_panel, get_font
 from arena.gui.tray_backgrounds import draw_tray_background
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 
 
 class InitiativePanel:
@@ -63,7 +63,7 @@ class InitiativePanel:
             draw_panel(surface, self.rect)
 
         # Title
-        title_font = get_font(18)
+        title_font = get_font(FONT_SIZES["title"], "heading")
         round_num = self.combat.initiative.round_number
         title = title_font.render(
             f"Initiative - Round {round_num}",
@@ -76,7 +76,7 @@ class InitiativePanel:
         y = self.rect.y + 30
         active = self.combat.active_combatant
         if active and self.combat.state == CombatState.IN_COMBAT:
-            info_font = get_font(11)
+            info_font = get_font(FONT_SIZES["small"])
             info_parts: list[str] = [active.creature.name]
 
             if self.combat.turn_phase == TurnPhase.SELECTING_TARGET:
@@ -109,8 +109,8 @@ class InitiativePanel:
             y += 16
 
         # Entries
-        font = get_font(15)
-        line_height = 22
+        font = get_font(FONT_SIZES["list"])
+        line_height = LAYOUT["initiative_line_height"]
         current_entry = self.combat.initiative.current_entry
 
         self._entry_rects.clear()
@@ -221,7 +221,7 @@ class InitiativePanel:
             legendary_count = getattr(combatant.creature, "legendary_action_count", 0)
             if legendary_count > 0:
                 remaining = self.combat.legendary_points.get(entry.creature_id, 0)
-                badge_font = get_font(10)
+                badge_font = get_font(FONT_SIZES["tiny"])
                 badge_text = f"L:{remaining}"
                 badge_color = (180, 120, 255)  # Purple for legendary
                 badge_surf = badge_font.render(badge_text, True, badge_color)

@@ -163,7 +163,9 @@ def draw_image_button(
         hover_text_color = parse_color(COLORS["text_gold"])
 
     color = hover_text_color if is_hovered else text_color
-    draw_text_centered(surface, label, rect.center, color, font_size=font_size)
+    # Menu buttons are display elements — they carry the fantasy heading face.
+    draw_text_centered(surface, label, rect.center, color,
+                       font_size=font_size, style="heading")
 
 
 def clear_button_cache() -> None:

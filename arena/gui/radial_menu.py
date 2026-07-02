@@ -22,7 +22,7 @@ from arena.grid.footprint import get_footprint_center_pixel
 from arena.models.actions import Action, ActionType
 from arena.gui.icons import get_icon
 from arena.gui.renderer import get_font
-from arena.util.constants import COLORS, parse_color
+from arena.util.constants import COLORS, FONT_SIZES, LAYOUT, parse_color
 from arena.util.settings import get_settings
 
 from typing import TYPE_CHECKING
@@ -117,16 +117,16 @@ class RadialMenu:
 
         # Geometry (updated every frame when open)
         self._center_screen: tuple[int, int] = (0, 0)
-        self._inner_radius: int = 40
-        self._outer_radius: int = 90
-        self._slot_radius: int = 22
-        self._screen_width: int = 1280
-        self._screen_height: int = 720
+        self._inner_radius: int = LAYOUT["radial_inner_radius"]
+        self._outer_radius: int = LAYOUT["radial_outer_radius"]
+        self._slot_radius: int = LAYOUT["radial_slot_radius"]
+        self._screen_width: int = LAYOUT["screen_width"]
+        self._screen_height: int = LAYOUT["screen_height"]
 
         # Arrow button rects (built during position update)
         self._next_arrow_center: tuple[int, int] = (0, 0)
         self._prev_arrow_center: tuple[int, int] = (0, 0)
-        self._arrow_radius: int = 12
+        self._arrow_radius: int = LAYOUT["radial_arrow_radius"]
 
         # Animation
         self._anim_start: int = 0  # pygame.time.get_ticks() when anim began
@@ -604,7 +604,7 @@ class RadialMenu:
             return
 
         lines = self.hovered_slot.tooltip_lines
-        font = get_font(13)
+        font = get_font(FONT_SIZES["content"])
         padding = 6
         line_height = 17
 
@@ -1259,7 +1259,7 @@ class RadialMenu:
         """Render pagination arrows and page indicator."""
         # Page indicator text
         cx, cy = self._center_screen
-        font = get_font(10)
+        font = get_font(FONT_SIZES["tiny"])
         page_text = f"{self.current_page + 1}/{self.total_pages}"
         page_surf = font.render(
             page_text,
