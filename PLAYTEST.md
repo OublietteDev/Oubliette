@@ -12,9 +12,11 @@ This guide gets you from a fresh download to playing in a few minutes.
 ## 1. What you need
 
 - **Windows 10 or 11.**
-- **Python 3.11 or newer** — a free, one-time install. Get it from
+- **Python 3.11, 3.12, or 3.13** (⚠ NOT 3.14 or newer — the game's graphics
+  library doesn't support it yet). It's a free, one-time install from
   <https://www.python.org/downloads/>. On the **first install screen, tick
-  "Add Python to PATH"**, then click Install. (If you already have Python, skip this.)
+  "Add Python to PATH"**, then click Install. If you already have Python 3.14,
+  that's fine — install 3.13 *alongside* it and setup will pick the right one.
 - **An Anthropic (Claude) API key** — see step 3. (You can poke around without one,
   but you'll only get the built-in demo script, not the real AI Dungeon Master.)
 
@@ -25,7 +27,8 @@ This guide gets you from a fresh download to playing in a few minutes.
    everything it needs. The first run takes a few minutes; you'll see
    "Setup complete!" when it's done.
 
-If `setup.bat` says Python wasn't found, install Python (step 1) and run it again.
+If `setup.bat` says Python wasn't found — or that your Python is too new —
+install Python 3.13 (step 1) and run it again; it sorts itself out from there.
 
 ## 3. Get your API key
 
