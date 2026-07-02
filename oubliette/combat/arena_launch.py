@@ -258,13 +258,17 @@ def stage_combat(
         portraits = _portrait_dirs(session)
     enemies = _resolve_enemies(request, repo, session, portraits)
     party = _resolve_allies(request, repo, repo.party() or [repo.pc()])
-    # The ruleset rides along: the equipment catalog turns drinkable consumables
-    # into Arena item actions (B1), and the class tables stage each PC's CURRENT
-    # spell-slot/resource state (B2). Pack-authored items carry no mechanics yet.
+    # The ruleset rides along: the mechanics catalog turns drinkable consumables
+    # into Arena item actions (B1) and equipped +X items into real bonuses (B3),
+    # and the class tables stage each PC's CURRENT spell-slot/resource state (B2).
+    # The catalog is the session's MERGED set — SRD plus the pack's own magic
+    # items (module-kit S1) — so a Forge-authored Flametongue works like SRD gear.
     ruleset = getattr(session, "ruleset", None)
+    catalog = (getattr(session, "mechanics_catalog", None)
+               or getattr(ruleset, "equipment", None))
     plan = build_encounter(party, enemies, request.terrain,
                            name=request.kind.title() or "Encounter",
-                           catalog=getattr(ruleset, "equipment", None),
+                           catalog=catalog,
                            ruleset=ruleset,
                            portraits=portraits)
 

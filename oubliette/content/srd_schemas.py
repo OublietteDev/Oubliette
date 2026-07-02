@@ -17,7 +17,8 @@ from typing import Literal
 
 from pydantic import ConfigDict, Field, model_validator
 
-from .schemas import ArmorProfile, WeaponProfile, _Strict
+from .schemas import (ArmorProfile, ConsumableMechanics, ItemType,
+                      PoisonMechanics, WeaponProfile, _Strict)
 
 # Bump on a breaking change to these shapes; the ruleset carries its own version.
 RULESET_SCHEMA_VERSION = 1
@@ -69,45 +70,9 @@ class SkillChoice(_Strict):
 # The granular SRD item class. `category` (below) stays inside the closed set the
 # state.Item model accepts, so projection (`_project_srd_item`) is unaffected;
 # `item_type` is the FROZEN contract the Arena bridge reads to decide what a magic
-# item *is* (Phase B). "mundane" = the base SRD gear chapter; the rest are the
-# magic-item chapter families.
-ItemType = Literal[
-    "mundane", "weapon", "armor", "ammunition",
-    "potion", "scroll", "wand", "ring", "rod", "staff", "wondrous", "poison",
-]
-
-
-class ConsumableMechanics(_Strict):
-    """Structured, bridge-readable mechanics extracted from a magic item's prose.
-    Populated only for families the deterministic generator can pattern-match
-    (healing/ability-set/resistance/scroll); everything else carries prose only and
-    leaves this None (see `SrdEquipment.mechanics == "none"`). The Arena bridge
-    (Phase B) maps these fields onto engine effects; Oubliette itself does not read
-    them — this is the twin of the handoff-v2 contract, designed once, here."""
-
-    healing: str | None = None              # dice string, e.g. "2d4+2" (Potion of Healing tiers)
-    ability_set: dict[str, int] | None = None  # set a score, e.g. {"str": 21} (Giant Strength)
-    grants_resistance: str | None = None    # damage type, e.g. "fire" (Potion of Resistance)
-    casts_spell_level: int | None = None    # spell scrolls (0 = cantrip); casting deferred (F3)
-    duration: str | None = None             # e.g. "1 hour" (buff potions)
-    action: str = "action"                  # how it's consumed (action / bonus action)
-
-
-class PoisonMechanics(_Strict):
-    """Structured, bridge-readable mechanics for an SRD poison. Unlike
-    `ConsumableMechanics` (a buff the user drinks), a poison targets ANOTHER creature
-    with a saving throw, so it gets its own shape: the Arena bridge (Phase B) can let
-    a PC coat a blade with an injury poison and force the save on a hit. All 14 SRD
-    poisons use a Constitution save; `damage` and/or `conditions` carry the failure
-    effect. Designed once, here (A2), alongside the rest of the Phase-A freeze."""
-
-    poison_type: Literal["contact", "ingested", "inhaled", "injury"]
-    save_dc: int
-    save_ability: str = "con"                # every SRD poison saves vs Constitution
-    damage: str | None = None               # dice on a failed save, e.g. "3d6" (None = no damage)
-    damage_type: str = "poison"
-    conditions: list[str] = Field(default_factory=list)  # SRD condition ids imposed (e.g. "poisoned")
-    duration: str | None = None             # how long the conditions last, e.g. "1 hour"
+# item *is* (Phase B). The contract shapes (`ItemType`/`ConsumableMechanics`/
+# `PoisonMechanics`) live in `content/schemas.py` since the module-kit arc gave
+# pack items the same fields — one contract, two catalogs, single source.
 
 
 class SrdEquipment(_Strict):

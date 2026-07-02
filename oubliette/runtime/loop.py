@@ -78,7 +78,8 @@ class TurnLoop:
         self._scene_override = scene
         self.dispatcher = Dispatcher(session.repo, session.canon, session.places,
                                      session.quests, ruleset=session.ruleset,
-                                     authored_quests=session.authored_quests, rng=rng)
+                                     authored_quests=session.authored_quests, rng=rng,
+                                     mechanics=(session.mechanics_catalog or None))
         # Short-term continuity beats (gap G5). Rehydrated from the durable record on
         # construction (W3): a reload rebuilds the DM's recent memory of THIS session from
         # the stored beats, so it resumes with the same short-term context it had before —

@@ -51,7 +51,8 @@ class ResolvedTool:
 class Dispatcher:
     def __init__(self, repo: Repository, canon: CanonStore | None = None,
                  places: dict | None = None, quests=None, ruleset=None,
-                 authored_quests: dict | None = None, rng=None) -> None:
+                 authored_quests: dict | None = None, rng=None,
+                 mechanics: dict | None = None) -> None:
         self.repo = repo
         self.canon = canon
         self.rng = rng                   # seeded Rng — rolls a consumable's healing (use_item);
@@ -59,6 +60,8 @@ class Dispatcher:
         self.places = places or {}       # {place_id: PlaceNode} — for travel resolution
         self.quests = quests             # QuestStore — for update_quest validation
         self.ruleset = ruleset           # SRD ruleset — for scroll min-level validation (A5)
+        self.mechanics = mechanics       # merged SRD+pack mechanics catalog (module-kit S1);
+                                         # None falls back to the bare SRD set in `ruleset`
         self.authored_quests = authored_quests or {}   # {id: AuthoredQuest} the pack ships
         self.offered_here: set = set()   # authored quest ids acceptable RIGHT NOW (source
                                          # present); the loop refreshes it each turn
@@ -173,11 +176,19 @@ class Dispatcher:
         return ops
 
     def _healing_spec(self, item_id: str) -> str | None:
-        """The item's structured healing dice, if the catalog carries them."""
-        srd = self.ruleset.equipment.get(item_id) if self.ruleset is not None else None
-        if srd is None or srd.mechanics != "structured" or srd.consumable is None:
+        """The item's structured healing dice, if the catalog carries them. Reads
+        the merged SRD+pack mechanics catalog when the session provides one, so a
+        pack-authored potion heals exactly like an SRD one; the bare SRD set is
+        the fallback (seeded tests construct a Dispatcher without a session)."""
+        if self.mechanics is not None:
+            entry = self.mechanics.get(item_id)
+        elif self.ruleset is not None:
+            entry = self.ruleset.equipment.get(item_id)
+        else:
+            entry = None
+        if entry is None or entry.mechanics != "structured" or entry.consumable is None:
             return None
-        return srd.consumable.healing
+        return entry.consumable.healing
 
     def _resolve_transact(self, t: Transact) -> list[StateOp]:
         # Validate BOTH sides can cover their half (transact symmetry, §5).

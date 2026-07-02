@@ -277,8 +277,9 @@ def equipped_magic(
     reading is: an equipped weapon-type magic item enchants THE wielded attack
     (best one counts — bonuses of the same kind don't stack in 5e), and every
     equipped defensive magic item adds its bonus to AC (armor + shield + ring DO
-    stack). Ammunition is skipped — the basic attack is melee. Pack items aren't
-    in the SRD catalog and carry no mechanics yet."""
+    stack). Ammunition is skipped — the basic attack is melee. The catalog is the
+    session's merged SRD+pack set (module-kit S1), so Forge-authored +X items
+    enchant exactly like SRD ones."""
     weapon_bonus, ac_bonus = 0, 0
     if not catalog:
         return 0, 0

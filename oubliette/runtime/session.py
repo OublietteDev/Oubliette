@@ -61,6 +61,9 @@ class Session:
         self.pending_combat = None          # combat.arena_launch.PendingCombat | None
         self.table: TableContract = DEFAULT_TABLE   # campaign's tone + content boundaries
         self.ruleset = None                  # the global SRD ruleset (chargen/sheet/derivation)
+        self.mechanics_catalog: dict = {}    # {item_id: SrdEquipment} — SRD + pack items merged
+                                             # (pack wins); the ONE catalog the bridge and use_item
+                                             # read magic mechanics from (module-kit S1)
         self.authored_quests: dict = {}      # {id: AuthoredQuest} the pack ships (offered in play,
                                              # not canon); deterministic baseline, re-seeded on open
 
@@ -97,6 +100,7 @@ class Session:
             npc_statblocks = world.npc_statblocks
             bestiary_gate = world.bestiary_gate
             authored_quests = {q.id: q for q in world.quests}
+            mechanics_catalog = world.mechanics_catalog
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
         else:
             repo = seed()
@@ -112,6 +116,7 @@ class Session:
             npc_statblocks = {}
             bestiary_gate = None
             authored_quests = {}
+            mechanics_catalog = {}
             marker = {}
         canon = CanonStore()
         quests = QuestStore()
@@ -165,6 +170,7 @@ class Session:
         session.force_ended = force_ended
         session.table = table
         session.ruleset = ruleset
+        session.mechanics_catalog = mechanics_catalog
         session.authored_quests = authored_quests
         if events:
             replay(events, repo, canon, quests)   # existing session: rebuild to current

@@ -28,6 +28,7 @@ from ..state.repository import InMemoryRepository
 from .ruleset import Ruleset, load_ruleset
 from .schemas import (NPC, AiProfile, AuthoredQuest, BestiaryGate, Item, Lore,
                       Place, PackManifest, Scenario, StatBlock)
+from .srd_schemas import SrdEquipment
 
 DEFAULT_PACK = "brightvale"
 _PACKS_ROOT = Path(__file__).parent / "packs"
@@ -88,6 +89,11 @@ class LoadedWorld:
     # statblock kit *with* persistent-entity semantics — the runtime Character drops
     # the stat_block ref, so this is how the entity is mapped back to its block.
     npc_statblocks: dict = field(default_factory=dict)
+    # Module-kit S1: the ONE mechanics catalog every magic-item consumer reads —
+    # the Arena bridge (equipped +X, drink actions) and the `use_item` tool. SRD
+    # equipment first, the pack's items layered over it (pack wins on id collision,
+    # the same precedence the repo's give/lookup tiers use).
+    mechanics_catalog: dict = field(default_factory=dict)   # {item_id: SrdEquipment}
 
 
 # --- file reading ------------------------------------------------------------
@@ -275,6 +281,32 @@ def _project_item(it: Item) -> StateItem:
     )
 
 
+def _project_mechanics(it: Item) -> SrdEquipment:
+    """content.Item -> its mechanics-catalog entry (module-kit S1). Pack items
+    share the Phase-A magic contract field-for-field, so this is a straight carry
+    into the `SrdEquipment` shape the bridge and `use_item` already consume —
+    a pack Flametongue behaves exactly like an SRD +1 sword, no special-casing."""
+    return SrdEquipment(
+        id=it.id, name=it.name, category=it.category, description=it.description,
+        base_value=it.base_value, tags=list(it.tags), slot=it.slot,
+        weapon=it.weapon, armor=it.armor,
+        item_type=it.item_type, rarity=it.rarity, magic_bonus=it.magic_bonus,
+        requires_attunement=it.requires_attunement, mechanics=it.mechanics,
+        consumable=it.consumable, poison=it.poison,
+    )
+
+
+def mechanics_catalog(ruleset: Ruleset | None, items: list[Item]) -> dict[str, SrdEquipment]:
+    """The merged magic-mechanics catalog a session plays with: the full SRD
+    equipment set with the pack's items layered over it (pack wins on id collision —
+    a world may deliberately reskin an SRD id)."""
+    catalog: dict[str, SrdEquipment] = {}
+    if ruleset is not None:
+        catalog.update(ruleset.equipment)
+    catalog.update({it.id: _project_mechanics(it) for it in items})
+    return catalog
+
+
 def _authored_canon(npcs: list[NPC], places: list[Place], lore: list[Lore]) -> list[CanonRecord]:
     """Authored NPCs, places and lore become confirmed, load-bearing canon so
     retrieval (canon search) and the canon lifecycle work over authored content
@@ -445,13 +477,15 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
                                    sounds=tuple(c.model_dump() for c in p.sounds))
                    for p in places}
 
+    ruleset = load_ruleset()      # the global SRD layer (shared by every world)
     return LoadedWorld(
         repository=repo, canon=_authored_canon(npcs, places, lore), scene=scene,
         location=scenario.start_location, places=place_nodes,
         pack_id=manifest.id, pack_version=manifest.version, world_map=manifest.world_map,
-        ruleset=load_ruleset(),   # the global SRD layer (shared by every world)
+        ruleset=ruleset,
         pack_name=manifest.name, statblocks=tuple(statblocks),
         bestiary_gate=manifest.bestiary_gate, quests=tuple(quests),
         ai_profiles=tuple(ai_profiles),
         npc_statblocks={n.id: n.stat_block for n in npcs if n.stat_block},
+        mechanics_catalog=mechanics_catalog(ruleset, items),
     )

@@ -58,6 +58,58 @@ class ArmorProfile(_Strict):
     dex_cap: int | None = None       # reserved for the eventual AC computation
 
 
+# --- the magic-item contract (Phase A freeze; shared by pack items + SRD gear) --
+# These shapes were designed once for the SRD equipment catalog (`srd_schemas.
+# SrdEquipment`) and are consumed by the Arena bridge (equipped +X bonuses, drink
+# actions) and the `use_item` tool. The Forge module-kit arc gives pack-authored
+# items the SAME contract, so they live here — the shared root — and srd_schemas
+# imports them. `item_type` says what a magic item *is*: "mundane" = the base SRD
+# gear chapter; the rest are the magic-item chapter families.
+ItemType = Literal[
+    "mundane", "weapon", "armor", "ammunition",
+    "potion", "scroll", "wand", "ring", "rod", "staff", "wondrous", "poison",
+]
+
+# item_type families that are worn/wielded — the only ones magic_bonus applies to
+# (a +N weapon boosts the attack; everything else equippable boosts AC).
+_EQUIPPABLE_MAGIC = ("weapon", "armor", "ammunition", "ring", "rod", "staff",
+                     "wand", "wondrous")
+
+
+class ConsumableMechanics(_Strict):
+    """Structured, bridge-readable mechanics for a consumable's effect. For SRD
+    items these are extracted from prose by the deterministic generator; for pack
+    items they are authored directly in the Forge. The Arena bridge maps these
+    fields onto engine effects (drink actions, B1) and `use_item` rolls `healing`
+    out of combat; anything not expressible here rides as prose only and leaves
+    this None (see `mechanics == "none"`)."""
+
+    healing: str | None = None              # dice string, e.g. "2d4+2" (Potion of Healing tiers)
+    ability_set: dict[str, int] | None = None  # set a score, e.g. {"str": 21} (Giant Strength)
+    grants_resistance: str | None = None    # damage type, e.g. "fire" (Potion of Resistance)
+    casts_spell_level: int | None = None    # spell scrolls (0 = cantrip); casting deferred (F3)
+    duration: str | None = None             # e.g. "1 hour" (buff potions)
+    action: str = "action"                  # how it's consumed (action / bonus action)
+
+
+class PoisonMechanics(_Strict):
+    """Structured, bridge-readable mechanics for a poison. Unlike
+    `ConsumableMechanics` (a buff the user drinks), a poison targets ANOTHER creature
+    with a saving throw, so it gets its own shape: the Arena bridge (Phase B) can let
+    a PC coat a blade with an injury poison and force the save on a hit. All 14 SRD
+    poisons use a Constitution save; `damage` and/or `conditions` carry the failure
+    effect. Designed once (A2, alongside the Phase-A freeze); pack items author it
+    directly in the Forge."""
+
+    poison_type: Literal["contact", "ingested", "inhaled", "injury"]
+    save_dc: int
+    save_ability: str = "con"                # every SRD poison saves vs Constitution
+    damage: str | None = None               # dice on a failed save, e.g. "3d6" (None = no damage)
+    damage_type: str = "poison"
+    conditions: list[str] = Field(default_factory=list)  # SRD condition ids imposed (e.g. "poisoned")
+    duration: str | None = None             # how long the conditions last, e.g. "1 hour"
+
+
 class Item(_Strict):
     id: str
     name: str
@@ -68,6 +120,36 @@ class Item(_Strict):
     slot: str | None = None          # equip slot: main_hand/off_hand/body/feet/...
     weapon: WeaponProfile | None = None
     armor: ArmorProfile | None = None
+    # --- magic-item contract (module-kit S1) — same fields as SrdEquipment, so a
+    #     pack's Flametongue enters the SAME mechanics catalog the SRD set uses ---
+    item_type: ItemType = "mundane"
+    rarity: str | None = None        # common / uncommon / rare / very rare / legendary / artifact
+    magic_bonus: int | None = None   # +N to attack&damage (weapon) or AC (armor/shield/ring)
+    requires_attunement: bool = False  # recorded, NOT enforced (attunement mechanics deferred)
+    mechanics: Literal["none", "structured"] = "none"  # does `consumable`/`poison` carry combat data?
+    consumable: ConsumableMechanics | None = None
+    poison: PoisonMechanics | None = None
+
+    @model_validator(mode="after")
+    def _magic_shape(self) -> "Item":
+        """Authoring traps the Forge should catch at save time, not mid-session:
+        mechanics payloads must be declared structured (and vice versa), a +N bonus
+        only means something on worn/wielded families, and a potion/scroll that
+        isn't category 'consumable' could never be drunk (`use_item` refuses it)."""
+        payloads = [p for p in (self.consumable, self.poison) if p is not None]
+        if len(payloads) > 1:
+            raise ValueError("an item carries at most one of {consumable, poison} mechanics")
+        if self.mechanics == "structured" and not payloads:
+            raise ValueError("mechanics is 'structured' but no consumable/poison payload is set")
+        if self.mechanics == "none" and payloads:
+            raise ValueError("a consumable/poison payload requires mechanics='structured'")
+        if self.magic_bonus is not None and self.item_type not in _EQUIPPABLE_MAGIC:
+            raise ValueError(f"magic_bonus needs an equippable item_type "
+                             f"({'/'.join(_EQUIPPABLE_MAGIC)}), not {self.item_type!r}")
+        if self.item_type in ("potion", "scroll") and self.category != "consumable":
+            raise ValueError(f"a {self.item_type} must have category 'consumable' "
+                             "so it can actually be used up (use_item)")
+        return self
 
 
 # --- stat blocks (bestiary + NPC combat) -------------------------------------

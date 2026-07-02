@@ -379,6 +379,13 @@ const ORDER = ["items", "statblocks", "npcs", "places", "lore", "quests", "scena
 const CATEGORIES = ["weapon", "armor", "gear", "consumable", "treasure", "misc"];
 const SLOTS = ["", "main_hand", "off_hand", "body", "feet", "hands", "waist", "head", "neck", "ring"];
 const ARMOR_TYPES = ["light", "medium", "heavy", "shield"];
+// magic-item contract (schemas.Item): the family list, rarity ladder, and which
+// families a +N bonus applies to (mirrors schemas._EQUIPPABLE_MAGIC).
+const ITEM_TYPES = ["mundane", "weapon", "armor", "ammunition", "potion", "scroll",
+                    "wand", "ring", "rod", "staff", "wondrous", "poison"];
+const RARITIES = ["common", "uncommon", "rare", "very rare", "legendary", "artifact"];
+const MAGIC_EQUIPPABLE = new Set(["weapon", "armor", "ammunition", "ring", "rod", "staff", "wand", "wondrous"]);
+const POISON_TYPES = ["injury", "contact", "ingested", "inhaled"];
 
 let state = { id: null, contents: null, validation: null, dirty: false };
 const collapsed = new Set();   // folded sections, remembered across re-renders
@@ -460,6 +467,8 @@ function buildInvRows(npc) {
 function describe(kind, e) {
   if (kind === "items") {
     const bits = [e.category];
+    if (e.item_type && e.item_type !== "mundane")
+      bits.unshift("✦ " + [e.rarity, e.item_type].filter(Boolean).join(" "));
     if (e.base_value != null) bits.push(`worth ~${e.base_value}g`);
     if (e.armor) bits.push(`armor ${e.armor.base_ac}`);
     if (e.weapon) bits.push(`weapon ${e.weapon.damage}`);
@@ -775,6 +784,9 @@ function editorCrumbHtml() { return editorCrumb ? `<div class="crumb">${editorCr
 function itemForm(it) {
   const v = it || {};
   const cat = v.category || "misc";
+  const itype = v.item_type || "mundane";
+  // ability_set round-trip: the form keeps it simple — one ability, one score
+  const [abKey, abVal] = Object.entries(v.consumable?.ability_set || {})[0] || ["", ""];
   return `
     <div class="mhead">${it ? "Edit item" : "New item"}</div>
     <div class="mbody">
@@ -782,7 +794,8 @@ function itemForm(it) {
               "What players see it called.")}
       <div class="row2">
         ${field("Kind", `<select id="f_cat">${CATEGORIES.map(c =>
-            `<option value="${c}"${c === cat ? " selected" : ""}>${c}</option>`).join("")}</select>`)}
+            `<option value="${c}"${c === cat ? " selected" : ""}>${c}</option>`).join("")}</select>`,
+            `<span id="catLock" style="display:none">Potions &amp; scrolls are always “consumable” — they get used up.</span>`)}
         ${field("Worth (gold)", `<input id="f_value" type="number" min="0" value="${v.base_value ?? ""}" placeholder="(optional)" />`,
                 "A rough price hint. Leave blank if you like.")}
       </div>
@@ -810,6 +823,61 @@ function itemForm(it) {
         </div>
         ${field("Properties", `<input id="f_props" value="${esc((v.weapon?.properties || []).join(", "))}" placeholder="finesse, light" />`)}
       </div>
+      <div class="subform">
+        <div class="sftitle">Magic &amp; mechanics</div>
+        <div class="row2">
+          ${field("Item family (magic)", `<select id="f_itype">${ITEM_TYPES.map(t =>
+              `<option value="${t}"${t === itype ? " selected" : ""}>${t}</option>`).join("")}</select>`,
+              "What it counts as under the magic-item rules. Ordinary gear stays “mundane”.")}
+          ${field("Rarity", `<select id="f_rarity"><option value="">—</option>${RARITIES.map(r =>
+              `<option value="${r}"${r === (v.rarity || "") ? " selected" : ""}>${r}</option>`).join("")}</select>`)}
+        </div>
+        <div class="row2">
+          <div id="bonusBox" style="display:none">
+            ${field("Magic bonus (+N)", `<input id="f_mbonus" type="number" value="${v.magic_bonus ?? ""}" placeholder="(none)" />`,
+                    "+N to attack &amp; damage on a weapon; +N to AC on worn things.")}
+          </div>
+          ${field("Attunement", `<label style="display:flex;align-items:center;gap:6px;font-weight:400"><input id="f_attune" type="checkbox" ${v.requires_attunement ? "checked" : ""}/> requires attunement</label>`)}
+        </div>
+      </div>
+      <div id="consumBox" class="subform" style="display:none">
+        <div class="sftitle">When it's used <span style="font-weight:400;opacity:.6">— leave everything blank for a prose-only item</span></div>
+        <div class="row2">
+          ${field("Healing", `<input id="f_cn_heal" value="${esc(v.consumable?.healing || "")}" placeholder="2d4+2" />`,
+                  "Dice healed when drunk/used.")}
+          ${field("Grants resistance to", `<input id="f_cn_resist" value="${esc(v.consumable?.grants_resistance || "")}" placeholder="fire" />`)}
+        </div>
+        <div class="row2">
+          ${field("Sets an ability score", `<div style="display:flex;gap:8px"><select id="f_cn_ab" style="flex:1"><option value="">(none)</option>${["str","dex","con","int","wis","cha"].map(a =>
+              `<option value="${a}"${a === abKey ? " selected" : ""}>${a}</option>`).join("")}</select><input id="f_cn_abv" type="number" style="width:80px;flex:none" value="${abVal}" placeholder="21" /></div>`,
+              "e.g. Giant Strength sets str to 21 while it lasts.")}
+          ${field("Casts a spell of level", `<input id="f_cn_lvl" type="number" min="0" max="9" value="${v.consumable?.casts_spell_level ?? ""}" placeholder="(0 = cantrip)" />`)}
+        </div>
+        <div class="row2">
+          ${field("Effect lasts", `<input id="f_cn_dur" value="${esc(v.consumable?.duration || "")}" placeholder="1 hour" />`)}
+          ${field("Used as", `<select id="f_cn_act">${["action", "bonus action"].map(a =>
+              `<option value="${a}"${a === (v.consumable?.action || "action") ? " selected" : ""}>${a}</option>`).join("")}</select>`)}
+        </div>
+      </div>
+      <div id="poisonBox" class="subform" style="display:none">
+        <div class="sftitle">Poison</div>
+        <div class="row2">
+          ${field("Delivered by", `<select id="f_ps_type">${POISON_TYPES.map(t =>
+              `<option value="${t}"${t === (v.poison?.poison_type || "injury") ? " selected" : ""}>${t}</option>`).join("")}</select>`)}
+          ${field("Save DC", `<input id="f_ps_dc" type="number" value="${v.poison?.save_dc ?? 10}" />`)}
+        </div>
+        <div class="row2">
+          ${field("Save ability", `<select id="f_ps_save">${["str","dex","con","int","wis","cha"].map(a =>
+              `<option value="${a}"${a === (v.poison?.save_ability || "con") ? " selected" : ""}>${a}</option>`).join("")}</select>`)}
+          ${field("Damage on a failed save", `<input id="f_ps_dmg" value="${esc(v.poison?.damage || "")}" placeholder="3d6 (optional)" />`)}
+        </div>
+        <div class="row2">
+          ${field("Damage type", `<input id="f_ps_dtype" value="${esc(v.poison?.damage_type || "poison")}" />`)}
+          ${field("Conditions imposed", `<input id="f_ps_conds" value="${esc((v.poison?.conditions || []).join(", "))}" placeholder="poisoned" />`,
+                  "Comma-separated condition names.")}
+        </div>
+        ${field("Conditions last", `<input id="f_ps_dur" value="${esc(v.poison?.duration || "")}" placeholder="1 hour (optional)" />`)}
+      </div>
       <div class="invalid" id="f_err"></div>
     </div>
     <div class="mfoot">
@@ -819,11 +887,25 @@ function itemForm(it) {
 }
 function wireItemForm() {
   const sync = () => {
-    const c = document.getElementById("f_cat").value;
+    const t = document.getElementById("f_itype").value;
+    const catSel = document.getElementById("f_cat");
+    // a potion/scroll must be category "consumable" (schema rule — it gets used up),
+    // so lock the Kind dropdown rather than let the save bounce.
+    const locked = t === "potion" || t === "scroll";
+    if (locked) catSel.value = "consumable";
+    catSel.disabled = locked;
+    document.getElementById("catLock").style.display = locked ? "inline" : "none";
+    const c = catSel.value;
     document.getElementById("armorBox").style.display = c === "armor" ? "block" : "none";
     document.getElementById("weaponBox").style.display = c === "weapon" ? "block" : "none";
+    // +N only means something on worn/wielded families (schema rule)
+    document.getElementById("bonusBox").style.display = MAGIC_EQUIPPABLE.has(t) ? "block" : "none";
+    document.getElementById("consumBox").style.display = c === "consumable" && t !== "poison" ? "block" : "none";
+    document.getElementById("poisonBox").style.display = t === "poison" ? "block" : "none";
   };
-  document.getElementById("f_cat").addEventListener("change", sync); sync();
+  document.getElementById("f_cat").addEventListener("change", sync);
+  document.getElementById("f_itype").addEventListener("change", sync);
+  sync();
 }
 function confirmItem(original) {
   const name = document.getElementById("f_name").value.trim();
@@ -851,6 +933,58 @@ function confirmItem(original) {
     if (props.length) w.properties = props;
     base.weapon = w;
   }
+
+  // --- magic-item contract: family / rarity / bonus / attunement --------------
+  const itype = document.getElementById("f_itype").value;
+  if (itype === "mundane") delete base.item_type; else base.item_type = itype;
+  setOrDel("rarity", document.getElementById("f_rarity").value);
+  if (document.getElementById("f_attune").checked) base.requires_attunement = true;
+  else delete base.requires_attunement;
+  delete base.magic_bonus;
+  if (MAGIC_EQUIPPABLE.has(itype)) {                 // schema: +N needs an equippable family
+    const mb = document.getElementById("f_mbonus").value;
+    if (mb !== "") base.magic_bonus = Number(mb);
+  }
+  if (itype === "potion" || itype === "scroll") base.category = "consumable";  // schema rule (the form locks this too)
+
+  // Mechanics payload: at most one of consumable/poison; `mechanics` is DERIVED —
+  // structured iff a payload survived (empty consumable form = prose-only item).
+  delete base.consumable; delete base.poison; delete base.mechanics;
+  if (itype === "poison") {
+    const p = { poison_type: document.getElementById("f_ps_type").value,
+                save_dc: Number(document.getElementById("f_ps_dc").value || 10) };
+    const sa = document.getElementById("f_ps_save").value;
+    if (sa !== "con") p.save_ability = sa;
+    const pdmg = document.getElementById("f_ps_dmg").value.trim();
+    if (pdmg) p.damage = pdmg;
+    const pdt = document.getElementById("f_ps_dtype").value.trim();
+    if (pdt && pdt !== "poison") p.damage_type = pdt;
+    const conds = csv(document.getElementById("f_ps_conds").value);
+    if (conds.length) p.conditions = conds;
+    const pdur = document.getElementById("f_ps_dur").value.trim();
+    if (pdur) p.duration = pdur;
+    base.poison = p;
+  } else if (base.category === "consumable") {
+    const cn = {};
+    const heal = document.getElementById("f_cn_heal").value.trim();
+    if (heal) cn.healing = heal;
+    const ab = document.getElementById("f_cn_ab").value;
+    const abv = document.getElementById("f_cn_abv").value;
+    if (ab && abv !== "") cn.ability_set = { [ab]: Number(abv) };
+    const resist = document.getElementById("f_cn_resist").value.trim();
+    if (resist) cn.grants_resistance = resist;
+    const lvl = document.getElementById("f_cn_lvl").value;
+    if (lvl !== "") cn.casts_spell_level = Number(lvl);
+    const dur = document.getElementById("f_cn_dur").value.trim();
+    if (dur) cn.duration = dur;
+    if (Object.keys(cn).length) {
+      const act = document.getElementById("f_cn_act").value;
+      if (act !== "action") cn.action = act;
+      base.consumable = cn;
+    }
+  }
+  if (base.consumable || base.poison) base.mechanics = "structured";
+
   commitEntry("items", original, base);
 }
 
