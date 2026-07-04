@@ -27,7 +27,9 @@ scripted **Offline Mode** DM (a canned demo) and says so in the chat.
 
 **Sharing it with someone else (Windows):** they double-click `setup.bat` once to
 build the environment, then `play.bat` to run and connect their AI from the start
-screen.
+screen. They don't need Python installed — if the computer has none (or only an
+unsupported version), setup downloads a private Python 3.13 into the game folder
+and uses that.
 
 ## Earlier phases
 

@@ -1,6 +1,8 @@
 @echo off
 REM One-time setup for Oubliette Table. Double-click this once; afterwards just
 REM use play.bat / forge.bat. Builds a private .venv and installs everything.
+REM If this computer has no suitable Python, setup downloads a private copy
+REM into .pyruntime (inside this folder) - nothing is installed system-wide.
 setlocal
 cd /d "%~dp0"
 
@@ -9,11 +11,18 @@ echo    Oubliette Table  -  one-time setup
 echo ==================================================
 echo.
 
-REM --- find a Python this game supports (3.11 - 3.13) -----------------------
-REM Python 3.14+ is TOO NEW: pygame (the Arena's graphics library) publishes
-REM no prebuilt wheels for it yet, so pip attempts a from-source build on the
-REM player's machine and dies. Prefer a specific supported version through the
-REM launcher rather than "py -3" (which picks the NEWEST installed Python).
+REM The exact Python the game is developed and tested on. Python 3.14+ is TOO
+REM NEW: pygame (the Arena's graphics library) publishes no prebuilt wheels
+REM for it yet, so pip attempts a from-source build on the player's machine
+REM and dies; older than 3.11 is too old. The URL below is one of Astral's
+REM official "standalone" CPython builds (the same ones the uv tool installs):
+REM a normal, complete Python that runs from a plain folder - no installer,
+REM no PATH changes, no registry entries.
+set "PYRUNTIME_URL=https://github.com/astral-sh/python-build-standalone/releases/download/20260623/cpython-3.13.14+20260623-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
+
+REM --- prefer a supported Python already on this computer (3.11 - 3.13) -----
+REM Ask the launcher for specific supported versions rather than "py -3"
+REM (which picks the NEWEST installed Python, e.g. an unusable 3.14).
 set "PYEXE="
 where py >nul 2>nul && (
   for %%V in (3.13 3.12 3.11) do (
@@ -23,44 +32,50 @@ where py >nul 2>nul && (
   )
 )
 if not defined PYEXE (
-  where py >nul 2>nul && set "PYEXE=py -3"
+  where python >nul 2>nul && (
+    python -c "import sys; sys.exit(0 if (3,11) <= sys.version_info[:2] < (3,14) else 1)" >nul 2>nul && set "PYEXE=python"
+  )
 )
+
+REM --- reuse a private Python from a previous run of this setup -------------
 if not defined PYEXE (
-  where python >nul 2>nul && set "PYEXE=python"
+  if exist ".pyruntime\python\python.exe" set "PYEXE=.pyruntime\python\python.exe"
 )
+
+REM --- otherwise download a private copy just for the game ------------------
 if not defined PYEXE (
-  echo  [X] Python was not found on this computer.
+  echo  No suitable Python found on this computer.
+  echo  Downloading a private copy for the game ^(Python 3.13, about 22 MB^).
+  echo  It lives inside this folder and touches nothing else on the computer.
   echo.
-  echo      Install Python 3.13 from:
-  echo          https://www.python.org/downloads/
-  echo      IMPORTANT: on the first install screen, tick
-  echo      "Add Python to PATH", then run this setup again.
-  echo.
-  pause
-  exit /b 1
+  curl.exe -fL --retry 3 -o pyruntime.tar.gz "%PYRUNTIME_URL%"
+  if errorlevel 1 (
+    del pyruntime.tar.gz >nul 2>nul
+    echo.
+    echo  [X] The download failed - check your internet connection and run
+    echo      this setup again. If it keeps failing, install Python 3.13
+    echo      from  https://www.python.org/downloads/  ^(tick "Add Python
+    echo      to PATH" on the first screen^) and run this setup again.
+    echo.
+    pause
+    exit /b 1
+  )
+  if exist ".pyruntime" rmdir /s /q ".pyruntime"
+  mkdir ".pyruntime"
+  tar -xf pyruntime.tar.gz -C ".pyruntime"
+  if errorlevel 1 (
+    echo  [X] Could not unpack the downloaded Python - please send the
+    echo      messages above to OublietteDev.
+    pause
+    exit /b 1
+  )
+  del pyruntime.tar.gz
+  set "PYEXE=.pyruntime\python\python.exe"
 )
 
 echo  Using Python: %PYEXE%
 %PYEXE% --version
 echo.
-
-REM --- refuse a Python outside the supported window, kindly ----------------
-%PYEXE% -c "import sys; sys.exit(0 if (3,11) <= sys.version_info[:2] < (3,14) else 1)" >nul 2>nul
-if errorlevel 1 (
-  echo  [X] This Python version can't run Oubliette yet.
-  echo.
-  echo      Oubliette needs Python 3.11 - 3.13. Python 3.14 and newer are
-  echo      TOO NEW for the game's graphics library ^(pygame^), and older
-  echo      than 3.11 is too old.
-  echo.
-  echo      Install Python 3.13 from:
-  echo          https://www.python.org/downloads/
-  echo      It installs happily ALONGSIDE any newer Python you have -
-  echo      then run this setup again and it will be picked automatically.
-  echo.
-  pause
-  exit /b 1
-)
 
 REM --- create the private environment (once) ------------------------------
 REM If a .venv already exists but was built with an unsupported Python (e.g.

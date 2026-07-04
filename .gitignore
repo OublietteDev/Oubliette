@@ -2,6 +2,10 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# Private Python runtime downloaded by setup.bat when the computer has none.
+.pyruntime/
+pyruntime.tar.gz
 *.egg-info/
 .pytest_cache/
 .env

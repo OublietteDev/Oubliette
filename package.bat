@@ -20,8 +20,8 @@ mkdir "%STAGE%"
 REM Copy everything EXCEPT dev/local/secret files into the staging folder.
 REM   /XD = exclude directories,  /XF = exclude files.  robocopy ships with Windows.
 robocopy "." "%STAGE%" /E ^
-  /XD ".git" ".venv" "dist" "__pycache__" ".pytest_cache" ".claude" "pack-backups" "oubliette.egg-info" ^
-  /XF ".env" "APIKey.txt" "oubliette-config.json" "preview-test-config.json" "*.sqlite" "*.sqlite3" "*.key" "srd-*-raw.json" "result.json" ^
+  /XD ".git" ".venv" ".pyruntime" "dist" "__pycache__" ".pytest_cache" ".claude" "pack-backups" "oubliette.egg-info" ^
+  /XF ".env" "APIKey.txt" "oubliette-config.json" "preview-test-config.json" "*.sqlite" "*.sqlite3" "*.key" "srd-*-raw.json" "result.json" "pyruntime.tar.gz" ^
   /NFL /NDL /NJH /NJS /NP
 REM robocopy returns 0-7 on success (it uses 1 for "files copied"); 8+ is a real error.
 if errorlevel 8 (
