@@ -81,9 +81,9 @@ class App:
         self.current_screen = new_screen
         self.current_screen.on_enter(self)
 
-        # Resume menu music when not entering combat
-        from arena.gui.screens.combat import CombatScreen
-        if not isinstance(new_screen, CombatScreen):
+        # Resume menu music unless the screen runs its own soundtrack
+        # (combat plays the encounter track; the battlefield editor previews)
+        if not getattr(new_screen, "OWNS_MUSIC", False):
             self._ensure_menu_music()
 
     def _ensure_menu_music(self) -> None:

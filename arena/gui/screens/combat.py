@@ -341,6 +341,8 @@ class CombatScreen(Screen):
     - Token rendering (overlaid on grid)
     """
 
+    OWNS_MUSIC = True   # plays the encounter track; App must not resume menu music
+
     def __init__(self, screen_width: int, screen_height: int) -> None:
         self.screen_width = screen_width
         self.screen_height = screen_height
