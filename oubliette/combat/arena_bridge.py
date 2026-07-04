@@ -49,7 +49,7 @@ from arena.models.encounter import CombatantEntry, Encounter, TerrainHex, Terrai
 from arena.models.monster import Monster
 from arena.paths import DATA_DIR
 
-from ..content.schemas import StatBlock
+from ..content.schemas import BattleMap, StatBlock
 from ..content.srd_schemas import SrdEquipment
 from ..enums import Ability
 from ..rules import derive
@@ -1115,6 +1115,58 @@ class EncounterPlan:
     resources_by_name: dict[str, StagedResources] = field(default_factory=dict)
 
 
+# --- location battlefields (location-battles arc) -------------------------
+
+@dataclass
+class BattleSetting:
+    """A location's authored battlefield, resolved for the Arena: grid size,
+    converted terrain, and ABSOLUTE asset paths. The Arena resolves
+    `music_track`/`background_image` with pathlib joins, and joining an absolute
+    path replaces the base — so pack assets load with no Arena-side changes."""
+
+    grid_width: int = GRID_WIDTH
+    grid_height: int = GRID_HEIGHT
+    terrain: list[TerrainHex] = field(default_factory=list)
+    music_path: str | None = None
+    background_path: str | None = None
+    background_offset: tuple[float, float] = (0.0, 0.0)
+    background_scale: float = 1.0
+
+
+def battle_setting(battle: "BattleMap", pack_dir: Path | None) -> BattleSetting:
+    """Resolve a Place's authored `BattleMap` against its pack dir. Defensive by
+    design — an authored block must never crash a fight: missing asset files
+    degrade to None (the Arena already no-ops on absent music; no background is
+    just the plain field), out-of-bounds hexes and unknown terrain types are
+    skipped."""
+    w, h = battle.grid_width, battle.grid_height
+    terrain: list[TerrainHex] = []
+    for t in battle.terrain:
+        q, r = t.position
+        if not (0 <= q < w and 0 <= r < h):
+            continue
+        try:
+            kind = TerrainType(t.terrain_type)
+        except ValueError:
+            continue
+        terrain.append(TerrainHex(position=(q, r), terrain_type=kind,
+                                  extra_data=dict(t.extra_data)))
+
+    def _asset(sub: str, name: str | None) -> str | None:
+        if not name or pack_dir is None:
+            return None
+        p = pack_dir / sub / name
+        return str(p) if p.is_file() else None
+
+    return BattleSetting(
+        grid_width=w, grid_height=h, terrain=terrain,
+        music_path=_asset("audio", battle.music_track),
+        background_path=_asset("images", battle.background_image),
+        background_offset=tuple(battle.background_offset),
+        background_scale=battle.background_scale,
+    )
+
+
 # Default terrain palettes, keyed to `TerrainSpec.kind`. A starting point —
 # richer/authored terrain is a later concern.
 def _terrain_for(kind: str) -> list[TerrainHex]:
@@ -1134,7 +1186,8 @@ def _terrain_for(kind: str) -> list[TerrainHex]:
 
 
 def _spawn_anchor(
-    size: CreatureSize, col: int, taken: set[tuple[int, int]]
+    size: CreatureSize, col: int, taken: set[tuple[int, int]],
+    grid_w: int = GRID_WIDTH, grid_h: int = GRID_HEIGHT,
 ) -> tuple[int, int]:
     """First anchor hex at (or near) column `col` whose whole FOOTPRINT fits the
     grid and doesn't overlap already-claimed hexes, scanning rows centre-out and
@@ -1144,24 +1197,30 @@ def _spawn_anchor(
     3-hex footprint overlaps the next row's anchor, the engine's
     `place_creature` refuses the collision, and the combatant silently spawns
     OFF-GRID (position=None). Claims footprint hexes in `taken` as it places.
-    (Terrain isn't consulted — the default palettes keep walls away from the
-    spawn columns.)"""
+    (The default palettes keep walls away from the spawn columns; authored
+    battle terrain is handled by seeding `taken` with its unspawnable hexes.)"""
     from arena.grid.coordinates import HexCoord
     from arena.grid.footprint import get_occupied_hexes
 
-    rows = sorted(range(GRID_HEIGHT), key=lambda r: (abs(r - GRID_HEIGHT // 2), r))
-    cols = sorted(range(GRID_WIDTH), key=lambda q: (abs(q - col), q))
+    rows = sorted(range(grid_h), key=lambda r: (abs(r - grid_h // 2), r))
+    cols = sorted(range(grid_w), key=lambda q: (abs(q - col), q))
     for q in cols:
         for r in rows:
             hexes = {(h.q, h.r) for h in get_occupied_hexes(HexCoord(q, r), size)}
-            if any(not (0 <= hq < GRID_WIDTH and 0 <= hr < GRID_HEIGHT)
+            if any(not (0 <= hq < grid_w and 0 <= hr < grid_h)
                    for hq, hr in hexes):
                 continue
             if hexes & taken:
                 continue
             taken |= hexes
             return (q, r)
-    return (col, GRID_HEIGHT // 2)  # grid effectively full — engine sorts it out
+    return (col, grid_h // 2)  # grid effectively full — engine sorts it out
+
+
+# Terrain no creature should SPAWN on: impassable (a wall, a pit) or actively
+# harmful (a fire hex). Passable flavor — difficult ground, water, cover — is
+# fine to start on.
+_UNSPAWNABLE = {TerrainType.WALL, TerrainType.PIT, TerrainType.HAZARD}
 
 
 def _unique(name: str, used: set[str]) -> str:
@@ -1186,23 +1245,40 @@ def build_encounter(
     catalog: dict[str, SrdEquipment] | None = None,
     ruleset=None,
     portraits: PortraitDirs | None = None,
+    battle: BattleSetting | None = None,
 ) -> EncounterPlan:
     """Assemble an Arena `Encounter` from the live party + resolved enemies +
     terrain. Counts are pre-expanded (one `CombatantEntry` per individual, with
     a unique `name_override`) so the returned result is matchable by name.
     With `portraits`, each PC's uploaded portrait (A3) becomes its token art
-    (enemies got theirs when their instances were resolved)."""
+    (enemies got theirs when their instances were resolved).
+
+    `battle` is the current location's authored battlefield (location-battles
+    arc): its grid size wins over the defaults, its terrain REPLACES the
+    kind-keyed palette (no chokepoint walls inside a tavern), and its resolved
+    asset paths become the encounter's music and background. None → the
+    default field, exactly as before."""
     used: set[str] = set()
     entries: list[CombatantEntry] = []
     persistent_ids: dict[str, str] = {}
     loot_by_name: dict[str, list[ValueEntry]] = {}
     resources_by_name: dict[str, StagedResources] = {}
-    taken: set[tuple[int, int]] = set()   # footprint hexes claimed by spawns
+
+    grid_w = battle.grid_width if battle else GRID_WIDTH
+    grid_h = battle.grid_height if battle else GRID_HEIGHT
+    player_col = min(_PLAYER_COL, grid_w - 1)
+    enemy_col = max(grid_w - 3, 0)
+    hexes = battle.terrain if battle else _terrain_for(terrain.kind)
+    # Footprint hexes claimed by spawns — pre-seeded with authored hexes nobody
+    # should start on (walls, pits, fire), so spawns route around the furniture.
+    taken: set[tuple[int, int]] = {
+        tuple(t.position) for t in hexes if t.terrain_type in _UNSPAWNABLE
+    }
 
     for char in party:
         display = _unique(char.name, used)
         creature = character_to_player(char, catalog, ruleset)
-        pos = _spawn_anchor(creature.size, _PLAYER_COL, taken)
+        pos = _spawn_anchor(creature.size, player_col, taken, grid_w, grid_h)
         if portraits is not None:
             art = _token_image([portraits.pc], [char.portrait])
             if art:
@@ -1226,7 +1302,7 @@ def build_encounter(
         display = _unique(inst.creature.name, used)
         creature = inst.creature.model_copy(deep=True)
         creature.name = display
-        pos = _spawn_anchor(creature.size, _ENEMY_COL, taken)
+        pos = _spawn_anchor(creature.size, enemy_col, taken, grid_w, grid_h)
         entries.append(
             CombatantEntry(
                 creature_id=f"enemy/{display}",
@@ -1243,12 +1319,16 @@ def build_encounter(
 
     encounter = Encounter(
         name=name,
-        grid_width=GRID_WIDTH,
-        grid_height=GRID_HEIGHT,
-        terrain=_terrain_for(terrain.kind),
+        grid_width=grid_w,
+        grid_height=grid_h,
+        terrain=hexes,
         combatants=entries,
         use_ai_for_enemies=True,
         use_ai_for_allies=False,
+        music_track=battle.music_path if battle else None,
+        background_image=battle.background_path if battle else None,
+        background_offset=battle.background_offset if battle else (0.0, 0.0),
+        background_scale=battle.background_scale if battle else 1.0,
     )
     return EncounterPlan(
         encounter=encounter,

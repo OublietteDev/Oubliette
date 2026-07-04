@@ -533,6 +533,222 @@
         "min_gap": 15,
         "max_gap": 60
       }
-    ]
+    ],
+    "battle": {
+      "background_image": "tavernbrawl_background.png",
+      "background_offset": [
+        0.0,
+        0.0
+      ],
+      "background_scale": 1.0,
+      "music_track": "tavernbrawl_encounter_1.mp3",
+      "grid_width": 15,
+      "grid_height": 10,
+      "terrain": [
+        {
+          "position": [
+            1,
+            1
+          ],
+          "terrain_type": "wall"
+        },
+        {
+          "position": [
+            2,
+            1
+          ],
+          "terrain_type": "wall"
+        },
+        {
+          "position": [
+            3,
+            1
+          ],
+          "terrain_type": "wall"
+        },
+        {
+          "position": [
+            4,
+            1
+          ],
+          "terrain_type": "wall"
+        },
+        {
+          "position": [
+            9,
+            0
+          ],
+          "terrain_type": "wall"
+        },
+        {
+          "position": [
+            10,
+            0
+          ],
+          "terrain_type": "wall"
+        },
+        {
+          "position": [
+            13,
+            0
+          ],
+          "terrain_type": "wall"
+        },
+        {
+          "position": [
+            14,
+            0
+          ],
+          "terrain_type": "wall"
+        },
+        {
+          "position": [
+            14,
+            1
+          ],
+          "terrain_type": "wall"
+        },
+        {
+          "position": [
+            12,
+            0
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            13,
+            1
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            1,
+            4
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            1,
+            5
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            4,
+            4
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            5,
+            4
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            3,
+            7
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            4,
+            7
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            8,
+            6
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            9,
+            6
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            12,
+            7
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            12,
+            8
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            11,
+            3
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            12,
+            3
+          ],
+          "terrain_type": "cover_half"
+        },
+        {
+          "position": [
+            10,
+            2
+          ],
+          "terrain_type": "difficult"
+        },
+        {
+          "position": [
+            2,
+            5
+          ],
+          "terrain_type": "difficult"
+        },
+        {
+          "position": [
+            7,
+            4
+          ],
+          "terrain_type": "difficult"
+        },
+        {
+          "position": [
+            6,
+            8
+          ],
+          "terrain_type": "difficult"
+        },
+        {
+          "position": [
+            5,
+            5
+          ],
+          "terrain_type": "difficult"
+        },
+        {
+          "position": [
+            8,
+            2
+          ],
+          "terrain_type": "difficult"
+        }
+      ]
+    }
   }
 ]

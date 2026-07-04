@@ -26,8 +26,8 @@ from ..enums import Ability
 from ..state.models import Character, Item as StateItem, ItemStack
 from ..state.repository import InMemoryRepository
 from .ruleset import _VALID_SKILLS, Ruleset, load_ruleset
-from .schemas import (NPC, AiProfile, AuthoredQuest, BestiaryGate, Item, Lore,
-                      Place, PackManifest, Scenario, StatBlock)
+from .schemas import (NPC, AiProfile, AuthoredQuest, BattleMap, BestiaryGate,
+                      Item, Lore, Place, PackManifest, Scenario, StatBlock)
 from .srd_schemas import Background, PackSpell, SrdEquipment
 
 DEFAULT_PACK = "brightvale"
@@ -60,6 +60,8 @@ class PlaceNode:
     map_image: str | None = None  # background map shown when drilled INTO this place
     position: dict | None = None  # {x, y} percent coords for the map (authored in The Forge)
     sounds: tuple = ()           # soundscape cues (AudioCue dicts) — the location's audio
+    battle: "BattleMap | None" = None  # authored battlefield (location-battles arc) —
+                                 # the combat bridge reads it when a fight starts here
 
 
 @dataclass
@@ -522,7 +524,8 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     place_nodes = {p.id: PlaceNode(id=p.id, name=p.name, description=p.description,
                                    parent=p.parent, exits=tuple(e.to for e in p.exits),
                                    image=p.image, map_image=p.map_image, position=p.position,
-                                   sounds=tuple(c.model_dump() for c in p.sounds))
+                                   sounds=tuple(c.model_dump() for c in p.sounds),
+                                   battle=p.battle)
                    for p in places}
 
     # The session plays with a PACK-MERGED ruleset (module-kit S2/S3): the

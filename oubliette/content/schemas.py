@@ -454,6 +454,37 @@ class AudioCue(_Strict):
     max_gap: float | None = None
 
 
+# --- battle maps (location-battles arc: fights look/sound/play like WHERE they
+# happen). The block is authored per Place; the combat bridge reads it at fight
+# time and fills the Arena Encounter fields that already exist. No block → the
+# generic gray battlefield, exactly as before.
+class BattleTerrain(_Strict):
+    """One authored battlefield hex. `terrain_type` mirrors the Arena's
+    TerrainType enum values — the bridge converts, skipping anything it doesn't
+    recognise, so a newer pack degrades instead of crashing an older engine."""
+
+    position: tuple[int, int]        # (q, r) hex coordinate on the battle grid
+    terrain_type: Literal[
+        "normal", "difficult", "hazard", "water", "pit", "wall",
+        "cover_half", "cover_three_quarters", "cover_full",
+    ]
+    extra_data: dict = Field(default_factory=dict)  # e.g. {"damage": "1d6 fire"}
+
+
+class BattleMap(_Strict):
+    """A Place's battlefield: what a fight staged HERE looks and sounds like.
+    Assets live in the pack's existing folders (images/, audio/) so the Forge's
+    upload endpoints and world-export zips handle them unchanged."""
+
+    background_image: str | None = None   # filename in the pack's images/ folder
+    background_offset: tuple[float, float] = (0.0, 0.0)  # world-space pan (editor-set)
+    background_scale: float = 1.0         # 1.0 = image fills the grid bounds
+    music_track: str | None = None        # filename in the pack's audio/ folder
+    grid_width: int = Field(default=20, ge=5, le=40)
+    grid_height: int = Field(default=15, ge=5, le=40)
+    terrain: list[BattleTerrain] = Field(default_factory=list)
+
+
 class Place(_Strict):
     id: str
     name: str
@@ -468,6 +499,7 @@ class Place(_Strict):
     exits: list[Exit] = Field(default_factory=list)           # the map's edges
     position: dict | None = None     # {x,y} percent — this place's PIN on its parent's map
     sounds: list[AudioCue] = Field(default_factory=list)      # the place's soundscape cues
+    battle: BattleMap | None = None  # what a fight HERE looks/sounds like (Arena)
 
 
 # --- lore (authored world history/legend the DM can draw on) ----------------

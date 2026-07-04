@@ -35,9 +35,11 @@ from pathlib import Path
 from ..schemas import TurnAssessment
 from ..state.repository import Repository, StateError
 from .arena_bridge import (
+    BattleSetting,
     EnemyInstance,
     EncounterPlan,
     PortraitDirs,
+    battle_setting,
     build_encounter,
     enemy_from_character,
     enemy_from_statblock,
@@ -224,6 +226,23 @@ def _resolve_allies(
     return out
 
 
+def _battle_for(session) -> BattleSetting | None:
+    """The current location's authored battlefield (location-battles arc), or
+    None for the default field. Entirely session-side: the loader threads each
+    Place's `battle` block onto its PlaceNode, and asset filenames resolve
+    against the active pack's content dir. Every step degrades to None — a
+    session without places (tests, legacy saves) stages exactly as before."""
+    loc = getattr(session, "location", None)
+    places = getattr(session, "places", None) or {}
+    node = places.get(loc) if loc else None
+    battle = getattr(node, "battle", None)
+    if battle is None:
+        return None
+    pack_id = getattr(session, "pack_id", None)
+    pack_dir = (_CONTENT_ROOT / "packs" / pack_id) if pack_id else None
+    return battle_setting(battle, pack_dir)
+
+
 # --- staging -------------------------------------------------------------
 
 def stage_combat(
@@ -270,7 +289,8 @@ def stage_combat(
                            name=request.kind.title() or "Encounter",
                            catalog=catalog,
                            ruleset=ruleset,
-                           portraits=portraits)
+                           portraits=portraits,
+                           battle=_battle_for(session))
 
     scratch_dir = Path(tempfile.mkdtemp(prefix="oubliette-combat-", dir=scratch_root))
     encounter_path = scratch_dir / "encounter.json"
