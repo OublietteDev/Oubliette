@@ -80,11 +80,17 @@ authoring UI and never built the story→Arena plumbing.
    hand-author a battle block on a tavern location for OublietteDev to play.
 
 ### S2 — the Arena battlefield editor (the port)
-- Engine rider: static `hazard` terrain hexes are currently COSMETIC — the
-  entry-damage machinery exists only for spell zones. Wire terrain-hazard
-  entry damage (`extra_data: {damage: "1d6 fire"}`) through the same
-  zone-movement seam, so a hearth can be a hazard you shove people into
-  instead of a wall.
+- Engine rider — SHIPPED (wrap commit): authored hazard hexes now DEAL their
+  `extra_data: {damage: "1d6 fire"}` on entry, through the zone-damage
+  pipeline (resist/immunity apply, concentration checks fire, mundane
+  damage). Hooked at all three landing seams: the per-step voluntary move,
+  the Shove push, and spell-driven forced movement — shove-into-the-hearth
+  works. Unrollable specs are ignored, never fatal. The editor's Hazard
+  brush carries dice + damage-type cyclers and stamps its spec per painted
+  hex; the in-fight tooltip names the price ("Hazard — 1d6 fire on entry").
+- Known polish gap: the AI doesn't AVOID hazard hexes when pathing (it
+  won't route around fire). Cosmetically rare (hazards live at map edges);
+  revisit if a playtest shows monsters face-tanking flames.
 - New screen in the current Arena, ported from the old `encounter_setup.py`,
   battlefield-only: terrain paint + erase, grid spinners, background
   pan/scale, music preview. **No creature placement** (fights are

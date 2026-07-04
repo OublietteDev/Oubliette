@@ -158,3 +158,38 @@ def test_main_rejects_unreadable_spec(monkeypatch, tmp_path, capsys):
     )
     assert be.main() == 2
     assert "bad spec" in capsys.readouterr().err
+
+
+# --- the hazard damage brush -------------------------------------------------
+
+def test_hazard_brush_stamps_its_damage_spec(screen):
+    screen.selected_terrain = TerrainType.HAZARD
+    assert screen.hazard_spec == "1d6 fire"           # the default brush
+    screen._paint_terrain(HexCoord(1, 1))
+    by_pos = {tuple(t["position"]): t for t in screen.build_battle()["terrain"]}
+    assert by_pos[(1, 1)]["extra_data"] == {"damage": "1d6 fire"}
+
+
+def test_hazard_brush_cyclers_change_the_spec(screen):
+    screen.selected_terrain = TerrainType.HAZARD
+    r = screen._hazard_cfg_rects()
+    screen._handle_terrain_palette_click(r["dice_next"].center)   # 1d6 -> 1d8
+    screen._handle_terrain_palette_click(r["type_next"].center)   # fire -> cold
+    assert screen.hazard_spec == "1d8 cold"
+    screen._paint_terrain(HexCoord(2, 2))
+    by_pos = {tuple(t["position"]): t for t in screen.build_battle()["terrain"]}
+    assert by_pos[(2, 2)]["extra_data"] == {"damage": "1d8 cold"}
+    # restamping an existing hazard replaces its spec
+    screen._handle_terrain_palette_click(r["type_prev"].center)   # cold -> fire
+    screen._paint_terrain(HexCoord(2, 2))
+    by_pos = {tuple(t["position"]): t for t in screen.build_battle()["terrain"]}
+    assert by_pos[(2, 2)]["extra_data"] == {"damage": "1d8 fire"}
+
+
+def test_non_hazard_brush_still_clears_extra_data(screen):
+    # (6,4) is the spec's authored hazard with 1d6 fire; repaint it as wall
+    screen.selected_terrain = TerrainType.WALL
+    screen._paint_terrain(HexCoord(6, 4))
+    by_pos = {tuple(t["position"]): t for t in screen.build_battle()["terrain"]}
+    assert by_pos[(6, 4)]["terrain_type"] == "wall"
+    assert "extra_data" not in by_pos[(6, 4)]

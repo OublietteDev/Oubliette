@@ -3974,6 +3974,15 @@ class CombatScreen(Screen):
         terrain_name = TERRAIN_NAMES.get(
             self._hovered_terrain_type, "Unknown Terrain"
         )
+        # An authored hazard names its price up front ("Hazard — 1d6 fire on
+        # entry"), so stepping in is a choice, not a surprise.
+        if (self._hovered_terrain_type == TerrainType.HAZARD
+                and self.grid_view is not None
+                and self.grid_view.hovered_hex is not None):
+            hh = self.grid_view.hovered_hex
+            spec = self.combat.terrain_hazards.get((hh.q, hh.r))
+            if spec:
+                terrain_name = f"{terrain_name} — {spec} on entry"
 
         font = get_font(FONT_SIZES["label"])
         padding = 6

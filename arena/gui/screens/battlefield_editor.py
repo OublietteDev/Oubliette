@@ -49,6 +49,13 @@ STATUS_BAR_HEIGHT = 40
 MIN_GRID_SIZE = 5
 MAX_GRID_SIZE = 40
 
+# The hazard brush: what a painted hazard hex deals on ENTRY (walked into or
+# shoved into — the engine's process_terrain_hazard_entry reads this spec).
+HAZARD_DICE = ["1d4", "1d6", "1d8", "1d10", "2d4", "2d6", "2d8", "3d6", "4d6"]
+HAZARD_TYPES = ["fire", "cold", "lightning", "acid", "poison", "necrotic",
+                "radiant", "thunder", "force", "bludgeoning", "piercing",
+                "slashing"]
+
 
 class ToolMode(Enum):
     TERRAIN = auto()
@@ -85,6 +92,8 @@ class BattlefieldEditorScreen(Screen):
         # Tool state
         self.tool_mode = ToolMode.TERRAIN
         self.selected_terrain = TerrainType.COVER_HALF
+        self.hazard_dice_i = HAZARD_DICE.index("1d6")
+        self.hazard_type_i = HAZARD_TYPES.index("fire")
 
         # UI state
         self.status_message = ""
@@ -313,6 +322,22 @@ class BattlefieldEditorScreen(Screen):
         if self.tool_mode == ToolMode.TERRAIN:
             self._handle_terrain_palette_click(pos)
 
+    @property
+    def hazard_spec(self) -> str:
+        """The brush's damage spec, e.g. "1d6 fire"."""
+        return f"{HAZARD_DICE[self.hazard_dice_i]} {HAZARD_TYPES[self.hazard_type_i]}"
+
+    def _hazard_cfg_rects(self) -> dict[str, pygame.Rect]:
+        """The ◄/► cycler buttons shown below the palette while the Hazard
+        brush is selected."""
+        y0 = self.context_start_y + len(TerrainType) * 34 + 14
+        return {
+            "dice_prev": pygame.Rect(20, y0 + 22, 22, 22),
+            "dice_next": pygame.Rect(160, y0 + 22, 22, 22),
+            "type_prev": pygame.Rect(20, y0 + 50, 22, 22),
+            "type_next": pygame.Rect(160, y0 + 50, 22, 22),
+        }
+
     def _handle_terrain_palette_click(self, pos: tuple[int, int]) -> None:
         item_h, gap, x, w = 30, 4, 20, 260
         for i, terrain_type in enumerate(TerrainType):
@@ -320,6 +345,16 @@ class BattlefieldEditorScreen(Screen):
             if rect.collidepoint(pos):
                 self.selected_terrain = terrain_type
                 return
+        if self.selected_terrain == TerrainType.HAZARD:
+            r = self._hazard_cfg_rects()
+            if r["dice_prev"].collidepoint(pos):
+                self.hazard_dice_i = (self.hazard_dice_i - 1) % len(HAZARD_DICE)
+            elif r["dice_next"].collidepoint(pos):
+                self.hazard_dice_i = (self.hazard_dice_i + 1) % len(HAZARD_DICE)
+            elif r["type_prev"].collidepoint(pos):
+                self.hazard_type_i = (self.hazard_type_i - 1) % len(HAZARD_TYPES)
+            elif r["type_next"].collidepoint(pos):
+                self.hazard_type_i = (self.hazard_type_i + 1) % len(HAZARD_TYPES)
 
     def _handle_grid_click(self, hex_coord: HexCoord) -> None:
         if self.tool_mode == ToolMode.TERRAIN:
@@ -333,9 +368,15 @@ class BattlefieldEditorScreen(Screen):
 
     def _paint_terrain(self, hex_coord: HexCoord) -> None:
         self.grid.set_terrain(hex_coord, self.selected_terrain)
-        # Repainting a hex discards any authored extra_data it carried.
-        self._extra_data.pop((hex_coord.q, hex_coord.r), None)
-        name = TERRAIN_NAMES.get(self.selected_terrain, self.selected_terrain.value)
+        key = (hex_coord.q, hex_coord.r)
+        if self.selected_terrain == TerrainType.HAZARD:
+            # The hazard brush stamps its damage spec; repainting restamps.
+            self._extra_data[key] = {"damage": self.hazard_spec}
+            name = f"Hazard ({self.hazard_spec} on entry)"
+        else:
+            # Repainting a hex discards any authored extra_data it carried.
+            self._extra_data.pop(key, None)
+            name = TERRAIN_NAMES.get(self.selected_terrain, self.selected_terrain.value)
         self.status_message = f"Painted {name} at ({hex_coord.q}, {hex_coord.r})"
         self.status_timer = 90
 
@@ -551,6 +592,29 @@ class BattlefieldEditorScreen(Screen):
                 parse_color(COLORS["text_primary"]), font_size=14,
             )
 
+        if self.selected_terrain == TerrainType.HAZARD:
+            self._render_hazard_config(surface)
+
+    def _render_hazard_config(self, surface: pygame.Surface) -> None:
+        """The hazard brush's damage pickers (◄ value ►), under the palette."""
+        r = self._hazard_cfg_rects()
+        font = get_font(14)
+        label = font.render("Hazard damage (on entry):", True,
+                            parse_color(COLORS["text_gold"]))
+        surface.blit(label, (20, r["dice_prev"].y - 22))
+        rows = (
+            (r["dice_prev"], r["dice_next"], HAZARD_DICE[self.hazard_dice_i]),
+            (r["type_prev"], r["type_next"], HAZARD_TYPES[self.hazard_type_i]),
+        )
+        for prev, nxt, value in rows:
+            self._draw_small_btn(surface, prev, "<")
+            self._draw_small_btn(surface, nxt, ">")
+            draw_text_centered(
+                surface, value,
+                ((prev.right + nxt.left) // 2, prev.centery),
+                parse_color(COLORS["text_primary"]), font_size=15,
+            )
+
     def _render_grid_area(self, surface: pygame.Surface) -> None:
         old_clip = surface.get_clip()
         surface.set_clip(self.grid_area_rect)
@@ -586,6 +650,8 @@ class BattlefieldEditorScreen(Screen):
     def _get_default_status(self) -> str:
         if self.tool_mode == ToolMode.TERRAIN:
             name = TERRAIN_NAMES.get(self.selected_terrain, self.selected_terrain.value)
+            if self.selected_terrain == TerrainType.HAZARD:
+                name = f"Hazard ({self.hazard_spec} on entry)"
             base = f"Click hexes to paint {name}"
         else:
             base = "Click hexes to clear terrain"

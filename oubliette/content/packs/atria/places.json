@@ -537,10 +537,10 @@
     "battle": {
       "background_image": "tavernbrawl_background.png",
       "background_offset": [
-        0.0,
-        0.0
+        -8.784600000000003,
+        21.961500000000004
       ],
-      "background_scale": 1.0,
+      "background_scale": 1,
       "music_track": "tavernbrawl_encounter_1.mp3",
       "grid_width": 15,
       "grid_height": 10,
@@ -550,203 +550,246 @@
             1,
             1
           ],
-          "terrain_type": "wall"
-        },
-        {
-          "position": [
-            2,
-            1
-          ],
-          "terrain_type": "wall"
-        },
-        {
-          "position": [
-            3,
-            1
-          ],
-          "terrain_type": "wall"
-        },
-        {
-          "position": [
-            4,
-            1
-          ],
-          "terrain_type": "wall"
-        },
-        {
-          "position": [
-            9,
-            0
-          ],
-          "terrain_type": "wall"
-        },
-        {
-          "position": [
-            10,
-            0
-          ],
-          "terrain_type": "wall"
-        },
-        {
-          "position": [
-            13,
-            0
-          ],
-          "terrain_type": "wall"
-        },
-        {
-          "position": [
-            14,
-            0
-          ],
-          "terrain_type": "wall"
-        },
-        {
-          "position": [
-            14,
-            1
-          ],
-          "terrain_type": "wall"
-        },
-        {
-          "position": [
-            12,
-            0
-          ],
-          "terrain_type": "cover_half"
-        },
-        {
-          "position": [
-            13,
-            1
-          ],
-          "terrain_type": "cover_half"
+          "terrain_type": "wall",
+          "extra_data": {}
         },
         {
           "position": [
             1,
             4
           ],
-          "terrain_type": "cover_half"
+          "terrain_type": "cover_half",
+          "extra_data": {}
         },
         {
           "position": [
             1,
             5
           ],
-          "terrain_type": "cover_half"
+          "terrain_type": "cover_half",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            2,
+            1
+          ],
+          "terrain_type": "wall",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            2,
+            5
+          ],
+          "terrain_type": "difficult",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            3,
+            1
+          ],
+          "terrain_type": "wall",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            3,
+            7
+          ],
+          "terrain_type": "cover_half",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            4,
+            1
+          ],
+          "terrain_type": "wall",
+          "extra_data": {}
         },
         {
           "position": [
             4,
             4
           ],
-          "terrain_type": "cover_half"
+          "terrain_type": "cover_half",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            4,
+            7
+          ],
+          "terrain_type": "cover_half",
+          "extra_data": {}
         },
         {
           "position": [
             5,
             4
           ],
-          "terrain_type": "cover_half"
+          "terrain_type": "cover_half",
+          "extra_data": {}
         },
         {
           "position": [
-            3,
-            7
-          ],
-          "terrain_type": "cover_half"
-        },
-        {
-          "position": [
-            4,
-            7
-          ],
-          "terrain_type": "cover_half"
-        },
-        {
-          "position": [
-            8,
-            6
-          ],
-          "terrain_type": "cover_half"
-        },
-        {
-          "position": [
-            9,
-            6
-          ],
-          "terrain_type": "cover_half"
-        },
-        {
-          "position": [
-            12,
-            7
-          ],
-          "terrain_type": "cover_half"
-        },
-        {
-          "position": [
-            12,
-            8
-          ],
-          "terrain_type": "cover_half"
-        },
-        {
-          "position": [
-            11,
-            3
-          ],
-          "terrain_type": "cover_half"
-        },
-        {
-          "position": [
-            12,
-            3
-          ],
-          "terrain_type": "cover_half"
-        },
-        {
-          "position": [
-            10,
-            2
-          ],
-          "terrain_type": "difficult"
-        },
-        {
-          "position": [
-            2,
+            5,
             5
           ],
-          "terrain_type": "difficult"
-        },
-        {
-          "position": [
-            7,
-            4
-          ],
-          "terrain_type": "difficult"
+          "terrain_type": "difficult",
+          "extra_data": {}
         },
         {
           "position": [
             6,
             8
           ],
-          "terrain_type": "difficult"
+          "terrain_type": "difficult",
+          "extra_data": {}
         },
         {
           "position": [
-            5,
-            5
+            7,
+            4
           ],
-          "terrain_type": "difficult"
+          "terrain_type": "difficult",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            8,
+            0
+          ],
+          "terrain_type": "hazard",
+          "extra_data": {
+            "damage": "1d6 fire"
+          }
         },
         {
           "position": [
             8,
             2
           ],
-          "terrain_type": "difficult"
+          "terrain_type": "difficult",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            8,
+            6
+          ],
+          "terrain_type": "cover_half",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            9,
+            0
+          ],
+          "terrain_type": "hazard",
+          "extra_data": {
+            "damage": "1d6 fire"
+          }
+        },
+        {
+          "position": [
+            9,
+            6
+          ],
+          "terrain_type": "cover_half",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            10,
+            0
+          ],
+          "terrain_type": "hazard",
+          "extra_data": {
+            "damage": "1d6 fire"
+          }
+        },
+        {
+          "position": [
+            10,
+            2
+          ],
+          "terrain_type": "difficult",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            11,
+            3
+          ],
+          "terrain_type": "cover_half",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            12,
+            0
+          ],
+          "terrain_type": "cover_half",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            12,
+            3
+          ],
+          "terrain_type": "cover_half",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            12,
+            7
+          ],
+          "terrain_type": "cover_half",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            12,
+            8
+          ],
+          "terrain_type": "cover_half",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            13,
+            0
+          ],
+          "terrain_type": "wall",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            13,
+            1
+          ],
+          "terrain_type": "cover_half",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            14,
+            0
+          ],
+          "terrain_type": "wall",
+          "extra_data": {}
+        },
+        {
+          "position": [
+            14,
+            1
+          ],
+          "terrain_type": "wall",
+          "extra_data": {}
         }
       ]
     }

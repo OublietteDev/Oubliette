@@ -59,7 +59,7 @@ from arena.grid.hexgrid import HexGrid
 from arena.grid.coordinates import HexCoord
 from arena.models.character import Creature
 from arena.models.actions import Action
-from arena.models.encounter import Encounter, CombatantEntry
+from arena.models.encounter import Encounter, CombatantEntry, TerrainType
 from arena.util.dice import roll_die
 from arena.util.loader import load_json
 from arena.combat.riders import (
@@ -238,6 +238,11 @@ class CombatManager:
         # Persistent AoE zones (e.g., Spirit Guardians)
         self.active_zones: list = []  # list[ActiveZone], imported lazily
 
+        # Authored hazard terrain (location-battles): {(q, r) -> damage spec
+        # like "1d6 fire"}, read from encounter terrain extra_data at load.
+        # Entering one of these hexes hurts — walked into or shoved into alike.
+        self.terrain_hazards: dict[tuple[int, int], str] = {}
+
         # Terrain modifications (e.g., Wall of Stone, Spike Growth)
         self.active_terrain_mods: list = []  # list[TerrainModification], imported lazily
 
@@ -366,10 +371,16 @@ class CombatManager:
         """
         self.grid = HexGrid(encounter.grid_width, encounter.grid_height)
 
-        # Apply terrain
+        # Apply terrain (hazard hexes keep their authored damage spec — the
+        # grid cell only stores the type, so the spec lives on the manager)
+        self.terrain_hazards = {}
         for th in encounter.terrain:
             coord = HexCoord(th.position[0], th.position[1])
             self.grid.set_terrain(coord, th.terrain_type)
+            if th.terrain_type == TerrainType.HAZARD:
+                spec = (th.extra_data or {}).get("damage")
+                if spec:
+                    self.terrain_hazards[(coord.q, coord.r)] = str(spec)
 
         # Load and place combatants
         for entry in encounter.combatants:
@@ -4746,7 +4757,70 @@ class CombatManager:
                     self._check_victory()
                     return True
 
+            # Authored hazard terrain (location-battles): the hex itself burns.
+            # Once per step that lands in a hazard, same convention as walls.
+            hazard_events = self.process_terrain_hazard_entry(combatant.creature_id)
+            if hazard_events:
+                for he in hazard_events:
+                    self.log.add(he)
+                self._cleanup_orphaned_zones()
+                if not combatant.creature.is_conscious:
+                    self._check_victory()
+                    return True
+
         return success
+
+    def process_terrain_hazard_entry(self, creature_id: str) -> list["CombatEvent"]:
+        """Authored hazard terrain (location-battles): a creature ENTERING a
+        hazard hex takes that hex's damage — an ``extra_data`` spec like
+        ``"1d6 fire"``. No save, mundane damage (resistances and immunities
+        apply through the normal packet pipeline), and no once-per-round
+        guard: walking THROUGH a fire field burns per step, matching the
+        Spike-Growth movement-hazard convention. A multi-hex creature rolls
+        once per entry, against the first hazard hex under its footprint.
+
+        Called from every seam where a creature lands on a new hex: the
+        voluntary per-step move, the Shove push, and spell-driven forced
+        movement — being thrown into the hearth is the whole point."""
+        comb = self.combatants.get(creature_id)
+        if (not self.terrain_hazards or comb is None
+                or comb.position is None or self.grid is None):
+            return []
+
+        from arena.grid.footprint import get_occupied_hexes
+        spec = None
+        for h in get_occupied_hexes(comb.position, comb.creature.size):
+            spec = self.terrain_hazards.get((h.q, h.r))
+            if spec:
+                break
+        if not spec:
+            return []
+
+        parts = str(spec).split(None, 1)
+        dtype = parts[1].strip().lower() if len(parts) > 1 else "bludgeoning"
+        from arena.util.dice import roll_expression
+        try:
+            total, _rolls = roll_expression(parts[0])
+        except Exception:
+            return []   # an unrollable authored spec must never crash a fight
+        if total <= 0:
+            return []
+
+        from arena.combat.actions import apply_damage
+        from arena.combat.concentration import check_concentration
+        from arena.combat.damage import DamagePacket
+
+        target = comb.creature
+        packet = DamagePacket(amount=total, dtype=dtype, source="hazardous terrain")
+        dmg_event, dp_events = apply_damage(target, [packet], creature_id=creature_id)
+        dmg_event.target_id = creature_id
+        dmg_event.message = f"{target.name} {dmg_event.message} (hazardous terrain)"
+        events = [dmg_event, *dp_events]
+        events.extend(check_concentration(
+            target, creature_id, dmg_event.details.get("damage", total),
+            combatants=self.combatants,
+        ))
+        return events
 
     def resolve_opportunity_attack_choice(self, make_attack: bool) -> None:
         """Resolve the front of the pending player-OA queue (GUI Attack/Skip).
@@ -4985,6 +5059,10 @@ class CombatManager:
                         self.combatants, self.grid,
                     )
                     events.extend(zone_events)
+
+                # Authored hazard terrain: shoved INTO the hearth burns
+                if fm_result.distance_moved > 0:
+                    events.extend(self.process_terrain_hazard_entry(target_id))
 
         # Mark action as used
         self.turn_resources.has_used_action = True
@@ -6089,6 +6167,11 @@ class CombatManager:
                     self.active_zones, target_id, start_hex,
                     result.destination_hex, self.combatants, self.grid,
                 ))
+
+            # Authored hazard terrain: a spell's push/pull that lands a
+            # creature in the fire burns it, same as a Shove would.
+            if result.distance_moved > 0:
+                new_events.extend(self.process_terrain_hazard_entry(target_id))
 
         # Remove marker events from the original list
         for marker in markers_to_remove:
