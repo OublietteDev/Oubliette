@@ -127,7 +127,12 @@ def _character_cards(repo: Repository, ruleset) -> list[str]:
 
 def _reachable(location: str | None, places: dict) -> list:
     """Places the party can travel to from `location`: its explicit exits, its
-    sublocations (children), and its siblings (same parent). Returns PlaceNodes."""
+    sublocations (children), its siblings (same parent), its PARENT (you can always
+    zoom back out of a district), and — from a top-level place — the other top-level
+    places (roots are mutual siblings). Without those last two, a region with no
+    authored exits is a one-way trap: drill into a city district and you could never
+    leave the city, and a parentless region like Seraphel's Roost was unreachable
+    from anywhere (v0.9 playtest). Returns PlaceNodes."""
     if location is None or location not in places:
         return []
     here = places[location]
@@ -135,6 +140,9 @@ def _reachable(location: str | None, places: dict) -> list:
     ids |= {pid for pid, n in places.items() if n.parent == location}      # children
     if here.parent is not None:
         ids |= {pid for pid, n in places.items() if n.parent == here.parent}  # siblings
+        ids.add(here.parent)                                               # zoom out
+    else:
+        ids |= {pid for pid, n in places.items() if n.parent is None}      # fellow roots
     ids.discard(location)
     return [places[i] for i in ids if i in places]
 
@@ -234,9 +242,20 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
     # moves them with the travel tool, naming the destination by id.
     dests = _reachable(location, places or {})
     if dests:
+        # The turn that TRAVELS somewhere is written with context built at the ORIGIN,
+        # so the model can't see the destination's cast — it narrates arrivals thin and
+        # invents stand-ins for authored NPCs (v0.9 playtest: "Old Pell" minted at the
+        # dock where Captain Bromley lives). Name each destination's residents here so
+        # an arrival is written with the authored cast in hand.
+        by_home: dict[str, list] = {}
+        for n in repo.npcs():
+            if n.home_location:
+                by_home.setdefault(n.home_location, []).append(n)
         lines.append("WHERE YOU CAN GO (travel here with the travel tool, by id):")
         for d in sorted(dests, key=lambda p: p.name):
-            lines.append(f"  - {d.name} (id: {d.id})")
+            names = ", ".join(n.name for n in by_home.get(d.id, [])[:6])
+            who = f" — found here: {names}" if names else ""
+            lines.append(f"  - {d.name} (id: {d.id}){who}")
     # Long-term memory: world canon relevant to this turn, retrieved by keyword
     # (gap G4). Stay consistent with these; provisional canon is soft.
     if canon:

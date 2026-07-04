@@ -119,3 +119,23 @@ def test_build_context_renders_story_so_far():
     assert "STORY SO FAR" in ctx
     assert "Session 1: The cult still hunts the amulet." in ctx
     assert "Session 2" not in ctx          # empty notes are skipped, not numbered blank
+
+
+def test_wrap_refused_when_note_writing_fails():
+    """Finding #6 (v0.9 playtest): a note-gen failure must NOT seal the session — an
+    empty note is a permanent hole in the campaign's memory. The wrap is refused with
+    a notice and the session stays open, so the player can simply wrap again."""
+    class _FailingNotesBrain(Brain):
+        async def write_session_notes(self, *a, **k):
+            raise RuntimeError("timed out")
+
+    s = Session.open(InMemoryEventStore())
+    loop = TurnLoop(s, Rng(1, record=s.emit_log), _FailingNotesBrain(ScriptedLLMClient()))
+    asyncio.run(loop.take_turn("I look around the market"))
+    assert loop.history
+
+    report = asyncio.run(loop.wrap_session(write_notes=True))
+    assert report.wrapped is False
+    assert "try wrapping again" in (report.notice or "")
+    assert session_notes(s.store.read_all()) == []          # nothing sealed
+    assert loop.history                                     # beats window intact

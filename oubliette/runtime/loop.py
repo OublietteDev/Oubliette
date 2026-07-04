@@ -34,6 +34,8 @@ from .session import Session
 from .transcript import notebook_notes, recent_beats, session_notes, transcript_turns
 
 MAX_TOOL_RETRIES = 2    # D6: after this, force a narration-only turn.
+MIN_TURN_PROSE = 60     # under this many chars with tools applied → the story starved;
+                        # run the narration-only follow-up pass (finding #1).
 HISTORY_IN_CONTEXT = 4  # recent turns fed back to the DM for continuity (gap G5).
 HISTORY_CAP = 8         # how many beats to retain in memory.
 
@@ -300,11 +302,20 @@ class TurnLoop:
             if not narration:        # all attempts failed to produce usable narration
                 narration = "The Phantom's gaze drifts a moment, the thread of the scene slipping."
             self.debug.append("anomaly", stage="turn", note="forced narration-only after retries")
-        elif not narration.strip():
-            # A tool-only turn (e.g. a bare travel) with no prose would render an empty
-            # bubble — the model CAN omit narration under tool_choice:auto (W6), and the
-            # prompt asks it not to, but this is the floor: synthesize a brief line so the
-            # player always gets narration, travel-aware when a move just happened.
+        elif applied and len(narration.strip()) < MIN_TURN_PROSE:
+            # The model did the state work but starved the story: under tool_choice:auto
+            # (W6) it CAN spend its whole turn on tool calls and skip prose, and no prompt
+            # fully prevents it (v0.9 playtest, finding #1 — a nat-20 landlord pitch and a
+            # quest-reveal both landed as one bare travel line). Enforce in code: one
+            # follow-up, narration-only pass. Context is REBUILT first, so a turn that
+            # travelled now narrates the arrival with the destination's cast in hand
+            # (finding #3) and a resolved roll gets its payoff on screen.
+            narration = await self._narrate_followup(
+                player_text, assessment, roll_result, narration, applied,
+                table_prompt, on_text=on_text)
+        if success and not narration.strip():
+            # Last-resort floor (e.g. the follow-up itself failed): synthesize a brief
+            # line so the player never gets an empty bubble.
             narration = self._narrate_applied(applied)
 
         self.debug.append("narration", text=narration)
@@ -452,8 +463,10 @@ class TurnLoop:
         session transcript (the one time it sees the whole thing, not just beats), records
         them on a wrap marker, and the beats window resets — the session is sealed into its
         note, and play resumes fresh as the next session. `write_notes=False` (Offline Mode)
-        wraps with no notes rather than invoke a model. A note-writing failure degrades to an
-        empty wrap so the ritual never dead-ends. Refuses a wrap when nothing has happened yet."""
+        wraps with no notes rather than invoke a model. A note-writing failure is retried
+        once, then REFUSES the wrap (the player can press Wrap again) — sealing a session
+        with empty notes silently destroys its continuity (v0.9 playtest, finding #6).
+        Refuses a wrap when nothing has happened yet."""
         events = self.session.store.read_all()
         turns = transcript_turns(events)
         if not turns:
@@ -463,12 +476,22 @@ class TurnLoop:
             transcript_text = "\n".join(
                 f'{"PLAYER" if t["role"] == "player" else "DM"}: {t["text"]}' for t in turns)
             table_prompt = render_table_prompt(self.session.table)
-            try:
-                notes = await self.brain.write_session_notes(
-                    transcript_text, self._build_context(), table_prompt=table_prompt)
-            except Exception as e:   # never let a bad note-gen strand the wrap
-                self.debug.append("anomaly", stage="wrap", error=str(e))
-                notes = None
+            last_err: Exception | None = None
+            for attempt in range(2):
+                try:
+                    notes = await self.brain.write_session_notes(
+                        transcript_text, self._build_context(), table_prompt=table_prompt)
+                    break
+                except Exception as e:
+                    last_err = e
+                    self.debug.append("anomaly", stage="wrap", attempt=attempt, error=str(e))
+            if notes is None:
+                # Don't seal: an empty note is a hole in the campaign's memory the player
+                # can never refill. Leave the session open and let them wrap again.
+                return WrapReport(
+                    wrapped=False,
+                    notice=f"the DM couldn't write this session's notes ({last_err}) — "
+                           "nothing was lost; try wrapping again")
         pf = notes.player_facing if notes else ""
         dm = notes.dm_private if notes else ""
         self.session.emit_wrap(pf, dm)
@@ -528,6 +551,39 @@ class TurnLoop:
         # Durable capture: the full narration (rebuilds the player transcript) + the beat
         # (rehydrates this in-memory history on reload). Inert prose, no-op on replay (W2).
         self.session.emit_narration(report.narration, beat, caused_by=caused_by)
+
+    async def _narrate_followup(self, player_text: str, assessment, roll_result,
+                                first_pass: str, applied, table_prompt: str,
+                                on_text=None) -> str:
+        """The narration-only enforcement pass (finding #1): the model resolved the
+        turn's state changes but wrote (almost) no prose. Ask it — with context REBUILT
+        after the tools applied, so a travel turn now sees its destination's scene and
+        cast — to write the turn's full narration. Its tool calls, if any, are DROPPED:
+        everything is already applied, and a second application would double-charge.
+        Falls back to whatever the first pass produced if this call fails too."""
+        summary = "; ".join(f"{rt.tool} ({rt.reason})" for rt in applied) or "none"
+        feedback = (
+            f"You already resolved this turn's state changes — {summary} — but your reply "
+            "carried almost no story text, so the player has seen NOTHING happen. Write this "
+            "turn's FULL narration now, in prose: what the player did, the journey and the "
+            "arrival scene (with the people present) if the party travelled, and the outcome "
+            "of any roll. Do NOT emit tool calls — every state change is already applied.")
+        try:
+            resolution = await self.brain.resolve(
+                player_text, assessment, roll_result, self._build_context(player_text),
+                feedback, on_text=on_text, table_prompt=table_prompt)
+        except Exception as e:      # enforcement must never cost the player the turn
+            self.debug.append("anomaly", stage="narrate_followup", error=str(e))
+            return first_pass
+        if resolution.tool_calls:
+            self.debug.append(
+                "anomaly", stage="narrate_followup",
+                note=f"dropped {len(resolution.tool_calls)} tool call(s) — already applied")
+        text = resolution.narration.strip()
+        if not text:
+            return first_pass
+        self.debug.append("note", stage="narrate_followup", chars=len(text))
+        return f"{first_pass.strip()}\n\n{text}" if first_pass.strip() else text
 
     def _narrate_applied(self, applied) -> str:
         """A minimal narration floor for a successful turn the model left wordless (W6:

@@ -221,7 +221,11 @@ RESOLVE_SYSTEM = (
     "what the player reads), and emit tool calls ONLY for state changes. EVERY turn MUST include "
     "narration — at least a sentence — even when you also emit a tool: never reply with tool calls "
     "and no prose (that leaves the player staring at an empty message). When you travel the party, "
-    "narrate the journey and arrival in that same reply. A turn with no state change is just "
+    "narrate the journey and arrival in FULL in that same reply — WHERE YOU CAN GO names who lives "
+    "at each destination, so bring that cast on stage rather than inventing stand-ins for them. "
+    "When ROLL_RESULT resolved a check this turn, its outcome MUST be narrated — the payoff of a "
+    "success (or the sting of a failure) the player never reads didn't happen; never end a turn on "
+    "a bare travel or status line. A turn with no state change is just "
     "narration and no tools. Don't describe your tool calls mechanically; let the prose read as story."
 )
 

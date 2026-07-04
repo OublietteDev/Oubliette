@@ -152,7 +152,12 @@ class AnthropicLLMClient:
         by_name = {_tool_name(m): m for m in tools}
         payload = {
             "model": self._model,
-            "max_tokens": self._max_tokens,
+            # max_tokens is a CAP, not a spend — thinking + narration + tool JSON all
+            # share it, and hitting it truncates SILENTLY (no stop_reason handling),
+            # which starves the narration: the model emits its tool calls and the
+            # player-facing prose never gets generated (v0.9 playtest: a quest-reveal
+            # faction was created with 0 chars of story text). Keep the ceiling high.
+            "max_tokens": max(self._max_tokens, 8192),
             "system": system,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
             "tools": [_tool_def(m) for m in tools],
@@ -161,11 +166,11 @@ class AnthropicLLMClient:
         if eff is not None:
             # W4 per-turn thinking. `tool_choice: auto` (never forced) is a hard requirement
             # for thinking — which is exactly our resolve shape. Adaptive thinking + effort;
-            # `display: summarized` so the reasoning is captured (not empty). Give generous
-            # output room since thinking + narration + tools share the max_tokens budget.
+            # `display: summarized` so the reasoning is captured (not empty). High-effort
+            # thinking alone can run thousands of tokens, so give it real headroom.
             payload["thinking"] = {"type": "adaptive", "display": "summarized"}
             payload["output_config"] = {"effort": eff}
-            payload["max_tokens"] = max(self._max_tokens, 4096)
+            payload["max_tokens"] = max(self._max_tokens, 16384)
         if on_text is not None:
             narration, raw, thinking = await asyncio.to_thread(
                 self._post_stream_act, {**payload, "stream": True}, on_text)
@@ -273,7 +278,10 @@ class AnthropicLLMClient:
         for attempt in range(self._max_retries):
             req = urllib.request.Request(_API_URL, data=body, method="POST", headers=headers)
             try:
-                with urllib.request.urlopen(req, timeout=60) as resp:
+                # 300s, not 60: the session-wrap notes call hands the model the FULL
+                # transcript of a long session — at 60s it can time out, and the swallowed
+                # failure sealed a session with EMPTY notes (v0.9 playtest, finding #6).
+                with urllib.request.urlopen(req, timeout=300) as resp:
                     return json.loads(resp.read())
             except urllib.error.HTTPError as e:
                 detail = e.read().decode("utf-8", "replace")[:300]
