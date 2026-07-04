@@ -29,6 +29,9 @@ class DisplaySettings(BaseModel):
     """Display-related settings."""
 
     show_hex_coordinates: bool = False
+    # Battle-map background image opacity (%). Players turn it down when the
+    # art makes terrain hexes hard to read; 0 = plain field.
+    battle_background_opacity: int = Field(default=100, ge=0, le=100)
     default_hex_size: int = Field(default=40, ge=20, le=80)
     zoom_speed: float = Field(default=1.1, ge=1.01, le=1.5)
     token_radius: int = Field(default=26, ge=8, le=40)

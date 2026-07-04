@@ -240,12 +240,15 @@ class GridView:
         scaled_size = get_settings().display.default_hex_size * self.camera.zoom
         border_color = parse_color(COLORS["hex_border"])
 
-        # Pass 0: Background image (pans/zooms with camera)
-        if self._background_surface is not None:
-            self._render_background(surface)
+        # Pass 0: Background image (pans/zooms with camera). At 0% opacity the
+        # image is skipped entirely and hexes render opaque — the plain field.
+        bg_opacity = get_settings().display.battle_background_opacity
+        bg_visible = self._background_surface is not None and bg_opacity > 0
+        if bg_visible:
+            self._render_background(surface, bg_opacity)
 
         # Pass 1: Draw all visible hexes
-        use_alpha = self._background_surface is not None
+        use_alpha = bg_visible
         for q in range(q_min, q_max + 1):
             for r in range(r_min, r_max + 1):
                 coord = HexCoord(q, r)
@@ -327,8 +330,10 @@ class GridView:
     # Background rendering
     # ------------------------------------------------------------------
 
-    def _render_background(self, surface: pygame.Surface) -> None:
-        """Draw the background image with offset/scale transform applied."""
+    def _render_background(self, surface: pygame.Surface, opacity: int = 100) -> None:
+        """Draw the background image with offset/scale transform applied.
+        `opacity` (0–100) fades the art toward the plain field — the in-fight
+        slider for when the image makes terrain hard to read."""
         if self._background_raw is None:
             return
 
@@ -366,6 +371,8 @@ class GridView:
 
         # Scale the raw image to fill the transformed footprint
         scaled = pygame.transform.smoothscale(self._background_raw, (dest_w, dest_h))
+        if opacity < 100:
+            scaled.set_alpha(int(opacity * 255 / 100))
         ox, oy = self.origin
         surface.blit(scaled, (int(sx0) + ox, int(sy0) + oy))
 

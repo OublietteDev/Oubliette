@@ -17,6 +17,7 @@ from arena.combat.actions import is_in_range, AttackHitResult
 from arena.models.actions import DamageRoll, DamageType
 from arena.gui.rider_popup import RiderPopup, RiderChoice
 from arena.gui.reroll_popup import RerollPopup, RerollChoice
+from arena.gui.settings_popup import SettingsPopup
 from arena.gui.bardic_popup import BardicInspirationPopup, BardicChoice
 from arena.gui.reaction_popup import ReactionPopup, ReactionChoice
 from arena.gui.counterspell_popup import CounterspellPopup, CounterspellChoice
@@ -489,6 +490,11 @@ class CombatScreen(Screen):
         # Counterspell popup state
         self._counterspell_popup: CounterspellPopup | None = None
 
+        # Options popup (battle-map opacity + music volume sliders) and the
+        # clickable "O options" corner nudge that opens it
+        self._settings_popup: SettingsPopup | None = None
+        self._options_rect: pygame.Rect | None = None
+
         self.app: App | None = None
 
         # Handoff mode: when The Arena is launched as a subprocess to resolve ONE
@@ -578,6 +584,12 @@ class CombatScreen(Screen):
 
     def handle_event(self, event: pygame.event.Event) -> None:
         """Process events, delegating to sub-components."""
+        # --- Options popup (sliders) intercepts ALL input when open ---
+        if self._settings_popup is not None:
+            if self._settings_popup.handle_event(event) == "__close__":
+                self._settings_popup = None
+            return
+
         # --- Lair action popup intercepts input when open ---
         if self._lair_popup is not None:
             result = self._lair_popup.handle_event(event)
@@ -683,6 +695,13 @@ class CombatScreen(Screen):
             result = self._passenger_popup.handle_event(event)
             if result is not None:
                 self._resolve_passenger_popup(result)
+            return
+
+        # Corner "O options" affordance opens the sliders popup
+        if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                and self._options_rect is not None
+                and self._options_rect.collidepoint(event.pos)):
+            self._settings_popup = SettingsPopup(self.screen_width, self.screen_height)
             return
 
         # ESC: close radial menu first, else return to main menu
@@ -1796,6 +1815,11 @@ class CombatScreen(Screen):
             self._show_shortcuts_help = not self._show_shortcuts_help
             return True
 
+        # O — options popup: battle-map opacity + music volume (works always)
+        if key == pygame.K_o:
+            self._settings_popup = SettingsPopup(self.screen_width, self.screen_height)
+            return True
+
         # If shortcuts overlay is showing, any other key dismisses it
         if self._show_shortcuts_help:
             self._show_shortcuts_help = False
@@ -2090,6 +2114,11 @@ class CombatScreen(Screen):
         )):
             draw_modal_dim(surface)
 
+        # Options popup (no dim: the whole point of its sliders is watching
+        # the battle map change live underneath)
+        if self._settings_popup is not None:
+            self._settings_popup.render(surface)
+
         # Rider popup (above panels, below end overlay)
         if self._rider_popup is not None:
             self._rider_popup.render(surface)
@@ -2160,17 +2189,25 @@ class CombatScreen(Screen):
             hx = (self.screen_width - hint_surf.get_width()) // 2
             surface.blit(hint_surf, (hx, 8))
 
-        # Corner nudge toward the shortcuts overlay
+        # Corner nudges: shortcuts overlay + the options sliders
         if not self._show_shortcuts_help:
             corner_font = get_font(FONT_SIZES["small"])
             corner = corner_font.render(
                 "? shortcuts", True, parse_color(COLORS["text_secondary"]),
             )
-            surface.blit(
-                corner,
-                (self.grid_rect.right - corner.get_width() - 10,
-                 self.grid_rect.bottom - corner.get_height() - 6),
+            cx = self.grid_rect.right - corner.get_width() - 10
+            cy = self.grid_rect.bottom - corner.get_height() - 6
+            surface.blit(corner, (cx, cy))
+            opts = corner_font.render(
+                "O options", True, parse_color(COLORS["text_secondary"]),
             )
+            ox = cx - opts.get_width() - 16
+            surface.blit(opts, (ox, cy))
+            self._options_rect = pygame.Rect(
+                ox - 4, cy - 4, opts.get_width() + 8, opts.get_height() + 8,
+            )
+        else:
+            self._options_rect = None
 
         # Victory/Defeat overlay
         if self.combat.state == CombatState.COMBAT_ENDED:

@@ -109,6 +109,20 @@ class SoundManager:
         except Exception:
             pass
 
+    def refresh_music_volume(self) -> None:
+        """Re-apply the settings-derived volume to the playing track — the
+        live half of the in-fight volume slider (play_music only reads the
+        settings once, at load)."""
+        if not self._initialized:
+            return
+
+        import pygame.mixer
+
+        try:
+            pygame.mixer.music.set_volume(self._get_music_volume())
+        except Exception:
+            pass
+
     def stop_music(self) -> None:
         """Stop any currently playing background music."""
         if not self._initialized:
