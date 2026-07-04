@@ -217,6 +217,10 @@
   .ai-key input { width: 100%; box-sizing: border-box; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font: inherit; font-size: 13px; padding: 8px 10px; }
   .ai-key input:focus { outline: none; border-color: var(--accent); }
   .ai-priv { font-size: 11px; color: var(--faint); font-style: italic; margin-top: 8px; }
+  .ai-key.hidden { display: none; }
+  .ai-model-help { font-size: 11px; color: var(--faint); margin-top: 2px; }
+  .ai-priv .linklike { background: none; border: none; padding: 0; color: var(--gold);
+    font: inherit; font-size: 11px; cursor: pointer; text-decoration: underline; }
   .offline-banner { display: flex; align-items: center; gap: 8px; margin: 12px 16px 0; padding: 9px 13px; border: 1px solid var(--accent-2); border-radius: 10px; background: rgba(120,80,40,.18); color: var(--gold); font-size: 13px; }
   .offline-banner.hidden { display: none; }
   .offline-banner b { font-family: var(--serif); letter-spacing: .02em; }
@@ -774,16 +778,26 @@
 <div id="ai-overlay" class="overlay hidden">
   <div class="start-modal" style="width: min(470px, 94vw); text-align: left;">
     <h2 style="text-align:center;">Connect your AI</h2>
-    <div class="sub" style="text-align:center;">The Phantom needs a language model to narrate. Pick a service and paste its API key.</div>
+    <div class="sub" style="text-align:center;">The Phantom needs a language model to narrate. Pick a service, paste its API key, and name the model.</div>
     <div class="prov-list" id="ai-providers"></div>
     <div class="ai-key" id="ai-key-wrap">
       <label id="ai-key-label" for="ai-key-input">API key</label>
       <input type="password" id="ai-key-input" autocomplete="off" spellcheck="false" placeholder="" />
     </div>
-    <div class="ai-priv">Your key is stored only on this computer (never shared, never sent anywhere but the provider you choose). Save with the box empty to return to offline mode.</div>
+    <div class="ai-key" id="ai-model-wrap">
+      <label for="ai-model-input">Model</label>
+      <input type="text" id="ai-model-input" autocomplete="off" spellcheck="false" placeholder="" />
+      <div class="ai-model-help">Type the model's <b>exact API id</b> — new models work the day they ship. “Test” makes one real (tiny) call so a typo shows up here, never mid-game.</div>
+    </div>
+    <div class="ai-key hidden" id="ai-url-wrap">
+      <label for="ai-url-input">Server address</label>
+      <input type="text" id="ai-url-input" autocomplete="off" spellcheck="false" placeholder="http://localhost:11434/v1" />
+    </div>
+    <div class="ai-priv">Your key is stored only on this computer (never shared, never sent anywhere but the provider you choose). <button class="linklike" id="ai-disconnect" style="display:none">Disconnect &amp; go offline</button></div>
     <div class="cg-status" id="ai-status" style="margin-top:10px; text-align:center;"></div>
     <div class="start-actions" style="flex-direction: row; gap: 10px; margin-top: 16px;">
-      <button class="start-btn primary" id="ai-save" style="flex:1;">Save &amp; connect</button>
+      <button class="start-btn" id="ai-test" style="flex:1;">Test</button>
+      <button class="start-btn primary" id="ai-save" style="flex:1.4;">Save &amp; connect</button>
       <button class="start-btn" id="ai-close" style="flex:1;">Close</button>
     </div>
   </div>
@@ -2327,6 +2341,49 @@ function syncKeyField(data) {
   if (!p) return;
   $("ai-key-label").textContent = p.key_label || "API key";
   $("ai-key-input").placeholder = p.has_key ? "•••••• (saved — leave blank to keep)" : (p.key_hint || "");
+  // v0.9 provider opening: free-text model id, prefilled with what's saved
+  $("ai-model-input").value = p.model || "";
+  $("ai-model-input").placeholder = p.model_hint || "the model's exact API id";
+  // the server-address field only matters for the local provider
+  $("ai-url-wrap").classList.toggle("hidden", !p.needs_base_url);
+  if (p.needs_base_url) $("ai-url-input").value = p.base_url || "";
+  $("ai-disconnect").style.display = p.has_key ? "inline" : "none";
+}
+// The settings as currently typed — what Test and Save both send.
+function aiForm() {
+  return {
+    provider: aiSelected,
+    api_key: $("ai-key-input").value || null,
+    model: $("ai-model-input").value.trim() || null,
+    base_url: $("ai-url-wrap").classList.contains("hidden") ? null : ($("ai-url-input").value.trim() || null),
+  };
+}
+async function testAI() {
+  const status = $("ai-status");
+  status.className = "cg-status"; status.textContent = "Testing — one tiny call to the model…";
+  try {
+    const data = await (await fetch("/api/providers/test", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(aiForm()),
+    })).json();
+    status.className = "cg-status " + (data.ok ? "ok" : "bad");
+    status.textContent = data.ok ? "✓ The model answered — this setup works."
+                                 : (data.error || "could not connect");
+  } catch (e) { status.className = "cg-status bad"; status.textContent = "Error: " + e; }
+}
+async function disconnectAI() {
+  const status = $("ai-status");
+  status.className = "cg-status"; status.textContent = "Disconnecting…";
+  try {
+    const data = await (await fetch("/api/providers", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...aiForm(), api_key: null, disconnect: true }),
+    })).json();
+    renderProviders(data);
+    applyConnection(data);
+    status.className = "cg-status ok";
+    status.textContent = "Key cleared — back in offline mode.";
+  } catch (e) { status.className = "cg-status bad"; status.textContent = "Error: " + e; }
 }
 function openAI() {
   $("ai-status").textContent = "";
@@ -2337,21 +2394,23 @@ function openAI() {
 function closeAI() { $("ai-overlay").classList.add("hidden"); }
 async function saveAI() {
   const status = $("ai-status");
-  status.className = "cg-status"; status.textContent = "Connecting…";
+  status.className = "cg-status"; status.textContent = "Testing the connection, then saving…";
   try {
     const res = await fetch("/api/providers", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider: aiSelected, api_key: $("ai-key-input").value || null }),
+      body: JSON.stringify(aiForm()),
     });
     const data = await res.json();
-    renderProviders(data);
-    applyConnection(data);
+    // Only re-render on success — a failed save must leave the typed values
+    // on screen exactly as they failed, so the player can fix the typo.
+    if (data.ok && data.providers) { renderProviders(data); applyConnection(data); }
     if (data.ok) {
       status.className = "cg-status ok";
-      status.textContent = data.online ? `Connected — ${data.model}. The Phantom is live.`
+      status.textContent = data.online ? `Connected — ${data.model} answered. The Phantom is live.`
                                         : "Saved. Offline mode (no key set).";
       if (data.online) $("ai-key-input").value = "";
     } else {
+      // nothing was saved — the settings on screen are still what failed
       status.className = "cg-status bad";
       status.textContent = data.error || "could not connect";
     }
@@ -2360,6 +2419,8 @@ async function saveAI() {
 $("start-ai").addEventListener("click", openAI);
 $("ai-close").addEventListener("click", closeAI);
 $("ai-save").addEventListener("click", saveAI);
+$("ai-test").addEventListener("click", testAI);
+$("ai-disconnect").addEventListener("click", disconnectAI);
 // ai-connect holds a half-typed key — closes via its buttons only (no click-off)
 $("offline-connect").addEventListener("click", openAI);
 $("reload-btn").addEventListener("click", async () => {

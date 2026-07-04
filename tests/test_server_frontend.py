@@ -488,18 +488,21 @@ def test_providers_endpoint_lists_roster_and_offline_state():
     assert r.status_code == 200
     d = r.json()
     by_id = {p["id"]: p for p in d["providers"]}
-    assert by_id["anthropic"]["implemented"] is True
-    assert by_id["openai"]["implemented"] is False        # visible but unselectable
+    for pid in ("anthropic", "openai", "google", "local"):   # v0.9: all four wired
+        assert by_id[pid]["implemented"] is True
     assert d["online"] is False and d["client"] == "scripted"  # no key in this harness
 
 
-def test_setting_an_unimplemented_provider_is_refused():
-    r = client.post("/api/providers", json={"provider": "openai", "api_key": "x"})
+def test_setting_an_unknown_provider_is_refused():
+    r = client.post("/api/providers", json={"provider": "closedai", "api_key": "x"})
     assert r.status_code == 400
     assert r.json()["ok"] is False
 
 
-def test_saving_an_anthropic_key_brings_the_dm_online():
+def test_saving_an_anthropic_key_brings_the_dm_online(monkeypatch):
+    async def fake_ping(c):        # the save-path connection test, minus the network
+        return True, None
+    monkeypatch.setattr("oubliette.llm.connect.ping", fake_ping)
     r = client.post("/api/providers", json={"provider": "anthropic", "api_key": "sk-ant-test"})
     assert r.status_code == 200
     d = r.json()
@@ -509,8 +512,8 @@ def test_saving_an_anthropic_key_brings_the_dm_online():
     # the roster now reports a key on file, still without leaking it
     assert {p["id"]: p for p in d["providers"]}["anthropic"]["has_key"] is True
     assert "sk-ant-test" not in r.text
-    # clear it again so the rest of the suite stays offline/deterministic
-    client.post("/api/providers", json={"provider": "anthropic", "api_key": None})
+    # disconnect again so the rest of the suite stays offline/deterministic
+    client.post("/api/providers", json={"provider": "anthropic", "disconnect": True})
     assert GAME.client_name == "scripted"
 
 

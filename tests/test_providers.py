@@ -22,12 +22,12 @@ def _isolated_config(tmp_path, monkeypatch):
 
 # --- registry -------------------------------------------------------------
 
-def test_registry_marks_only_anthropic_implemented():
+def test_registry_marks_all_four_providers_wired():
+    """v0.9 provider opening: every roster row is selectable — Anthropic natively,
+    the other three through the OpenAI-compatible adapter."""
     view = {p["id"]: p for p in providers.registry_view()}
-    assert view["anthropic"]["implemented"] is True
-    for pid in ("openai", "google", "local"):
-        assert view[pid]["implemented"] is False
-        assert view[pid]["note"]              # an unselectable provider explains itself
+    for pid in ("anthropic", "openai", "google", "local"):
+        assert view[pid]["implemented"] is True
 
 
 def test_registry_reports_has_key_but_never_the_key():
@@ -52,10 +52,10 @@ def test_empty_key_clears_the_stored_one():
     assert providers.stored_key("anthropic") is None
 
 
-def test_selected_provider_falls_back_for_an_unimplemented_choice():
-    # Even if the config names a not-yet-wired provider, selection resolves to the
-    # default wired one so the game never tries to drive a phantom client.
-    providers.save_config({"provider": "openai"})
+def test_selected_provider_falls_back_for_an_unknown_choice():
+    # A config naming a provider that doesn't exist (hand-edited, or from a future
+    # version) resolves to the default so the game never drives a phantom client.
+    providers.save_config({"provider": "closedai"})
     assert providers.selected_provider() == "anthropic"
 
 

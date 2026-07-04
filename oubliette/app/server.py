@@ -1560,10 +1560,17 @@ async def post_reload() -> JSONResponse:
 class ProviderSetBody(BaseModel):
     provider: str
     api_key: str | None = None
+    model: str | None = None        # free-text model id (v0.9 provider opening)
+    base_url: str | None = None     # local-server address (local provider only)
+    disconnect: bool = False        # explicit "clear my key, go offline"
 
 
 def _pretty_model(mid: str) -> str:
-    """`claude-sonnet-5` -> `Claude Sonnet 5` for the connection badge."""
+    """`claude-sonnet-5` -> `Claude Sonnet 5` for the connection badge; a
+    non-Claude id shows verbatim (the player typed it — echoing it back exactly
+    is the honest badge)."""
+    if not mid.startswith("claude-"):
+        return mid
     words, nums = [], []
     for tok in mid.split("-"):
         (nums if tok.isdigit() else words).append(tok)
@@ -1574,39 +1581,90 @@ def _provider_status() -> dict:
     """Live connection state for the front door: is a real DM wired up, and a
     friendly model label when it is. (`scripted` == offline stub.)"""
     online = GAME.client_name != "scripted"
-    from ..llm.anthropic_client import DEFAULT_MODEL
-    model = _pretty_model(DEFAULT_MODEL) if GAME.client_name == "anthropic" else ""
+    model = _pretty_model(providers.stored_model(GAME.client_name)) if online else ""
     return {"online": online, "client": GAME.client_name,
             "selected": providers.selected_provider(), "model": model}
 
 
+def _throwaway_client(body: ProviderSetBody):
+    """A client from the request's settings, falling back to what's stored for
+    any field left blank (so 'test' works with a saved key + a new model)."""
+    from ..llm import connect
+    key = (body.api_key or "").strip() or providers.stored_key(body.provider)
+    model = (body.model or "").strip() or providers.stored_model(body.provider)
+    base = (body.base_url or "").strip() or providers.stored_base_url(body.provider)
+    return connect.build_client(body.provider, key, model, base)
+
+
 @app.get("/api/providers")
 async def get_providers() -> JSONResponse:
-    """The provider roster (which services exist + which are wired) plus the current
-    connection state. Never returns key material — only whether one is on file."""
+    """The provider roster plus the current connection state. Never returns key
+    material — only whether one is on file."""
     return JSONResponse({"providers": providers.registry_view(), **_provider_status()})
+
+
+@app.post("/api/providers/test")
+async def post_providers_test(body: ProviderSetBody) -> JSONResponse:
+    """Prove a provider/key/model/address combination works WITHOUT saving it:
+    one real, tiny forced-tool call through the same client the game would use
+    (a fraction of a cent). This is the typo-catcher — `clade-sonnet-5` comes
+    back as a plain sentence, not a mid-game crash."""
+    from ..llm import connect
+    try:
+        client = _throwaway_client(body)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)})
+    ok, error = await connect.ping(client)
+    return JSONResponse({"ok": ok, "error": error})
 
 
 @app.post("/api/providers")
 async def post_providers(body: ProviderSetBody) -> JSONResponse:
-    """Save the chosen provider + key and re-pick the live DM immediately (no
-    restart). An unimplemented provider is refused; a key that fails to construct a
-    client leaves the game offline and says so."""
+    """Save the chosen provider settings and re-pick the live DM immediately (no
+    restart) — but only AFTER a live connection test passes, so a typo'd model
+    id can never enter the config through the UI. Saving with everything blank
+    (no key on a key-required provider) is the deliberate 'back to offline'
+    path and skips the test."""
+    from ..llm import connect
     prov = providers.get_provider(body.provider)
     if prov is None or not prov.implemented:
         return JSONResponse(
             {"ok": False, "error": f"{body.provider!r} isn't available yet",
              "providers": providers.registry_view(), **_provider_status()},
             status_code=400)
-    async with GAME.lock:
-        providers.set_provider_key(body.provider, body.api_key)
-        GAME.refresh_client()
-    status = _provider_status()
-    if body.api_key and not status["online"]:
+    if body.disconnect:
+        async with GAME.lock:
+            providers.set_provider_key(body.provider, None,
+                                       model=body.model, base_url=body.base_url)
+            GAME.refresh_client()
+        return JSONResponse({"ok": True, "providers": providers.registry_view(),
+                             **_provider_status()})
+    # A blank key keeps the saved one (so changing just the model doesn't demand
+    # re-pasting a key); the explicit `disconnect` flag is how you go offline.
+    key = (body.api_key or "").strip() or providers.stored_key(body.provider)
+    going_live = bool(key) or (prov.key_optional and bool(
+        (body.model or "").strip() or providers.stored_model(body.provider)))
+    if not going_live:
         return JSONResponse(
-            {"ok": False, "error": "that key didn't connect — still in offline mode",
-             "providers": providers.registry_view(), **status}, status_code=400)
-    return JSONResponse({"ok": True, "providers": providers.registry_view(), **status})
+            {"ok": False, "error": f"no {prov.key_label} set",
+             "providers": providers.registry_view(), **_provider_status()},
+            status_code=400)
+    try:
+        client = _throwaway_client(body)
+        ok, error = await connect.ping(client)
+    except Exception as e:
+        ok, error = False, str(e)
+    if not ok:
+        return JSONResponse(
+            {"ok": False, "error": error or "could not connect",
+             "providers": providers.registry_view(), **_provider_status()},
+            status_code=400)
+    async with GAME.lock:
+        providers.set_provider_key(body.provider, key,
+                                   model=body.model, base_url=body.base_url)
+        GAME.refresh_client()
+    return JSONResponse({"ok": True, "providers": providers.registry_view(),
+                         **_provider_status()})
 
 
 def main() -> None:

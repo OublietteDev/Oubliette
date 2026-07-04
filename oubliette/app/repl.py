@@ -54,19 +54,22 @@ def _load_dotenv(path: str = ".env") -> None:
 
 
 def _pick_client(force_scripted: bool):
-    """Pick the DM client from the player's saved provider/key (front-door config),
-    falling back to the scripted OFFLINE stub when no live provider is configured.
-    The config's key takes precedence, then the provider's env var (so a .env /
-    ANTHROPIC_API_KEY still works untouched). Only wired providers can go live; an
-    unimplemented selection or a missing key lands on the offline stub."""
+    """Pick the DM client from the player's saved provider settings (front-door
+    config), falling back to the scripted OFFLINE stub when no live provider is
+    configured. The config takes precedence, then the provider's env var (so a
+    .env / ANTHROPIC_API_KEY still works untouched). All four provider rows go
+    through the ONE factory (`llm.connect.build_client`) the front door's
+    save/test paths use, so what tested green is exactly what plays."""
     if not force_scripted:
-        from ..llm import providers
+        from ..llm import connect, providers
         prov = providers.selected_provider()
         key = providers.stored_key(prov)
-        if prov == "anthropic" and key:
+        p = providers.get_provider(prov)
+        if key or (p is not None and p.key_optional and providers.stored_model(prov)):
             try:
-                from ..llm.anthropic_client import AnthropicLLMClient
-                return AnthropicLLMClient(api_key=key), "anthropic"
+                return connect.build_client(
+                    prov, key, providers.stored_model(prov),
+                    providers.stored_base_url(prov)), prov
             except Exception as e:  # pragma: no cover
                 print(f"[warn] falling back to scripted client: {e}")
     from ..llm.scripted import ScriptedLLMClient
