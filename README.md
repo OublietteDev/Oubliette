@@ -14,15 +14,20 @@ opens: talk to the DM on the left, watch the live character sheet, inventory, an
 canon on the right.
 
 **Connecting a model:** the start screen's **🔌 Connect your AI** panel lets you
-pick a provider and paste an API key right in the browser — stored locally in a
-gitignored `oubliette-config.json`, never committed. Anthropic (Claude Sonnet 5)
-is wired; OpenAI / Gemini / local models are shown as "coming soon". A key in the
-environment or a `.env` (`ANTHROPIC_API_KEY`) still works too. With no key the game
-runs the scripted **Offline Mode** DM (a canned demo) and says so in the chat.
+pick a provider, paste an API key, and type the model's **exact API id** — all four
+rows are live: **Anthropic**, **OpenAI**, **Google Gemini**, and **local models**
+(any OpenAI-compatible server: Ollama, LM Studio, llama.cpp — no key needed, just
+the server address). The model name is free text, so new models work the day they
+ship; the **Test** button makes one real (tiny) call so a typo'd id shows up as a
+plain sentence, never mid-game — and settings only save after that test passes.
+Everything is stored locally in a gitignored `oubliette-config.json`, never
+committed. A key in the environment or a `.env` (`ANTHROPIC_API_KEY`,
+`OPENAI_API_KEY`, `GEMINI_API_KEY`) still works too. With no key the game runs the
+scripted **Offline Mode** DM (a canned demo) and says so in the chat.
 
 **Sharing it with someone else (Windows):** they double-click `setup.bat` once to
-build the environment, then `play.bat` to run — see [`PLAYTEST.md`](PLAYTEST.md) for
-the playtester walkthrough (installing Python, getting an API key, what to look at).
+build the environment, then `play.bat` to run and connect their AI from the start
+screen.
 
 ## Earlier phases
 
@@ -122,9 +127,9 @@ python -m oubliette.app.repl --script --scripted   # the §14.1 non-combat trans
 python -m oubliette.app.repl --combat --scripted   # the Phase 1 combat-boundary demo
 python -m oubliette.app.repl --canon --scripted    # the Phase 3 canonization demo
 python -m oubliette.app.repl --scripted --db save.sqlite   # persist; re-run to reload+replay
-python -m oubliette.app.repl             # interactive REPL — uses the REAL model when
-                                         # ANTHROPIC_API_KEY is set (in env or a .env file);
-                                         # no extra deps, the adapter uses the stdlib
+python -m oubliette.app.repl             # interactive REPL — uses the REAL model when a
+                                         # provider is configured (Connect your AI, or a key
+                                         # in env/.env); no extra deps, adapters use the stdlib
 ```
 
 ## The acceptance transcript (definition of "done" for Phase 0)
@@ -143,7 +148,7 @@ python -m oubliette.app.repl             # interactive REPL — uses the REAL mo
 | `rules/` | pure SRD functions (ability mods, checks); no I/O |
 | `record/` | the event log (`events.py` ops/replay, `store.py` SQLite/in-memory), the seeded RNG (emits ROLL events), + a non-replayed debug log |
 | `runtime/session.py` | session lifecycle: durable store + materialized state, kept in sync via seed-then-replay |
-| `llm/` | the `LLMClient` seam; `scripted` (offline double) + `anthropic` (real) adapters |
+| `llm/` | the `LLMClient` seam; `scripted` (offline double) + `anthropic` (native) + `openai_compat` (OpenAI/Gemini/local) adapters; `connect.py` builds + ping-tests a client from provider settings |
 | `schemas.py` | typed structured-output contracts (Intent, assessment, resolution, tool calls) |
 | `tools/` | the tool surface — the only doors into protected state |
 | `combat/` | the combat boundary: `EncounterRequest` → placeholder engine → `CombatResult` |

@@ -101,8 +101,8 @@ echo ==================================================
 echo    Setup complete!
 echo.
 echo    Next: double-click  play.bat  to start.
-echo    In the game, click "Connect your AI" and paste
-echo    your API key (see PLAYTEST.md for how to get one).
+echo    In the game, click "Connect your AI", pick a
+echo    provider, and paste your API key.
 echo ==================================================
 echo.
 pause
