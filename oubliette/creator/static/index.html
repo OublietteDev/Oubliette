@@ -349,13 +349,17 @@
     <span class="tag">— build a world the game can play</span>
     <span class="spacer"></span>
     <span id="dirty">● unsaved changes</span>
+    <button class="btn" id="exportBtn" disabled title="Download this world as one shareable zip">⬇ Export</button>
     <button class="btn" id="mapBtn" disabled>🗺 Map</button>
     <button class="btn primary" id="saveBtn" disabled>Save world</button>
     <span class="badge" id="rootBadge"></span>
   </header>
   <main>
     <nav class="worlds">
-      <div class="worlds-head"><h2>Worlds</h2><button class="btn mini" id="newWorldBtn">+ New</button></div>
+      <div class="worlds-head"><h2>Worlds</h2>
+        <button class="btn mini" id="importWorldBtn" title="Install a shared world zip">⬆ Import</button>
+        <button class="btn mini" id="newWorldBtn">+ New</button></div>
+      <input type="file" id="importWorldFile" accept=".zip,application/zip" style="display:none" />
       <div id="worldList"></div>
     </nav>
     <section class="detail" id="detail">
@@ -712,6 +716,7 @@ function renderGroup(kind) {
 function render() {
   const d = document.getElementById("detail");
   document.getElementById("mapBtn").disabled = !state.contents;
+  document.getElementById("exportBtn").disabled = !state.contents;
   if (!state.contents) { d.innerHTML = '<div class="empty">Pick a world on the left to open it.</div>'; return; }
   // Per-section warning counts from the last validation (hidden while dirty — the
   // report is stale until the next save re-checks).
@@ -3848,8 +3853,43 @@ async function newWorld() {
   toast("New world created — start adding to it!");
 }
 
+// --- world portability (v0.9): one zip out, one zip in ----------------------
+function exportWorld() {
+  if (!state.id) return;
+  if (state.dirty && !confirm("Export reads the last SAVED version — your unsaved changes won't be in the zip. Export anyway?")) return;
+  window.location.href = `/api/pack/${encodeURIComponent(state.id)}/export`;
+}
+async function importWorld(file) {
+  const data = await file.arrayBuffer();
+  const post = async (overwrite) =>
+    (await fetch(`/api/pack/import${overwrite ? "?overwrite=true" : ""}`, {
+      method: "POST", headers: { "Content-Type": "application/zip" }, body: data,
+    })).json();
+  let res = await post(false);
+  if (res.exists) {
+    if (!confirm(`A world called “${res.name}” is already installed. Replace it? (The current copy is backed up first.)`)) return;
+    res = await post(true);
+  }
+  if (!res.ok) { toast((res.errors || ["import failed"])[0]); return; }
+  await loadWorlds();
+  await openWorld(res.id);
+  toast(res.validation && res.validation.ok
+    ? `“${res.name}” imported ✓ — ready to play`
+    : `“${res.name}” imported — it has issues to fix (see the report)`);
+}
+
 document.getElementById("saveBtn").addEventListener("click", saveWorld);
 document.getElementById("newWorldBtn").addEventListener("click", newWorld);
+document.getElementById("exportBtn").addEventListener("click", exportWorld);
+document.getElementById("importWorldBtn").addEventListener("click", () => {
+  if (state.dirty && !confirm("You have unsaved changes. Import another world anyway?")) return;
+  document.getElementById("importWorldFile").click();
+});
+document.getElementById("importWorldFile").addEventListener("change", e => {
+  const f = e.target.files[0];
+  e.target.value = "";                 // same file re-picks must re-fire
+  if (f) importWorld(f);
+});
 document.getElementById("mapBtn").addEventListener("click", openMap);
 document.getElementById("mapClose").addEventListener("click", closeMap);
 // Editor modals hold WORK IN PROGRESS (a half-written description, a statblock mid-edit) —

@@ -263,13 +263,22 @@ class Session:
                            reward_settled=reward_settled)
 
     def emit_party_created(self, builds: list["CharacterBuild"],
-                           reason: str = "party created") -> list[Character]:
+                           reason: str = "party created",
+                           imports: list[tuple[Character, list]] | None = None,
+                           ) -> list[Character]:
         """Run chargen (design §6) for each build, then record-then-apply ONE
         CHARACTER_CREATED event carrying the whole built party + the SRD gear its
         members were granted. The first build becomes the lead PC (`repo.pc()`); ids
         are pc, pc2, pc3, … Replaces the scenario's default-party stopgap; replay
         re-registers the gear and re-installs the party. Raises `ChargenError` if any
-        build breaks the rules."""
+        build breaks the rules.
+
+        `imports` (v0.9 portability) are heroes carried over from another
+        campaign: already-built (Character, [item defs]) pairs from a character
+        bundle, validated by the caller. They join AFTER the built heroes,
+        continuing the pc-id sequence — an import-only party is fine (its first
+        member becomes the lead) — and their item definitions ride the same
+        event, so a pack sword from the old world still cuts in this one."""
         if self.ruleset is None:
             raise RuntimeError("this campaign has no ruleset loaded; cannot create characters")
         chars: list[Character] = []
@@ -278,8 +287,15 @@ class Session:
             char, granted = build_character(build, self.ruleset, "pc" if i == 0 else f"pc{i + 1}")
             chars.append(char)
             items.extend(granted)
-        # Party gold is a shared purse (one shop, one driver). Pool every hero's chargen
-        # starting gold onto the lead so none is stranded on a member the shop can't spend.
+        for char, defs in (imports or []):
+            n = len(chars)
+            char = char.model_copy(update={"id": "pc" if n == 0 else f"pc{n + 1}",
+                                           "kind": "pc"})
+            chars.append(char)
+            items.extend(defs)
+        # Party gold is a shared purse (one shop, one driver). Pool every hero's
+        # starting gold — chargen grants and imported savings alike — onto the lead
+        # so none is stranded on a member the shop can't spend.
         if len(chars) > 1:
             chars[0].gold = sum(c.gold for c in chars)
             for c in chars[1:]:

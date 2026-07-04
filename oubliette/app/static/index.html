@@ -295,6 +295,14 @@
   .ng-party input[type=number] { width: 64px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font: inherit; padding: 6px 8px; }
   .ng-party .cg-hint { margin: 0; }
   /* party builder tab strip (one per hero) */
+  /* imported-hero chips + the import links (v0.9 portability) */
+  .cg-imports { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 20px 8px; }
+  .cg-import-chip { display: inline-flex; align-items: center; gap: 7px; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; color: var(--ink); }
+  .cg-import-chip b { font-family: var(--serif); font-weight: 600; }
+  .cg-import-x { background: none; border: none; color: var(--faint); cursor: pointer; font: inherit; padding: 0 2px; }
+  .cg-import-x:hover { color: var(--ink); }
+  .ng-import-world { padding: 10px 4px 0; }
   .cg-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 20px 10px; }
   .cg-tab { display: inline-flex; align-items: center; gap: 7px; background: var(--panel-2); border: 1px solid var(--line);
     border-radius: 999px; padding: 5px 12px; color: var(--muted); cursor: pointer; font: inherit; font-size: 12.5px; }
@@ -710,13 +718,17 @@
     <div id="ng-step-world">
       <div class="newgame-note">Starting a new game erases your current save.</div>
       <div class="newgame-list" id="newgame-list"></div>
+      <div class="ng-import-world">
+        <button class="linklike" id="ng-import-world-btn">⬆ Have a world file? Import it (.zip)</button>
+        <input type="file" id="ng-import-world-file" accept=".zip,application/zip" style="display:none">
+      </div>
     </div>
     <div id="ng-step-contract" class="hidden">
       <div class="newgame-note">Set the table: the tone of the telling and any boundaries. All optional — you can change it later in Settings.</div>
       <div class="ng-party">
         <label for="ng-party-size">Party size</label>
-        <input type="number" id="ng-party-size" min="1" max="6" value="1">
-        <span class="cg-hint">How many heroes you'll create (1–6). A classic D&D party is about four.</span>
+        <input type="number" id="ng-party-size" min="0" max="6" value="1">
+        <span class="cg-hint">How many heroes you'll create here (0–6). You can also import heroes from another campaign on the next screen.</span>
       </div>
       <div class="newgame-list"><div class="contract-form" id="ng-contract"></div></div>
       <div class="ng-foot">
@@ -728,11 +740,13 @@
     <div id="ng-step-character" class="hidden">
       <div class="newgame-note">Build your hero. Every number is computed by the rules from your choices — or
         <button class="linklike" id="cg-quickstart">skip and play a pre-made hero ›</button></div>
+      <div id="cg-imports" class="cg-imports hidden"></div>
       <div id="cg-tabs" class="cg-tabs hidden"></div>
       <div class="cg-grid">
         <div class="cg-form" id="cg-form"></div>
         <div class="cg-preview" id="cg-preview"></div>
       </div>
+      <input type="file" id="cg-import-file" accept=".json,application/json" style="display:none">
       <div class="ng-foot">
         <button class="act" id="cg-back">‹ Back</button>
         <div class="spacer"></div>
@@ -1556,6 +1570,7 @@ function readContractForm(root) {
 // --- New Game: choose a world, then set the table -------------------------
 let ngPack = null;               // { id, name } chosen in step 1
 async function openNewGame() {
+  cgImports = [];                // a fresh wizard starts with no carried-over heroes
   const { packs, current } = await (await fetch("/api/packs")).json();
   const list = $("newgame-list");
   list.innerHTML = "";
@@ -1584,17 +1599,37 @@ async function ngToContract(packId, packName) {
   ngShowStep("contract");
 }
 function closeNewGame() { $("newgame-overlay").classList.add("hidden"); }
+// --- world import at the Choose-a-World shelf (v0.9) ----------------------
+async function ngImportWorld(file) {
+  const data = await file.arrayBuffer();
+  const post = async (ow) => (await fetch(`/api/pack/import${ow ? "?overwrite=true" : ""}`, {
+    method: "POST", headers: { "Content-Type": "application/zip" }, body: data })).json();
+  let res = await post(false);
+  if (res.exists) {
+    if (!confirm(`A world called “${res.name}” is already installed. Replace it? (The current copy is backed up first.)`)) return;
+    res = await post(true);
+  }
+  if (!res.ok) { alert("Couldn't import that world:\n" + (res.errors || ["unknown error"]).join("\n")); return; }
+  await openNewGame();               // refresh the shelf — the new world appears on it
+  alert(`“${res.name}” is installed — pick it from the shelf.`);
+}
 async function beginNewGame(builds) {
   if (!ngPack) return;
-  const n = Array.isArray(builds) ? builds.length : 0;
-  const who = !n ? "a pre-made hero"
-    : n === 1 ? `“${builds[0].name}”`
-    : `a party of ${n} (${builds.map(b => b.name).join(", ")})`;
+  // Quick-start ("a pre-made hero") deliberately ignores imports; the built path
+  // sends both halves of the party.
+  const imports = Array.isArray(builds) ? cgImports.map(x => x.bundle) : [];
+  const names = [...(builds || []).map(b => b.name),
+                 ...imports.map(b => (b.character || {}).name || "an imported hero")];
+  const who = !names.length ? "a pre-made hero"
+    : names.length === 1 ? `“${names[0]}”`
+    : `a party of ${names.length} (${names.join(", ")})`;
   if (!confirm(`Begin in “${ngPack.name}” as ${who}? This erases the current save.`)) return;
   const table = readContractForm($("ng-contract"));
   const res = await fetch("/api/new", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pack_id: ngPack.id, table, builds: builds || null }),
+    body: JSON.stringify({ pack_id: ngPack.id, table,
+                           builds: builds && builds.length ? builds : null,
+                           imports: imports.length ? imports : null }),
   });
   const data = await res.json();
   if (!data.ok) { alert("Could not start: " + (data.errors || ["unknown error"]).join("; ")); return; }
@@ -1616,6 +1651,7 @@ async function beginNewGame(builds) {
 let cgOpt = null;          // ruleset options from the server
 let cg = null;             // the ACTIVE build (always === cgParty[cgActive])
 let cgParty = [];          // one build-state object per hero (party builder)
+let cgImports = [];        // heroes carried over from another campaign: {bundle, summary}
 let cgActive = 0;          // which slot the form is editing
 let cgValid = false, cgTimer = null, cgSeq = 0;
 const abilMod = (s) => Math.floor((s - 10) / 2);
@@ -1644,15 +1680,61 @@ function cgNewSlot() {
 }
 async function ngToCharacter() {
   if (!cgOpt) cgOpt = await (await fetch("/api/chargen/options")).json();
-  const n = Math.max(1, Math.min(6, parseInt($("ng-party-size").value || "1", 10)));
+  const n = Math.max(0, Math.min(6, parseInt($("ng-party-size").value || "1", 10)));
   cgParty = [];
   for (let i = 0; i < n; i++) cgParty.push(cgNewSlot());
   cgActive = 0;
-  cg = cgParty[0];
+  cg = cgParty[0] || null;      // 0 = an import-only party; the form shows a pointer
+  renderCgImports();
   renderCgTabs();
   renderCgForm();
   ngShowStep("character");
-  cgPreview();
+  if (cg) cgPreview(); else ngUpdateGate();
+}
+// The Begin gate, one place: every built hero valid AND at least one hero total
+// (built or imported). Import-only parties are a real path — "carry the party
+// into a fresh adventure".
+function ngUpdateGate() {
+  const buildsOk = !cgParty.length || (cgParty.length > 1 ? cgAllValid() : cgValid);
+  const anyone = cgParty.length + cgImports.length > 0;
+  $("ng-begin").disabled = !(buildsOk && anyone);
+  if (!cgParty.length) {
+    const status = $("cg-status");
+    if (!anyone) { status.className = "cg-status bad"; status.textContent = "Import a hero — or go back and raise the party size"; }
+    else { status.className = "cg-status ok"; status.textContent = cgImports.length > 1 ? "Party ready" : "Ready to begin"; }
+  }
+}
+function renderCgImports() {
+  const strip = $("cg-imports");
+  strip.innerHTML = "";
+  strip.classList.remove("hidden");
+  cgImports.forEach((imp, i) => {
+    const s = imp.summary;
+    const chip = el("span", "cg-import-chip");
+    chip.appendChild(el("b", null, `📥 ${s.name || "Hero"}`));
+    chip.appendChild(el("span", null, ` — level ${s.level}${s.char_class ? " " + s.char_class : ""}`));
+    const x = el("button", "cg-import-x", "✕");
+    x.title = "Remove this imported hero";
+    x.addEventListener("click", () => { cgImports.splice(i, 1); renderCgImports(); ngUpdateGate(); });
+    chip.appendChild(x);
+    strip.appendChild(chip);
+  });
+  const btn = el("button", "linklike", "⬆ Import a hero from another campaign");
+  btn.addEventListener("click", () => $("cg-import-file").click());
+  strip.appendChild(btn);
+}
+async function cgImportHero(file) {
+  let bundle;
+  try { bundle = JSON.parse(await file.text()); }
+  catch (e) { alert("That file isn't a character export."); return; }
+  const res = await (await fetch("/api/import-character/check", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pack_id: ngPack.id, bundle }),
+  })).json();
+  if (!res.ok) { alert("Couldn't import that hero:\n" + (res.errors || ["unknown error"]).join("\n")); return; }
+  cgImports.push({ bundle, summary: res.summary });
+  renderCgImports();
+  ngUpdateGate();
 }
 function renderCgTabs() {
   const bar = $("cg-tabs");
@@ -1737,6 +1819,13 @@ function selectField(label, value, options, onChange) {
 
 function renderCgForm() {
   const root = $("cg-form"); root.innerHTML = "";
+  if (!cg) {                       // an import-only party: no build form to show
+    root.appendChild(el("div", "cg-hint",
+      "No new heroes to build — your party is the imported one(s) above. " +
+      "Use “Import a hero” to add more, or go back to raise the party size."));
+    $("cg-preview").innerHTML = "";
+    return;
+  }
 
   // Identity
   const idn = secEl("Identity");
@@ -2087,7 +2176,7 @@ function renderPreview(data) {
   cg._valid = cgValid;                 // remember this slot's validity for the party gate
   const party = cgParty.length > 1;
   const allValid = cgAllValid();
-  $("ng-begin").disabled = !(party ? allValid : cgValid);
+  ngUpdateGate();
   renderCgTabs();                      // refresh the active tab's ✓/name
   const status = $("cg-status");
   if (!data.ok) { status.className = "cg-status bad"; status.textContent = `${data.errors.length} to fix`; }
@@ -2149,8 +2238,21 @@ $("new-btn").addEventListener("click", () => { if (!busy) openNewGame(); });
 $("ng-back").addEventListener("click", () => ngShowStep("world"));
 $("ng-to-char").addEventListener("click", ngToCharacter);
 $("cg-back").addEventListener("click", () => ngShowStep("contract"));
-$("ng-begin").addEventListener("click", () => { if (cgAllValid()) beginNewGame(cgParty.map(cgBuildOf)); });
+$("ng-begin").addEventListener("click", () => {
+  if (!$("ng-begin").disabled) beginNewGame(cgParty.map(cgBuildOf));
+});
 $("cg-quickstart").addEventListener("click", () => beginNewGame(null));
+$("ng-import-world-btn").addEventListener("click", () => $("ng-import-world-file").click());
+$("ng-import-world-file").addEventListener("change", e => {
+  const f = e.target.files[0];
+  e.target.value = "";               // picking the same file again must re-fire
+  if (f) ngImportWorld(f);
+});
+$("cg-import-file").addEventListener("change", e => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (f) cgImportHero(f);
+});
 
 // --- Settings (edit this campaign's table contract mid-game) --------------
 async function openSettings() {
@@ -3070,6 +3172,12 @@ function renderRestBar(m) {
     luBtn.addEventListener("click", () => openLevelUp(m.id));
     bar.appendChild(luBtn);
   }
+  // v0.9 portability: this hero as a file — import them into any other campaign
+  // at New Game ("Import a hero"). Gear definitions and portrait ride along.
+  const exBtn = el("button", "act", "⬇ Export");
+  exBtn.title = "Download this hero as a file another campaign can import at New Game";
+  exBtn.addEventListener("click", () => { window.location.href = `/api/character-export/${m.id}`; });
+  bar.appendChild(exBtn);
   return bar;
 }
 // The party short-rest popup: a hit-dice spinner per hero, one Confirm.

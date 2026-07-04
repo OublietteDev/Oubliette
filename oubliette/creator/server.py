@@ -29,9 +29,10 @@ from pathlib import Path
 from dataclasses import replace
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, ValidationError
 
+from ..content import packaging
 from ..content.loader import PackValidationError, load_pack
 from ..content.ruleset import load_ruleset
 from ..content.srd_schemas import Background, PackSpell
@@ -321,6 +322,44 @@ async def save_pack(pack_id: str, body: SaveIn) -> JSONResponse:
             _write_json(d / f"{name}.json", data)
 
     return JSONResponse({"ok": True, "backed_up": backup, "validation": _validate(pack_id)})
+
+
+# --- world portability (v0.9): share a pack as one zip -------------------------
+
+@app.get("/api/pack/{pack_id}/export", response_model=None)
+async def export_pack_zip(pack_id: str) -> Response | JSONResponse:
+    """The whole world as one downloadable zip (JSON + art + audio + combat
+    files) — what an author hands to a friend, who imports it in the Forge or
+    straight from the game's Choose-a-World screen. Exports what's ON DISK;
+    the page warns if there are unsaved edits."""
+    d = _pack_dir(pack_id)
+    if d is None:
+        return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
+    data = packaging.export_pack(pack_id, packs_root=_packs_root())
+    return Response(content=data, media_type="application/zip", headers={
+        "Content-Disposition": f'attachment; filename="{pack_id}.oubliette-world.zip"'})
+
+
+@app.post("/api/pack/import")
+async def import_pack_zip(request: Request, overwrite: bool = False) -> JSONResponse:
+    """Install a shared world zip into the packs folder. The power-user door:
+    a world with validation issues installs ANYWAY (the Forge is where you fix
+    it) — the response carries the fresh ✓/⚠ report like every save does.
+    `exists=True` asks the page to confirm an overwrite (the old copy is
+    shelved in pack-backups first, same as save backups)."""
+    data = await request.body()
+    if not data:
+        return JSONResponse({"ok": False, "errors": ["the upload is empty"]}, status_code=400)
+    try:
+        result = packaging.import_pack(data, packs_root=_packs_root(),
+                                       overwrite=overwrite, require_valid=False)
+    except ValueError as e:
+        return JSONResponse({"ok": False, "errors": [str(e)]}, status_code=400)
+    if result["exists"]:
+        return JSONResponse({"ok": False, "exists": True, "id": result["id"],
+                             "name": result["name"]})
+    return JSONResponse({"ok": True, "id": result["id"], "name": result["name"],
+                         "validation": _validate(result["id"])})
 
 
 class ImageIn(BaseModel):

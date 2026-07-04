@@ -21,7 +21,10 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from ..content.loader import DEFAULT_PACK, _PACKS_ROOT, available_packs
+from ..combat.arena_bridge import character_to_player
+from ..content import packaging
+from ..content.loader import (DEFAULT_PACK, _PACKS_ROOT, PackValidationError,
+                              available_packs, load_pack)
 from ..content.ruleset import Ruleset, load_ruleset
 from ..journal.store import Journal, JournalStore
 from ..record.events import EventKind, StateOp
@@ -865,6 +868,32 @@ async def get_packs() -> JSONResponse:
     return JSONResponse({"packs": available_packs(), "current": GAME.pack_id})
 
 
+@app.post("/api/pack/import")
+async def post_pack_import(request: Request, overwrite: bool = False) -> JSONResponse:
+    """Install a shared world zip (v0.9 portability) so it appears on the
+    Choose-a-World shelf. The casual-player door: a world that fails the
+    loader's validation is REFUSED whole (nothing half-installed) — fixing a
+    flawed pack is the Forge's job, not the player's. `exists=True` means a
+    world with this id is already installed; the page asks and retries with
+    ?overwrite=true (the old copy is shelved in pack-backups, not lost)."""
+    data = await request.body()
+    if not data:
+        return JSONResponse({"ok": False, "errors": ["the upload is empty"]}, status_code=400)
+    try:
+        result = packaging.import_pack(data, overwrite=overwrite, require_valid=True)
+    except ValueError as e:
+        return JSONResponse({"ok": False, "errors": [str(e)]}, status_code=400)
+    if result["exists"]:
+        return JSONResponse({"ok": False, "exists": True, "id": result["id"],
+                             "name": result["name"],
+                             "errors": [f"a world called “{result['name']}” is already installed"]})
+    if not result["ok"]:
+        return JSONResponse({"ok": False, "errors":
+                             ["this world has problems and won't load:"] + result["issues"]})
+    return JSONResponse({"ok": True, "id": result["id"], "name": result["name"],
+                         "version": result.get("version")})
+
+
 # --- chargen (CS2): serialize the ruleset for the wizard, and validate live ---
 def _ruleset() -> Ruleset:
     """The ruleset for chargen — the SESSION's, which since module-kit S2 is
@@ -1253,6 +1282,81 @@ async def upload_character_portrait(char_id: str, request: Request) -> JSONRespo
         return JSONResponse({"ok": ok, "error": error, "state": _snapshot()})
 
 
+# --- character portability (v0.9): export a hero, import them elsewhere -------
+
+@app.get("/api/character-export/{char_id}")
+async def get_character_export(char_id: str) -> JSONResponse:
+    """One party member as a self-contained bundle: the full runtime snapshot,
+    the item definitions their gear references (a pack sword still cuts in a
+    world that never heard of it), and the portrait as base64. Served with a
+    download disposition — the Export button on the sheet just navigates here."""
+    async with GAME.lock:
+        repo = GAME.session.repo
+        try:
+            char = repo.get_character(char_id)
+        except StateError:
+            return JSONResponse({"error": "no such character"}, status_code=404)
+        if char.kind != "pc":
+            return JSONResponse({"error": "only party members can be exported"}, status_code=400)
+        ids = dict.fromkeys([*(s.item_id for s in char.inventory), *char.equipped])
+        defs = []
+        for iid in ids:
+            try:
+                defs.append(repo.get_item(iid))
+            except StateError:
+                pass                    # an unregistered id rides along name-only, as in play
+        portrait = None
+        p = _pc_portrait_path(char_id)
+        if p is not None:
+            mime = {v: k for k, v in _PORTRAIT_MIME_EXT.items()}.get(p.suffix, "image/png")
+            portrait = (mime, p.read_bytes())
+        bundle = packaging.character_bundle(char, defs, portrait)
+        fname = quote(f"{(char.name or 'hero').strip()}.oubliette-character.json")
+        return JSONResponse(bundle, headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{fname}"})
+
+
+def _read_import_bundle(raw: dict, world) -> tuple[Character, list, tuple | None]:
+    """Parse + gate one imported hero against the world they're joining: the
+    bundle must read as a character, and the Arena bridge must be able to field
+    them (OublietteDev's contract: "Oubliette and the Arena can both read it"). Raises
+    ValueError with a player-facing message."""
+    char, items, portrait = packaging.parse_character_bundle(raw)
+    try:
+        character_to_player(char, world.mechanics_catalog, world.ruleset)
+    except Exception as e:                      # any bridge failure = not fieldable
+        raise ValueError(f"the combat engine can't field {char.name or 'this hero'} ({e})")
+    return char, items, portrait
+
+
+class ImportCheckIn(BaseModel):
+    pack_id: str                     # the world the hero would join
+    bundle: dict                     # the parsed .oubliette-character.json
+
+
+@app.post("/api/import-character/check")
+async def post_import_character_check(body: ImportCheckIn) -> JSONResponse:
+    """Pre-flight for the New Game wizard: is this file a hero both apps can
+    read, in the chosen world? Returns a summary card for the imports strip.
+    Nothing is persisted — /api/new re-runs the same gate before starting."""
+    try:
+        world = load_pack(body.pack_id)
+    except PackValidationError:
+        return JSONResponse({"ok": False, "errors": ["that world won't load"]})
+    except Exception:
+        return JSONResponse({"ok": False, "errors": [f"unknown world {body.pack_id!r}"]})
+    try:
+        char, items, portrait = _read_import_bundle(body.bundle, world)
+    except ValueError as e:
+        return JSONResponse({"ok": False, "errors": [str(e)]})
+    sheet = char.sheet
+    return JSONResponse({"ok": True, "errors": [], "summary": {
+        "name": char.name, "level": char.level,
+        "char_class": sheet.char_class if sheet else None,
+        "race": sheet.race if sheet else None,
+        "items": len(items), "has_portrait": portrait is not None}})
+
+
 class RestIn(BaseModel):
     char_id: str = "pc"             # legacy: the lone member who spends hit_dice (short rest)
     kind: str                       # "short" | "long"
@@ -1379,6 +1483,7 @@ class NewGameIn(BaseModel):
     table: TableContract | None = None      # the table contract agreed at New Game (optional)
     build: CharacterBuild | None = None     # legacy single character (a party of one)
     builds: list[CharacterBuild] | None = None  # the chargen party (preferred); None/[] = quick-start
+    imports: list[dict] | None = None       # heroes carried over as character bundles (v0.9)
 
 
 @app.post("/api/new")
@@ -1396,9 +1501,45 @@ async def post_new(body: NewGameIn | None = None) -> JSONResponse:
                 build_character(b, rs)
             except ChargenError as e:
                 return JSONResponse({"ok": False, "errors": e.errors}, status_code=400)
+        # Imported heroes gate against the TARGET world (its merged catalog) before
+        # the save is erased, for the same reason.
+        parsed_imports: list[tuple[Character, list, tuple | None]] = []
+        raw_imports = (body.imports if body and body.imports else [])
+        if raw_imports:
+            target = (body.pack_id if body and body.pack_id else GAME.pack_id)
+            try:
+                world = load_pack(target)
+            except Exception:
+                return JSONResponse({"ok": False, "errors": [f"world {target!r} won't load"]},
+                                    status_code=400)
+            for i, raw in enumerate(raw_imports):
+                try:
+                    parsed_imports.append(_read_import_bundle(raw, world))
+                except ValueError as e:
+                    return JSONResponse({"ok": False,
+                                         "errors": [f"imported hero #{i + 1}: {e}"]},
+                                        status_code=400)
         GAME.new_game(body.pack_id if body else None, body.table if body else None)
-        if builds:
-            GAME.session.emit_party_created(builds)   # replaces the default-party stopgap
+        if builds or parsed_imports:
+            chars = GAME.session.emit_party_created(
+                builds, imports=[(c, defs) for c, defs, _ in parsed_imports])
+            # Imported portraits: the bytes land beside the NEW save, and a
+            # PORTRAIT_SET event records the reference — the exact path the
+            # sheet's upload button takes, so replay just works.
+            for (char, _defs, portrait), member in zip(parsed_imports, chars[len(builds):]):
+                if portrait is None:
+                    continue
+                ext = _PORTRAIT_MIME_EXT.get(portrait[0])
+                if ext is None:
+                    continue
+                _PC_PORTRAITS.mkdir(parents=True, exist_ok=True)
+                for old in _PC_PORTRAITS.glob(f"{member.id}.*"):
+                    old.unlink()
+                fname = f"{member.id}{ext}"
+                (_PC_PORTRAITS / fname).write_bytes(portrait[1])
+                GAME.session.emit_state(
+                    EventKind.PORTRAIT_SET, [StateOp.portrait(member.id, fname)],
+                    reason=f"imported portrait for {member.name}")
         return JSONResponse({"ok": True, "state": _snapshot(), "model": GAME.client_name,
                              "pack_id": GAME.pack_id, "has_progress": _has_progress(),
                              "soundscape": _soundscape()})
