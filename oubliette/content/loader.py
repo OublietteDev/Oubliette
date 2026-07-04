@@ -28,7 +28,7 @@ from ..state.repository import InMemoryRepository
 from .ruleset import _VALID_SKILLS, Ruleset, load_ruleset
 from .schemas import (NPC, AiProfile, AuthoredQuest, BestiaryGate, Item, Lore,
                       Place, PackManifest, Scenario, StatBlock)
-from .srd_schemas import Background, SrdEquipment
+from .srd_schemas import Background, PackSpell, SrdEquipment
 
 DEFAULT_PACK = "brightvale"
 _PACKS_ROOT = Path(__file__).parent / "packs"
@@ -266,6 +266,23 @@ def _lint_backgrounds(backgrounds: list[Background], items: list[Item],
                               f"item {g.item!r}")
 
 
+def _lint_spells(spells: list[PackSpell], ruleset: Ruleset,
+                 errors: list[str]) -> None:
+    """Pack-authored chassis spells (module-kit S3): ids unique and
+    non-shadowing (same rule as backgrounds — a pack ADDS options, never
+    silently replaces an SRD spell), and class lists resolving against real
+    classes. Chassis shape/number rules are enforced by the schema itself,
+    so by the time we're here every chassis is internally sound."""
+    _dup_ids(spells, "spells", errors)
+    for s in spells:
+        if s.id in ruleset.spells:
+            errors.append(f"spells: {s.id!r} shadows an SRD spell — "
+                          "give the pack's own spell a new id")
+        for c in s.classes:
+            if c not in ruleset.classes:
+                errors.append(f"spells: {s.id} lists unknown class {c!r}")
+
+
 def _lint_default_party(sc: Scenario, item_ids: set[str], errors: list[str]) -> None:
     """A default party is a list of state.Character dicts (the chargen stopgap).
     Validate each parses and that its inventory/equipped reference real items."""
@@ -472,15 +489,17 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     quests = _parse_list(base / "quests.json", AuthoredQuest, "quests.json", errors)
     ai_profiles = _parse_list(base / "ai_profiles.json", AiProfile, "ai_profiles.json", errors)
     backgrounds = _parse_list(base / "backgrounds.json", Background, "backgrounds.json", errors)
+    spells = _parse_list(base / "spells.json", PackSpell, "spells.json", errors)
 
-    # The SRD layer loads BEFORE the lint: pack backgrounds are checked against
-    # its background/equipment sets (S2), and the merged ruleset is built below.
+    # The SRD layer loads BEFORE the lint: pack backgrounds/spells are checked
+    # against its sets (S2/S3), and the merged ruleset is built below.
     ruleset = load_ruleset()
 
     _lint(manifest, items, statblocks, npcs, places, scenarios, quests, errors)
     _dup_ids(lore, "lore", errors)        # subjects are free-form, so only ids are checked
     _dup_ids(ai_profiles, "ai_profiles", errors)
     _lint_backgrounds(backgrounds, items, ruleset, errors)
+    _lint_spells(spells, ruleset, errors)
     person_chars = _load_person_characters(base, npcs, errors)   # Phase 4b sidecars
 
     if errors:
@@ -506,16 +525,19 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
                                    sounds=tuple(c.model_dump() for c in p.sounds))
                    for p in places}
 
-    # The session plays with a PACK-MERGED ruleset (module-kit S2): the pack's
-    # backgrounds join the SRD's (collisions are lint errors above), and the
-    # equipment map IS the merged mechanics catalog — so chargen can grant
-    # pack items (a background's dockhand boots) and every consumer of
-    # `ruleset.equipment` sees one consistent set. `load_ruleset()` returns a
-    # fresh instance per call, so this never mutates another world's ruleset.
+    # The session plays with a PACK-MERGED ruleset (module-kit S2/S3): the
+    # pack's backgrounds and chassis spells join the SRD's (collisions are lint
+    # errors above), and the equipment map IS the merged mechanics catalog — so
+    # chargen can grant pack items (a background's dockhand boots), a pack
+    # sorcerer can learn the world's signature spell, and every consumer of
+    # `ruleset.equipment`/`ruleset.spells` sees one consistent set.
+    # `load_ruleset()` returns a fresh instance per call, so this never
+    # mutates another world's ruleset.
     merged_equipment = mechanics_catalog(ruleset, items)
     ruleset = replace(
         ruleset,
         backgrounds={**ruleset.backgrounds, **{b.id: b for b in backgrounds}},
+        spells={**ruleset.spells, **{s.id: s for s in spells}},
         equipment=merged_equipment,
     )
     return LoadedWorld(

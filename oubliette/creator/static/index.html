@@ -184,6 +184,15 @@
   .shop-row { display: grid; grid-template-columns: 1fr 64px 80px auto; gap: 8px; margin-bottom: 8px; align-items: center; }
   .ability-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .ability-grid .field { margin-bottom: 0; }
+  /* the spell "card" preview (module-kit S3) — what a player would read */
+  .spell-preview { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+    background: var(--bg); font-size: 13px; line-height: 1.45; }
+  .spell-preview .spv-name { font-weight: 700; font-size: 15px; }
+  .spell-preview .spv-school { font-style: italic; color: var(--faint); margin-bottom: 6px; }
+  .spell-preview .spv-lines { font-size: 12px; margin-bottom: 8px; }
+  .spell-preview .spv-flavor { font-style: italic; margin-bottom: 6px; }
+  .spell-preview .spv-mech { margin-bottom: 4px; }
+  .spell-preview .spv-classes { font-size: 12px; color: var(--faint); margin-top: 6px; }
   /* pick-from-a-fixed-list checkbox groups (damage types, conditions, skills, languages) */
   .chk-group { display: flex; flex-wrap: wrap; gap: 7px 16px; }
   .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink);
@@ -370,14 +379,14 @@
 
 <script>
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const EDITABLE = new Set(["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios", "ai_profiles", "backgrounds"]);
+const EDITABLE = new Set(["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios", "ai_profiles", "backgrounds", "spells"]);
 const SINGULAR = { items: "item", statblocks: "creature", npcs: "character", places: "place",
                    lore: "lore entry", quests: "quest", scenarios: "opening", ai_profiles: "personality",
-                   backgrounds: "background" };
+                   backgrounds: "background", spells: "spell" };
 const TITLES = { items: "Items", statblocks: "Creatures", npcs: "Characters & NPCs",
                  places: "Places", lore: "Lore", quests: "Quests", scenarios: "Opening setup",
-                 ai_profiles: "AI Personalities", backgrounds: "Backgrounds" };
-const ORDER = ["items", "statblocks", "npcs", "backgrounds", "places", "lore", "quests", "scenarios", "ai_profiles"];
+                 ai_profiles: "AI Personalities", backgrounds: "Backgrounds", spells: "Spells" };
+const ORDER = ["items", "statblocks", "npcs", "backgrounds", "spells", "places", "lore", "quests", "scenarios", "ai_profiles"];
 const CATEGORIES = ["weapon", "armor", "gear", "consumable", "treasure", "misc"];
 const SLOTS = ["", "main_hand", "off_hand", "body", "feet", "hands", "waist", "head", "neck", "ring"];
 const ARMOR_TYPES = ["light", "medium", "heavy", "shield"];
@@ -388,6 +397,24 @@ const ITEM_TYPES = ["mundane", "weapon", "armor", "ammunition", "potion", "scrol
 const RARITIES = ["common", "uncommon", "rare", "very rare", "legendary", "artifact"];
 const MAGIC_EQUIPPABLE = new Set(["weapon", "armor", "ammunition", "ring", "rod", "staff", "wand", "wondrous"]);
 const POISON_TYPES = ["injury", "contact", "ingested", "inhaled"];
+// spell-chassis contract (module-kit S3; mirrors schemas.SpellChassis)
+const SPELL_SCHOOLS = ["abjuration", "conjuration", "divination", "enchantment",
+                       "evocation", "illusion", "necromancy", "transmutation"];
+const CASTER_CLASSES = [["bard","Bard"],["cleric","Cleric"],["druid","Druid"],["paladin","Paladin"],
+                        ["ranger","Ranger"],["sorcerer","Sorcerer"],["warlock","Warlock"],["wizard","Wizard"]];
+const CHASSIS_KINDS = [
+  ["bolt",  "Bolt — a spell attack that deals damage (Fire Bolt style)"],
+  ["blast", "Blast — an area burst; targets save or take damage (Fireball style)"],
+  ["heal",  "Heal — restores hit points to one creature (Cure Wounds style)"],
+  ["hex",   "Hex — one target saves or suffers a condition (Hold Person style)"]];
+const SPELL_DAMAGE_TYPES = ["acid","bludgeoning","cold","fire","force","lightning","necrotic",
+                            "piercing","poison","psychic","radiant","slashing","thunder"];
+const BLAST_SHAPES = ["sphere", "cone", "line", "cube"];
+const HEX_CONDITIONS = [["blinded","Blinded"],["charmed","Charmed"],["deafened","Deafened"],
+                        ["frightened","Frightened"],["paralyzed","Paralyzed"],["poisoned","Poisoned"],
+                        ["restrained","Restrained"],["stunned","Stunned"]];
+const DICE_RE = /^\d+d\d+(\+\d+)?$/, PLAIN_DICE_RE = /^\d+d\d+$/;
+const ordinal = n => ({1:"1st",2:"2nd",3:"3rd"})[n] || `${n}th`;
 
 let state = { id: null, contents: null, validation: null, dirty: false };
 const collapsed = new Set();   // folded sections, remembered across re-renders
@@ -518,6 +545,17 @@ function describe(kind, e) {
     if ((e.equipment || []).length) bits.push(`${e.equipment.length} item grant(s)`);
     if (e.feature && e.feature.name) bits.push(`feature: ${e.feature.name}`);
     return bits.join(" · ");
+  }
+  if (kind === "spells") {
+    const ch = e.chassis || {};
+    const lvl = e.level === 0 ? "cantrip" : `level ${e.level}`;
+    const what = ch.kind === "bolt" ? `bolt · ${ch.damage} ${ch.damage_type}`
+               : ch.kind === "blast" ? `blast · ${ch.size_ft}-ft ${ch.shape} · ${ch.damage} ${ch.damage_type}`
+               : ch.kind === "heal" ? `heal · ${ch.healing} + mod`
+               : ch.kind === "hex" ? `hex · ${(ch.conditions || []).join(", ")}`
+               : "";
+    const who = (e.classes || []).join(", ");
+    return [lvl, e.school, what, who && `for ${who}`].filter(Boolean).join(" · ");
   }
   if (kind === "quests") {
     const src = e.giver_npc ? `given by ${npcName(e.giver_npc)}`
@@ -733,9 +771,9 @@ function openEditor(kind, index) {
   if (kind === "quests") editorCtx.branches = ((original?.branches) || []).map(b => ({ ...b }));
   if (kind === "backgrounds") editorCtx.bgeq = ((original?.equipment) || []).map(g => ({ item: g.item, qty: g.qty || 1 }));
 
-  const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, lore: loreForm, quests: questForm, scenarios: scenarioForm, ai_profiles: aiProfileForm, backgrounds: backgroundForm };
-  const WIRES = { statblocks: wireStatblockForm, npcs: wireNpcForm, places: wirePlaceForm, items: wireItemForm, quests: wireQuestForm, ai_profiles: wireAiProfileForm, backgrounds: wireBackgroundForm };
-  const CONFIRMS = { items: confirmItem, statblocks: confirmStatblock, npcs: confirmNpc, places: confirmPlace, lore: confirmLore, quests: confirmQuest, scenarios: confirmScenario, ai_profiles: confirmAiProfile, backgrounds: confirmBackground };
+  const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, lore: loreForm, quests: questForm, scenarios: scenarioForm, ai_profiles: aiProfileForm, backgrounds: backgroundForm, spells: spellForm };
+  const WIRES = { statblocks: wireStatblockForm, npcs: wireNpcForm, places: wirePlaceForm, items: wireItemForm, quests: wireQuestForm, ai_profiles: wireAiProfileForm, backgrounds: wireBackgroundForm, spells: wireSpellForm };
+  const CONFIRMS = { items: confirmItem, statblocks: confirmStatblock, npcs: confirmNpc, places: confirmPlace, lore: confirmLore, quests: confirmQuest, scenarios: confirmScenario, ai_profiles: confirmAiProfile, backgrounds: confirmBackground, spells: confirmSpell };
 
   const modal = document.getElementById("modal");
   modal.innerHTML = FORMS[kind](original);
@@ -1130,6 +1168,236 @@ function confirmBackground(original) {
   setOrDel("bonds", perLine("f_bg_bonds"));
   setOrDel("flaws", perLine("f_bg_flaws"));
   commitEntry("backgrounds", original, base);
+}
+
+// ---- spell form (module-kit S3) ----
+// A pack-authored chassis spell: the author picks one of four proven shapes
+// (bolt/blast/heal/hex) and fills in numbers. One saved entry is BOTH halves —
+// chargen learns it from the merged ruleset, and the Arena bridge projects the
+// chassis into a castable action at fight time. The live preview shows the
+// exact spell "card" a player would read.
+function spellForm(sp) {
+  const v = sp || {};
+  const ch = v.chassis || {};
+  const kind = ch.kind || "bolt";
+  const lvl = v.level ?? 0;
+  return `
+    <div class="mhead">${sp ? "Edit spell" : "New spell"}</div>
+    <div class="mbody">
+      ${field(req("Name"), `<input id="f_name" value="${esc(v.name || "")}" placeholder="Tidesurge" />`)}
+      <div class="row2">
+        ${field("Level", `<select id="f_sp_level">${[0,1,2,3,4,5,6,7,8,9].map(n =>
+            `<option value="${n}"${n === lvl ? " selected" : ""}>${n === 0 ? "Cantrip" : `${ordinal(n)} level`}</option>`).join("")}</select>`,
+            "Cantrips cost no slot and grow at levels 5/11/17.")}
+        ${field("School", `<select id="f_sp_school">${SPELL_SCHOOLS.map(s =>
+            `<option value="${s}"${s === (v.school || "evocation") ? " selected" : ""}>${s}</option>`).join("")}</select>`)}
+      </div>
+      ${field("Who can learn it", checklist("f_sp_classes", CASTER_CLASSES, v.classes),
+              "The class spell lists it joins. Leave empty for a spell that only exists on scrolls.")}
+      ${field("Flavor", `<textarea id="f_sp_flavor" placeholder="What it looks and feels like — the DM narrates from this.">${esc(v.description || "")}</textarea>`)}
+      <div class="subform">
+        <div class="sftitle">How it works</div>
+        ${field("Shape", `<select id="f_sp_kind">${CHASSIS_KINDS.map(([k, lab]) =>
+            `<option value="${k}"${k === kind ? " selected" : ""}>${lab}</option>`).join("")}</select>`,
+            "Four proven shapes the combat engine runs natively. Wilder ideas stay prose (for now).")}
+        <div id="spDmgRow" class="row2" style="display:none">
+          ${field("Damage", `<input id="f_sp_dmg" value="${esc(ch.damage || "1d10")}" placeholder="2d8" />`,
+                  "Dice, e.g. 1d10 or 2d6+1.")}
+          ${field("Damage type", `<select id="f_sp_dtype">${SPELL_DAMAGE_TYPES.map(t =>
+              `<option value="${t}"${t === (ch.damage_type || "fire") ? " selected" : ""}>${t}</option>`).join("")}</select>`)}
+        </div>
+        <div id="spBlastRow" class="row2" style="display:none">
+          ${field("Area shape", `<select id="f_sp_shape">${BLAST_SHAPES.map(s =>
+              `<option value="${s}"${s === (ch.shape || "sphere") ? " selected" : ""}>${s}</option>`).join("")}</select>`)}
+          ${field("Area size (feet)", `<input id="f_sp_size" type="number" min="5" step="5" value="${ch.size_ft ?? 15}" />`,
+                  "Sphere: radius. Cone/cube: size. Line: length.")}
+        </div>
+        <div id="spSaveRow" class="row2" style="display:none">
+          ${field("Saving throw", `<select id="f_sp_save">${["dexterity","constitution","wisdom","strength","intelligence","charisma"].map(a =>
+              `<option value="${a}"${a === (ch.save || "dexterity") ? " selected" : ""}>${a}</option>`).join("")}</select>`)}
+          <div id="spOnSaveBox">
+            ${field("On a successful save", `<select id="f_sp_onsave">${[["half","half damage"],["none","no damage"]].map(([k, lab]) =>
+                `<option value="${k}"${k === (ch.on_save || "half") ? " selected" : ""}>${lab}</option>`).join("")}</select>`)}
+          </div>
+        </div>
+        <div id="spHealRow" style="display:none">
+          ${field("Healing", `<input id="f_sp_heal" value="${esc(ch.healing || "1d8")}" placeholder="1d8" />`,
+                  "Plain dice — the caster's spellcasting modifier is added automatically.")}
+        </div>
+        <div id="spHexBox" style="display:none">
+          ${field("On a failed save the target is…", checklist("f_sp_conds", HEX_CONDITIONS, ch.conditions))}
+          ${field("", `<label style="display:flex;align-items:center;gap:6px;font-weight:400"><input id="f_sp_saveends" type="checkbox" ${ch.save_ends === false ? "" : "checked"}/> the target repeats the save at the end of each of its turns</label>`,
+                  "Unticked, the condition holds until your concentration breaks — much stronger.")}
+          <div class="help" style="margin-top:4px">A hex is held by concentration, like Hold Person.</div>
+        </div>
+        <div class="row2">
+          ${field("Range (feet)", `<input id="f_sp_range" type="number" min="0" step="5" value="${ch.range_ft ?? 60}" />`,
+                  "5 = touch. A blast at range 0 bursts out from the caster.")}
+          ${field("Cast as", `<select id="f_sp_act">${[["action","an action"],["bonus_action","a bonus action"]].map(([k, lab]) =>
+              `<option value="${k}"${k === (ch.action_type || "action") ? " selected" : ""}>${lab}</option>`).join("")}</select>`)}
+        </div>
+        <div id="spUpcastDiceBox" style="display:none">
+          ${field("Cast with a bigger slot: extra dice per level", `<input id="f_sp_upcast" value="${esc(ch.upcast_dice || "")}" placeholder="1d8 (optional)" />`,
+                  "Plain dice added per slot level above the spell's own. Blank = no upcasting.")}
+        </div>
+        <div id="spUpcastTgtBox" style="display:none">
+          ${field("Cast with a bigger slot: extra targets per level", `<input id="f_sp_uptargets" type="number" min="0" value="${ch.upcast_targets ?? 0}" />`,
+                  "0 = no upcasting. 1 = one more target per slot level, like Hold Person.")}
+        </div>
+      </div>
+      <div class="subform">
+        <div class="sftitle">What players will read</div>
+        <div id="spellPreview" class="spell-preview"></div>
+      </div>
+      <div class="invalid" id="f_err"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" data-confirm>${sp ? "Update" : "Add"} spell</button>
+    </div>`;
+}
+// The mechanics sentence, worded to match the bridge's projected action text —
+// preview and Arena tooltip tell the same story.
+function spellMechanicsText(k, f) {
+  if (k === "bolt")
+    return `Make a ${f.range > 5 ? "ranged" : "melee"} spell attack; on a hit the target takes ${f.dmg} ${f.dtype} damage.`;
+  if (k === "blast")
+    return `Each creature in a ${f.size}-foot ${f.shape} makes a ${f.save} saving throw, taking ${f.dmg} ${f.dtype} damage on a failure (${f.onsave === "half" ? "half as much" : "none"} on a success).`;
+  if (k === "heal")
+    return `A creature within range regains ${f.heal} + your spellcasting modifier hit points.`;
+  const conds = f.conds.length ? f.conds.join(" and ") : "…";
+  return `The target makes a ${f.save} saving throw or is ${conds}. ` +
+         (f.saveEnds ? "It repeats the save at the end of each of its turns."
+                     : "The effect holds for as long as you concentrate.");
+}
+function readSpellForm() {
+  return {
+    kind: gid("f_sp_kind").value, level: Number(gid("f_sp_level").value),
+    dmg: gid("f_sp_dmg").value.trim(), dtype: gid("f_sp_dtype").value,
+    shape: gid("f_sp_shape").value, size: Number(gid("f_sp_size").value || 0),
+    save: gid("f_sp_save").value, onsave: gid("f_sp_onsave").value,
+    heal: gid("f_sp_heal").value.trim(),
+    conds: readChecklist("f_sp_conds"), saveEnds: gid("f_sp_saveends").checked,
+    range: Number(gid("f_sp_range").value || 0), act: gid("f_sp_act").value,
+    upcast: gid("f_sp_upcast").value.trim(),
+    uptargets: Number(gid("f_sp_uptargets").value || 0),
+  };
+}
+function spellRangeText(f) {
+  if (f.kind === "blast" && f.range === 0) return `Self (${f.size}-foot ${f.shape})`;
+  return f.range === 5 ? "Touch" : `${f.range} feet`;
+}
+function renderSpellPreview() {
+  const f = readSpellForm();
+  const name = gid("f_name").value.trim() || "Unnamed spell";
+  const school = gid("f_sp_school").value;
+  const flavor = gid("f_sp_flavor").value.trim();
+  const isHex = f.kind === "hex";
+  const head = f.level === 0 ? `${school} cantrip` : `${ordinal(f.level)}-level ${school}`;
+  const lines = [
+    `<b>Casting Time:</b> 1 ${f.act === "bonus_action" ? "bonus action" : "action"}`,
+    `<b>Range:</b> ${esc(spellRangeText(f))}`,
+    `<b>Duration:</b> ${isHex ? "Concentration, up to 1 minute" : "Instantaneous"}`,
+  ];
+  let scaling = "";
+  if (f.level === 0)
+    scaling = "The damage increases by one die at levels 5, 11, and 17.";
+  else if ((f.kind === "bolt" || f.kind === "blast") && f.upcast)
+    scaling = `Cast with a higher-level slot: +${esc(f.upcast)} damage per slot level above ${ordinal(f.level)}.`;
+  else if (f.kind === "heal" && f.upcast)
+    scaling = `Cast with a higher-level slot: +${esc(f.upcast)} healing per slot level above ${ordinal(f.level)}.`;
+  else if (isHex && f.uptargets > 0)
+    scaling = `Cast with a higher-level slot: ${f.uptargets} more target(s) per slot level above ${ordinal(f.level)}.`;
+  const classes = readChecklist("f_sp_classes");
+  gid("spellPreview").innerHTML = `
+    <div class="spv-name">${esc(name)}</div>
+    <div class="spv-school">${esc(head)}</div>
+    <div class="spv-lines">${lines.join(" &nbsp;·&nbsp; ")}</div>
+    ${flavor ? `<div class="spv-flavor">${esc(flavor)}</div>` : ""}
+    <div class="spv-mech">${esc(spellMechanicsText(f.kind, f))}</div>
+    ${scaling ? `<div class="spv-mech">${scaling}</div>` : ""}
+    ${classes.length ? `<div class="spv-classes">Spell lists: ${esc(classes.join(", "))}</div>` : ""}`;
+}
+function wireSpellForm() {
+  const sync = () => {
+    const k = gid("f_sp_kind").value;
+    const lvlSel = gid("f_sp_level");
+    // heals and hexes can't be cantrips (the schema refuses) — steer, don't bounce
+    if ((k === "heal" || k === "hex") && lvlSel.value === "0") lvlSel.value = "1";
+    [...lvlSel.options].forEach(o => { if (o.value === "0") o.disabled = (k === "heal" || k === "hex"); });
+    const lvl = Number(lvlSel.value);
+    gid("spDmgRow").style.display = (k === "bolt" || k === "blast") ? "grid" : "none";
+    gid("spBlastRow").style.display = k === "blast" ? "grid" : "none";
+    gid("spSaveRow").style.display = (k === "blast" || k === "hex") ? "grid" : "none";
+    gid("spOnSaveBox").style.display = k === "blast" ? "block" : "none";
+    gid("spHealRow").style.display = k === "heal" ? "block" : "none";
+    gid("spHexBox").style.display = k === "hex" ? "block" : "none";
+    gid("spUpcastDiceBox").style.display = (lvl > 0 && k !== "hex") ? "block" : "none";
+    gid("spUpcastTgtBox").style.display = (lvl > 0 && k === "hex") ? "block" : "none";
+    renderSpellPreview();
+  };
+  gid("f_sp_kind").addEventListener("change", sync);
+  gid("f_sp_level").addEventListener("change", sync);
+  // any keystroke or pick refreshes the card the player would read; the .mbody
+  // node is rebuilt for every editor open, so this listener dies with the form
+  const body = document.querySelector("#modal .mbody");
+  body.addEventListener("input", renderSpellPreview);
+  body.addEventListener("change", renderSpellPreview);
+  sync();
+}
+function confirmSpell(original) {
+  const name = gid("f_name").value.trim();
+  if (!name) { fieldInvalid("f_name", "Please give it a name."); return; }
+  const f = readSpellForm();
+  if ((f.kind === "bolt" || f.kind === "blast") && !DICE_RE.test(f.dmg)) {
+    fieldInvalid("f_sp_dmg", "Damage should be dice like 2d8 or 2d6+1."); return; }
+  if (f.kind === "blast" && (!f.size || f.size <= 0)) {
+    fieldInvalid("f_sp_size", "Give the area a size in feet."); return; }
+  if (f.kind === "heal" && !PLAIN_DICE_RE.test(f.heal)) {
+    fieldInvalid("f_sp_heal", "Healing should be plain dice like 1d8."); return; }
+  if (f.kind === "hex" && !f.conds.length) {
+    fieldInvalid("f_sp_conds", "Pick at least one condition."); return; }
+  if (f.level > 0 && f.kind !== "hex" && f.upcast && !PLAIN_DICE_RE.test(f.upcast)) {
+    fieldInvalid("f_sp_upcast", "Upcast dice should be plain dice like 1d8."); return; }
+  if (f.kind !== "blast" && f.range < 5) {
+    fieldInvalid("f_sp_range", "Range must be at least 5 (touch)."); return; }
+
+  const base = original ? { ...original } : {};
+  if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("spells").map(x => x.id)));
+  const isHex = f.kind === "hex";
+  base.name = name;
+  base.level = f.level;
+  base.school = gid("f_sp_school").value;
+  base.casting_time = f.act === "bonus_action" ? "1 bonus action" : "1 action";
+  base.range = spellRangeText(f);
+  base.components = "V, S";
+  base.duration = isHex ? "Concentration, up to 1 minute" : "Instantaneous";
+  if (isHex) base.concentration = true; else delete base.concentration;
+  base.classes = readChecklist("f_sp_classes");
+  const flavor = gid("f_sp_flavor").value.trim();
+  if (flavor) base.description = flavor; else delete base.description;
+
+  const ch = { kind: f.kind, range_ft: f.range };
+  if (f.act === "bonus_action") ch.action_type = "bonus_action";
+  if (f.kind === "bolt" || f.kind === "blast") {
+    ch.damage = f.dmg; ch.damage_type = f.dtype;
+    if (f.level > 0 && f.upcast) ch.upcast_dice = f.upcast;
+  }
+  if (f.kind === "blast") {
+    ch.shape = f.shape; ch.size_ft = f.size; ch.save = f.save;
+    if (f.onsave !== "half") ch.on_save = f.onsave;
+  }
+  if (f.kind === "heal") {
+    ch.healing = f.heal;
+    if (f.level > 0 && f.upcast) ch.upcast_dice = f.upcast;
+  }
+  if (isHex) {
+    ch.save = f.save; ch.conditions = f.conds;
+    if (!f.saveEnds) ch.save_ends = false;
+    if (f.uptargets > 0) ch.upcast_targets = f.uptargets;
+  }
+  base.chassis = ch;
+  commitEntry("spells", original, base);
 }
 
 // ---- place form ----

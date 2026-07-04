@@ -18,7 +18,7 @@ from typing import Literal
 from pydantic import ConfigDict, Field, model_validator
 
 from .schemas import (ArmorProfile, ConsumableMechanics, ItemType,
-                      PoisonMechanics, WeaponProfile, _Strict)
+                      PoisonMechanics, SpellChassis, WeaponProfile, _Strict)
 
 # Bump on a breaking change to these shapes; the ruleset carries its own version.
 RULESET_SCHEMA_VERSION = 1
@@ -132,6 +132,34 @@ class Spell(_Strict):
     def _level_range(self) -> "Spell":
         if not 0 <= self.level <= 9:
             raise ValueError("spell level must be 0 (cantrip) through 9")
+        return self
+
+
+class PackSpell(Spell):
+    """A pack-authored spell (module-kit S3): the standard chargen `Spell` shape
+    plus a required `chassis` — the structured combat half, constrained to the
+    four shapes the Arena executes natively. Because this IS a `Spell`, the
+    merged ruleset serves it to chargen/level-up/DM-context unchanged; the
+    Arena bridge spots the chassis and projects it into an Action at fight
+    time (`combat.arena_bridge.chassis_action`). One source of truth, no
+    generated sidecar files."""
+
+    chassis: SpellChassis
+
+    @model_validator(mode="after")
+    def _chassis_fits_the_spell(self) -> "PackSpell":
+        errs: list[str] = []
+        if self.level == 0 and self.chassis.kind in ("heal", "hex"):
+            errs.append("cantrips can only use the bolt or blast chassis")
+        if self.level == 0 and (self.chassis.upcast_dice
+                                or self.chassis.upcast_targets):
+            errs.append("cantrips scale automatically at levels 5/11/17 — "
+                        "drop the upcast fields")
+        if self.chassis.kind == "hex" and not self.concentration:
+            errs.append("a hex holds its condition through concentration — "
+                        "set concentration to true")
+        if errs:
+            raise ValueError("; ".join(errs))
         return self
 
 

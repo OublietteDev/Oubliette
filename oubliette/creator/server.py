@@ -34,7 +34,7 @@ from pydantic import BaseModel, ValidationError
 
 from ..content.loader import PackValidationError, load_pack
 from ..content.ruleset import load_ruleset
-from ..content.srd_schemas import Background
+from ..content.srd_schemas import Background, PackSpell
 from ..rules.chargen import (CharacterBuild, ChargenError, _project_srd_item,
                              build_character)
 from ..rules.chargen_view import chargen_options, preview_payload
@@ -45,11 +45,11 @@ from ..state.models import Character
 STATIC = Path(__file__).parent / "static"
 _DEFAULT_PACKS_ROOT = Path(__file__).parent.parent / "content" / "packs"
 _TYPES = ["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios",
-          "ai_profiles", "backgrounds"]
+          "ai_profiles", "backgrounds", "spells"]
 _TYPE_WORD = {"items": "items", "statblocks": "creatures", "npcs": "characters",
               "places": "places", "lore": "lore entries", "quests": "quests",
               "scenarios": "opening setups", "ai_profiles": "AI personalities",
-              "backgrounds": "backgrounds"}
+              "backgrounds": "backgrounds", "spells": "spells"}
 
 
 def _slug(name: str) -> str:
@@ -57,7 +57,7 @@ def _slug(name: str) -> str:
 
 # The per-type files a pack is made of (the world recipe).
 PACK_FILES = ["pack", "items", "statblocks", "npcs", "places", "lore", "quests",
-              "scenarios", "ai_profiles", "backgrounds"]
+              "scenarios", "ai_profiles", "backgrounds", "spells"]
 
 app = FastAPI(title="Oubliette: The Forge")
 
@@ -609,8 +609,9 @@ def _ruleset():
 
 def _chargen_ruleset(pack: str | None):
     """The ruleset a chargen request runs against: the SRD, plus the named pack's
-    own backgrounds and items (module-kit S2) — so a person-NPC authored inside
-    Atria can BE a Silverfin dockhand carrying dockhand boots. The pack is read
+    own backgrounds, items and chassis spells (module-kit S2/S3) — so a
+    person-NPC authored inside Atria can BE a Silverfin dockhand carrying
+    dockhand boots and knowing the bay's signature spell. The pack is read
     from disk leniently: it may be mid-edit, so entries that don't validate are
     simply skipped here (the pack validator panel is where they're reported)."""
     rs = _ruleset()
@@ -638,7 +639,14 @@ def _chargen_ruleset(pack: str | None):
         except (ValidationError, TypeError):
             continue
         equipment[it.id] = _project_mechanics(it)
-    return replace(rs, backgrounds=backgrounds, equipment=equipment)
+    spells = dict(rs.spells)
+    for raw in entries("spells.json"):
+        try:
+            s = PackSpell(**raw)
+        except (ValidationError, TypeError):
+            continue
+        spells[s.id] = s
+    return replace(rs, backgrounds=backgrounds, equipment=equipment, spells=spells)
 
 
 @app.get("/api/chargen/options")
@@ -804,7 +812,8 @@ async def new_pack(body: NewIn) -> JSONResponse:
     _write_json(d / "pack.json", {
         "id": pack_id, "schema_version": 1, "name": name, "version": "0.1.0",
         "author": "", "description": "", "entry_scenario": "opening"})
-    for t in ["items", "statblocks", "npcs", "lore", "quests", "ai_profiles"]:
+    for t in ["items", "statblocks", "npcs", "lore", "quests", "ai_profiles",
+              "backgrounds", "spells"]:
         _write_json(d / f"{t}.json", [])
     _write_json(d / "places.json", [{
         "id": "town_square", "name": "Town Square",

@@ -40,6 +40,7 @@ from arena.models.actions import (
     Attack,
     DamageRoll,
     DamageType,
+    SavingThrowEffect,
     TargetType,
 )
 from arena.models.character import Creature, CreatureSize, CreatureType, PlayerCharacter
@@ -200,9 +201,111 @@ def arena_spell_action(spell_id: str) -> Action | None:
         return None
 
 
-def spell_actions(char: Character) -> list[Action]:
+# blast shape -> the Arena targeting mode that already telegraphs/resolves it.
+_CHASSIS_SHAPES = {
+    "sphere": TargetType.AREA_SPHERE, "cone": TargetType.AREA_CONE,
+    "line": TargetType.AREA_LINE, "cube": TargetType.AREA_CUBE,
+}
+
+
+def chassis_action(spell) -> Action:
+    """Project a pack spell's chassis (module-kit S3) into the Arena Action the
+    SRD generator would have produced for the same shape — including the caster
+    placeholders (`Attack.ability`, `dc=None`, the `+MOD` healing token), so
+    `_bake_spell_action` treats both sources identically. Returns a FRESH
+    Action every call because the bake mutates in place (the SRD path re-reads
+    its file for the same reason)."""
+    ch = spell.chassis
+    kw: dict = dict(
+        name=spell.name,
+        action_type=ActionType(ch.action_type),
+        range=ch.range_ft,
+        requires_concentration=spell.concentration,
+        spell_level=spell.level,
+        ai_priority=7 if ch.kind == "heal" else 6,
+    )
+    if spell.level > 0:
+        kw["resource_cost"] = {f"spell_slot_{spell.level}": 1}
+        if ch.kind in ("bolt", "blast") and ch.upcast_dice:
+            kw["upcast_damage_dice"] = ch.upcast_dice
+        elif ch.kind == "heal" and ch.upcast_dice:
+            kw["upcast_healing_dice"] = ch.upcast_dice
+        elif ch.kind == "hex" and ch.upcast_targets:
+            kw["upcast_target_count"] = ch.upcast_targets
+    else:
+        kw["cantrip_scaling"] = True
+
+    if ch.kind == "bolt":
+        dice, flat = _parse_damage(ch.damage)
+        ranged = ch.range_ft > 5
+        kw.update(
+            target_type=TargetType.ONE_CREATURE,
+            attack=Attack(
+                name=spell.name,
+                attack_type="ranged_spell" if ranged else "melee_spell",
+                ability="intelligence",       # placeholder; the bake resolves it
+                reach=5,
+                range_normal=ch.range_ft if ranged else None,
+                damage=[DamageRoll(dice=dice, damage_type=DamageType(ch.damage_type),
+                                   bonus=flat)],
+            ),
+        )
+        desc = (f"Make a {'ranged' if ranged else 'melee'} spell attack; on a "
+                f"hit the target takes {ch.damage} {ch.damage_type} damage.")
+    elif ch.kind == "blast":
+        dice, flat = _parse_damage(ch.damage)
+        kw.update(
+            target_type=_CHASSIS_SHAPES[ch.shape],
+            area_size=ch.size_ft,
+            saving_throw=SavingThrowEffect(
+                ability=ch.save, dc=None,
+                damage_on_fail=[DamageRoll(dice=dice,
+                                           damage_type=DamageType(ch.damage_type),
+                                           bonus=flat)],
+                damage_on_success=ch.on_save,
+            ),
+        )
+        outcome = "half as much" if ch.on_save == "half" else "none"
+        desc = (f"Each creature in a {ch.size_ft}-foot {ch.shape} makes a "
+                f"{ch.save} saving throw, taking {ch.damage} {ch.damage_type} "
+                f"damage on a failure ({outcome} on a success).")
+    elif ch.kind == "heal":
+        kw.update(target_type=TargetType.ONE_ALLY, healing=f"{ch.healing}+MOD")
+        desc = (f"A creature within range regains {ch.healing} + your "
+                f"spellcasting modifier hit points.")
+    else:  # hex
+        kw.update(
+            target_type=TargetType.ONE_CREATURE,
+            saving_throw=SavingThrowEffect(
+                ability=ch.save, dc=None,
+                conditions_on_fail=list(ch.conditions),
+                conditions_no_resave=not ch.save_ends,
+            ),
+        )
+        held = ("It repeats the save at the end of each of its turns."
+                if ch.save_ends else
+                "The effect holds for as long as you concentrate.")
+        desc = (f"The target makes a {ch.save} saving throw or is "
+                f"{' and '.join(ch.conditions)}. {held}")
+    kw["description"] = desc
+    return Action(**kw)
+
+
+def _spell_action_for(spell_id: str, ruleset) -> Action | None:
+    """One spell id -> its castable Action, whichever half of the merged
+    ruleset it came from: a pack spell carries a chassis and is projected on
+    the spot; everything else is the generated SRD library. Pack ids can never
+    shadow SRD ids (a load-time lint), so there is exactly one answer."""
+    sp = ruleset.spells.get(spell_id) if ruleset is not None else None
+    if getattr(sp, "chassis", None) is not None:
+        return chassis_action(sp)
+    return arena_spell_action(spell_id)
+
+
+def spell_actions(char: Character, ruleset=None) -> list[Action]:
     """The caster kit (B4): the sheet's cantrips + spells (prepared list when the
-    class prepares, else known), each loaded from the generated library and BAKED
+    class prepares, else known), each loaded from the generated library — or
+    projected from its pack chassis (S3) via the merged `ruleset` — and BAKED
     with this caster's numbers — the same philosophy as the +X gear bake:
 
       - `Attack.ability` ← the spellcasting ability (the generator emits a
@@ -226,7 +329,7 @@ def spell_actions(char: Character) -> list[Action]:
     leveled = sheet.spells_prepared or sheet.spells_known
     out: list[Action] = []
     for spell_id in dict.fromkeys([*sheet.cantrips_known, *leveled]):
-        action = arena_spell_action(spell_id)
+        action = _spell_action_for(spell_id, ruleset)
         if action is None:
             continue
         _bake_spell_action(action, ability_long, dc, mod)
@@ -410,7 +513,7 @@ _ORDINAL = {1: "1st", 2: "2nd", 3: "3rd"}
 
 
 def scroll_actions(
-    char: Character, catalog: dict[str, SrdEquipment] | None
+    char: Character, catalog: dict[str, SrdEquipment] | None, ruleset=None,
 ) -> list[Action]:
     """Castable actions for the scroll stacks in a character's inventory (C5).
 
@@ -443,7 +546,7 @@ def scroll_actions(
 
     out: list[Action] = []
     for (item_id, spell_id, rider_level), qty in qty_by_variant.items():
-        action = arena_spell_action(spell_id)
+        action = _spell_action_for(spell_id, ruleset)
         if action is None or action.action_type == ActionType.REACTION:
             continue
         base_level = action.spell_level or 0
@@ -738,7 +841,7 @@ def character_to_player(
     extra_actions, bonus_actions = feature_actions(char, carrier)
     # C4: reaction spells (Shield) go to `reactions`, NOT `actions` — they
     # are cast via the engine's hit-reaction popup, never from the radial.
-    all_spells = spell_actions(char)
+    all_spells = spell_actions(char, ruleset)
     reaction_spells = [a for a in all_spells
                        if a.action_type == ActionType.REACTION]
     turn_spells = [a for a in all_spells
@@ -770,7 +873,7 @@ def character_to_player(
             ),
             *turn_spells,
             *consumable_actions(char, catalog),
-            *scroll_actions(char, catalog),
+            *scroll_actions(char, catalog, ruleset),
             *weapon_kit_actions(char, catalog),
             *extra_actions,
         ],

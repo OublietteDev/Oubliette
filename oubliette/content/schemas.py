@@ -8,6 +8,7 @@ models (`state.Item`, `state.Character`) — see `loader.py`.
 
 from __future__ import annotations
 
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -108,6 +109,126 @@ class PoisonMechanics(_Strict):
     damage_type: str = "poison"
     conditions: list[str] = Field(default_factory=list)  # SRD condition ids imposed (e.g. "poisoned")
     duration: str | None = None             # how long the conditions last, e.g. "1 hour"
+
+
+# --- the spell-chassis contract (module-kit S3; shared by pack spells) ---------
+# A pack spell is the standard chargen `Spell` shape plus a `chassis`: structured
+# combat data constrained to the four action shapes the Arena already executes
+# natively (the scoping frame: spells are nearly all "Arena half", so custom
+# spells are priced by CONSTRAINING them to proven shapes). The bridge projects
+# a chassis into an Arena Action at fight time — no sidecar files, one source of
+# truth, exactly like `_project_mechanics` for items. Freeform effects, summons,
+# walls and teleports are explicitly v2.0.
+ChassisKind = Literal["bolt", "blast", "heal", "hex"]
+
+# Mirrors of the Arena's vocabularies, kept here so `content/` stays free of
+# arena imports; a drift-guard test asserts these against the arena enums.
+CHASSIS_DAMAGE_TYPES = frozenset({
+    "acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic",
+    "piercing", "poison", "psychic", "radiant", "slashing", "thunder",
+})
+# The curated author-facing condition set — each one is applied-and-resolved by
+# SRD spells the Arena already runs (Hold Person, Charm Person, Blindness...).
+CHASSIS_CONDITIONS = frozenset({
+    "blinded", "charmed", "deafened", "frightened", "paralyzed", "poisoned",
+    "restrained", "stunned",
+})
+SaveAbility = Literal["strength", "dexterity", "constitution",
+                      "intelligence", "wisdom", "charisma"]
+
+_DAMAGE_DICE_RE = re.compile(r"^\d+d\d+(\+\d+)?$")   # "2d8", "2d6+1"
+_PLAIN_DICE_RE = re.compile(r"^\d+d\d+$")            # no flat riders (heal adds MOD)
+
+
+class SpellChassis(_Strict):
+    """The structured half of a pack spell — the author picks a shape and fills
+    in numbers. `bolt` = spell attack roll → damage; `blast` = save-or-take AoE;
+    `heal` = restore dice + the caster's modifier; `hex` = save vs condition(s)
+    held by concentration. Per-kind field rules are enforced whole (aggregated
+    into one error) so the Forge can show everything wrong at once."""
+
+    kind: ChassisKind
+    range_ft: int = 60                    # 5 = touch; blasts may be 0 (burst from self)
+    action_type: Literal["action", "bonus_action"] = "action"
+    # bolt / blast
+    damage: str | None = None             # dice, e.g. "2d8" or "2d6+1"
+    damage_type: str | None = None        # one of CHASSIS_DAMAGE_TYPES
+    # blast / hex
+    save: SaveAbility | None = None
+    # blast
+    shape: Literal["sphere", "cone", "line", "cube"] | None = None
+    size_ft: int | None = None            # radius / cone-cube size / line length
+    on_save: Literal["half", "none"] = "half"
+    # heal
+    healing: str | None = None            # plain dice; the caster's modifier is added
+    # hex
+    conditions: list[str] = Field(default_factory=list)  # from CHASSIS_CONDITIONS
+    save_ends: bool = True                # target re-saves at the end of its turns
+    # upcasting (leveled spells; cantrips scale automatically at 5/11/17)
+    upcast_dice: str | None = None        # bolt/blast: +damage dice; heal: +healing dice
+    upcast_targets: int = 0               # hex: extra targets per slot level above base
+
+    @model_validator(mode="after")
+    def _kind_rules(self) -> "SpellChassis":
+        errs: list[str] = []
+        k = self.kind
+
+        def forbid(value, name: str, kinds: str) -> None:
+            if value:
+                errs.append(f"{name} only belongs on a {kinds} chassis")
+
+        if k in ("bolt", "blast"):
+            if not (self.damage and _DAMAGE_DICE_RE.match(self.damage)):
+                errs.append("damage must be dice like '2d8' or '2d6+1'")
+            if self.damage_type not in CHASSIS_DAMAGE_TYPES:
+                errs.append(f"damage_type must be one of: "
+                            f"{', '.join(sorted(CHASSIS_DAMAGE_TYPES))}")
+        else:
+            forbid(self.damage, "damage", "bolt or blast")
+            forbid(self.damage_type, "damage_type", "bolt or blast")
+        if k in ("blast", "hex"):
+            if self.save is None:
+                errs.append("a save ability is required")
+        else:
+            forbid(self.save, "save", "blast or hex")
+        if k == "blast":
+            if self.shape is None:
+                errs.append("a blast needs a shape (sphere/cone/line/cube)")
+            if not self.size_ft or self.size_ft <= 0:
+                errs.append("a blast needs a positive size_ft")
+        else:
+            forbid(self.shape, "shape", "blast")
+            forbid(self.size_ft, "size_ft", "blast")
+        if k == "heal":
+            if not (self.healing and _PLAIN_DICE_RE.match(self.healing)):
+                errs.append("healing must be plain dice like '1d8' "
+                            "(the caster's modifier is added automatically)")
+        else:
+            forbid(self.healing, "healing", "heal")
+        if k == "hex":
+            if not self.conditions:
+                errs.append("a hex needs at least one condition")
+            for c in self.conditions:
+                if c not in CHASSIS_CONDITIONS:
+                    errs.append(f"unknown condition {c!r} — pick from: "
+                                f"{', '.join(sorted(CHASSIS_CONDITIONS))}")
+        else:
+            forbid(self.conditions, "conditions", "hex")
+            if self.upcast_targets:
+                errs.append("upcast_targets only belongs on a hex chassis")
+        if k == "hex" and self.upcast_dice:
+            errs.append("upcast_dice does not apply to a hex (use upcast_targets)")
+        if self.upcast_dice and not _PLAIN_DICE_RE.match(self.upcast_dice):
+            errs.append("upcast_dice must be plain dice like '1d6'")
+        if self.upcast_targets < 0:
+            errs.append("upcast_targets cannot be negative")
+        if self.range_ft < 0:
+            errs.append("range_ft cannot be negative")
+        if k != "blast" and self.range_ft < 5:
+            errs.append("range_ft must be at least 5 (touch)")
+        if errs:
+            raise ValueError("; ".join(errs))
+        return self
 
 
 class Item(_Strict):
