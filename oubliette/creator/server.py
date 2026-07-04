@@ -23,6 +23,9 @@ import os
 import random
 import re
 import shutil
+import subprocess
+import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -826,6 +829,77 @@ async def get_audio(pack_id: str, filename: str) -> FileResponse | JSONResponse:
     if not path.is_file():
         return JSONResponse({"error": "not found"}, status_code=404)
     return FileResponse(path, headers={"Cache-Control": "no-cache"})
+
+
+# --- the battlefield editor (location-battles S3) --------------------------
+# The Forge's one subprocess: a place's battle map is edited in the Arena
+# itself (terrain painting on the real hex grid over the real image), the
+# same launch pattern the play app uses for fights (arena_launch.run_arena).
+
+# Repo root (…/Oubliette), the cwd the Arena subprocess needs so `import arena`
+# resolves. This file is at oubliette/creator/server.py.
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+class BattleEditIn(BaseModel):
+    place_name: str = "Battlefield"
+    battle: dict = {}      # the place form's CURRENT block (possibly unsaved)
+
+
+@app.post("/api/pack/{pack_id}/battle-editor")
+def edit_battlefield(pack_id: str, body: BattleEditIn) -> JSONResponse:
+    """Launch the Arena's battlefield editor on a place's battle block and
+    return the edited block. Sync on purpose: FastAPI runs def endpoints in a
+    worker thread, so the (long) blocking wait on the GUI subprocess never
+    stalls the event loop. The client folds the result into its form — the
+    pack is only touched by the normal Save flow."""
+    d = _pack_dir(pack_id)
+    if d is None:
+        return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
+
+    from ..content.schemas import BattleMap
+    try:   # the same validation the game applies — the editor gets a sane block
+        battle = BattleMap.model_validate(body.battle or {}).model_dump(mode="json")
+    except ValidationError as e:
+        return JSONResponse({"error": f"bad battle block: {e.errors()[0].get('msg', e)}"},
+                            status_code=400)
+
+    def _asset(sub: str, name: str | None) -> str | None:
+        if not name or not _safe_leaf(name):
+            return None
+        p = d / sub / name
+        return str(p.resolve()) if p.is_file() else None
+
+    scratch = Path(tempfile.mkdtemp(prefix="oubliette-battle-edit-"))
+    spec_path = scratch / "spec.json"
+    out_path = scratch / "out.json"
+    spec = {
+        "place_name": body.place_name or "Battlefield",
+        "battle": battle,
+        "background_path": _asset("images", battle.get("background_image")),
+        "music_path": _asset("audio", battle.get("music_track")),
+    }
+    try:
+        spec_path.write_text(json.dumps(spec, indent=2), encoding="utf-8")
+        proc = subprocess.run(
+            [sys.executable, "-m", "arena.battlefield_editor",
+             str(spec_path), str(out_path)],
+            cwd=str(_PROJECT_ROOT), capture_output=True, text=True,
+        )
+        if proc.returncode != 0:
+            tail = (proc.stderr or "")[-400:]
+            return JSONResponse(
+                {"error": f"the battlefield editor exited abnormally: {tail}"},
+                status_code=500)
+        if not out_path.is_file():
+            return JSONResponse({"ok": True, "cancelled": True})
+        edited = json.loads(out_path.read_text(encoding="utf-8")).get("battle") or {}
+        edited = BattleMap.model_validate(edited).model_dump(mode="json")
+        return JSONResponse({"ok": True, "battle": edited})
+    except (OSError, json.JSONDecodeError, ValidationError) as e:
+        return JSONResponse({"error": f"battlefield edit failed: {e}"}, status_code=500)
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
 
 
 class NewIn(BaseModel):

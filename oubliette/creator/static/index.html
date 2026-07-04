@@ -770,6 +770,7 @@ function openEditor(kind, index) {
     editorCtx.exits = ((original?.exits) || []).map(x => ({ ...x }));
     editorCtx.image = original?.image || null;
     editorCtx.sounds = ((original?.sounds) || []).map(c => ({ ...c }));
+    editorCtx.battle = original?.battle ? JSON.parse(JSON.stringify(original.battle)) : null;
   }
   if (kind === "statblocks") { editorCtx.loot = ((original?.loot) || []).filter(l => l.item).map(l => ({ item: l.item, qty: l.qty || 1 })); editorCtx.statblockId = original?.id || null; }
   if (kind === "npcs") { editorCtx.inv = buildInvRows(original); editorCtx.original = original; editorCtx.statBlockSel = original?.stat_block || ""; }
@@ -1442,6 +1443,14 @@ function placeForm(pl) {
           <div class="help" style="margin-top:8px">Looping <b>beds</b> set the ambience; <b>occasional sounds</b> fire now and then. Mark a sound <b>“plays in sub-locations”</b> to pass it down to places inside this one (e.g. a city theme). “Music” vs “sound effect” chooses which volume slider controls it. ▶ previews; sounds are copied into the pack.</div>
         </details>
       </div>
+      <div class="subform">
+        <details class="drawer" id="btlDrawer">
+          <summary class="sftitle" style="margin-bottom:0">Battlefield<span class="drawer-note" id="btlSummary"></span></summary>
+          <div id="battleBox" style="margin-top:10px"></div>
+          <input type="file" id="btlImgFile" accept="image/png,image/jpeg,image/webp" style="display:none" />
+          <div class="help" style="margin-top:8px">When a fight breaks out <b>here</b>, the Arena uses this battle map: the image under the hex grid, the battle music, and the furniture — chairs as cover, a spill as difficult ground, the bar as a wall. <b>Open in Arena</b> launches the battlefield editor to paint terrain, size the grid, and fit the image. Without a battle map, fights here use the plain field.</div>
+        </details>
+      </div>
       <div class="invalid" id="f_err"></div>
     </div>
     <div class="mfoot">
@@ -1617,7 +1626,7 @@ function renderSounds() {
   on("[data-cue-del]", "click", e => { editorCtx.sounds.splice(+e.target.dataset.cueDel, 1); renderSounds(); });
   on("[data-cue-play]", "click", e => previewCue(+e.target.dataset.cuePlay));
 }
-let _audioUploadIdx = null, _preview = null;
+let _audioUploadIdx = null, _preview = null, _battleAudioUpload = false;
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -1628,6 +1637,7 @@ function fileToDataUrl(file) {
 }
 async function onUploadAudio(file) {
   const i = _audioUploadIdx; _audioUploadIdx = null;
+  const forBattle = _battleAudioUpload; _battleAudioUpload = false;
   try {
     const dataUrl = await fileToDataUrl(file);
     const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/audio`, {
@@ -1637,8 +1647,13 @@ async function onUploadAudio(file) {
     if (res.error) { toast(res.error); return; }
     state.audioFiles = state.audioFiles || [];
     if (!state.audioFiles.includes(res.filename)) { state.audioFiles.push(res.filename); state.audioFiles.sort(); }
-    if (i != null && editorCtx.sounds[i]) editorCtx.sounds[i].file = res.filename;
-    renderSounds();
+    if (forBattle && editorCtx.battle) {
+      editorCtx.battle.music_track = res.filename;
+      renderBattle();
+    } else {
+      if (i != null && editorCtx.sounds[i]) editorCtx.sounds[i].file = res.filename;
+      renderSounds();
+    }
     toast("Sound added: " + res.filename);
   } catch (e) { toast(String(e.message || e)); }
 }
@@ -1663,10 +1678,108 @@ function cleanCue(c) {
   return o;
 }
 
+// ---- the battlefield (location-battles S3) ----
+// A place's battle map: image + music by reference (files live in the pack's
+// images/ and audio/ like everything else), geometry authored in the Arena.
+function renderBattle() {
+  const box = document.getElementById("battleBox");
+  const b = editorCtx.battle;
+  if (!b) {
+    box.innerHTML = `<div class="nothing" style="margin:8px 0">No battle map — fights here use the plain field.</div>
+      <button class="btn mini" type="button" id="btlAdd">+ Add a battle map</button>`;
+    document.getElementById("btlAdd").addEventListener("click", () => {
+      editorCtx.battle = { grid_width: 20, grid_height: 15, terrain: [],
+                           background_offset: [0, 0], background_scale: 1.0 };
+      document.getElementById("btlDrawer").open = true;
+      renderBattle();
+    });
+  } else {
+    const nTerrain = (b.terrain || []).length;
+    box.innerHTML = `
+      <div class="cue-row"><span class="cue-when">image</span>
+        <span style="flex:1">${b.background_image ? esc(b.background_image) : "(none — plain field under the grid)"}</span>
+        <button class="btn mini" type="button" id="btlImgChoose">Choose…</button>
+        ${b.background_image ? '<button class="btn mini danger" type="button" id="btlImgRemove">✕</button>' : ""}
+      </div>
+      <div class="cue-row"><span class="cue-when">music</span>
+        <select id="btlMusic" style="flex:1">${audioOptions(b.music_track || "")}</select>
+        <button class="btn mini" type="button" id="btlMusicPlay" title="Preview">▶</button>
+      </div>
+      <div class="cue-row"><span class="cue-when">layout</span>
+        <span style="flex:1">${b.grid_width}×${b.grid_height} grid · ${nTerrain} terrain hex${nTerrain === 1 ? "" : "es"}</span>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:8px">
+        <button class="btn mini" type="button" id="btlOpen">Open in Arena (paint terrain &amp; fit image)</button>
+        <button class="btn mini danger" type="button" id="btlRemove">Remove battle map</button>
+      </div>`;
+    document.getElementById("btlImgChoose").addEventListener("click", () => document.getElementById("btlImgFile").click());
+    const rm = document.getElementById("btlImgRemove");
+    if (rm) rm.addEventListener("click", () => { editorCtx.battle.background_image = null; renderBattle(); });
+    document.getElementById("btlMusic").addEventListener("change", e => {
+      if (e.target.value === "__upload__") {
+        e.target.value = editorCtx.battle.music_track || "";
+        _battleAudioUpload = true;
+        document.getElementById("audioFile").click();
+        return;
+      }
+      editorCtx.battle.music_track = e.target.value || null;
+    });
+    document.getElementById("btlMusicPlay").addEventListener("click", () => {
+      const f = editorCtx.battle.music_track;
+      if (!f) { toast("Pick a music track first."); return; }
+      if (_preview) { _preview.pause(); _preview = null; }
+      _preview = new Audio(`/api/pack/${encodeURIComponent(state.id)}/audio/${encodeURIComponent(f)}`);
+      _preview.play().catch(e => toast("Couldn't play that track: " + (e.message || e)));
+    });
+    document.getElementById("btlOpen").addEventListener("click", openBattleEditor);
+    document.getElementById("btlRemove").addEventListener("click", () => { editorCtx.battle = null; renderBattle(); });
+  }
+  const sum = document.getElementById("btlSummary");
+  if (sum) sum.textContent = b ? ` — ${b.grid_width}×${b.grid_height}, ${(b.terrain || []).length} terrain` : " — none";
+}
+async function onChooseBattleImage(file) {
+  const name = document.getElementById("f_name").value.trim();
+  if (!name) { fieldInvalid("f_name", "Name the place first, then add its battle image."); return; }
+  try {
+    const dataUrl = await resizeToDataUrl(file, 1600);   // battle maps deserve more pixels than cards
+    const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/image`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: slugify(name) + "_battle.jpg", data: dataUrl }),
+    })).json();
+    if (res.error) { toast(res.error); return; }
+    editorCtx.battle.background_image = res.filename;
+    renderBattle();
+  } catch (e) { toast(String(e.message || e)); }
+}
+let _battleEditorBusy = false;
+async function openBattleEditor() {
+  if (_battleEditorBusy) { toast("The battlefield editor is already open — finish there first."); return; }
+  const name = document.getElementById("f_name").value.trim() || "Battlefield";
+  _battleEditorBusy = true;
+  toast("Opening the Arena… paint terrain there, then Save (or Back to cancel).");
+  try {
+    const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/battle-editor`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ place_name: name, battle: editorCtx.battle }),
+    })).json();
+    if (res.error) { toast(res.error); return; }
+    if (res.cancelled) { toast("Battlefield editing cancelled — nothing changed."); return; }
+    editorCtx.battle = res.battle;
+    renderBattle();
+    toast("Battlefield updated — now Update the place and Save the world.");
+  } catch (e) {
+    toast("Couldn't reach the battlefield editor: " + (e.message || e));
+  } finally {
+    _battleEditorBusy = false;
+  }
+}
+
 function wirePlaceForm() {
   renderExits();
   renderIllus();
   renderSounds();
+  renderBattle();
+  document.getElementById("btlImgFile").addEventListener("change", e => { if (e.target.files[0]) onChooseBattleImage(e.target.files[0]); e.target.value = ""; });
   document.getElementById("addExit").addEventListener("click", () => { editorCtx.exits.push({ to: "", label: "" }); renderExits(); });
   document.getElementById("addSound").addEventListener("click", () => { editorCtx.sounds.push({ file: "", kind: "bed", category: "sfx", scope: "local", gain: 1 }); renderSounds(); });
   document.getElementById("audioFile").addEventListener("change", e => { if (e.target.files[0]) onUploadAudio(e.target.files[0]); e.target.value = ""; });
@@ -1704,6 +1817,7 @@ function confirmPlace(original) {
   if (exits.length) base.exits = exits.map(e => e.label ? { to: e.to, label: e.label } : { to: e.to });
   else delete base.exits;
   if (sounds.length) base.sounds = sounds.map(cleanCue); else delete base.sounds;
+  if (editorCtx.battle) base.battle = editorCtx.battle; else delete base.battle;
   commitEntry("places", original, base);
 }
 

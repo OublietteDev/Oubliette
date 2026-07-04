@@ -647,3 +647,105 @@ def test_monster_baseline_rejects_garbage(tmp_path, monkeypatch):
     r = client.post("/api/pack/brightvale/monster-baseline",
                     json={"statblock": {"name": "no id or hp"}})
     assert r.status_code == 400
+
+
+# --- the battlefield editor endpoint (location-battles S3) -------------------
+# The GUI subprocess is faked: the stand-in reads the spec the server wrote,
+# optionally writes an out-file, and the tests pin the whole contract around it
+# (asset-path resolution, cancel = no out-file, crash = 500, re-validation).
+
+def _fake_editor(write_battle=None, returncode=0, stderr=""):
+    """A subprocess.run stand-in for `python -m arena.battlefield_editor`."""
+    import types
+
+    def run(cmd, **kw):
+        run.spec = json.loads(Path(cmd[-2]).read_text(encoding="utf-8"))
+        if write_battle is not None:
+            Path(cmd[-1]).write_text(
+                json.dumps({"battle": write_battle}), encoding="utf-8")
+        return types.SimpleNamespace(returncode=returncode, stderr=stderr)
+    return run
+
+
+def _battle_block(**over):
+    base = {"background_image": "brawl.png", "music_track": "brawl.mp3",
+            "grid_width": 12, "grid_height": 9,
+            "terrain": [{"position": [3, 3], "terrain_type": "wall"}]}
+    base.update(over)
+    return base
+
+
+def test_battle_editor_resolves_assets_and_returns_the_edited_block(
+        tmp_path, monkeypatch):
+    packs = _temp_brightvale(tmp_path, monkeypatch)
+    (packs / "brightvale" / "images").mkdir(exist_ok=True)
+    (packs / "brightvale" / "audio").mkdir(exist_ok=True)
+    (packs / "brightvale" / "images" / "brawl.png").write_bytes(b"png")
+    (packs / "brightvale" / "audio" / "brawl.mp3").write_bytes(b"mp3")
+
+    edited = _battle_block(grid_width=15,
+                           terrain=[{"position": [1, 1], "terrain_type": "cover_half"}])
+    fake = _fake_editor(write_battle=edited)
+    monkeypatch.setattr("oubliette.creator.server.subprocess.run", fake)
+
+    r = client.post("/api/pack/brightvale/battle-editor",
+                    json={"place_name": "The Tap", "battle": _battle_block()})
+    assert r.status_code == 200
+    out = r.json()
+    assert out["ok"] is True and "cancelled" not in out
+    assert out["battle"]["grid_width"] == 15
+    assert out["battle"]["terrain"][0]["terrain_type"] == "cover_half"
+    # the spec the editor received: absolute, existing asset paths + the name
+    assert fake.spec["place_name"] == "The Tap"
+    assert fake.spec["background_path"].endswith("brawl.png")
+    assert Path(fake.spec["background_path"]).is_absolute()
+    assert fake.spec["music_path"].endswith("brawl.mp3")
+
+
+def test_battle_editor_missing_assets_resolve_to_none(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)   # no images/ or audio/ files created
+    fake = _fake_editor(write_battle=_battle_block())
+    monkeypatch.setattr("oubliette.creator.server.subprocess.run", fake)
+    r = client.post("/api/pack/brightvale/battle-editor",
+                    json={"place_name": "X", "battle": _battle_block()})
+    assert r.status_code == 200
+    assert fake.spec["background_path"] is None
+    assert fake.spec["music_path"] is None
+
+
+def test_battle_editor_no_out_file_means_cancelled(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    monkeypatch.setattr("oubliette.creator.server.subprocess.run", _fake_editor())
+    r = client.post("/api/pack/brightvale/battle-editor",
+                    json={"place_name": "X", "battle": _battle_block()})
+    assert r.status_code == 200
+    assert r.json() == {"ok": True, "cancelled": True}
+
+
+def test_battle_editor_crash_is_500_with_stderr_tail(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    monkeypatch.setattr("oubliette.creator.server.subprocess.run",
+                        _fake_editor(returncode=2, stderr="pygame exploded"))
+    r = client.post("/api/pack/brightvale/battle-editor",
+                    json={"place_name": "X", "battle": _battle_block()})
+    assert r.status_code == 500
+    assert "pygame exploded" in r.json()["error"]
+
+
+def test_battle_editor_rejects_bad_blocks_both_ways(tmp_path, monkeypatch):
+    _temp_brightvale(tmp_path, monkeypatch)
+    # in: an invalid block never reaches the subprocess
+    r = client.post("/api/pack/brightvale/battle-editor",
+                    json={"place_name": "X", "battle": {"grid_width": 999}})
+    assert r.status_code == 400
+    # out: an editor that returns garbage doesn't corrupt the client's form
+    monkeypatch.setattr("oubliette.creator.server.subprocess.run",
+                        _fake_editor(write_battle={"grid_width": 999}))
+    r = client.post("/api/pack/brightvale/battle-editor",
+                    json={"place_name": "X", "battle": _battle_block()})
+    assert r.status_code == 500
+
+
+def test_battle_editor_unknown_pack_is_404():
+    assert client.post("/api/pack/nope/battle-editor",
+                       json={"place_name": "X", "battle": {}}).status_code == 404
