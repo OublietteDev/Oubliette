@@ -39,6 +39,13 @@ self-dispatch, asset paths) are intentionally NOT here — those are v1.0 work.*
   re-author to level an NPC).
 - Manifest editor (name/author/description/entry scenario/world map are
   read-only in the Forge today).
+- ~~Custom backgrounds, area size, obstacle placement, music in the Arena based
+  on where fights begin.~~ **SHIPPED early (2026-07-04, location-battles arc):**
+  Place.battle blocks + bridge wiring + Arena battlefield editor + Forge UI +
+  in-fight opacity/volume sliders + hazard entry damage. Plan:
+  docs/roadmap/oubliette-location-battles-v0.1.md. Still wishlisted from that
+  arc: a stock battle asset library (ship the original 3 backgrounds + 7
+  tracks as out-of-the-box flavor), AI hazard-avoidance polish.
 
 ## Rules / engine
 
@@ -59,3 +66,11 @@ self-dispatch, asset paths) are intentionally NOT here — those are v1.0 work.*
 - Unified OOC channel (low priority, ditto).
 - Long-rest anti-spam gating (undesigned ask from the interview follow-ups —
   may land pre-v2 if it bites playtesters).
+- Eleven Labs narration for the DM turns - characters in the Forge should have Eleven Labs 
+  preferred voices attached, so that their speaking lines are done by a voice that matches their
+  character. Likely will use a Haiku model to break the player facing DM turn into an API readable
+  set, then send to Eleven Labs. Then stream the tokens to the player as well as the narration. Make
+  optional. (Added by OublietteDev).
+- Multiplayer. Have no idea how this will work, but we can make it happen I think. (Added by OublietteDev).
+- Mobile phone app. Only if people overwhelmingly beg for this. If so, I will begin charging. Not excited
+  to build and support that. (Added by OublietteDev).
