@@ -40,10 +40,12 @@ class App:
 
         pygame.init()
 
-        # Initialize audio system (gracefully handles missing audio device)
+        # Initialize audio system (gracefully handles missing audio device).
+        # No music is started here: the Arena runs only as Oubliette's combat
+        # subprocess and goes straight to combat, which owns its own soundtrack.
+        # (The old standalone menu music is gone.)
         from arena.audio.manager import get_sound_manager
-        sm = get_sound_manager()
-        sm.play_music("menu_music.mp3")
+        get_sound_manager()
 
         self.screen = pygame.display.set_mode((width, height))
         pygame.display.set_caption("The Arena")

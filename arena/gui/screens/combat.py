@@ -520,10 +520,13 @@ class CombatScreen(Screen):
         self._music_track = encounter.music_track
         self.combat.load_encounter(encounter, data_dir)
 
-        # Start encounter music if specified
+        # Start encounter music if the Forge defined a track; otherwise play
+        # nothing (and stop anything left over, so silence stays silence).
+        from arena.audio.manager import get_sound_manager
         if self._music_track:
-            from arena.audio.manager import get_sound_manager
             get_sound_manager().play_music(self._music_track)
+        else:
+            get_sound_manager().stop_music()
 
         # Create grid view from combat's grid
         self.grid_view = GridView(
