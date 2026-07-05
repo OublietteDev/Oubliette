@@ -50,3 +50,12 @@ srd-spells-raw.json
 # Plaintext, per-machine — must never enter shared history.
 oubliette-config.json
 preview-test-config.json
+
+# Internal dev docs — kept out of the public repo. The always-current dev diary
+# (PROJECT_NOTES.md, moved under docs/), the phase/roadmap plans, the candid
+# DM/model interview feedback, and the internal docs index. The PUBLIC docs live
+# at the repo root (README, FEATURES, ROADMAP) plus the design specs in docs/design/.
+/docs/PROJECT_NOTES.md
+/docs/roadmap/
+/docs/feedback/
+/docs/README.md
