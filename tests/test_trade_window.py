@@ -20,7 +20,8 @@ from oubliette.runtime.loop import TurnLoop
 from oubliette.runtime.session import Session
 from oubliette.state.repository import StateError
 from oubliette.tools.dispatch import Dispatcher, ToolApplyError
-from oubliette.trade.service import build_state, buy_transact, checkout_transact, sell_transact
+from oubliette.trade.service import (build_state, buy_transact, checkout_ops,
+                                     hand_over_transact, sell_transact)
 
 
 def _session():
@@ -85,17 +86,15 @@ def test_buy_unstocked_item_rejected():
         buy_transact(s.repo, "merchant_thom", "boots", 1)  # boots aren't in Thom's price list
 
 
-def test_checkout_basket_settles_buys_and_sells_in_one_transact():
+def test_checkout_basket_settles_buys_and_sells_in_one_event():
     s = _session()
-    disp = Dispatcher(s.repo, s.canon)
     pc = s.repo.pc()
-    thom = s.repo.get_character("merchant_thom")
     # buy a belt (5g) + waterskin (4g) = 9g; sell the boots (buyback) to offset
     boots_offer = next(o.offer_cp for o in build_state(s.repo, "merchant_thom").sell if o.item_id == "boots")
-    tx = checkout_transact(s.repo, "merchant_thom",
-                           buy=[("sturdy_belt", 1), ("waterskin", 1)], sell=[("boots", 1)])
-    rt = disp.resolve(tx)
-    s.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
+    ops, reason = checkout_ops(s.repo, "merchant_thom",
+                               buy=[("sturdy_belt", 1), ("waterskin", 1)],
+                               sell=[("pc", "boots", 1)])
+    s.emit_state(EventKind.TOOL_APPLIED, ops, tool="transact", reason=reason)
 
     assert s.repo.party_cp == 15_00 - (9_00 - boots_offer)     # paid the net
     assert pc.item_qty("sturdy_belt") == 1 and pc.item_qty("waterskin") == 1
@@ -106,14 +105,13 @@ def test_checkout_basket_settles_buys_and_sells_in_one_transact():
 
 def test_checkout_rejects_unaffordable_basket_atomically():
     s = _session()
-    disp = Dispatcher(s.repo, s.canon)
     pc = s.repo.pc()
-    # two satchels at 15g = 30g; player has 15g — must fail, nothing applied
-    tx = checkout_transact(s.repo, "merchant_thom", buy=[("leather_satchel", 2)], sell=[])
-    with pytest.raises(ToolApplyError):
-        disp.resolve(tx)
+    # two satchels at 15g = 30g; the purse holds 15g — must fail, nothing applied
+    with pytest.raises(StateError):
+        checkout_ops(s.repo, "merchant_thom", buy=[("leather_satchel", 2)], sell=[])
     assert s.repo.party_cp == 15_00
     assert pc.item_qty("leather_satchel") == 0
+    assert s.store.of_kind(EventKind.TOOL_APPLIED) == []
 
 
 def test_merchant_stock_appears_in_dm_context():
@@ -133,6 +131,75 @@ def test_item_resolution_handles_abbreviated_names():
     assert s.repo.resolve_item_id("boots") == "boots"     # exact id wins over fuzzy
     with pytest.raises(StateError):
         s.repo.resolve_item_id("dragon scale")
+
+
+def _two_hero_repo():
+    """A lead (Ana, 10 gp) + a packmate (Bo, carrying the boots) + Thom's stall."""
+    from oubliette.state.models import Character, Item, ItemStack
+    from oubliette.state.repository import InMemoryRepository
+    items = [Item(id="boots", name="worn boots", category="gear", value_cp=200),
+             Item(id="waterskin", name="waterskin", category="gear", value_cp=300)]
+    ana = Character(id="pc", name="Ana", kind="pc", gold=10)
+    bo = Character(id="pc2", name="Bo", kind="pc",
+                   inventory=[ItemStack(item_id="boots", qty=1)])
+    thom = Character(id="merchant_thom", name="Thom", kind="npc", gold=100,
+                     inventory=[ItemStack(item_id="waterskin", qty=2)],
+                     price_list={"waterskin": 4})
+    return InMemoryRepository(characters=[ana, bo, thom], items=items, pc_id="pc")
+
+
+def test_sell_column_aggregates_the_whole_party():
+    s = Session.open(InMemoryEventStore(), seed=_two_hero_repo)
+    state = build_state(s.repo, "merchant_thom")
+    offers = [(o.owner, o.item_id) for o in state.sell]
+    assert ("pc2", "boots") in offers                    # Bo's goods are on the counter
+    assert state.purse_cp == 10_00                       # Ana's coin pooled to the purse
+
+
+def test_checkout_routes_purchases_to_the_chosen_member_and_sells_from_owners():
+    s = Session.open(InMemoryEventStore(), seed=_two_hero_repo)
+    ops, reason = checkout_ops(s.repo, "merchant_thom",
+                               buy=[("waterskin", 1)],           # 4 gp from the purse
+                               sell=[("pc2", "boots", 1)],       # Bo's boots, 2 gp buyback (value)
+                               recipient="pc2")                  # the wizard gets the wand
+    s.emit_state(EventKind.TOOL_APPLIED, ops, tool="transact", reason=reason)
+    bo = s.repo.get_character("pc2")
+    assert bo.item_qty("waterskin") == 1                 # landed on Bo, not the lead
+    assert bo.item_qty("boots") == 0
+    assert s.repo.pc().item_qty("waterskin") == 0
+    assert s.repo.party_cp == 10_00 - 4_00 + 2_00        # net settled against the purse
+    assert "to Bo" in reason
+
+
+def test_checkout_refuses_a_non_party_recipient():
+    s = Session.open(InMemoryEventStore(), seed=_two_hero_repo)
+    with pytest.raises(StateError):
+        checkout_ops(s.repo, "merchant_thom", buy=[("waterskin", 1)], sell=[],
+                     recipient="merchant_thom")
+
+
+def test_hand_over_moves_an_item_between_party_members():
+    s = Session.open(InMemoryEventStore(), seed=_two_hero_repo)
+    disp = Dispatcher(s.repo, s.canon)
+    tx = hand_over_transact(s.repo, "pc2", "pc", "boots", 1)
+    rt = disp.resolve(tx)
+    s.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
+    assert s.repo.pc().item_qty("boots") == 1
+    assert s.repo.get_character("pc2").item_qty("boots") == 0
+    # and it replays: reopen the same store
+    reopened = Session.open(s.store, seed=_two_hero_repo)
+    assert reopened.repo.pc().item_qty("boots") == 1
+
+
+def test_hand_over_guards_its_edges():
+    s = Session.open(InMemoryEventStore(), seed=_two_hero_repo)
+    with pytest.raises(StateError):
+        hand_over_transact(s.repo, "pc2", "pc2", "boots", 1)          # to yourself
+    with pytest.raises(StateError):
+        hand_over_transact(s.repo, "pc2", "merchant_thom", "boots", 1)  # not a PC
+    disp = Dispatcher(s.repo, s.canon)
+    with pytest.raises(ToolApplyError):
+        disp.resolve(hand_over_transact(s.repo, "pc", "pc2", "boots", 1))  # Ana holds none
 
 
 def test_scripted_loop_summons_trade_window():

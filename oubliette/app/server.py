@@ -47,7 +47,8 @@ from ..state.models import Character
 from ..state.repository import StateError
 from ..table import TONE_PRESETS, TableContract
 from ..tools.dispatch import ToolApplyError
-from ..trade.service import build_state, buy_transact, checkout_transact, sell_transact
+from ..trade.service import (build_state, buy_transact, checkout_ops,
+                             hand_over_transact, sell_transact)
 from ..llm import providers
 from .repl import _load_dotenv, _pick_client
 
@@ -801,20 +802,23 @@ async def post_trade(body: TradeActionIn) -> JSONResponse:
 class CheckoutIn(BaseModel):
     merchant_id: str
     buy: list[dict] = []     # [{item_id, qty}]
-    sell: list[dict] = []
+    sell: list[dict] = []    # [{owner, item_id, qty}] — sells leave their owner's pack
+    recipient: str = "pc"    # which party member receives the purchases
 
 
 @app.post("/api/trade/checkout")
 async def post_checkout(body: CheckoutIn) -> JSONResponse:
-    """Settle a whole basket at listed prices as one validated transact."""
+    """Settle a whole basket at listed prices as ONE validated, recorded event:
+    purchases land on the chosen party member, sells leave each item's owner,
+    and the net coin settles against the shared purse."""
     async with GAME.lock:
         repo = GAME.session.repo
         buy = [(e["item_id"], int(e.get("qty", 1))) for e in body.buy]
-        sell = [(e["item_id"], int(e.get("qty", 1))) for e in body.sell]
+        sell = [(e.get("owner", "pc"), e["item_id"], int(e.get("qty", 1))) for e in body.sell]
         try:
-            tx = checkout_transact(repo, body.merchant_id, buy, sell)
-            rt = GAME.loop.dispatcher.resolve(tx)
-            GAME.session.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
+            ops, reason = checkout_ops(repo, body.merchant_id, buy, sell,
+                                       recipient=body.recipient)
+            GAME.session.emit_state(EventKind.TOOL_APPLIED, ops, tool="transact", reason=reason)
             ok, error = True, None
         except (ToolApplyError, StateError) as e:
             ok, error = False, str(e)
@@ -856,6 +860,34 @@ async def post_equip(body: EquipIn) -> JSONResponse:
                 reason=f"player {'equipped' if body.equip else 'unequipped'} {body.item_id}")
             ok, error = True, None
         except StateError as e:
+            ok, error = False, str(e)
+        return JSONResponse({"ok": ok, "error": error, "inventory": _build_inventory(), "state": _snapshot()})
+
+
+class HandOverIn(BaseModel):
+    from_id: str
+    to_id: str
+    item_id: str
+    qty: int = 1
+    spell: str | None = None          # scroll rider: move the EXACT stack
+    spell_level: int | None = None
+
+
+@app.post("/api/handover")
+async def post_handover(body: HandOverIn) -> JSONResponse:
+    """Bounded player action: pass an item between party members (the bard hands
+    the wizard that wand). Runs through the dispatcher like any transact and is
+    recorded, so it replays."""
+    async with GAME.lock:
+        repo = GAME.session.repo
+        try:
+            tx = hand_over_transact(repo, body.from_id, body.to_id, body.item_id,
+                                    body.qty, spell=body.spell,
+                                    spell_level=body.spell_level)
+            rt = GAME.loop.dispatcher.resolve(tx)
+            GAME.session.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
+            ok, error = True, None
+        except (ToolApplyError, StateError) as e:
             ok, error = False, str(e)
         return JSONResponse({"ok": ok, "error": error, "inventory": _build_inventory(), "state": _snapshot()})
 

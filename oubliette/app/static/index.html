@@ -355,6 +355,13 @@
   .trade-row button:hover:not(:disabled) { border-color: var(--accent); }
   .trade-row button:disabled { opacity: var(--opacity-disabled); cursor: default; }
   .trade-empty { color: var(--faint); font-style: italic; font-size: 13px; }
+  .t-recipient { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
+  .t-recipient label { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .t-recipient select { font: inherit; font-size: 13px; background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px; padding: 4px 8px; }
+  .trade-row .meta .owner { color: var(--gold); opacity: .8; }
+  .inv-row select.give { font: inherit; font-size: 12px; background: #2a231d; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px; padding: 5px 7px; max-width: 130px; }
 
   /* player menu */
   .menu-wrap { position: relative; }
@@ -678,7 +685,7 @@
           <div class="hpbar"><div class="hpfill" id="hpfill"></div></div>
           <div class="stats">
             <span id="hp"></span>
-            <span class="gold">Gold <b id="gold">0</b></span>
+            <span class="gold">Purse <b id="gold">0</b></span>
             <span>AC <b id="ac">0</b></span>
           </div>
           <div class="xprow">
@@ -808,13 +815,20 @@
     <div class="trade-head">
       <h2 id="trade-title">Trading</h2>
       <div class="spacer"></div>
-      <div class="tgold">Your gold <b id="t-pcgold">0</b> · <span id="t-mname">Merchant</span> <b id="t-mgold">0</b></div>
+      <div class="tgold">Party purse <b id="t-pcgold">0</b> · <span id="t-mname">Merchant</span> <b id="t-mgold">0</b></div>
       <button class="act" id="trade-done">Done</button>
     </div>
     <div class="trade-msg" id="trade-msg"></div>
     <div class="trade-cols">
-      <div class="trade-col"><h3>For Sale</h3><ul class="trade-list" id="t-buy"></ul></div>
-      <div class="trade-col"><h3>Your Goods</h3><ul class="trade-list" id="t-sell"></ul></div>
+      <div class="trade-col">
+        <h3>For Sale</h3>
+        <div class="t-recipient hidden" id="t-recipient-wrap">
+          <label for="t-recipient">Purchases go to</label>
+          <select id="t-recipient"></select>
+        </div>
+        <ul class="trade-list" id="t-buy"></ul>
+      </div>
+      <div class="trade-col"><h3>Party Goods</h3><ul class="trade-list" id="t-sell"></ul></div>
     </div>
     <div class="trade-foot">
       <div class="trade-summary" id="trade-summary">Pick items to trade…</div>
@@ -1010,6 +1024,18 @@ function el(tag, cls, text) {
   if (text != null) e.textContent = text;
   return e;
 }
+// Copper -> "2 gp 3 sp 5 cp" (mirrors coin.format_cp; no platinum promotion).
+function fmtCoin(cp) {
+  if (cp == null) return "";
+  if (cp === 0) return "0 gp";
+  const sign = cp < 0 ? "-" : ""; cp = Math.abs(cp);
+  const g = Math.floor(cp / 100), s = Math.floor((cp % 100) / 10), c = cp % 10;
+  const parts = [];
+  if (g) parts.push(g.toLocaleString() + " gp");
+  if (s) parts.push(s + " sp");
+  if (c) parts.push(c + " cp");
+  return sign + parts.join(" ");
+}
 function scrollDown() { log.scrollTop = log.scrollHeight; }
 
 function addMessage(who, text, cls) {
@@ -1078,6 +1104,7 @@ function addChips(msg, data) {
 }
 
 // --- trade window ---------------------------------------------------------
+let lastParty = [];        // [{id, name}] from the latest state (pickers read it)
 let tradeMerchant = null;
 let tradeState = null;
 let basket = { buy: {}, sell: {} };
@@ -1108,28 +1135,48 @@ function stepper(kind, id, max) {
   return wrap;
 }
 
+// Sell offers are per-OWNER (the whole party's packs are on the counter), so a
+// sell basket key is "owner|item_id"; buy keys stay the plain item_id.
+const sellKey = (o) => o.owner + "|" + o.item_id;
+
 function tradeRow(o, kind) {
   const li = el("li", "trade-row");
   const info = el("div", "info");
   info.appendChild(el("div", "nm", o.name));
-  info.appendChild(el("div", "meta", kind === "buy" ? `${o.qty} in stock` : `you have ${o.qty}`));
+  const meta = el("div", "meta");
+  if (kind === "buy") {
+    meta.textContent = `${o.qty} in stock`;
+  } else {
+    const many = (tradeState.sell || []).some(x => x.owner !== o.owner);
+    if (many) { meta.appendChild(el("span", "owner", o.owner_name)); meta.appendChild(document.createTextNode(" · ")); }
+    meta.appendChild(document.createTextNode(`has ${o.qty}`));
+  }
+  info.appendChild(meta);
   li.appendChild(info);
-  li.appendChild(el("div", "price", (kind === "buy" ? o.price : o.offer) + "g"));
-  li.appendChild(stepper(kind, o.item_id, o.qty));
+  li.appendChild(el("div", "price", fmtCoin(kind === "buy" ? o.price_cp : o.offer_cp)));
+  li.appendChild(stepper(kind, kind === "buy" ? o.item_id : sellKey(o), o.qty));
   return li;
 }
 
 function renderTrade(t) {
   tradeState = t; basket = { buy: {}, sell: {} };
   $("trade-title").textContent = "Trading with " + t.merchant_name;
-  $("t-pcgold").textContent = t.player_gold;
-  $("t-mname").textContent = t.merchant_name + "'s gold";
-  $("t-mgold").textContent = t.merchant_gold;
+  $("t-pcgold").textContent = fmtCoin(t.purse_cp);
+  $("t-mname").textContent = t.merchant_name + "'s coin";
+  $("t-mgold").textContent = fmtCoin(t.merchant_cp);
+  // Recipient picker (who receives the purchases) — only when there's a choice.
+  const party = lastParty || [];
+  const wrap = $("t-recipient-wrap"), sel = $("t-recipient");
+  const prev = sel.value;
+  sel.innerHTML = "";
+  party.forEach(p => { const o = el("option", null, p.name); o.value = p.id; sel.appendChild(o); });
+  if (prev && party.some(p => p.id === prev)) sel.value = prev;
+  wrap.classList.toggle("hidden", party.length <= 1);
   const buy = $("t-buy"); buy.innerHTML = "";
   if (!t.buy.length) buy.appendChild(el("div", "trade-empty", "nothing for sale"));
   t.buy.forEach(o => buy.appendChild(tradeRow(o, "buy")));
   const sell = $("t-sell"); sell.innerHTML = "";
-  if (!t.sell.length) sell.appendChild(el("div", "trade-empty", "you have nothing to sell"));
+  if (!t.sell.length) sell.appendChild(el("div", "trade-empty", "the party has nothing to sell"));
   t.sell.forEach(o => sell.appendChild(tradeRow(o, "sell")));
   renderBasket();
 }
@@ -1137,10 +1184,10 @@ function renderTrade(t) {
 function basketTotals() {
   let cost = 0, value = 0, nb = 0, ns = 0;
   for (const [id, qn] of Object.entries(basket.buy)) {
-    const o = tradeState.buy.find(x => x.item_id === id); if (o) { cost += o.price * qn; nb += qn; }
+    const o = tradeState.buy.find(x => x.item_id === id); if (o) { cost += o.price_cp * qn; nb += qn; }
   }
-  for (const [id, qn] of Object.entries(basket.sell)) {
-    const o = tradeState.sell.find(x => x.item_id === id); if (o) { value += o.offer * qn; ns += qn; }
+  for (const [key, qn] of Object.entries(basket.sell)) {
+    const o = tradeState.sell.find(x => sellKey(x) === key); if (o) { value += o.offer_cp * qn; ns += qn; }
   }
   return { cost, value, net: cost - value, nb, ns };
 }
@@ -1153,23 +1200,27 @@ function renderBasket() {
     $("trade-summary").innerHTML = "Pick items to trade…";
   } else {
     const parts = [];
-    if (nb) parts.push(`buying ${nb} (${cost}g)`);
-    if (ns) parts.push(`selling ${ns} (${value}g)`);
-    const settle = net >= 0 ? `you pay <b>${net}g</b>` : `you receive <b>${-net}g</b>`;
+    if (nb) parts.push(`buying ${nb} (${fmtCoin(cost)})`);
+    if (ns) parts.push(`selling ${ns} (${fmtCoin(value)})`);
+    const settle = net >= 0 ? `you pay <b>${fmtCoin(net)}</b>` : `you receive <b>${fmtCoin(-net)}</b>`;
     $("trade-summary").innerHTML = parts.join(" · ") + " → " + settle;
   }
-  $("trade-settle").disabled = !any || net > tradeState.player_gold;
-  $("trade-settle").textContent = any && net > 0 ? `Settle (${net}g)` : "Settle";
+  $("trade-settle").disabled = !any || net > tradeState.purse_cp;
+  $("trade-settle").textContent = any && net > 0 ? `Settle (${fmtCoin(net)})` : "Settle";
   $("trade-haggle").disabled = !any;
 }
 
 async function settle() {
   const buy = Object.entries(basket.buy).map(([item_id, qty]) => ({ item_id, qty }));
-  const sell = Object.entries(basket.sell).map(([item_id, qty]) => ({ item_id, qty }));
+  const sell = Object.entries(basket.sell).map(([key, qty]) => {
+    const [owner, item_id] = key.split("|");
+    return { owner, item_id, qty };
+  });
+  const recipient = $("t-recipient").value || "pc";
   try {
     const res = await fetch("/api/trade/checkout", {
       method: "POST", headers: {"content-type": "application/json"},
-      body: JSON.stringify({ merchant_id: tradeMerchant, buy, sell })
+      body: JSON.stringify({ merchant_id: tradeMerchant, buy, sell, recipient })
     });
     const data = await res.json();
     if (data.trade) renderTrade(data.trade);
@@ -1181,10 +1232,10 @@ async function settle() {
 function haggleMessage() {
   const t = tradeState;
   const buys = Object.entries(basket.buy).map(([id, qn]) => {
-    const o = t.buy.find(x => x.item_id === id); return `${qn}× ${o.name} (you're asking ${o.price}g each)`;
+    const o = t.buy.find(x => x.item_id === id); return `${qn}× ${o.name} (you're asking ${fmtCoin(o.price_cp)} each)`;
   });
-  const sells = Object.entries(basket.sell).map(([id, qn]) => {
-    const o = t.sell.find(x => x.item_id === id); return `${qn}× ${o.name}`;
+  const sells = Object.entries(basket.sell).map(([key, qn]) => {
+    const o = t.sell.find(x => sellKey(x) === key); return `${qn}× ${o.name}`;
   });
   let m = `[At ${t.merchant_name}'s stall] `;
   if (buys.length) m += `I want to buy: ${buys.join(", ")}. `;
@@ -1221,23 +1272,23 @@ function renderState(s) {
   $("scene").textContent = s.scene || "";
   $("env-badge").textContent = envLabel(s.time_of_day, s.weather);
   const party = s.party && s.party.length ? s.party : [s.pc];
+  lastParty = party.map(p => ({ id: p.id, name: p.name }));   // feeds trade/hand-over pickers
   const isParty = party.length > 1;
   $("pc-card-title").textContent = isParty ? `Party (${party.length})` : "Character";
   $("pc-single").classList.toggle("hidden", isParty);
   $("party-roster").classList.toggle("hidden", !isParty);
   $("party-gold").classList.toggle("hidden", !isParty);
   if (isParty) {
-    const partyGold = party.reduce((t, p) => t + (p.gold || 0), 0);
     $("party-gold").innerHTML = "";
-    $("party-gold").appendChild(el("span", "pg-label", "Party Gold"));
-    $("party-gold").appendChild(el("b", "pg-val", partyGold + "g"));
+    $("party-gold").appendChild(el("span", "pg-label", "Party Purse"));
+    $("party-gold").appendChild(el("b", "pg-val", s.purse_text || fmtCoin(s.purse_cp)));
     renderPartyRoster(party);
   } else {
     const pc = s.pc;
     $("pc-name").textContent = pc.name;
     $("hp").textContent = `HP ${pc.hp}/${pc.max_hp}`;
     $("hpfill").style.width = Math.max(0, Math.min(100, 100 * pc.hp / pc.max_hp)) + "%";
-    $("gold").textContent = pc.gold;
+    $("gold").textContent = s.purse_text || fmtCoin(s.purse_cp);
     $("ac").textContent = pc.armor_class;
     const xpp = pc.xp_progress || { xp: pc.xp, pct: 0, is_max: false, ready: false, ceil: null };
     $("xp").textContent = xpp.is_max ? `${xpp.xp.toLocaleString()} (max level)`
@@ -1256,7 +1307,7 @@ function renderState(s) {
     const li = el("li");
     const left = el("span", null, n.name);
     li.appendChild(left);
-    li.appendChild(el("span", "sub", n.gold + "g")); npcs.appendChild(li);
+    li.appendChild(el("span", "sub", n.coin_text || "")); npcs.appendChild(li);
   });
 
   const questEl = $("quest"); questEl.innerHTML = "";
@@ -2236,7 +2287,7 @@ function renderPreview(data) {
     p.features.forEach(f => ul.appendChild(el("li", null, f.name)));
     root.appendChild(ul);
   }
-  root.appendChild(el("div", "cg-hint", `Gear (${p.gold} gp)`));
+  root.appendChild(el("div", "cg-hint", `Gear (${p.coin_text || "0 gp"})`));
   const gl = el("ul", "cg-plist");
   p.inventory.forEach(it => gl.appendChild(el("li", null, `${it.name}${it.qty > 1 ? " ×" + it.qty : ""}${p.equipped.includes(it.name) ? " (equipped)" : ""}`)));
   root.appendChild(gl);
@@ -2884,6 +2935,7 @@ function closeInventory() { hideItemTip(); $("inv-overlay").classList.add("hidde
 
 // --- item hover-card: the details map ships with /api/inventory (ids the party carries) ---
 let invDetails = {};
+let invParty = [];         // [{id, name}] — who can receive a hand-over
 const itemTip = el("div", "item-tip");
 document.body.appendChild(itemTip);
 const TIP_ABILITY = { str: "Strength", dex: "Dexterity", con: "Constitution",
@@ -2935,7 +2987,7 @@ function buildItemTip(name, d) {
   if (d.grants_resistances && d.grants_resistances.length) line("Resistance: " + d.grants_resistances.join(", "));
   if (d.grants_immunities && d.grants_immunities.length) line("Immunity: " + d.grants_immunities.join(", "));
   if (d.description) itemTip.appendChild(el("div", "t-desc", d.description));
-  if (d.value != null) itemTip.appendChild(el("div", "t-val", "worth ~" + d.value + "g"));
+  if (d.value_text) itemTip.appendChild(el("div", "t-val", "worth ~" + d.value_text));
 }
 function showItemTip(row, name, d) {
   buildItemTip(name, d);
@@ -2957,9 +3009,21 @@ function invRow(it, memberId) {
   if (it.qty > 1) meta.appendChild(el("span", null, "×" + it.qty));
   meta.appendChild(el("span", null, cap(it.category)));
   if (it.armor_class != null) meta.appendChild(el("span", "ac", "AC " + it.armor_class));
-  if (it.value != null) meta.appendChild(el("span", "val", "~" + it.value + "g"));
+  if (it.value_text) meta.appendChild(el("span", "val", "~" + it.value_text));
   info.appendChild(meta);
   row.appendChild(info);
+  // Hand an item to a packmate (the bard passes the wizard that wand). Equipped
+  // gear stays put — unequip first, then hand it over.
+  const others = invParty.filter(p => p.id !== memberId);
+  if (others.length && !it.equipped) {
+    const give = el("select", "give");
+    give.appendChild(el("option", null, "Give to…"));
+    others.forEach(p => { const o = el("option", null, p.name); o.value = p.id; give.appendChild(o); });
+    give.addEventListener("change", () => {
+      if (give.value) handOver(memberId, give.value, it);
+    });
+    row.appendChild(give);
+  }
   if (it.equippable) {
     const btn = el("button", null, it.equipped ? "Unequip" : "Equip");
     btn.addEventListener("click", () => equipToggle(memberId, it.item_id, !it.equipped));
@@ -2993,6 +3057,7 @@ function invGroup(label, items, memberId, isEquipped) {
 function renderInventory(data) {
   hideItemTip();
   invDetails = data.details || {};
+  invParty = (data.party || []).map(m => ({ id: m.id, name: m.name }));
   const body = $("inv-body"); body.innerHTML = "";
   if (!data.party || !data.party.length) { body.appendChild(el("div", "inv-empty", "no party members")); return; }
   data.party.forEach(m => {
@@ -3015,6 +3080,19 @@ async function equipToggle(charId, itemId, equip) {
       body: JSON.stringify({ char_id: charId, item_id: itemId, equip })
     });
     const data = await res.json();
+    if (data.inventory) renderInventory(data.inventory);
+    if (data.state) renderState(data.state);
+  } catch (e) { /* ignore transient */ }
+}
+async function handOver(fromId, toId, it) {
+  try {
+    const res = await fetch("/api/handover", {
+      method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({ from_id: fromId, to_id: toId, item_id: it.item_id, qty: 1,
+                             spell: it.spell || null, spell_level: it.spell_level ?? null })
+    });
+    const data = await res.json();
+    if (!data.ok && data.error) alert(data.error);
     if (data.inventory) renderInventory(data.inventory);
     if (data.state) renderState(data.state);
   } catch (e) { /* ignore transient */ }
@@ -3116,9 +3194,9 @@ function renderSheetMember(m) {
   top.appendChild(shCell("Speed", m.has_sheet ? m.identity.speed : 30));
   top.appendChild(shCell("Prof", shSigned(d.proficiency_bonus)));
   top.appendChild(shCell("Hit Dice", m.hit_dice ? `${m.hit_dice.total - m.hit_dice.used}d${m.hit_dice.die}` : "—"));
-  // Gold is a shared party purse — every sheet shows the same pooled total.
-  const partyGold = (sheetParty || []).reduce((t, x) => t + (x.gold || 0), 0);
-  top.appendChild(shCell(sheetParty.length > 1 ? "Party Gold" : "Gold", partyGold + "g"));
+  // Money is the shared party purse — every sheet shows the same pooled total.
+  top.appendChild(shCell(sheetParty.length > 1 ? "Party Purse" : "Purse",
+                         m.purse_text || fmtCoin(m.purse_cp)));
   root.appendChild(top);
 
   root.appendChild(renderRestBar(m));
@@ -3194,7 +3272,7 @@ function renderSheetMember(m) {
   }
 
   // equipment
-  const eq = el("div", "sh-sec"); eq.appendChild(el("h3", null, "Equipment" + (m.gold != null ? ` · ${m.gold} gp` : "")));
+  const eq = el("div", "sh-sec"); eq.appendChild(el("h3", null, "Equipment"));
   const tags = el("div", "sh-tags2");
   m.inventory.forEach(it => tags.appendChild(el("span", "sh-pill",
     `${it.name}${it.qty > 1 ? " ×" + it.qty : ""}${it.equipped ? " ⚔" : ""}`)));

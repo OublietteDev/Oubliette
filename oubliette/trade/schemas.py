@@ -22,8 +22,10 @@ class SellOffer(BaseModel):
     item_id: str
     name: str
     offer_cp: int     # what the merchant will pay per unit, in copper
-    qty: int          # how many the player holds
+    qty: int          # how many this owner holds
     affordable: bool  # merchant can cover at least one (their pocket caps buyback)
+    owner: str        # which party member carries it (sell aggregates the party)
+    owner_name: str
 
 
 class TradeState(BaseModel):
