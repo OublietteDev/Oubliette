@@ -664,7 +664,7 @@
           ],
           "terrain_type": "hazard",
           "extra_data": {
-            "damage": "1d6 fire"
+            "damage": "1d4 fire"
           }
         },
         {
@@ -690,7 +690,7 @@
           ],
           "terrain_type": "hazard",
           "extra_data": {
-            "damage": "1d6 fire"
+            "damage": "1d4 fire"
           }
         },
         {
@@ -708,7 +708,7 @@
           ],
           "terrain_type": "hazard",
           "extra_data": {
-            "damage": "1d6 fire"
+            "damage": "1d4 fire"
           }
         },
         {

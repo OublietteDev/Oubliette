@@ -7,6 +7,7 @@
   },
   "display": {
     "show_hex_coordinates": false,
+    "battle_background_opacity": 100,
     "default_hex_size": 40,
     "zoom_speed": 1.1,
     "token_radius": 26,
@@ -16,7 +17,7 @@
   "audio": {
     "master_volume": 80,
     "sfx_volume": 80,
-    "music_volume": 20
+    "music_volume": 17
   },
   "system": {
     "resolution": "1280x720",

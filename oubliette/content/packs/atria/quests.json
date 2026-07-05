@@ -7,8 +7,16 @@
     "briefing": "The true cause is a foreign deep-trawling fleet working the outer bay by night, scraping the floor bare with fine-mesh nets. But the dock folk whisper a worse fear — that Seraphel has withdrawn her grace. Let that dread color the search; the real, fixable cause is the fleet, and the party can uncover it by talking to fishers and walking the waterline.",
     "giver_npc": "captain_bromley",
     "root": true,
-    "reward": { "gold": 15, "note": "Bromley has little coin, but he'll owe the party a crossing of the bay — and his word on the docks is worth more than silver." },
-    "branches": [ { "outcome": "onward", "to": "salt_and_suspicion" } ]
+    "reward": {
+      "gold": 15,
+      "note": "Bromley has little coin, but he'll owe the party a crossing of the bay — and his word on the docks is worth more than silver."
+    },
+    "branches": [
+      {
+        "outcome": "onward",
+        "to": "salt_and_suspicion"
+      }
+    ]
   },
   {
     "id": "salt_and_suspicion",
@@ -17,10 +25,18 @@
     "briefing": "The culprit is a deep-trawling fleet flying the colors of a merchant house with quiet ties to the Council of Elders. Two roads open here. The party may confront the fleet directly (unlocks 'Cut the Nets'), or take the matter to the Palladian Ward and fight it out in the city's politics (unlocks 'A Matter for the Ward'). Complete this quest with the outcome that matches their choice: 'confront' or 'appeal'.",
     "giver_place": "the_lantern_wake_tavern",
     "discovery": "overheard among the knot of anxious dockhands by the tavern hearth",
-    "reward": { "note": "No coin for this — only the truth of who is emptying the bay, and a choice about what to do with it." },
+    "reward": {
+      "note": "No coin for this — only the truth of who is emptying the bay, and a choice about what to do with it."
+    },
     "branches": [
-      { "outcome": "confront", "to": "cut_the_nets" },
-      { "outcome": "appeal", "to": "a_matter_for_the_ward" }
+      {
+        "outcome": "confront",
+        "to": "cut_the_nets"
+      },
+      {
+        "outcome": "appeal",
+        "to": "a_matter_for_the_ward"
+      }
     ]
   },
   {
@@ -29,7 +45,10 @@
     "hook": "The party has chosen to act directly. Bromley will sail them out to where the foreign fleet trawls by night — to put a stop to it with their own hands.",
     "briefing": "The finale of the direct road. Bromley ferries the party out under cover of dark. This can resolve as a boarding fight, a tense standoff, or a clever sabotage of the nets — let the party's approach decide. Win or lose, the bay's plight should feel answered by the end.",
     "giver_npc": "captain_bromley",
-    "reward": { "gold": 80, "note": "The grateful Silverfin families pool what they can — and press a healing draught from the harbor apothecary into the party's hands." }
+    "reward": {
+      "gold": 80,
+      "note": "The grateful Silverfin families pool what they can — and press a healing draught from the harbor apothecary into the party's hands."
+    }
   },
   {
     "id": "a_matter_for_the_ward",
@@ -37,7 +56,10 @@
     "hook": "The party has chosen the lawful road. Governor Eustace Broadbarrel will hear them out — but barring the fleet from the bay means navigating the careful hostility between the Governor and the Council of Elders.",
     "briefing": "The finale of the lawful road. Eustace is sympathetic but cannot move alone; Elaida and the Council hold the real leverage, and the offending house has quiet ties to them. Reward evidence, persuasion, and reading the politics. The win is a writ barring the fleet — earned through people, not steel.",
     "giver_npc": "eustace_broadbarrel",
-    "reward": { "gold": 60, "note": "A sealed writ of the governor's favor — and a standing welcome at his dinner table, which in Brightvale is worth more than gold." }
+    "reward": {
+      "gold": 60,
+      "note": "A sealed writ of the governor's favor — and a standing welcome at his dinner table, which in Brightvale is worth more than gold."
+    }
   },
   {
     "id": "a_light_coin_box",
@@ -48,6 +70,9 @@
     "giver_place": "brightvale_market_square",
     "discovery": "a notice pinned to the market board",
     "root": true,
-    "reward": { "gold": 20, "note": "The stallkeeper's modest bounty — which, in her eyes, is happily doubled if the matter is settled with mercy." }
+    "reward": {
+      "gold": 20,
+      "note": "The stallkeeper's modest bounty — which, in her eyes, is happily doubled if the matter is settled with mercy."
+    }
   }
 ]
