@@ -98,6 +98,7 @@ pytest                          # the full acceptance + engine suite
 - **Charge attacks don't animate.** Pounce, Trample, and Charge resolve correctly in code but have no visual yet — needs investigation and a fix.
 - **Encounter difficulty is inconsistent** (my own runs lean *easy*). The combat evaluator has no party-CR rules yet, and CR math assumes a party of four, so even a "fair" solo fight can skew either way. This will take several balancing passes.
 - **Arena token art can be sized inconsistently.** The plan is a token previewer that lets you adjust framing so your art (and the current bestiary art) is represented well.
+- **New Game character creation uses the current session's ruleset, not the chosen world's.** When you start a New Game, the background and spell options come from whichever world was last loaded — so a brand-new world's own pack content can't be picked at its own character creation. Workaround: start the New Game once with the world/pack you want, save and close, then start the New Game a second time — the options now reflect that world. This only matters if you regularly switch between multiple packs. (Your save is safe throughout: it isn't deleted until character generation finishes.)
 
 ---
 
