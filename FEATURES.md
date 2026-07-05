@@ -2,7 +2,7 @@
 
 *A complete, code-verified inventory of everything the project does, grouped by its three apps.*
 
-Oubliette is a non-commercial, open-source **AI Dungeon Master text RPG** built on the D&D 5e SRD (5.1). It is three programs that share one engine and one house style:
+Oubliette is a free and open-source **AI Dungeon Master text RPG** built on the D&D 5e SRD (5.1). It is three programs that share one engine and one house style:
 
 | App | What it is | How you launch it |
 |---|---|---|

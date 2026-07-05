@@ -2,7 +2,7 @@
 
 **An AI Dungeon Master that never cheats — with real dice, a real tactical battlefield, and worlds you build yourself.**
 
-Oubliette is a non-commercial, open-source tabletop RPG you play in your browser, powered by the D&D 5e SRD. You type what your character does in the first person; an AI narrates the world's reply as your DM. But unlike a plain chatbot, **the code owns the game — the AI only tells the story.** Your HP, gold, XP, inventory, and every die roll live in a rules engine the model can't reach; it can only *propose* changes that the code validates first. The result is an AI DM that improvises freely but can never fudge your character sheet or hand-wave a fight.
+Oubliette is a free and open-source tabletop RPG you play in your browser, powered by the D&D 5e SRD. You type what your character does in the first person; an AI narrates the world's reply as your DM. But unlike a plain chatbot, **the code owns the game — the AI only tells the story.** Your HP, gold, XP, inventory, and every die roll live in a rules engine the model can't reach; it can only *propose* changes that the code validates first. The result is an AI DM that improvises freely but can never fudge your character sheet or hand-wave a fight.
 
 It ships as three programs that share one engine:
 
@@ -103,4 +103,4 @@ pytest                          # the full acceptance + engine suite
 
 ## License & attribution
 
-Oubliette Table is a **non-commercial, open-source** project. It includes material from the **System Reference Document 5.1** by Wizards of the Coast LLC, used under the Creative Commons Attribution 4.0 International License. Bundled fonts (MedievalSharp, PT Serif) are used under the SIL Open Font License. See [`NOTICE`](NOTICE) for details.
+Oubliette Table is a **free and open-source** project. It includes material from the **System Reference Document 5.1** by Wizards of the Coast LLC, used under the Creative Commons Attribution 4.0 International License. Bundled fonts (MedievalSharp, PT Serif) are used under the SIL Open Font License. See [`NOTICE`](NOTICE) for details.
