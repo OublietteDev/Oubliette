@@ -126,7 +126,14 @@ class TurnLoop:
                 intent=Intent(raw_text=player_text, verb=Verb.META, ooc=True),
                 tier=Tier.FREESTYLE, resolution_hint="Player is speaking out-of-character.")
         else:
-            assessment = await self.brain.assess(player_text, context)
+            # Assess gets the same one-retry safety net the resolve loop has: a
+            # single malformed model reply (or transient provider hiccup) must
+            # not kill the player's turn outright.
+            try:
+                assessment = await self.brain.assess(player_text, context)
+            except (ValidationError, RuntimeError) as e:
+                self.debug.append("anomaly", stage="assess", attempt=0, error=repr(e))
+                assessment = await self.brain.assess(player_text, context)
             # The OOC toggle is the SOLE signal for table-talk (the assess prompt
             # says so, but the model can disobey — e.g. a reflective in-character
             # remark after a fight, "What a happenstance!", gets mislabeled meta and

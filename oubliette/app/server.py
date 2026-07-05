@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import traceback
 from pathlib import Path
 from urllib.parse import quote
 
@@ -739,6 +740,10 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
                 payload["t"] = "done"
                 _emit(payload)
             except Exception as e:  # surface failures to the client, don't hang
+                # …but never silently: keep the full traceback (console + debug log)
+                # so a one-off failure is diagnosable after the fact.
+                traceback.print_exc()
+                GAME.loop.debug.append("anomaly", stage="turn_stream", error=repr(e))
                 _emit({"t": "error", "error": str(e)})
 
     async def events():
