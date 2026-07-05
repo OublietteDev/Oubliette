@@ -589,5 +589,5 @@ def test_inventory_details_carry_magic_item_facts():
     assert "requires_attunement" not in pot          # only true facts ship (compact map)
     dag = det["dagger_of_venom"]
     assert dag["item_type"] == "weapon" and dag["rarity"] == "rare"
-    assert dag["magic_bonus"] == 1 and dag["value_text"] == "4,000 gp" and dag["description"]
+    assert dag["magic_bonus"] == 1 and dag["value_text"] == "400 pp" and dag["description"]
     _new()                                           # reset the shared save for other tests

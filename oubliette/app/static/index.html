@@ -1024,13 +1024,15 @@ function el(tag, cls, text) {
   if (text != null) e.textContent = text;
   return e;
 }
-// Copper -> "2 gp 3 sp 5 cp" (mirrors coin.format_cp; no platinum promotion).
+// Copper -> "2 gp 3 sp 5 cp" (mirrors coin.format_cp). Hoard-sized amounts
+// (>= 100 gp) promote into platinum: 30999 -> "30 pp 9 gp 9 sp 9 cp".
 function fmtCoin(cp) {
   if (cp == null) return "";
   if (cp === 0) return "0 gp";
   const sign = cp < 0 ? "-" : ""; cp = Math.abs(cp);
-  const g = Math.floor(cp / 100), s = Math.floor((cp % 100) / 10), c = cp % 10;
   const parts = [];
+  if (cp >= 10000) { parts.push(Math.floor(cp / 1000).toLocaleString() + " pp"); cp %= 1000; }
+  const g = Math.floor(cp / 100), s = Math.floor((cp % 100) / 10), c = cp % 10;
   if (g) parts.push(g.toLocaleString() + " gp");
   if (s) parts.push(s + " sp");
   if (c) parts.push(c + " cp");

@@ -5,9 +5,11 @@ between it and the human denominations (pp/gp/sp/cp, SRD rates: 1 pp = 10 gp,
 Everything internal — wallets, prices, StateOp deltas — is an int of copper.
 Denominations exist only at the edges: authored pack content (ints mean GOLD for
 back-compat, strings like "5 sp" name their unit), the DM's tool fields
-(gold/silver/copper), and display (`format_cp`). Display never promotes to
-platinum — tables think in gold, so 2,500 gp stays "2,500 gp", not "250 pp" —
-but parsing accepts pp for authored prices.
+(gold/silver/copper), and display (`format_cp`). Display promotes to platinum
+only for HOARD-sized amounts (100 gp and up, OublietteDev's call 2026-07-04): the
+party's 309.99 gp purse reads "30 pp 9 gp 9 sp 9 cp", while a 15 gp longsword
+stays "15 gp" — never "1 pp 5 gp". Keep `fmtCoin` in app/static/index.html in
+step with any change here.
 """
 
 from __future__ import annotations
@@ -64,13 +66,24 @@ def split_cp(cp: int) -> tuple[int, int, int]:
     return (sign * (cp // 100), sign * ((cp % 100) // 10), sign * (cp % 10))
 
 
+# Amounts this large (in cp) display with a platinum headline; below it, gold
+# leads. 10_000 cp = 100 gp = 10 pp.
+PP_DISPLAY_FLOOR = 10_000
+
+
 def format_cp(cp: int, zero: str = "0 gp") -> str:
-    """Copper -> a compact human string: 235 -> '2 gp 3 sp 5 cp'; 0 -> `zero`."""
+    """Copper -> a compact human string: 235 -> '2 gp 3 sp 5 cp'; 0 -> `zero`.
+    Hoard-sized amounts (>= 100 gp) promote into platinum: 30_999 ->
+    '30 pp 9 gp 9 sp 9 cp'; everyday sums stay gold-led."""
     if cp == 0:
         return zero
     sign = "-" if cp < 0 else ""
-    g, s, c = split_cp(abs(cp))
+    rest = abs(cp)
     parts = []
+    if rest >= PP_DISPLAY_FLOOR:
+        pp, rest = divmod(rest, CP_PER["pp"])
+        parts.append(f"{pp:,} pp")
+    g, s, c = split_cp(rest)
     if g:
         parts.append(f"{g:,} gp")
     if s:

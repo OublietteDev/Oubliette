@@ -39,13 +39,22 @@ def test_authored_values_keep_gold_semantics_for_ints():
 
 def test_format_cp_reads_like_a_table_talks():
     assert format_cp(235) == "2 gp 3 sp 5 cp"
-    assert format_cp(1500) == "15 gp"
+    assert format_cp(1500) == "15 gp"                  # everyday prices stay gold-led
     assert format_cp(50) == "5 sp"
     assert format_cp(3) == "3 cp"
     assert format_cp(0) == "0 gp"
     assert format_cp(-150) == "-1 gp 5 sp"
-    assert format_cp(250000) == "2,500 gp"             # no platinum promotion
     assert split_cp(235) == (2, 3, 5)
+
+
+def test_format_cp_promotes_hoards_to_platinum():
+    """OublietteDev's call: 100 gp and up read as a hoard — platinum headline."""
+    assert format_cp(30_999) == "30 pp 9 gp 9 sp 9 cp"   # the Brightvale purse
+    assert format_cp(250_000) == "250 pp"
+    assert format_cp(150_000) == "150 pp"                # plate armor
+    assert format_cp(10_000) == "10 pp"                  # the floor
+    assert format_cp(9_999) == "99 gp 9 sp 9 cp"         # just under: gold-led
+    assert format_cp(-30_999) == "-30 pp 9 gp 9 sp 9 cp"
 
 
 # --- ValueEntry money ------------------------------------------------------------
