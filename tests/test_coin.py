@@ -135,6 +135,17 @@ def test_legacy_item_base_value_becomes_value_cp():
     assert Item(id="x", name="x", value_cp=35).value_cp == 35
 
 
+def test_srd_catalog_carries_real_coin_prices():
+    """S3: the equipment catalog's re-imported SRD prices survive projection —
+    a candle really costs 1 cp, a club 1 sp, plate armor 1,500 gp."""
+    from oubliette.content.ruleset import load_ruleset
+    from oubliette.rules.chargen import _project_srd_item
+    rs = load_ruleset()
+    worth = {k: _project_srd_item(rs.equipment[k]).value_cp
+             for k in ("candle", "club", "longsword", "plate_armor")}
+    assert worth == {"candle": 1, "club": 10, "longsword": 1500, "plate_armor": 150000}
+
+
 def test_new_session_end_to_end_purse():
     """The seeded world (authored gp) opens with a copper purse and merchant pocket."""
     s = Session.open(InMemoryEventStore())

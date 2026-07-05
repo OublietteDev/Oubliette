@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..coin import authored_to_cp
 from ..content.ruleset import Ruleset
 from ..content.srd_schemas import CharClass, SrdEquipment
 from ..enums import Ability, Skill
@@ -209,13 +210,13 @@ def _project_srd_item(it: SrdEquipment) -> Item:
     """SrdEquipment -> state.Item, carrying the mechanical bits the derivation
     engine needs (armor base_ac/type/dex_cap, weapon damage). Mirrors the pack
     loader's `_project_item`."""
-    # SRD equipment still authors gp ints (real coin costs land with the catalog
-    # re-import); worth = base_value, falling back to cost. 1 gp = 100 cp.
+    # Worth: base_value (real SRD coin strings like "1 sp", or gp ints from our
+    # magic-item/poison generators), falling back to the legacy gp `cost`.
     worth = it.base_value if it.base_value is not None else it.cost
     return Item(
         id=it.id, name=it.name, category=it.category,
         tags=list(it.tags),
-        value_cp=None if worth is None else worth * 100,
+        value_cp=authored_to_cp(worth),
         armor_class=(it.armor.base_ac if it.armor else None),
         armor_type=(it.armor.type if it.armor else None),
         dex_cap=(it.armor.dex_cap if it.armor else None),
