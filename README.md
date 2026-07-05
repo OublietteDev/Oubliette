@@ -1,174 +1,106 @@
-# Oubliette Table
+# Oubliette
 
-A non-commercial, open-source AI-DM text RPG built on the D&D SRD. The thesis:
-**code owns state and the rules; the LLM only narrates and proposes; the player
-never holds the pen.** See [`oubliette-table-spec-v0.2.md`](docs/design/oubliette-table-spec-v0.2.md)
-for the full design (and [`oubliette-table-design-v0.1.md`](docs/design/oubliette-table-design-v0.1.md)
-for the original rationale).
+**An AI Dungeon Master that never cheats — with real dice, a real tactical battlefield, and worlds you build yourself.**
 
-## Status: Phase 4 — web chat UI (on Phase 0–3)
+Oubliette is a non-commercial, open-source tabletop RPG you play in your browser, powered by the D&D 5e SRD. You type what your character does in the first person; an AI narrates the world's reply as your DM. But unlike a plain chatbot, **the code owns the game — the AI only tells the story.** Your HP, gold, XP, inventory, and every die roll live in a rules engine the model can't reach; it can only *propose* changes that the code validates first. The result is an AI DM that improvises freely but can never fudge your character sheet or hand-wave a fight.
 
-**Play in your browser:** install the web deps once (`pip install -e ".[web]"`),
-then run `oubliette-play` (or double-click `play.bat` on Windows). A chat window
-opens: talk to the DM on the left, watch the live character sheet, inventory, and
-canon on the right.
+It ships as three programs that share one engine:
 
-**Connecting a model:** the start screen's **🔌 Connect your AI** panel lets you
-pick a provider, paste an API key, and type the model's **exact API id** — all four
-rows are live: **Anthropic**, **OpenAI**, **Google Gemini**, and **local models**
-(any OpenAI-compatible server: Ollama, LM Studio, llama.cpp — no key needed, just
-the server address). The model name is free text, so new models work the day they
-ship; the **Test** button makes one real (tiny) call so a typo'd id shows up as a
-plain sentence, never mid-game — and settings only save after that test passes.
-Everything is stored locally in a gitignored `oubliette-config.json`, never
-committed. A key in the environment or a `.env` (`ANTHROPIC_API_KEY`,
-`OPENAI_API_KEY`, `GEMINI_API_KEY`) still works too. With no key the game runs the
-scripted **Offline Mode** DM (a canned demo) and says so in the chat.
+| | | |
+|---|---|---|
+| 🎭 **Oubliette** | The game — an AI DM you play in your browser. | `play.bat` |
+| 🔨 **The Forge** | Build your own worlds — no coding, ever. | `forge.bat` |
+| ⚔️ **The Arena** | A full D&D 5e tactical combat engine. | launches from the game |
 
-**Sharing it with someone else (Windows):** they double-click `setup.bat` once to
-build the environment, then `play.bat` to run and connect their AI from the start
-screen. They don't need Python installed — if the computer has none (or only an
-unsupported version), setup downloads a private Python 3.13 into the game folder
-and uses that.
+> **Status: v0.9.** Feature-complete and very playable; a handful of known rough edges (see [Known issues](#known-issues)) are why this isn't 1.0 yet.
 
-## Earlier phases
+---
 
-Per spec §14, we build *through the seams* so later phases are substitutions, not
-rewrites. Everything runs with a **scripted (offline) DM** — no API key required.
+## What makes it different
 
-- **Phase 0** (tag `phase-0`): the core non-combat loop end to end.
-- **Phase 1** (tag `phase-1`): the combat *boundary* (§8) — declarative
-  `EncounterRequest` in, instantiation from live state + templates (ephemeral
-  combatants, D5), a `CombatResult` with absolute values (D7) out, applied as one
-  recorded result; non-combat exits (parley/flee) first-class. Engine internals
-  are a placeholder the real tactical prototype slots in behind later.
-- **Phase 2** (tag `phase-2`): the **event log** is now real. Authoritative state
-  is rebuilt by `seed(authored baseline) + replay(events)`; every protected
-  mutation decomposes into atomic, replayable `StateOp`s applied through one path
-  (live + replay); the RNG emits `ROLL` events (recorded, never re-rolled); the
-  log persists to **SQLite**. Reload is byte-identical for authoritative state
-  (D9). Run with `--db PATH` to persist and reload.
-- **Phase 2.5/2.6** (tags `phase-2.5`, `phase-2.6`): harness ergonomics validated
-  against the live model — typed tool schemas, state/scene context, combat-summon
-  prompt, item-id resolution, and short-term turn continuity.
-- **Phase 3** (tag `phase-3`): the **canonization lifecycle** + **retrieval**. The
-  DM creates world content with `create_entity` (born `provisional`) and confirms
-  it with `promote_canon`; canon is event-sourced and rebuilds byte-identically on
-  replay; keyword retrieval feeds relevant canon back into context so the DM stays
-  consistent (its long-term memory). Verified live: the model named an NPC, then
-  reused it by retrieval instead of duplicating.
-- **Phase 4** (tag `phase-4`): the **web chat UI** above (FastAPI + a
-  self-contained page, no build step) — narration, roll/effect/combat chips, and
-  the live sheet/inventory/canon, all in the browser.
-- **Phase 5** (tag `phase-5`): the **trade window** (§9) — ask a merchant to see
-  their wares and an in-window popup opens showing their priced stock and gold
-  (which caps what they'll pay). Buying/selling are ordinary code-validated
-  `transact`s at merchant-set prices, so the firewall holds for free. Verified
-  live: the model summons the window on a browse request.
-- **Phase 6** (tag `phase-6`): **streaming plumbing + UI polish**. The DM's
-  narration is delivered over SSE, with the `narration` field extracted from the
-  partial structured-output JSON as it arrives, a blinking cursor, markdown
-  (bold/italic/paragraphs), and message fade-ins. (Caveat: because the narration
-  rides inside a forced structured-output tool call, in practice it lands in a
-  burst near the end of generation rather than smoothly token-by-token — a
-  progressive-streaming redesign is deferred to the DM-robustness work.)
-- **Phase 7** (tag `phase-7`): **trade basket + haggle**. The trade window now has
-  quantity steppers on both sides and a running net total; **Settle** executes the
-  whole basket as one validated transact at listed prices, while **Haggle** sends
-  the selection to the DM as a chat proposal — it rolls persuasion/deception and
-  settles at an *adjusted* price (the soft economy, §8/§11, wired to the window).
-  The merchant's priced stock is now in the DM's context too, so it can negotiate.
-- **Phase 8** (tag `phase-8`): a **player menu** (extensible registry — add an entry
-  to `MENU_ITEMS`) and the first item, a **player journal**: modular sections with
-  status-grouped entries (e.g. Quests → In-Progress / Completed) and markdown notes.
-  The journal is **deliberately invisible to the DM** — stored in its own table,
-  never read into context — so player notes can't induce hallucination or bloat the
-  prompt. (Bestiary & Party Sheets are stubbed "soon" menu slots; **Map** is now live —
-  see below.)
-- **Phase 9** (tag `phase-9`): the **Inventory panel**. Moved off the sidebar into a
-  menu panel: a section per party member, items grouped into Weapons / Armor (with
-  AC) / Gear / Consumables / Other, plus an **Equipped** section with equip/unequip
-  toggles. Loadout changes are event-sourced (an `equip` op) so they persist and
-  replay. (Total-AC-from-equipment is deferred to the rules pass.)
-- **Phase 10** (tag `phase-10`): the **world map**, both halves, as pins on
-  assignable map art. In **The Forge**, the map editor lets you assign a **world map
-  image** (e.g. Atria) and a **sub-map image** per top-level area, then drag each place
-  as a **pin** onto it (hover shows name + description); double-click a ★ area to arrange
-  the places inside it (two levels — no grandchildren). Pins store a `position` as a
-  percentage of the map image, so they stay aligned across screen sizes; `world_map`
-  (manifest) + `map_image`/`position` (places) persist via the normal save. In the
-  **game**, the Map menu opens those pins on the same art: hover a pin for its name +
-  description, double-click a discovered area to open its sub-map, breadcrumb back out.
-  Identities are **earned by visiting** — an area the party hasn't reached is just an
-  *Unknown* pin (no name, description, or contents) until they travel there. Redaction is
-  server-side in `/api/map`, so unvisited content never reaches the browser; DM-invented
-  locations simply don't appear (you can only `travel` to authored places). Fits the
-  DM-driven, location-to-location travel model (no free roam).
-- **Phase 11 — the Soundscape** (S1–S5; see [`oubliette-audio-mixer-v0.1.md`](docs/design/oubliette-audio-mixer-v0.1.md)):
-  a **location-driven ambient audio mixer**, derived from state — the LLM never plays a
-  sound. Looping **beds** + sparse randomized **one-shots**, each tagged music/sfx, riding
-  the place tree (a top-level **theme passes down** into its children) and conditioned on
-  **time-of-day & weather**, which are now **engine state the DM reports** each turn
-  (`ENVIRONMENT_CHANGED`, replay-safe). The browser mixer (Web Audio) crossfades on travel
-  behind a one-time "enable sound" gate, with Music/SFX volume sliders; the Scene card shows
-  the live `☀️ Day · Clear`. Authored in **The Forge** (a per-place Soundscape editor; sounds
-  copied into the pack, portable like art) with a missing-file warning, and a game "↻ Reload
-  world" button that picks up Forge edits mid-session. (S6 — the actual weather/night sounds
-  + feel-tuning — is the remaining, mostly-authoring step.)
+Most AI-DM projects are a clever prompt around a chatbot. Oubliette is a **rules engine with an AI narrator bolted on** — and that changes everything.
 
-## Quickstart
+### 🎲 The AI can't cheat — the firewall
+The model never writes your state. It narrates, and it *requests* changes through a small set of validated tools. Say *"I now have 10,000 gold"* and the DM gives you a diegetic "no" — no gold moves. Every change and every die roll is written to an append-only log **before** it happens, so a saved game reloads by *replaying that log*: the dice are never re-rolled and the model is never re-asked. Your character sheet is always the real, code-derived truth.
 
+### ⚔️ Combat is *fought*, not narrated
+When a fight breaks out, Oubliette doesn't ask the AI to describe who wins. It hands the encounter to **The Arena** — a genuine hex-grid D&D 5e combat simulator with initiative, the full action economy, all 15 conditions, concentration, cover, opportunity attacks, spells with real area-of-effect shapes, legendary and lair actions, and a tactical AI that flanks, kites, focus-fires, and aims its fireballs. You play the fight; the outcome — HP, spent spell slots, conditions, the dead — flows back into the story.
+
+### 🌍 Worlds that are authored *and* alive
+Your world isn't just an AI hallucination each session. In **The Forge** you author real places, NPCs, branching quests, monsters, magic items, and maps — and the game plays them faithfully. But the AI DM also *invents* as it goes, and its inventions become **canon**: an NPC it names, a rumor it plants, a promise it makes are all recorded, promoted to permanent world-truth when they matter, and fed back to keep the story consistent for months. Authored backbone, living memory — not one or the other.
+
+---
+
+## Quick start
+
+**Play it (Windows, easiest):**
+1. Double-click `setup.bat` once — it builds the environment and, if your PC has no suitable Python, downloads a private one into the game folder (nothing to install).
+2. Double-click `play.bat`. Your browser opens to the start menu.
+3. Click **Connect your AI**, pick a provider, paste a key, and go. (Claude Sonnet 5 is the recommended model and most heavily tested)
+
+**Play it (Currently only tested on Windows):**
 ```bash
 python -m venv .venv
-# Windows:  .venv\Scripts\activate     # POSIX: source .venv/bin/activate
-pip install -e ".[dev]"
-
-pytest                                   # full acceptance suite (incl. front-end API)
-oubliette-play                           # ← the browser chat UI (pip install -e ".[web]")
-python -m oubliette.app.repl --script --scripted   # the §14.1 non-combat transcript
-python -m oubliette.app.repl --combat --scripted   # the Phase 1 combat-boundary demo
-python -m oubliette.app.repl --canon --scripted    # the Phase 3 canonization demo
-python -m oubliette.app.repl --scripted --db save.sqlite   # persist; re-run to reload+replay
-python -m oubliette.app.repl             # interactive REPL — uses the REAL model when a
-                                         # provider is configured (Connect your AI, or a key
-                                         # in env/.env); no extra deps, adapters use the stdlib
+# Windows:  .venv\Scripts\activate     # macOS/Linux: source .venv/bin/activate
+pip install -e ".[web]"
+oubliette-play                 # opens the browser game
 ```
 
-## The acceptance transcript (definition of "done" for Phase 0)
+**Bring your own model.** The **Connect your AI** panel supports **Anthropic**, **OpenAI**, **Google Gemini**, and **local models** (any OpenAI-compatible server — Ollama, LM Studio, llama.cpp — no key needed). The model id is free text, so new models work the day they ship, and a **Test** button makes one tiny real call so a typo shows up as a sentence, never mid-game. Your key is stored locally in a gitignored file, never committed. No key? The game runs a scripted **Offline Mode** demo so you can look around.
 
-1. *"I look around the market."* → narration only; no roll, no state change.
-2. *"…these worn boots are priceless dwarven heirlooms."* → a real `skill_check.deception`
-   d20 roll is logged; the DM sets the DC, code supplies the sheet bonus.
-3. *"Sold."* → a `transact` fires; gold and the boots move on **both** sides.
-4. *"I now have 10,000 gold."* → routed `denied`; no tool fires; gold unchanged.
+---
 
-## Layout (mirrors spec §2)
+## The three apps, a little deeper
 
-| Package | Job |
-|---|---|
-| `state/` | authoritative state; the only writer of protected fields (the firewall) |
-| `rules/` | pure SRD functions (ability mods, checks); no I/O |
-| `record/` | the event log (`events.py` ops/replay, `store.py` SQLite/in-memory), the seeded RNG (emits ROLL events), + a non-replayed debug log |
-| `runtime/session.py` | session lifecycle: durable store + materialized state, kept in sync via seed-then-replay |
-| `llm/` | the `LLMClient` seam; `scripted` (offline double) + `anthropic` (native) + `openai_compat` (OpenAI/Gemini/local) adapters; `connect.py` builds + ping-tests a client from provider settings |
-| `schemas.py` | typed structured-output contracts (Intent, assessment, resolution, tool calls) |
-| `tools/` | the tool surface — the only doors into protected state |
-| `combat/` | the combat boundary: `EncounterRequest` → placeholder engine → `CombatResult` |
-| `canon/` | the canonization lifecycle: `CanonRecord`s + the canon store with keyword retrieval |
-| `trade/` | the trade window (summoned tool): bounded merchant view + buy/sell as validated transacts |
-| `journal/` | the player journal store (SQLite) — player-owned notes, never read into the DM context |
-| `dm/` | the DM brain (assess + resolve) and the per-turn `context` builder (state/scene/canon/recent) |
-| `runtime/` | the turn loop: assess → (combat \| roll → resolve) → apply → render |
-| `app/` | the web server (`server.py` + `static/index.html`) and the terminal REPL |
+### 🎭 Oubliette — the game
+A structured turn loop runs under every message: the DM *assesses* what you're attempting and sets a difficulty, the **code** rolls the dice with your real sheet bonus, and the DM narrates the result it's given. Around that core: full SRD character creation and a party of up to six heroes, XP-gated leveling, short/long rests, a shared coin purse with real cp/sp/gp/pp and haggling merchants, an inventory with equip toggles, emergent and authored quests, a visit-gated world map, a location-driven ambient soundtrack, a searchable bestiary, and a session-zero **table contract** (a tone dial plus Lines & Veils the DM always honors). It remembers: a session wrap writes a spoiler-free "previously…" for you and private continuity notes for the DM, so next session picks up where you left off.
 
-## What this does NOT do yet
+### 🔨 The Forge — build your own worlds
+A visual studio — no code, ever. Author places and a drag-arrange world map (with visit-gated redaction), NPCs and shops, branching quests with player hooks and DM-only briefings, and full monster stat blocks (clone any of the 334 SRD creatures and tweak). The module kit adds **magic items**, **custom backgrounds**, and a **spell builder**, all of which merge straight into character creation and the Arena. You can even paint a battlefield — terrain, hazards, cover — for fights that start in a given location. Its promise: the Forge validates your world with *the game's own loader*, so a green "✓ Ready to play" badge means it really will. Share a world as a single `.zip`.
 
-Truly *progressive* (token-by-token) narration streaming is still to come: the
-SSE plumbing exists, but structured-output tool calls flush the narration near the
-end of generation rather than streaming it smoothly (see the Phase 6 caveat above).
-Canon quarantine is modeled
-(provisional vs confirmed) but quest-dependency auto-promotion isn't wired yet.
-Also note: RNG *state* isn't persisted across reload (past rolls
-are in the log; post-reload rolls restart from the base seed) — fine for
-single-player and it doesn't affect the byte-identical-**state** guarantee, since
-state comes from recorded ops, not rolls.
+### ⚔️ The Arena — real tactical combat
+A standalone hex-grid 5e combat engine (also playable on its own). Creatures from Tiny to Gargantuan, footprints and difficult terrain and line-of-sight, typed damage through resistances and immunities, on-hit riders, upcasting, 158 spells, walls and zones and telegraphed area effects, legendary/lair/recharge/regeneration mechanics — and an opponent AI with editable personalities (berserker, archer, coward, bodyguard…). A presentation layer sequences every hit so damage numbers, HP drops, and sounds land on impact, with charge lunges and danger telegraphs.
+
+📖 **The complete, code-verified feature inventory is in [FEATURES.md](FEATURES.md).**
+
+---
+
+## Content
+
+Every world stands on a content-complete **SRD 5.1** layer: all 12 classes and their subclasses, 9 races, **319 spells**, **~590 items** (mundane, magic, and poisons), **334 monsters** with portraits, all 15 conditions, plus the SRD background and feat. Worlds you build in the Forge merge their own content on top.
+
+## How it works (for the curious)
+
+- **Event-sourced core** — every protected change is an atomic, replayable operation; state is `seed(authored world) + replay(event log)`, byte-identical on reload.
+- **Provider-agnostic** — a thin `LLMClient` seam with native Anthropic and OpenAI-compatible (OpenAI/Gemini/local) adapters.
+- **No build step** — the game and Forge are FastAPI servers each serving one self-contained HTML page.
+- **~65k lines of source, ~56k lines of tests.**
+
+```bash
+pip install -e ".[dev]"
+pytest                          # the full acceptance + engine suite
+```
+
+## Roadmap & known issues
+
+- 🗺️ **[ROADMAP.md](ROADMAP.md)** — what's planned beyond v0.9.
+- 🐞 **[Known issues](#known-issues)** — see below.
+
+## Known issues
+
+*v0.9 is stable and fun, but honest about its rough edges. Full list to be tracked in GitHub Issues.*
+
+- **Bestiary art is ~20% complete.** Every creature works fully in the Arena — all abilities, actions, spells, and legendary actions — they just show a generic token until art is added. This grows slowly over time. Art added via a pack is unaffected and displays fine in the bestiary.
+- **API calls occasionally drop.** A dropped connection mid-call surfaces an error (no effect on gameplay or the DM's memory) — but it's annoying if it takes ~300 seconds to time out.
+- **The 12 SRD classes need another accuracy pass.** For example: Half-Orcs are missing Relentless Endurance (the engine supports it, it just needs wiring), and character-creation languages look static — every character seems to get 2 languages + 1 racial language.
+- **Walls are indestructible.** You can cheese melee enemies by dropping a Wall of Force or Wall of Stone and then plinking them with cantrips.
+- **Long rests are ungated.** You can open your character sheet and take unlimited long rests for free heals and spell slots outside of combat. A sensible cost mechanic is in the works.
+- **Charge attacks don't animate.** Pounce, Trample, and Charge resolve correctly in code but have no visual yet — needs investigation and a fix.
+- **Encounter difficulty is inconsistent** (my own runs lean *easy*). The combat evaluator has no party-CR rules yet, and CR math assumes a party of four, so even a "fair" solo fight can skew either way. This will take several balancing passes.
+- **Arena token art can be sized inconsistently.** The plan is a token previewer that lets you adjust framing so your art (and the current bestiary art) is represented well.
+
+---
+
+## License & attribution
+
+Oubliette Table is a **non-commercial, open-source** project. It includes material from the **System Reference Document 5.1** by Wizards of the Coast LLC, used under the Creative Commons Attribution 4.0 International License. Bundled fonts (MedievalSharp, PT Serif) are used under the SIL Open Font License. See [`NOTICE`](NOTICE) for details.

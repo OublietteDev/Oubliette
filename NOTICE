@@ -11,3 +11,16 @@ The SRD 5.1 material in this project lives under oubliette/content/srd/ (classes
 races, backgrounds, spells, feats, conditions, equipment) and backs the
 character-creation and character-sheet features. Oubliette Table is a
 non-commercial, open-source project.
+
+Fonts
+-----
+MedievalSharp (Copyright (c) wmk69) and PT Serif (Copyright (c) ParaType Ltd.)
+are used under the SIL Open Font License, Version 1.1. The full license texts
+are bundled with the fonts in arena/assets/fonts/ (OFL.txt, OFL-PTSerif.txt).
+
+Audio and visual assets
+-----------------------
+The Arena's music and visual art (battle backgrounds, creature tokens, UI, and
+cursors) are AI-generated and carry no third-party rights. Some sound effects
+are derived from freely-licensed audio from Pixabay (https://pixabay.com),
+edited by the author.

@@ -68,7 +68,7 @@ Hand-written code only — excludes JSON data/content, art, audio, `.venv`, and 
 
 ### Economy & trade
 - **Party purse in real coins** (cp/sp/gp, with platinum promotion for hoards); any hero spends from it and any hero's earnings land in it.
-- **Soft, DM-set economy:** item values are advisory anchors; prices shift with NPC disposition and haggling.
+- **Soft, DM-set economy:** item values are advisory anchors; prices shift with haggling.
 - **Trade window:** browse a merchant's priced stock and their carried coin (which caps what they'll pay), build a basket with quantity steppers and a running net total, then **Settle** (one validated transaction) or **Haggle** (the DM rolls persuasion/deception and adjusts).
 - **Hand-over between heroes:** pass an item (including exact scroll stacks) from one party member to another.
 - **World rewards:** the DM can grant a quest payout or found cache straight to the party, or levy tolls/fines/thefts.
@@ -91,7 +91,7 @@ Hand-written code only — excludes JSON data/content, art, audio, `.venv`, and 
 
 ### Audio soundscape
 - **Location-driven ambient mixer** (Web Audio): looping beds + sparse one-shots, derived from state — *the AI never plays a sound.*
-- **Theme inheritance** (a city's theme plays in every shop inside it) and cues filtered by time-of-day/weather.
+- **Theme inheritance** (a city's theme plays in every shop inside it - optional in editing via the Forge) and cues filtered by time-of-day/weather.
 - Player controls: enable-sound gate, separate Music/SFX volume, mute-all, and a crossfade on travel.
 
 ### Bestiary & content
@@ -229,7 +229,7 @@ A per-place **Battlefield** drawer authoring what a fight staged here looks and 
 ### Spells & area effects
 - **158 SRD spells** with real mechanics, plus **AoE shapes** — sphere, cone, line, cube, cylinder — resolved by one shared geometry resolver (so both the AI's aim and the on-screen preview use the exact hexes the engine will hit).
 - **Persistent zones** (Spirit Guardians, Cloudkill, Spike Growth…) with start-of-turn damage, entry damage, per-5-ft movement hazards, imposed conditions, and fog/darkness obscurement.
-- **Wall spells** as real barriers with per-panel HP, movement/LOS blocking, and entry damage (Wall of Fire, Wall of Force, Wall of Ice…).
+- **Wall spells** as real barriers, movement/LOS blocking, and entry damage (Wall of Fire, Wall of Force, Wall of Ice…).
 - **Sculpt Spells** (evocation) sparing allies; **Counterspell** and **Dispel Magic** (auto below your level, a check above it); **teleportation**, **chain** effects, **domination/compulsion**, **summoning**, **recurring** spells (Witch Bolt, Spiritual Weapon), and **HP-threshold** effects (Power Word Kill, Sleep, Toll the Dead).
 
 ### Monster & legendary mechanics
