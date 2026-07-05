@@ -135,6 +135,22 @@ def _pc_view(pc) -> dict:
     }
 
 
+def _location_trail() -> list[str]:
+    """Place names from the outermost enclosing area down to the party's current spot
+    (e.g. ["Brightvale", "Market Square"]) — the "where am I" breadcrumb for the HUD.
+    Empty when the party has no authored location (a custom seed)."""
+    places = GAME.session.places
+    cur, seen, chain = GAME.session.location, set(), []
+    while cur in places and cur not in seen:
+        seen.add(cur)
+        chain.append(places[cur].name)
+        cur = places[cur].parent
+        if not cur:
+            break
+    chain.reverse()
+    return chain
+
+
 def _snapshot() -> dict:
     repo = GAME.session.repo
     pc = repo.pc()
@@ -154,6 +170,8 @@ def _snapshot() -> dict:
         quest = {"id": q.id, "title": q.title, "text": q.text, "notes": list(q.notes)}
     return {
         "scene": GAME.session.scene,
+        "pack_name": GAME.session.pack_name or "",   # the world you're playing (header)
+        "location_trail": _location_trail(),         # parent > sublocation breadcrumb
         "force_ended": GAME.session.force_ended,
         "combat_pending": GAME.session.pending_combat is not None,
         "time_of_day": GAME.session.time_of_day,

@@ -29,6 +29,12 @@
     color: var(--gold); text-shadow: 0 0 18px rgba(217, 178, 90, .25);
   }
   header .tag { font-size: 12px; color: var(--muted); font-style: italic; }
+  header .world-name {
+    font-family: var(--serif); font-size: 14px; color: var(--muted);
+    border-left: 1px solid var(--line); padding-left: 16px; letter-spacing: .3px;
+    white-space: nowrap;
+  }
+  header .world-name:empty { display: none; }
   header .spacer { flex: 1; }
   .badge {
     font-size: 11px; color: var(--muted); border: 1px solid var(--line);
@@ -172,6 +178,13 @@
   .quest-notes { list-style: none; margin: 11px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   .quest-notes li { position: relative; padding-left: 14px; color: var(--ink); font-size: 12.5px; line-height: 1.45; }
   .quest-notes li::before { content: "›"; position: absolute; left: 2px; color: var(--gold); }
+  .scene-loc {
+    font-family: var(--sans); font-size: 11px; color: var(--faint);
+    letter-spacing: .06em; text-transform: uppercase; margin-bottom: 7px;
+  }
+  .scene-loc:empty { display: none; }
+  .scene-loc .sep { color: var(--line); margin: 0 6px; }
+  .scene-loc .here { color: var(--gold); }
   .scene { font-style: italic; color: var(--muted); font-size: 13px; line-height: 1.5; }
   ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: #2e2722; border-radius: 8px; }
 
@@ -621,6 +634,7 @@
       <h1>Oubliette Table</h1>
       <div class="tag">Join the Phantom's Table</div>
     </div>
+    <div class="world-name" id="world-name" title="The world you're playing"></div>
     <div class="spacer"></div>
     <div class="sound-wrap">
       <button class="act" id="sound-btn" title="Sound">🔈 Enable sound</button>
@@ -675,6 +689,7 @@
     <aside>
       <div class="card" id="scene-card">
         <h2>The Scene <span class="env" id="env-badge"></span></h2>
+        <div class="scene-loc" id="scene-loc"></div>
         <div class="scene" id="scene"></div>
       </div>
       <div class="card">
@@ -1273,6 +1288,15 @@ function envLabel(t, w) {
 function renderState(s) {
   $("scene").textContent = s.scene || "";
   $("env-badge").textContent = envLabel(s.time_of_day, s.weather);
+  // Header: the world/pack you're playing. Location breadcrumb: parent > sublocation,
+  // with the innermost spot highlighted — a quick "where am I" for the scene card.
+  $("world-name").textContent = s.pack_name || "";
+  const locEl = $("scene-loc"); locEl.innerHTML = "";
+  const trail = s.location_trail || [];
+  trail.forEach((name, i) => {
+    if (i) locEl.appendChild(el("span", "sep", "›"));
+    locEl.appendChild(el("span", i === trail.length - 1 ? "here" : null, name));
+  });
   const party = s.party && s.party.length ? s.party : [s.pc];
   lastParty = party.map(p => ({ id: p.id, name: p.name }));   // feeds trade/hand-over pickers
   const isParty = party.length > 1;
