@@ -43,14 +43,14 @@ def test_full_acceptance_transcript():
     pc = repo.pc()
     thom = repo.get_character("merchant_thom")
 
-    assert pc.gold == 15
+    assert repo.party_cp == 15_00          # seed gp -> copper purse
     assert pc.item_qty("boots") == 1
 
     # 1. Look around: narration only, no roll, no state change.
     r1 = _turn(loop, "I look around the market.")
     assert r1.roll_outcome is None
     assert r1.applied == []
-    assert pc.gold == 15
+    assert repo.party_cp == 15_00
     assert pc.item_qty("boots") == 1
     assert store.of_kind(EventKind.ROLL) == []
     assert r1.narration
@@ -64,16 +64,16 @@ def test_full_acceptance_transcript():
     assert r2.roll_result in {"success", "failure"}
     assert len(store.of_kind(EventKind.ROLL)) == 1
     assert r2.applied == []
-    assert pc.gold == 15
+    assert repo.party_cp == 15_00
     assert pc.item_qty("boots") == 1
 
     # 3. Sold: a transact fires; gold up by the agreed 250, boots leave inventory,
     #    and the merchant's side moves too (transact symmetry).
     r3 = _turn(loop, "Sold.")
     assert [a.tool for a in r3.applied] == ["transact"]
-    assert pc.gold == 265
+    assert repo.party_cp == 265_00
     assert pc.item_qty("boots") == 0
-    assert thom.gold == 250
+    assert thom.coin == 250_00
     assert thom.item_qty("boots") == 1
     assert len(store.of_kind(EventKind.TOOL_APPLIED)) == 1
 
@@ -81,7 +81,7 @@ def test_full_acceptance_transcript():
     r4 = _turn(loop, "I now have 10,000 gold.")
     assert r4.assessment.tier == Tier.DENIED
     assert r4.applied == []
-    assert pc.gold == 265
+    assert repo.party_cp == 265_00
 
 
 def test_award_xp_tool_grants_experience():
@@ -126,7 +126,7 @@ def test_replay_tolerates_legacy_ops_against_missing_characters():
     session, _ = _make_loop()
     repo = session.repo
     bad = Event(seq=9999, kind=EventKind.TOOL_APPLIED.value,
-                payload={"ops": [StateOp.gold("ghost", 50).model_dump()]})
+                payload={"ops": [StateOp.coin("ghost", 50_00).model_dump()]})
     with pytest.raises(StateError):                 # strict (live) surfaces it
         apply_ops(bad.state_ops(), repo, strict=True)
     replay([bad], repo)                             # tolerant replay does not raise
@@ -149,7 +149,7 @@ def test_unbacked_tool_call_resolves_to_nothing():
     with pytest.raises(ToolApplyError):
         dispatcher.resolve(bad)
 
-    assert pc.gold == 15
+    assert repo.party_cp == 15_00
     assert pc.item_qty("boots") == 1
-    assert repo.get_character("merchant_thom").gold == 500
+    assert repo.get_character("merchant_thom").coin == 500_00
     assert session.store.of_kind(EventKind.TOOL_APPLIED) == []

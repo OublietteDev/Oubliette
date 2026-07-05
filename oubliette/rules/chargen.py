@@ -209,9 +209,13 @@ def _project_srd_item(it: SrdEquipment) -> Item:
     """SrdEquipment -> state.Item, carrying the mechanical bits the derivation
     engine needs (armor base_ac/type/dex_cap, weapon damage). Mirrors the pack
     loader's `_project_item`."""
+    # SRD equipment still authors gp ints (real coin costs land with the catalog
+    # re-import); worth = base_value, falling back to cost. 1 gp = 100 cp.
+    worth = it.base_value if it.base_value is not None else it.cost
     return Item(
         id=it.id, name=it.name, category=it.category,
-        tags=list(it.tags), base_value=it.base_value,
+        tags=list(it.tags),
+        value_cp=None if worth is None else worth * 100,
         armor_class=(it.armor.base_ac if it.armor else None),
         armor_type=(it.armor.type if it.armor else None),
         dex_cap=(it.armor.dex_cap if it.armor else None),
@@ -468,7 +472,7 @@ def _assemble(build: CharacterBuild, cc: CharClass, race, subrace, subclass, bg,
         abilities=abilities,
         skill_proficiencies=(set(build.skills) | {Skill(s) for s in bg.skill_proficiencies}
                              | set(build.race_skills)),
-        gold=bg.starting_gold,
+        coin=bg.starting_gold * 100,     # backgrounds author gp; wallet is copper
         inventory=inventory, equipped=equipped,
         sheet=sheet, description=build.description,
     )

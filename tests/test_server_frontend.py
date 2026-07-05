@@ -32,7 +32,7 @@ def test_state_endpoint_reports_scripted_and_seed():
     assert r.status_code == 200
     d = r.json()
     assert d["model"] == "scripted"
-    assert d["state"]["pc"]["gold"] == 15
+    assert d["state"]["purse_cp"] == 15_00
     assert any(i["id"] == "boots" for i in d["state"]["pc"]["inventory"])
     assert any(n["id"] == "merchant_thom" for n in d["state"]["npcs"])
 
@@ -75,7 +75,7 @@ def test_turn_sale_updates_surfaced_state():
     d = r.json()
     assert d["narration"]
     assert any("transact" in a for a in d["applied"])
-    assert d["state"]["pc"]["gold"] == 265
+    assert d["state"]["purse_cp"] == 265_00
     assert all(i["id"] != "boots" for i in d["state"]["pc"]["inventory"])
 
 
@@ -174,7 +174,7 @@ def test_trade_window_opens_and_buy_updates_state():
         "merchant_id": mid, "action": "buy", "item_id": "waterskin", "qty": 1})
     d2 = r2.json()
     assert d2["ok"] is True
-    assert d2["state"]["pc"]["gold"] == 11  # 15 - 4
+    assert d2["state"]["purse_cp"] == 11_00  # 15 gp - 4 gp
     assert any(i["id"] == "waterskin" for i in d2["state"]["pc"]["inventory"])
 
 
@@ -188,7 +188,7 @@ def test_checkout_endpoint_settles_a_basket():
     })
     d = r.json()
     assert d["ok"] is True
-    assert d["state"]["pc"]["gold"] == 15 - 9   # waterskin 4 + belt 5
+    assert d["state"]["purse_cp"] == (15 - 9) * 100   # waterskin 4 gp + belt 5 gp
     have = {i["id"] for i in d["state"]["pc"]["inventory"]}
     assert {"waterskin", "sturdy_belt"} <= have
 
@@ -211,7 +211,7 @@ def test_stream_endpoint_yields_deltas_then_done():
     types = [e["t"] for e in events]
     assert "delta" in types and types[-1] == "done"
     done = events[-1]
-    assert done["narration"] and done["state"]["pc"]["gold"] == 15
+    assert done["narration"] and done["state"]["purse_cp"] == 15_00
     # the streamed deltas reconstruct the final narration
     streamed = "".join(e["v"] for e in events if e["t"] == "delta")
     assert streamed.strip() == done["narration"].strip()
@@ -399,7 +399,7 @@ def test_new_game_with_invalid_build_is_rejected_and_save_survives():
 
 def test_quick_start_keeps_the_default_party():
     d = client.post("/api/new", json={"pack_id": "brightvale"}).json()   # no build
-    assert d["state"]["pc"]["gold"] == 15        # brightvale's default-party hero
+    assert d["state"]["purse_cp"] == 15_00       # brightvale's default-party hero
 
 
 # --- character sheet (CS3) --------------------------------------------------
@@ -541,7 +541,7 @@ def test_applied_chip_labels():
     wrap = ResolvedTool("end_session", "rest", wrap_proposed=True)
     assert _describe_applied(wrap) is None                 # surfaces via the wrap-bar
 
-    give = ResolvedTool("give", "reward", ops=[StateOp.gold("pc", 5)])
+    give = ResolvedTool("give", "reward", ops=[StateOp.coin("pc", 5_00)])
     assert _describe_applied(give) and _describe_applied(give).startswith("give:")
 
 
@@ -572,7 +572,7 @@ def test_inventory_details_cover_carried_ids_only():
     carried = {it["item_id"] for m in d["party"] for it in m["items"]}
     assert carried and set(d["details"]) <= carried
     boots = d["details"]["boots"]                   # a pack item, through the merged catalog
-    assert boots["value"] == 2 and boots["description"].startswith("Scuffed")
+    assert boots["value_text"] == "2 gp" and boots["description"].startswith("Scuffed")
     knife = d["details"]["knife"]
     assert knife["weapon"]["damage"] == "1d4"
     assert knife["weapon"]["properties"] == ["finesse", "light"]
@@ -589,5 +589,5 @@ def test_inventory_details_carry_magic_item_facts():
     assert "requires_attunement" not in pot          # only true facts ship (compact map)
     dag = det["dagger_of_venom"]
     assert dag["item_type"] == "weapon" and dag["rarity"] == "rare"
-    assert dag["magic_bonus"] == 1 and dag["value"] == 4000 and dag["description"]
+    assert dag["magic_bonus"] == 1 and dag["value_text"] == "4,000 gp" and dag["description"]
     _new()                                           # reset the shared save for other tests

@@ -15,9 +15,14 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class ValueEntry(BaseModel):
-    """One side of an exchange: either gold OR an item stack, never both."""
+    """One side of an exchange: either money OR an item stack, never both.
+    Money is any mix of the coin fields (1 pp = 10 gp, 1 gp = 10 sp = 100 cp) —
+    '1 gp 5 sp' is {gold: 1, silver: 5}."""
 
     gold: int | None = None
+    silver: int | None = Field(default=None, description="silver pieces (10 sp = 1 gp)")
+    copper: int | None = Field(default=None, description="copper pieces (100 cp = 1 gp)")
+    platinum: int | None = Field(default=None, description="platinum pieces (1 pp = 10 gp)")
     item_id: str | None = None
     qty: int = 1
     spell: str | None = Field(
@@ -30,14 +35,29 @@ class ValueEntry(BaseModel):
                     "(0-9). Omit for the spell's normal level; set higher only for a "
                     "commissioned/upcast scroll. Never below the spell's own level.")
 
+    def money_cp(self) -> int:
+        """The entry's money side in copper (0 for an item entry)."""
+        return ((self.platinum or 0) * 1000 + (self.gold or 0) * 100
+                + (self.silver or 0) * 10 + (self.copper or 0))
+
+    @classmethod
+    def from_cp(cls, cp: int) -> "ValueEntry":
+        """A money entry decomposed into gp/sp/cp (no pp promotion — tables think
+        in gold). `cp` must be positive."""
+        g, s, c = cp // 100, (cp % 100) // 10, cp % 10
+        return cls(gold=g or None, silver=s or None, copper=c or None)
+
     @model_validator(mode="after")
     def _exactly_one(self) -> "ValueEntry":
-        has_gold = self.gold is not None
+        coins = [c for c in (self.platinum, self.gold, self.silver, self.copper)
+                 if c is not None]
+        has_money = bool(coins)
         has_item = self.item_id is not None
-        if has_gold == has_item:
-            raise ValueError("ValueEntry must set exactly one of {gold, item_id}")
-        if has_gold and self.gold <= 0:
-            raise ValueError("gold amount must be positive")
+        if has_money == has_item:
+            raise ValueError(
+                "ValueEntry must set exactly one of {money (gold/silver/copper/platinum), item_id}")
+        if has_money and (any(c < 0 for c in coins) or self.money_cp() <= 0):
+            raise ValueError("money amount must be positive")
         if has_item and self.qty <= 0:
             raise ValueError("item qty must be positive")
         if self.spell is not None:

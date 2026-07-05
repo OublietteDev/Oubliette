@@ -185,14 +185,14 @@ def test_notebook_is_current_session_only_and_inert_on_replay():
     loop = TurnLoop(s, Rng(1, record=s.emit_log),
                     _EnvBrain(ScriptedLLMClient(), [DmNote(note="Plant the cursed-amulet clue.")]))
     asyncio.run(loop.take_turn("I glance around the room."))
-    gold_before = s.repo.pc().gold
+    purse_before = s.repo.party_cp
     assert any("amulet" in n for n in notebook_notes(store.read_all()))
 
     asyncio.run(loop.wrap_session(write_notes=False))    # wrap seals the session…
     assert notebook_notes(store.read_all()) == []        # …and the notebook window resets
 
     s2 = Session.open(store)                              # inert on replay: state unchanged
-    assert s2.repo.pc().gold == gold_before
+    assert s2.repo.party_cp == purse_before
 
 
 def _resolve_messages(content: str):

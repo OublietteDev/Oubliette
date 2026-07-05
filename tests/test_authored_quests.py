@@ -343,4 +343,4 @@ def test_active_authored_quest_retains_briefing_and_reward(tmp_path, monkeypatch
                         quests=s.quests.active())
     assert "ACTIVE QUESTS" in ctx
     assert "the secret truth" in ctx                   # briefing retained
-    assert "30g" in ctx and "favor owed" in ctx        # intended reward retained
+    assert "30 gp" in ctx and "favor owed" in ctx      # intended reward retained

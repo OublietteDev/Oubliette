@@ -33,11 +33,11 @@ TRANSCRIPT = [
 
 def _snapshot(repo: Repository) -> str:
     """Deterministic JSON of the mutable protected state we care about."""
-    out = {}
+    out = {"purse_cp": repo.party_cp}
     for cid in ("pc", "merchant_thom"):
         c = repo.get_character(cid)
         out[cid] = {
-            "gold": c.gold, "hp": c.hp, "xp": c.xp,
+            "coin": c.coin, "hp": c.hp, "xp": c.xp,
             "conditions": sorted(c.conditions),
             "inventory": sorted((s.item_id, s.qty) for s in c.inventory),
         }
@@ -84,8 +84,8 @@ def test_reload_rebuilds_byte_identical_state(tmp_path):
     _play(TurnLoop(session, rng, Brain(ScriptedLLMClient())))
 
     live_snapshot = _snapshot(session.repo)
-    # sanity: the transcript actually moved state
-    assert "265" in live_snapshot or '"gold": 273' in live_snapshot
+    # sanity: the transcript actually moved state (265 gp = 26500 cp, +loot)
+    assert "26500" in live_snapshot or "27300" in live_snapshot
     n_rolls = len(store.of_kind(EventKind.ROLL))
     assert n_rolls > 0
     assert len(store.of_kind(EventKind.TOOL_APPLIED)) == 1

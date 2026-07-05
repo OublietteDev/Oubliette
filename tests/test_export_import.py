@@ -179,7 +179,7 @@ def _knife() -> Item:
 def test_character_bundle_round_trips():
     bundle = character_bundle(_hero(), [_knife()], ("image/png", b"portrait-bytes"))
     char, items, portrait = parse_character_bundle(json.loads(json.dumps(bundle)))
-    assert char.name == "Vex" and char.level == 3 and char.gold == 37
+    assert char.name == "Vex" and char.level == 3 and char.coin == 37_00  # legacy gp -> cp
     assert char.sheet.spells_known == ["magic_missile", "shield"]
     assert char.kind == "pc"
     assert char.portrait is None            # the importer re-establishes the portrait
@@ -242,8 +242,9 @@ def test_imported_hero_after_built_heroes_continues_the_ids():
     chars = live.emit_party_created([build], imports=[(_hero(), [_knife()])])
     assert [c.id for c in chars] == ["pc", "pc2"]
     assert chars[1].name == "Vex"
-    # gold pooled onto the lead (shared party purse); the import's 37 gp came along
-    assert chars[1].gold == 0 and chars[0].gold >= 37
+    # coin pooled into the shared party purse; the import's 37 gp came along
+    assert all(c.coin == 0 for c in live.repo.party())   # nothing strands on a member
+    assert live.repo.party_cp >= 37_00
 
 
 # --- the HTTP surfaces --------------------------------------------------------

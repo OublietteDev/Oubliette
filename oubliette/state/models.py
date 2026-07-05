@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from ..enums import Ability, Skill
 from ..rules.checks import ability_modifier, proficiency_bonus
@@ -20,11 +20,23 @@ class Item(BaseModel):
     name: str
     category: ItemCategory = "misc"
     tags: list[str] = Field(default_factory=list)
-    base_value: int | None = None       # advisory hint only; never enforced (spec §11)
+    value_cp: int | None = None         # advisory worth in COPPER; never enforced (spec §11)
     armor_class: int | None = None      # AC granted when worn: armor base_ac, or a shield's +N
     armor_type: Literal["light", "medium", "heavy", "shield"] | None = None  # for AC math
     dex_cap: int | None = None          # medium armor caps DEX bonus (usually 2)
     damage: str | None = None           # weapon damage dice (e.g. "1d8") for the sheet
+
+    @model_validator(mode="before")
+    @classmethod
+    def _legacy_base_value(cls, data):
+        """Items recorded before the coin migration carry `base_value` in GOLD
+        (CHARACTER_CREATED payloads, character bundles). Convert on read: 1 gp
+        = 100 cp. New dumps write `value_cp` only."""
+        if isinstance(data, dict) and data.get("value_cp") is None \
+                and data.get("base_value") is not None:
+            data = dict(data)
+            data["value_cp"] = int(data["base_value"]) * 100
+        return data
 
     @property
     def equippable(self) -> bool:
@@ -108,7 +120,11 @@ class Character(BaseModel):
     damage: str = "1d4"
     xp: int = 0
     conditions: list[str] = Field(default_factory=list)
-    gold: int = 0
+    # Money, in COPPER (1 gp = 100 cp). For an NPC this is their own pocket (a
+    # merchant's buyback cap); for a PC it is only the pre-pool chargen grant —
+    # at install the repository sweeps every PC's coin into the shared PARTY
+    # PURSE (repository.party_cp) and PC wallets stay 0 thereafter.
+    coin: int = 0
     inventory: list[ItemStack] = Field(default_factory=list)
     equipped: list[str] = Field(default_factory=list)   # item_ids worn/wielded (player loadout)
     # The full D&D build (PCs from chargen). NPCs leave it None and run on stat-block
@@ -126,7 +142,22 @@ class Character(BaseModel):
     description: str = ""
     disposition: str = ""    # NPC demeanor — context for the DM's DC-setting (D8)
     home_location: str | None = None   # Place id an NPC belongs to (scopes "who's present")
-    price_list: dict[str, int] = Field(default_factory=dict)  # merchant asking prices (soft, §11)
+    price_list: dict[str, int] = Field(default_factory=dict)  # merchant asking prices in CP (soft, §11)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _legacy_gold(cls, data):
+        """Characters recorded before the coin migration carry `gold` in GOLD
+        pieces (old CHARACTER_CREATED payloads, exported character bundles, and
+        seed/test constructors). Convert on read: 1 gp = 100 cp. Their
+        price_lists were gp too (merchants are seeded, not event-sourced, so
+        only bundles/tests hit this path — convert for consistency)."""
+        if isinstance(data, dict) and "coin" not in data and "gold" in data:
+            data = dict(data)
+            data["coin"] = int(data.pop("gold")) * 100
+            if data.get("price_list"):
+                data["price_list"] = {k: int(v) * 100 for k, v in data["price_list"].items()}
+        return data
 
     @property
     def proficiency_bonus(self) -> int:

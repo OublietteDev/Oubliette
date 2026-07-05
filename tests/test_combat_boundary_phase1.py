@@ -42,14 +42,14 @@ def test_attack_stages_a_fight_and_waits_for_the_arena():
     is written until the player enters the Arena (see test_combat_arena_launch)."""
     session, loop = _make_loop()
     pc = session.repo.pc()
-    assert pc.xp == 0 and pc.gold == 15
+    assert pc.xp == 0 and session.repo.party_cp == 15_00
 
     r = _turn(loop, "I draw my knife and attack the bandit.")
 
     assert r.combat_pending is True and r.combat_result is None
     assert session.pending_combat is not None
     # nothing resolved or recorded yet — the fight is held, not fought
-    assert pc.xp == 0 and pc.gold == 15 and pc.hp == 24
+    assert pc.xp == 0 and session.repo.party_cp == 15_00 and pc.hp == 24
     assert len(session.store.of_kind(EventKind.COMBAT_RESULT)) == 0
 
 
@@ -71,7 +71,7 @@ def test_parley_is_a_first_class_non_combat_exit():
     assert cr is not None
     assert cr.outcome == "parley"
     assert cr.xp_award == 0 and cr.loot == []
-    assert pc.hp == 24 and pc.xp == 0 and pc.gold == 15
+    assert pc.hp == 24 and pc.xp == 0 and session.repo.party_cp == 15_00
     assert len(session.store.of_kind(EventKind.COMBAT_RESULT)) == 1
 
 

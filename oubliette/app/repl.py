@@ -12,6 +12,7 @@ import asyncio
 import os
 import sys
 
+from ..coin import format_cp
 from ..dm.brain import Brain
 from ..record.rng import Rng
 from ..record.store import InMemoryEventStore, SqliteEventStore
@@ -80,7 +81,8 @@ def _render_state(session: Session) -> str:
     repo = session.repo
     pc = repo.pc()
     inv = ", ".join(f"{s.qty}x {repo.get_item(s.item_id).name}" for s in pc.inventory) or "(empty)"
-    line = f"  [ {pc.name}: {pc.hp}/{pc.max_hp} HP | {pc.gold}g | {pc.xp} XP | inventory: {inv} ]"
+    line = (f"  [ {pc.name}: {pc.hp}/{pc.max_hp} HP | purse {format_cp(repo.party_cp)} | "
+            f"{pc.xp} XP | inventory: {inv} ]")
     canon = [r for r in session.canon.all() if r.origin != "authored"]  # session canon only
     if canon:
         line += "\n  [ canon: " + ", ".join(f"{r.name} ({r.status})" for r in canon) + " ]"

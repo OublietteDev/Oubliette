@@ -60,7 +60,7 @@ def test_narration_carries_no_ops_and_is_inert_on_replay(tmp_path):
     asyncio.run(loop.take_turn("I look around the market"))
     asyncio.run(loop.take_turn("accept the task"))    # starts a quest → real state change too
     live_beats = list(loop.history)
-    live_gold = s.repo.pc().gold
+    live_purse = s.repo.party_cp
     live_quests = len(s.quests.all())
     for ev in s.store.of_kind(EventKind.NARRATION_RECORDED):
         assert ev.state_ops() == []                   # no ops — inert record
@@ -68,7 +68,7 @@ def test_narration_carries_no_ops_and_is_inert_on_replay(tmp_path):
 
     reopened = Session.open(SqliteEventStore(db))
     # Protected state replays byte-identical; narration events were pure no-ops.
-    assert reopened.repo.pc().gold == live_gold
+    assert reopened.repo.party_cp == live_purse
     assert len(reopened.quests.all()) == live_quests
     # And the durable beats are there to rehydrate the DM's short-term memory (W3).
     beats = [e.payload["beat"] for e in reopened.store.of_kind(EventKind.NARRATION_RECORDED)]

@@ -361,7 +361,7 @@ def test_triggering_combat_stages_a_pending_fight_and_does_not_resolve_yet():
     assert s.pending_combat is not None
     # nothing resolved yet: no event recorded, PC untouched
     assert len(s.store.of_kind(EventKind.COMBAT_RESULT)) == 0
-    assert pc.xp == 0 and pc.gold == 15
+    assert pc.xp == 0 and s.repo.party_cp == 15_00
 
 
 def test_entering_the_arena_resolves_the_fight_as_one_event(monkeypatch):
@@ -377,7 +377,7 @@ def test_entering_the_arena_resolves_the_fight_as_one_event(monkeypatch):
     assert report.combat_result.outcome == "victory"
     assert s.pending_combat is None                     # lock cleared
     assert pc.xp == 25                                   # road-bandit XP
-    assert pc.gold == 15 + 8                             # road-bandit loot (8g)
+    assert s.repo.party_cp == (15 + 8) * 100             # road-bandit loot (8 gp)
     assert 0 < pc.hp <= pc.max_hp                        # PC HP written back
     assert len(s.store.of_kind(EventKind.COMBAT_RESULT)) == 1
 

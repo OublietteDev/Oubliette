@@ -14,24 +14,25 @@ class TradeRequest(BaseModel):
 class BuyOffer(BaseModel):
     item_id: str
     name: str
-    price: int
+    price_cp: int     # asking price, in copper
     qty: int          # how many the merchant has in stock
 
 
 class SellOffer(BaseModel):
     item_id: str
     name: str
-    offer: int        # what the merchant will pay, per unit
+    offer_cp: int     # what the merchant will pay per unit, in copper
     qty: int          # how many the player holds
-    affordable: bool  # merchant can cover at least one (their gold caps buyback)
+    affordable: bool  # merchant can cover at least one (their pocket caps buyback)
 
 
 class TradeState(BaseModel):
-    """The bounded view the window renders — all of it authoritative state."""
+    """The bounded view the window renders — all of it authoritative state.
+    Money in copper; the window formats denominations."""
 
     merchant_id: str
     merchant_name: str
-    merchant_gold: int
-    player_gold: int
+    merchant_cp: int
+    purse_cp: int     # the shared party purse (what the player spends from)
     buy: list[BuyOffer]
     sell: list[SellOffer]

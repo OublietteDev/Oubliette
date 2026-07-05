@@ -21,6 +21,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+from ..coin import authored_to_cp, format_cp
 from ..combat.arena_bridge import character_to_player
 from ..content import packaging
 from ..content.loader import (DEFAULT_PACK, _PACKS_ROOT, PackValidationError,
@@ -121,7 +122,7 @@ def _pc_view(pc) -> dict:
     """The HUD view of one player character (the sidebar + party roster)."""
     return {
         "id": pc.id, "name": pc.name, "hp": pc.hp, "max_hp": pc.max_hp,
-        "gold": pc.gold, "xp": pc.xp, "xp_progress": xp_progress(pc),
+        "xp": pc.xp, "xp_progress": xp_progress(pc),
         "armor_class": pc.armor_class,
         "conditions": list(pc.conditions),
         "inventory": [
@@ -157,8 +158,12 @@ def _snapshot() -> dict:
         "weather": GAME.session.weather,
         "pc": _pc_view(pc),                          # the lead PC (back-compat)
         "party": [_pc_view(c) for c in repo.party()],  # the whole roster (HUD)
+        # The party's shared money (copper + a preformatted display string).
+        "purse_cp": repo.party_cp,
+        "purse_text": format_cp(repo.party_cp),
         "npcs": [
-            {"id": n.id, "name": n.name, "disposition": n.disposition, "gold": n.gold}
+            {"id": n.id, "name": n.name, "disposition": n.disposition,
+             "coin_text": format_cp(n.coin)}
             for n in npcs
         ],
         # The panel shows SESSION canon (the DM's live inventions). Authored pack
@@ -197,7 +202,9 @@ def _build_inventory() -> dict:
             carried.add(s.item_id)
             items.append({
                 "item_id": s.item_id, "name": _stack_label(rs, s), "category": it.category,
-                "qty": s.qty, "value": it.base_value, "armor_class": it.armor_class,
+                "qty": s.qty,
+                "value_text": format_cp(it.value_cp) if it.value_cp else None,
+                "armor_class": it.armor_class,
                 "equippable": it.equippable, "equipped": s.item_id in c.equipped,
                 "tags": it.tags, "spell": s.spell, "spell_name": _spell_name(rs, s.spell),
                 "spell_level": s.spell_level,
@@ -224,7 +231,9 @@ def _item_details(item_id: str) -> dict | None:
     if eq.description:
         d["description"] = eq.description
     if eq.base_value is not None:
-        d["value"] = eq.base_value
+        # Mechanics-catalog values still author gp (ints) or coin strings.
+        v = authored_to_cp(eq.base_value)
+        d["value_text"] = format_cp(v) if v else None
     if eq.weapon is not None:
         w: dict = {"damage": eq.weapon.damage}
         if eq.weapon.properties:
@@ -288,8 +297,8 @@ def _item_details_fallback(item_id: str) -> dict | None:
     except StateError:
         return None
     d: dict = {}
-    if it.base_value is not None:
-        d["value"] = it.base_value
+    if it.value_cp is not None:
+        d["value_text"] = format_cp(it.value_cp)
     if it.damage:
         d["weapon"] = {"damage": it.damage}
     if it.armor_class is not None:
@@ -307,8 +316,11 @@ def _ops_chip(ops) -> str:
     lands in a player-facing chip (the DM's own history beats keep the raw ids)."""
     bits = []
     for o in ops:
-        if o.op == "gold":
-            bits.append(f"{o.char} {o.delta:+d}g")
+        if o.op == "coin":
+            d = o.delta or 0
+            bits.append(f"{o.char} {'+' if d >= 0 else '-'}{format_cp(abs(d))}")
+        elif o.op == "gold":     # legacy op (pre-coin saves)
+            bits.append(f"{o.char} {o.delta:+d} gp")
         elif o.op == "item":
             bits.append(f"{o.char} {o.delta:+d} {_item_name(_ruleset(), o.item_id)}")
         elif o.op == "hp_set":
@@ -1159,7 +1171,10 @@ def _sheet_member(char: Character, rs: Ruleset) -> dict:
         "saves": saves, "skills": skills, "derived": d,
         "inventory": [{"name": _stack_label(rs, s), "qty": s.qty,
                        "equipped": s.item_id in char.equipped} for s in char.inventory],
-        "gold": char.gold, "xp": char.xp, "xp_progress": xp_progress(char),
+        # Money is the shared party purse (all PCs draw on it), preformatted.
+        "purse_cp": GAME.session.repo.party_cp,
+        "purse_text": format_cp(GAME.session.repo.party_cp),
+        "xp": char.xp, "xp_progress": xp_progress(char),
         "conditions": list(char.conditions),
         "hit_dice_used": char.hit_dice_used, "slots_used": dict(char.spell_slots_used),
         "resources_used": dict(char.resources_used),

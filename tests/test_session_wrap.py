@@ -108,7 +108,7 @@ def test_notes_survive_reload(tmp_path):
 
     reopened = Session.open(SqliteEventStore(db))
     assert session_notes(reopened.store.read_all()) == before   # durable, inert on replay
-    assert reopened.repo.pc().gold == s.repo.pc().gold          # state still byte-identical
+    assert reopened.repo.party_cp == s.repo.party_cp            # state still byte-identical
 
 
 def test_build_context_renders_story_so_far():

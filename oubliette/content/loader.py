@@ -22,6 +22,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError
 
 from ..canon.models import CanonRecord
+from ..coin import authored_to_cp
 from ..enums import Ability
 from ..state.models import Character, Item as StateItem, ItemStack
 from ..state.repository import InMemoryRepository
@@ -313,7 +314,7 @@ def _project_item(it: Item) -> StateItem:
     needs: armor base_ac/type/dex_cap (for AC math) and weapon damage."""
     return StateItem(
         id=it.id, name=it.name, category=it.category,
-        tags=list(it.tags), base_value=it.base_value,
+        tags=list(it.tags), value_cp=authored_to_cp(it.base_value),
         armor_class=(it.armor.base_ac if it.armor else None),
         armor_type=(it.armor.type if it.armor else None),
         dex_cap=(it.armor.dex_cap if it.armor else None),
@@ -435,9 +436,9 @@ def _build_npc(n: NPC, statblocks: dict[str, StatBlock],
     return Character(
         id=n.id, name=n.name, kind="npc",
         abilities=abilities,
-        gold=n.gold,
+        coin=authored_to_cp(n.gold) or 0,
         inventory=[ItemStack(item_id=e.item, qty=e.qty) for e in n.inventory],
-        price_list=dict(n.price_list),
+        price_list={k: authored_to_cp(v) for k, v in n.price_list.items()},
         description=n.description,
         disposition=n.disposition,
         home_location=n.home_location,

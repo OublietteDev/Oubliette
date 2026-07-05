@@ -30,7 +30,8 @@ def _session():
 def test_trade_state_shows_priced_stock_and_buyback():
     s = _session()
     state = build_state(s.repo, "merchant_thom")
-    assert state.merchant_gold == 500 and state.player_gold == 15
+    # seed authors gp; the engine speaks copper (×100), player money = party purse
+    assert state.merchant_cp == 500_00 and state.purse_cp == 15_00
     # priced stock is surfaced
     ids = {o.item_id for o in state.buy}
     assert "waterskin" in ids and "leather_satchel" in ids
@@ -45,23 +46,23 @@ def test_buy_applies_a_validated_transact():
     pc = s.repo.pc()
     thom = s.repo.get_character("merchant_thom")
 
-    tx = buy_transact(s.repo, "merchant_thom", "waterskin", 1)   # asking 4g
+    tx = buy_transact(s.repo, "merchant_thom", "waterskin", 1)   # asking 4 gp
     rt = disp.resolve(tx)
     s.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
 
-    assert pc.gold == 15 - 4
+    assert s.repo.party_cp == (15 - 4) * 100
     assert pc.item_qty("waterskin") == 1
-    assert thom.gold == 500 + 4
+    assert thom.coin == (500 + 4) * 100
     assert thom.item_qty("waterskin") == 3   # one left the stock of 4
 
 
 def test_cannot_buy_what_you_cannot_afford():
     s = _session()
     disp = Dispatcher(s.repo, s.canon)
-    # the satchel asks 15g; the player has 15g — affordable once, not twice
+    # the satchel asks 15g; the purse holds 15g — affordable once, not twice
     disp_ok = disp.resolve(buy_transact(s.repo, "merchant_thom", "leather_satchel", 1))
     s.emit_state(EventKind.TOOL_APPLIED, disp_ok.ops, tool="transact", reason="buy")
-    assert s.repo.pc().gold == 0
+    assert s.repo.party_cp == 0
     with pytest.raises(ToolApplyError):
         disp.resolve(buy_transact(s.repo, "merchant_thom", "waterskin", 1))  # 4g, has 0
 
@@ -74,7 +75,7 @@ def test_sell_capped_by_buyback_and_recorded():
     rt = disp.resolve(tx)
     s.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
     assert pc.item_qty("boots") == 0
-    assert pc.gold > 15  # got something for the boots
+    assert s.repo.party_cp > 15_00  # got something for the boots
     assert len(s.store.of_kind(EventKind.TOOL_APPLIED)) == 1
 
 
@@ -90,13 +91,13 @@ def test_checkout_basket_settles_buys_and_sells_in_one_transact():
     pc = s.repo.pc()
     thom = s.repo.get_character("merchant_thom")
     # buy a belt (5g) + waterskin (4g) = 9g; sell the boots (buyback) to offset
-    boots_offer = next(o.offer for o in build_state(s.repo, "merchant_thom").sell if o.item_id == "boots")
+    boots_offer = next(o.offer_cp for o in build_state(s.repo, "merchant_thom").sell if o.item_id == "boots")
     tx = checkout_transact(s.repo, "merchant_thom",
                            buy=[("sturdy_belt", 1), ("waterskin", 1)], sell=[("boots", 1)])
     rt = disp.resolve(tx)
     s.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
 
-    assert pc.gold == 15 - (9 - boots_offer)     # paid the net
+    assert s.repo.party_cp == 15_00 - (9_00 - boots_offer)     # paid the net
     assert pc.item_qty("sturdy_belt") == 1 and pc.item_qty("waterskin") == 1
     assert pc.item_qty("boots") == 0
     # exactly one event for the whole basket
@@ -111,7 +112,7 @@ def test_checkout_rejects_unaffordable_basket_atomically():
     tx = checkout_transact(s.repo, "merchant_thom", buy=[("leather_satchel", 2)], sell=[])
     with pytest.raises(ToolApplyError):
         disp.resolve(tx)
-    assert pc.gold == 15
+    assert s.repo.party_cp == 15_00
     assert pc.item_qty("leather_satchel") == 0
 
 
@@ -119,7 +120,8 @@ def test_merchant_stock_appears_in_dm_context():
     from oubliette.dm.context import build_context
     s = _session()
     ctx = build_context(s.repo, "a market")
-    assert "sells" in ctx and "leather satchel 15g" in ctx
+    assert "sells" in ctx and "leather satchel 15 gp" in ctx
+    assert "PARTY PURSE: 15 gp" in ctx
 
 
 def test_item_resolution_handles_abbreviated_names():

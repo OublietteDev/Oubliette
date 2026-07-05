@@ -91,9 +91,11 @@ class SrdEquipment(_Strict):
     name: str
     category: Literal["weapon", "armor", "gear", "consumable", "treasure", "misc"] = "misc"
     description: str = ""
-    cost: int | None = None          # in copper? no — gold pieces (advisory; soft economy §11)
+    cost: int | None = None          # gold pieces (advisory; real coin costs land in S3)
     weight: float | None = None      # lb
-    base_value: int | None = None    # advisory price hint (matches content.Item)
+    # Advisory price hint (matches content.Item): int = gp, str names its unit
+    # ("5 sp") — pack items project in here via the mechanics catalog.
+    base_value: int | str | None = None
     tags: list[str] = Field(default_factory=list)
     slot: str | None = None
     weapon: WeaponProfile | None = None

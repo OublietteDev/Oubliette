@@ -42,7 +42,7 @@ def test_plain_level_grants_hp_and_features():
     assert leveled.level == 2
     assert leveled.max_hp == 20 and leveled.hp == 20      # 12 + (avg d10 = 6 + CON 2)
     assert any(f.name == "Action Surge" for f in leveled.sheet.features)   # gained at L2
-    assert leveled.gold == 10 and leveled.item_qty("longsword") == 1       # protected state carried
+    assert leveled.coin == 10_00 and leveled.item_qty("longsword") == 1    # protected state carried
 
 
 def test_rolled_hp_uses_the_roll():

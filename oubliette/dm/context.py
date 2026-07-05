@@ -10,6 +10,7 @@ exposes internals the model shouldn't reason about as numbers it owns.
 from __future__ import annotations
 
 from ..canon.models import CanonRecord
+from ..coin import format_cp
 from ..enums import Ability, Skill
 from ..rules.derive import (class_resources, save_modifier, skill_modifier,
                             spell_attack_bonus, spell_save_dc, spell_slots)
@@ -167,7 +168,7 @@ def _reward_text(repo: Repository, reward) -> str:
         return ""
     bits: list[str] = []
     if reward.gold:
-        bits.append(f"{reward.gold}g")
+        bits.append(f"{reward.gold} gp" if isinstance(reward.gold, int) else str(reward.gold))
     if reward.item:
         try:
             name = repo.get_item(reward.item).name
@@ -192,12 +193,12 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
         item = repo.get_item(item_id)
-        worth = f", ~{item.base_value}g" if item.base_value else ""
+        worth = f", ~{format_cp(item.value_cp)}" if item.value_cp else ""
         return f"{qty}x {item.name} [id: {item_id}{worth}]"
 
     def _party_line(p) -> str:
         inv = ", ".join(_item_label(s.item_id, s.qty) for s in p.inventory) or "nothing"
-        return f"{p.name} (id: {p.id}) — {p.hp}/{p.max_hp} HP, {p.gold}g, {p.xp} XP; carrying {inv}."
+        return f"{p.name} (id: {p.id}) — {p.hp}/{p.max_hp} HP, {p.xp} XP; carrying {inv}."
 
     lines: list[str] = []
     if scene:
@@ -213,6 +214,9 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                      "call for whoever's check fits, and award XP/loot to each):")
         for p in party:
             lines.append(f"  - {_party_line(p)}")
+    # The party's money is ONE shared purse (coin ops on any PC land here).
+    lines.append(f"PARTY PURSE: {format_cp(repo.party_cp)} "
+                 "(shared — any hero spends from it; 1 gp = 10 sp = 100 cp).")
     # CS6: the mechanical 'card(s)' — who the PC(s) are in rules terms, so the DM
     # calls for the right checks/saves and narrates rules-aware (reference only).
     lines.extend(_character_cards(repo, ruleset))
@@ -233,11 +237,12 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
             stock = ""
             if n.price_list:
                 in_stock = {s.item_id for s in n.inventory if s.qty > 0}
-                items = [f"{repo.get_item(i).name} {p}g"
+                items = [f"{repo.get_item(i).name} {format_cp(p)}"
                          for i, p in list(n.price_list.items())[:8] if i in in_stock]
                 if items:
                     stock = "; sells " + ", ".join(items)
-            lines.append(f"  - {n.name} (id: {n.id}) — {note}; carries {n.gold}g{stock}.")
+            lines.append(f"  - {n.name} (id: {n.id}) — {note}; "
+                         f"carries {format_cp(n.coin)}{stock}.")
     # Where the party can travel from here (exits, sublocations, neighbours). The DM
     # moves them with the travel tool, naming the destination by id.
     dests = _reachable(location, places or {})

@@ -15,6 +15,7 @@ either server.)
 
 from __future__ import annotations
 
+from ..coin import format_cp
 from ..content.ruleset import Ruleset
 from ..enums import Ability, Skill
 from ..state.models import Character, CharacterSheet
@@ -144,7 +145,7 @@ def preview_payload(char: Character, items, rs: Ruleset) -> dict:
         "name": char.name,
         "abilities": {a.value: char.abilities.get(a, 10) for a in Ability},
         "max_hp": char.max_hp, "speed": char.sheet.speed, "size": char.sheet.size,
-        "gold": char.gold,
+        "coin_text": format_cp(char.coin),   # the hero's chargen grant (joins the party purse)
         "derived": derive.sheet_stats(char, rs, equipped_items),
         "inventory": [{"name": stack_label(rs, s), "qty": s.qty} for s in char.inventory],
         "equipped": [item_name(rs, i) for i in char.equipped],

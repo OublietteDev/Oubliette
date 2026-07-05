@@ -236,7 +236,9 @@ class Item(_Strict):
     name: str
     category: Literal["weapon", "armor", "gear", "consumable", "treasure", "misc"] = "misc"
     description: str = ""
-    base_value: int | None = None    # advisory price hint only (spec §11)
+    # Advisory price hint only (spec §11). A plain int means GOLD pieces (every
+    # existing pack stays right); a string names its unit: "5 sp", "3 cp", "1 gp 5 sp".
+    base_value: int | str | None = None
     tags: list[str] = Field(default_factory=list)
     slot: str | None = None          # equip slot: main_hand/off_hand/body/feet/...
     weapon: WeaponProfile | None = None
@@ -427,9 +429,10 @@ class NPC(_Strict):
     description: str = ""
     role: str = ""                   # "merchant", "quest_giver", ... (advisory)
     home_location: str | None = None  # -> Place id (where they're present)
-    gold: int = 0
+    gold: int | str = 0              # pocket money: int = gp, a string names its unit ("5 sp")
     inventory: list[InvEntry] = Field(default_factory=list)
-    price_list: dict[str, int] = Field(default_factory=dict)  # asking prices -> Item ids
+    # Asking prices by Item id. int = GOLD pieces; a string names its unit ("5 sp").
+    price_list: dict[str, int | str] = Field(default_factory=dict)
 
 
 # --- places (a graph; map-ready) ---------------------------------------------

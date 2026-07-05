@@ -80,7 +80,7 @@ def test_fighter_build_is_fully_derived():
     # gear: explorer's pack granted twice (class fixed + background) → qty 2
     assert char.item_qty("explorers_pack") == 2
     assert set(char.equipped) == {"chain_mail", "shield", "longsword"}
-    assert char.gold == 15
+    assert char.coin == 15_00      # acolyte's 15 gp grant, in copper
     # the granted SRD gear is handed back for catalog registration
     assert {it.id for it in items} == {"explorers_pack", "chain_mail", "longsword",
                                        "shield", "light_crossbow"}

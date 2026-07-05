@@ -293,13 +293,10 @@ class Session:
                                            "kind": "pc"})
             chars.append(char)
             items.extend(defs)
-        # Party gold is a shared purse (one shop, one driver). Pool every hero's
-        # starting gold — chargen grants and imported savings alike — onto the lead
-        # so none is stranded on a member the shop can't spend.
-        if len(chars) > 1:
-            chars[0].gold = sum(c.gold for c in chars)
-            for c in chars[1:]:
-                c.gold = 0
+        # Party money is the shared PURSE: at install the repository sweeps every
+        # hero's coin — chargen grants and imported savings alike — into party_cp.
+        # The payload keeps each hero's own grant (the sweep sums them identically
+        # on live apply and on replay).
         payload = {
             "characters": [c.model_dump(mode="json") for c in chars],
             "items": [it.model_dump(mode="json") for it in items],

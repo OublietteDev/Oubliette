@@ -599,8 +599,12 @@ class TurnLoop:
     def _ops_summary(ops) -> str:
         bits = []
         for o in ops:
-            if o.op == "gold":
-                bits.append(f"{o.char} {o.delta:+d}g")
+            if o.op == "coin":
+                from ..coin import format_cp
+                d = o.delta or 0
+                bits.append(f"{o.char} {'+' if d >= 0 else '-'}{format_cp(abs(d))}")
+            elif o.op == "gold":     # legacy op (pre-coin saves)
+                bits.append(f"{o.char} {o.delta:+d} gp")
             elif o.op == "item":
                 bits.append(f"{o.char} {o.delta:+d} {o.item_id}")
             elif o.op == "hp_set":

@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 
 from ..canon.models import CanonDraft
 from ..canon.store import CanonStore
+from ..coin import format_cp
 from ..record.events import StateOp
 from ..record.rng import dice_average
 from ..state.repository import Repository, StateError
@@ -219,9 +220,12 @@ class Dispatcher:
             char = self.repo.get_character(char_id)
         except StateError as e:
             raise ToolApplyError(str(e)) from e
-        need_gold = sum(e.gold for e in entries if e.gold is not None)
-        if char.gold < need_gold:
-            raise ToolApplyError(f"{char.name} cannot cover {need_gold}g (has {char.gold}g)")
+        need_cp = sum(e.money_cp() for e in entries)
+        if need_cp and self.repo.balance_cp(char_id) < need_cp:
+            holder = "the party purse" if char.kind == "pc" else char.name
+            raise ToolApplyError(
+                f"{holder} cannot cover {format_cp(need_cp)} "
+                f"(has {format_cp(self.repo.balance_cp(char_id))})")
         for e in entries:
             if e.item_id is not None:
                 item_id = self._canon_item(e.item_id)
@@ -239,14 +243,14 @@ class Dispatcher:
         return [self._debit_op(src, e), self._credit_op(dst, e)]
 
     def _debit_op(self, char_id: str, e: ValueEntry) -> StateOp:
-        if e.gold is not None:
-            return StateOp.gold(char_id, -e.gold)
+        if e.item_id is None:
+            return StateOp.coin(char_id, -e.money_cp())
         return StateOp.item(char_id, self._canon_item(e.item_id), -e.qty,
                             spell=e.spell, spell_level=e.spell_level)
 
     def _credit_op(self, char_id: str, e: ValueEntry) -> StateOp:
-        if e.gold is not None:
-            return StateOp.gold(char_id, e.gold)
+        if e.item_id is None:
+            return StateOp.coin(char_id, e.money_cp())
         self._check_scroll_level(e)
         return StateOp.item(char_id, self._canon_item(e.item_id), e.qty,
                             spell=e.spell, spell_level=e.spell_level)

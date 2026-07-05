@@ -52,7 +52,7 @@ class StateOp(BaseModel):
     """One atomic, replayable change to protected state. Deltas are commutative;
     `hp_set`/`conditions` are absolute (D7)."""
 
-    op: Literal["gold", "item", "hp_set", "xp", "conditions", "equip",
+    op: Literal["coin", "gold", "item", "hp_set", "xp", "conditions", "equip",
                 "slots_used", "hit_dice_used", "resources_used", "max_hp", "level",
                 "portrait", "spells_prepared"]
     char: str
@@ -69,8 +69,11 @@ class StateOp(BaseModel):
 
     # --- typed constructors ---------------------------------------------------
     @classmethod
-    def gold(cls, char: str, delta: int) -> "StateOp":
-        return cls(op="gold", char=char, delta=delta)
+    def coin(cls, char: str, delta_cp: int) -> "StateOp":
+        """Money delta in COPPER. (The legacy 'gold' op — deltas in gp from
+        pre-coin saves — is still applied on replay, scaled ×100; new events
+        always record 'coin'.)"""
+        return cls(op="coin", char=char, delta=delta_cp)
 
     @classmethod
     def item(cls, char: str, item_id: str, delta: int, spell: str | None = None,
@@ -123,8 +126,10 @@ class StateOp(BaseModel):
         return cls(op="spells_prepared", char=char, spells=list(spells))
 
     def apply(self, repo: "Repository") -> None:
-        if self.op == "gold":
-            repo.adjust_gold(self.char, self.delta or 0)
+        if self.op == "coin":
+            repo.adjust_coin(self.char, self.delta or 0)
+        elif self.op == "gold":     # legacy op (pre-coin saves): delta is GOLD pieces
+            repo.adjust_coin(self.char, (self.delta or 0) * 100)
         elif self.op == "item":
             d = self.delta or 0
             if d > 0:

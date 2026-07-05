@@ -127,8 +127,8 @@ def result_to_ops(result: CombatResult) -> list[StateOp]:
     if result.xp_award:
         ops.append(StateOp.xp("pc", result.xp_award))
     for entry in result.loot:
-        if entry.gold is not None:
-            ops.append(StateOp.gold("pc", entry.gold))
+        if entry.item_id is None:
+            ops.append(StateOp.coin("pc", entry.money_cp()))
         else:
             ops.append(StateOp.item("pc", entry.item_id, entry.qty))
     # Consumables spent in the Arena (B1): debit each drinker's own stack. Safe by
@@ -150,7 +150,8 @@ def result_to_ops(result: CombatResult) -> list[StateOp]:
 
 
 def loot_str(loot: list[ValueEntry]) -> str:
+    from ..coin import format_cp
     parts = []
     for e in loot:
-        parts.append(f"{e.gold}g" if e.gold is not None else f"{e.qty}x {e.item_id}")
+        parts.append(format_cp(e.money_cp()) if e.item_id is None else f"{e.qty}x {e.item_id}")
     return ", ".join(parts)

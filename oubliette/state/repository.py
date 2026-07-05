@@ -1,15 +1,21 @@
 """The repository: the only writer of protected state.
 
 `Repository` is a Protocol so Phase 2 can drop in a SQLite-backed implementation
-behind the same seam (decision D1). The protected mutators (`adjust_gold`,
+behind the same seam (decision D1). The protected mutators (`adjust_coin`,
 `add_item`, `remove_item`) raise on an illegal change rather than silently
 clamping — the dispatcher turns those raises into the retry path (D6).
+
+MONEY: one shared PARTY PURSE (`party_cp`, in copper). Any coin op that targets
+a PC routes to the purse — the party spends and earns as one — while each NPC
+keeps their own pocket (`Character.coin`, a merchant's buyback cap). PC wallets
+are swept into the purse at install, so no gold strands on a party member.
 """
 
 from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
+from ..coin import format_cp as _fmt
 from .models import Character, Item, ItemStack
 
 
@@ -40,8 +46,12 @@ class Repository(Protocol):
     def set_portrait(self, char_id: str, filename: str | None) -> None: ...
     def set_spells_prepared(self, char_id: str, spells: list[str]) -> None: ...
 
+    # --- money (party purse + NPC pockets, in copper) ---
+    party_cp: int
+    def balance_cp(self, char_id: str) -> int: ...
+
     # --- protected mutators (dispatcher- and combat-boundary-only) ---
-    def adjust_gold(self, char_id: str, delta: int) -> None: ...
+    def adjust_coin(self, char_id: str, delta_cp: int) -> None: ...
     def add_item(self, char_id: str, item_id: str, qty: int, spell: str | None = None,
                  spell_level: int | None = None) -> None: ...
     def remove_item(self, char_id: str, item_id: str, qty: int, spell: str | None = None,
@@ -57,6 +67,9 @@ class InMemoryRepository:
     def __init__(self, characters: list[Character], items: list[Item], pc_id: str):
         self._chars: dict[str, Character] = {c.id: c for c in characters}
         self._items: dict[str, Item] = {i.id: i for i in items}
+        # The shared party purse (copper). Seeded by sweeping every PC's coin.
+        self.party_cp: int = 0
+        self._sweep_pc_coin()
         # The global SRD equipment catalog, attached at session open. A second-tier
         # lookup so the DM can `give`/reference ANY SRD item, while the lean campaign
         # catalog (`_items`) keeps PRECEDENCE — exact names and short abbreviations still
@@ -121,14 +134,36 @@ class InMemoryRepository:
                 return hits[0]
         return None
 
-    # --- protected mutators ---------------------------------------------------
-    def adjust_gold(self, char_id: str, delta: int) -> None:
+    # --- money (party purse + NPC pockets) -------------------------------------
+    def _sweep_pc_coin(self) -> None:
+        """Pool every PC's coin into the shared purse (one shop, one wallet) so
+        none strands on a member. Runs at construction and (re)install; legacy
+        saves whose payloads pooled gold on the lead sum to the same purse."""
+        for c in self._chars.values():
+            if c.kind == "pc" and c.coin:
+                self.party_cp += c.coin
+                c.coin = 0
+
+    def balance_cp(self, char_id: str) -> int:
+        """What this character can spend: the party purse for a PC, their own
+        pocket for an NPC."""
         c = self.get_character(char_id)
-        if c.gold + delta < 0:
-            raise StateError(
-                f"{c.name} cannot afford this: has {c.gold}g, needs {-delta}g"
-            )
-        c.gold += delta
+        return self.party_cp if c.kind == "pc" else c.coin
+
+    # --- protected mutators ---------------------------------------------------
+    def adjust_coin(self, char_id: str, delta_cp: int) -> None:
+        c = self.get_character(char_id)
+        if c.kind == "pc":
+            if self.party_cp + delta_cp < 0:
+                raise StateError(
+                    f"the party cannot afford this: purse holds {_fmt(self.party_cp)}, "
+                    f"needs {_fmt(-delta_cp)}")
+            self.party_cp += delta_cp
+        else:
+            if c.coin + delta_cp < 0:
+                raise StateError(
+                    f"{c.name} cannot afford this: has {_fmt(c.coin)}, needs {_fmt(-delta_cp)}")
+            c.coin += delta_cp
 
     def add_item(self, char_id: str, item_id: str, qty: int, spell: str | None = None,
                  spell_level: int | None = None) -> None:
@@ -196,6 +231,10 @@ class InMemoryRepository:
             self._chars[c.id] = c
         if chars:
             self._pc_id = chars[0].id
+        # A fresh party starts a fresh purse: their chargen/imported coin IS the
+        # party's money (the stopgap default party it replaces is discarded).
+        self.party_cp = 0
+        self._sweep_pc_coin()
 
     def install_pc(self, char: Character) -> None:
         """Replace the whole party with a single chargen-built PC (the one-character
@@ -205,8 +244,13 @@ class InMemoryRepository:
     def replace_character(self, char: Character) -> None:
         """Swap ONE character in place (level-up: CHARACTER_LEVELED), preserving the
         rest of the party and the lead-PC pointer. The character is stored whole, never
-        re-derived (D9)."""
+        re-derived (D9). Coin riding the snapshot is DISCARDED for a PC, not swept:
+        money is purse state the op history already tracks — a legacy level-up
+        payload carries the lead's then-pooled gold, and adding it would double the
+        purse on every replay."""
         self._chars[char.id] = char
+        if char.kind == "pc":
+            char.coin = 0
 
     # --- rest / level-up trackers (CS5; absolute writes, D7) ------------------
     def set_slots_used(self, char_id: str, mapping: dict) -> None:
