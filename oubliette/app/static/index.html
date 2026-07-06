@@ -2080,6 +2080,12 @@ function renderRaceAbilityChoices() {
   const r = cgRace(), asc = r.ability_score_choices;
   if (!asc || !asc.choose) return null;
   const sec = secEl(`${r.name} ability increase — choose ${asc.choose} (+${asc.amount} each)`);
+  // Say WHY an ability is missing from the picker: the fixed racial bonus is
+  // automatic (a Half-Elf's CHA +2), and the picks raise OTHER abilities.
+  const fixed = Object.entries(r.ability_increases || {})
+    .map(([a, n]) => `${a.toUpperCase()} +${n}`).join(", ");
+  if (fixed) sec.appendChild(el("div", "cg-hint",
+    `${fixed} comes automatically with ${r.name} — your picks here raise ${asc.choose} of the other abilities.`));
   const checks = el("div", "cg-checks");
   cgOpt.abilities.forEach(a => {
     if (r.ability_increases[a]) return;          // "two OTHER abilities" — fixed ones excluded
