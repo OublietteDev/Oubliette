@@ -30,6 +30,7 @@ Unordered, and gated on demand. The big themes:
 - **Persistent NPC companions** you can recruit and level over a campaign (today allies join fight-by-fight).
 
 ### Rules & engine
+- **Difficulty & challenge settings** — decide how dangerous your world feels. Set a cap or floor on the challenge rating of encounters the AI improvises, let Forge quests declare a minimum party level ("starts at party level 3+"), and give the DM a clear read on the party's true strength when it sizes up a fight. Pairs naturally with keyed encounters to shape a campaign's arc. Also home to an optional hardcore mode: if the whole party falls, the DM narrates the end of the story, writes the campaign's final chapter, and says goodbye — that save is over for real.
 - **House rules per world** — variant initiative, custom conditions, and other table tweaks.
 - **Attunement enforcement** — the 3-item limit and attune-on-rest ritual (the flag is already tracked).
 - **Arena test beds** - add the ability to preview spells, custom attack animations, or run simulations using existing combat AI to balance custom monsters and classes.
