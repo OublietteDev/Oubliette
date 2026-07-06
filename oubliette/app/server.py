@@ -541,6 +541,15 @@ async def get_debug_log(tail: int = 200) -> JSONResponse:
     return JSONResponse({"entries": safe})
 
 
+@app.get("/api/debug/context")
+async def get_debug_context() -> JSONResponse:
+    """A dev window into the EXACT context string the DM is handed this turn —
+    the party card, encounter budget, rest rules, and the quests it can see.
+    Use it to confirm a level-gated quest is genuinely invisible until the party
+    qualifies (it won't appear anywhere in this text). Read-only."""
+    return JSONResponse({"context": GAME.loop._build_context("")})
+
+
 @app.get("/api/difficulty")
 async def get_difficulty() -> JSONResponse:
     """This campaign's difficulty settings + the presets (blurbs and the dial

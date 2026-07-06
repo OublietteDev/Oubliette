@@ -3635,6 +3635,7 @@ function questForm(q) {
           <input type="checkbox" id="f_root" ${v.root ? "checked" : ""} style="width:auto; flex:none; margin:0" />
           A starting quest (available from the beginning)
         </label>
+        ${field("Starts at party level", `<input id="f_minlvl" type="number" min="1" max="20" value="${v.min_party_level ?? ""}" placeholder="any" />`, "Optional gate: the quest stays hidden — the DM never even sees it — until the party reaches this level. Leave blank for no requirement.")}
         ${field("Arc name (optional)", `<input id="f_chain" value="${esc(v.chain || "")}" placeholder="The Smuggler's Trail" />`, "Just a label to group the parts of one story arc.")}
         <div class="sftitle" style="margin-top:10px">Leads on to…</div>
         <div id="branchList"></div>
@@ -3708,6 +3709,8 @@ function confirmQuest(original) {
   if (note) reward.note = note;
   if (Object.keys(reward).length) base.reward = reward; else delete base.reward;
   if (document.getElementById("f_root").checked) base.root = true; else delete base.root;
+  const minlvl = document.getElementById("f_minlvl").value;
+  if (minlvl !== "" && Number(minlvl) > 1) base.min_party_level = Number(minlvl); else delete base.min_party_level;
   setOrDel("chain", document.getElementById("f_chain").value.trim());
   if (branches.length) base.branches = branches.map(b => ({ outcome: b.outcome.trim(), to: b.to }));
   else delete base.branches;

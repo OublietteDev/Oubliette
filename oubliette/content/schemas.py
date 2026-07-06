@@ -576,6 +576,10 @@ class AuthoredQuest(_Strict):
     reward: QuestReward | None = None
     chain: str = ""                  # optional grouping/label for an arc (Forge display only)
     root: bool = False               # offerable from the start (no prior quest needed to unlock)
+    min_party_level: int | None = None  # gate: hidden until the party reaches this level
+                                     # ("starts at party level 3+"); None = no gate. The DM
+                                     # never sees a gated quest until the party qualifies, so
+                                     # it can't leak it early and the context stays lean (S2).
     branches: list[QuestBranch] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
 

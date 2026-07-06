@@ -52,13 +52,19 @@ def started_authored_ids(quests) -> set[str]:
     return {q.authored_id for q in quests.all() if q.authored_id}
 
 
-def offerable_ids(authored: dict, events: list[Event], quests) -> set[str]:
+def offerable_ids(authored: dict, events: list[Event], quests,
+                  party_level: int = 1) -> set[str]:
     """The authored quest ids currently available to take up: roots plus branch-unlocked
-    nodes, minus anything already started. Chain-eligibility only — NOT yet location-gated.
+    nodes, minus anything already started, minus anything the party is too low-level for.
+    Chain-eligibility only — NOT yet location-gated.
 
     A quest with a SINGLE branch is a linear step — it advances on completion with no
     outcome needed (the lone next quest is unambiguous). Only a genuine FORK (>1 branch)
-    requires the DM to report which outcome occurred."""
+    requires the DM to report which outcome occurred.
+
+    A quest's `min_party_level` HIDES it until `party_level` reaches it (difficulty S2):
+    the gate applies to roots and unlocked nodes alike, so a chain can hold a step back
+    until the party has grown into it."""
     started = started_authored_ids(quests)
     outcomes = completed_outcomes(events)
     unlocked: set[str] = set()
@@ -73,7 +79,12 @@ def offerable_ids(authored: dict, events: list[Event], quests) -> set[str]:
                 if b.outcome == outcome:
                     unlocked.add(b.to)
     eligible = {qid for qid, q in authored.items() if q.root} | unlocked
-    return {qid for qid in eligible if qid in authored and qid not in started}
+
+    def _level_ok(q) -> bool:
+        return q.min_party_level is None or party_level >= q.min_party_level
+
+    return {qid for qid in eligible
+            if qid in authored and qid not in started and _level_ok(authored[qid])}
 
 
 def offered_here(eligible: set[str], authored: dict, location: str | None,

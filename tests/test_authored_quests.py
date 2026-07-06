@@ -56,6 +56,33 @@ def test_reward_at_most_one_of_gold_item():
         QuestReward(gold=0)                                            # non-positive
 
 
+# --- level gate (difficulty S2) ---------------------------------------------
+def test_min_party_level_hides_a_quest_until_the_party_qualifies():
+    from oubliette.quest.store import QuestStore
+
+    authored = {
+        "easy": AuthoredQuest(id="easy", title="Rats in the Cellar", hook="clear them",
+                              giver_npc="innkeep", root=True),
+        "hard": AuthoredQuest(id="hard", title="The Lich's Vault", hook="dare it",
+                              giver_npc="sage", root=True, min_party_level=5),
+    }
+    events, quests = [], QuestStore()
+
+    # A level-1 party sees only the ungated quest — the gated one is invisible.
+    assert offers.offerable_ids(authored, events, quests, party_level=1) == {"easy"}
+    # Still hidden just below the threshold...
+    assert offers.offerable_ids(authored, events, quests, party_level=4) == {"easy"}
+    # ...and it opens exactly at the gate.
+    assert offers.offerable_ids(authored, events, quests, party_level=5) == {"easy", "hard"}
+    # Default party_level (1) keeps a gated quest hidden — safe for any caller.
+    assert offers.offerable_ids(authored, events, quests) == {"easy"}
+
+
+def test_min_party_level_defaults_to_no_gate():
+    q = AuthoredQuest(id="q1", title="A Favor", hook="help", giver_npc="bromley")
+    assert q.min_party_level is None
+
+
 # --- chains / branches assemble ---------------------------------------------
 def test_branching_quest_assembles():
     q = AuthoredQuest(

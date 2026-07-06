@@ -187,7 +187,11 @@ class TurnLoop:
         authored = self.session.authored_quests
         if not authored:
             return authored, set(), set()
-        eligible = offers.offerable_ids(authored, self.session.store.read_all(), self.session.quests)
+        # Level-gate (difficulty S2): the strongest hero's level opens a quest's
+        # min_party_level door — gated quests stay invisible to the DM until then.
+        party_level = max((c.level for c in self.repo.party()), default=1)
+        eligible = offers.offerable_ids(authored, self.session.store.read_all(),
+                                        self.session.quests, party_level=party_level)
         loc = self.session.location
         present = {n.id for n in self.repo.npcs() if loc is None or n.home_location == loc}
         return authored, eligible, offers.offered_here(eligible, authored, loc, present)

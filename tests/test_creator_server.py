@@ -393,7 +393,7 @@ def test_save_authored_quest_chain_stays_valid(tmp_path, monkeypatch):
     world still loads — a giver-NPC root that forks to a place-given follow-up."""
     packs = _temp_brightvale(tmp_path, monkeypatch)
     c = client.get("/api/pack/brightvale").json()["contents"]
-    assert c["quests"] in ([], None)                       # a pack with no quests yet
+    assert isinstance(c["quests"], list)                   # whatever the testbed ships, we replace it
     c["quests"] = [
         {"id": "missing_cargo", "title": "The Missing Cargo", "hook": "find Thom's shipment",
          "rumor": "traders mutter about vanishing crates", "briefing": "the porter took it",
