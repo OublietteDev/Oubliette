@@ -1290,6 +1290,7 @@ $("trade-haggle").addEventListener("click", doHaggle);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeInventory(); closeWorldMap(); closeMenu(); } });
 
 let gameEnded = false;          // set when the DM ends the session (locks the composer)
+let restStrictness = "free";    // the table's long-rest gating (S3), from state snapshots
 let combatPending = false;      // a tactical fight is staged, awaiting "Enter the Arena" (Stage 3c)
 function envLabel(t, w) {
   const ti = { day: "☀️ Day", night: "🌙 Night" }[t] || "";
@@ -1365,6 +1366,9 @@ function renderState(s) {
     gameEnded = true;
     addMessage("System", "— The Phantom has closed the table. This session has ended; start a New Game to play again. —", "system");
   }
+  // Rest gating (S3): remember the table's strictness so the sheet's Long Rest
+  // button knows whether to rest directly or ask the DM in the story.
+  restStrictness = s.rest_strictness || "free";
   // A staged fight locks the composer and surfaces the Enter-the-Arena bar; it
   // clears once the fight resolves (the post-combat state has combat_pending false).
   combatPending = !!s.combat_pending;
@@ -3438,7 +3442,19 @@ function renderRestBar(m) {
   const shortBtn = el("button", "act", "Short Rest");
   shortBtn.addEventListener("click", openShortRest);
   const longBtn = el("button", "act primary", "Long Rest");
-  longBtn.addEventListener("click", () => doRestParty("long", null));
+  longBtn.addEventListener("click", () => {
+    if (restStrictness !== "free") {
+      // Gated table (S3): resting is asked for in the story — the DM offers it
+      // (the rest bar) when the fiction permits, and that offer opens the rest.
+      closeSheet();
+      send("We find somewhere to settle in for the night and rest.");
+      return;
+    }
+    doRestParty("long", null);
+  });
+  longBtn.title = restStrictness !== "free"
+    ? "This table gates long rests — this asks the DM in the story"
+    : "Rest through the night: full HP, spell slots, and resources";
   bar.appendChild(shortBtn); bar.appendChild(longBtn);
   if (m.has_sheet) {
     const ready = m.xp_progress && m.xp_progress.ready;
@@ -3492,12 +3508,17 @@ async function doRestParty(kind, hitDiceBy) {
       body: JSON.stringify({ kind, hit_dice_by: hitDiceBy || null }),
     });
     const data = await res.json();
-    if (!data.ok) { addMessage("System", "Rest failed: " + (data.error || "unknown"), "system"); return; }
+    if (!data.ok) { addMessage("System", data.message || ("Rest failed: " + (data.error || "unknown")), "system"); return; }
     renderSheet({ party: data.party });
     if (data.state) renderState(data.state);
     const who = (data.party || []).length > 1 ? "The party" : "You";
-    addMessage("System", kind === "long" ? `${who} take a long rest and wake restored.`
-                                         : `${who} take a short rest.`, "system");
+    const cost = data.cost ? ` (The night cost ${data.cost}.)` : "";
+    addMessage("System",
+      kind === "long"
+        ? (data.interrupted
+            ? `The night breaks — something disturbs the camp. ${who} wake with only a fitful doze's worth of recovery.${cost} Tell the DM what you do.`
+            : `${who} take a long rest and wake restored.${cost}`)
+        : `${who} take a short rest.`, "system");
   } catch (e) { /* transient */ }
 }
 function featRow(it) {

@@ -26,6 +26,7 @@ from ..quest import offers
 from ..record.log import DebugLog
 from ..record.rng import Rng, RollOutcome
 from ..rules.checks import resolve_check
+from ..rules.rest import rest_interrupted_recently
 from ..schemas import Intent, RollRequest, TurnAssessment
 from ..state.repository import StateError
 from ..table import render_table_prompt
@@ -117,9 +118,15 @@ class TurnLoop:
             ruleset=self.session.ruleset,
             authored_quests=authored, offerable=eligible, offered_here=here,
             past_notes=past_notes, notebook=notebook_notes(events),
-            difficulty=getattr(self.session, "difficulty", DEFAULT_DIFFICULTY))
+            difficulty=getattr(self.session, "difficulty", DEFAULT_DIFFICULTY),
+            rest_interrupted=rest_interrupted_recently(events))
 
     async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
+        # A new in-character turn moves the fiction on: any standing rest grant
+        # (S3) expires — the DM's "you may rest now" was for THAT moment, not a
+        # coupon. Out-of-character table-talk leaves the offer standing.
+        if not ooc:
+            self.session.pending_rest = None
         context = self._build_context(player_text)
         # `ooc` is the player's explicit "out-of-character" signal (the composer
         # toggle). When set, the turn is table-talk — no model guessing, no combat
@@ -329,13 +336,17 @@ class TurnLoop:
             narration = self._narrate_applied(applied)
 
         self.debug.append("narration", text=narration)
+        rest_pending = next((rt.rest_proposed for rt in applied
+                             if rt.rest_proposed is not None), None)
+        if rest_pending is not None:
+            # The DM's grant (S3): on a gated table this is what opens /api/rest.
+            self.session.pending_rest = rest_pending
         return TurnReport(
             player_text=player_text, assessment=assessment, narration=narration,
             roll_outcome=roll_outcome, roll_result=roll_result, applied=applied,
             meta_notice=meta_notice,
             wrap_pending=any(rt.wrap_proposed for rt in applied),
-            rest_pending=next((rt.rest_proposed for rt in applied
-                               if rt.rest_proposed is not None), None),
+            rest_pending=rest_pending,
             session_force_ended=any(rt.force_end_session for rt in applied),
         )
 

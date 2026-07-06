@@ -433,7 +433,9 @@ def test_sheet_degrades_for_a_quickstart_hero():
 def test_rest_endpoint_restores_after_short_rest_hit_dice():
     # a level-1 fighter has one d10 hit die; spending it on a short rest marks it used,
     # a long rest gives it back
-    client.post("/api/new", json={"pack_id": "brightvale", "build": _FIGHTER_BUILD})
+    # A Story table: long rests stay one-click (the S3 gate is its own test file).
+    client.post("/api/new", json={"pack_id": "brightvale", "build": _FIGHTER_BUILD,
+                                  "difficulty": {"preset": "story"}})
     d = client.post("/api/rest", json={"kind": "short", "hit_dice": 1}).json()
     assert d["ok"] and d["party"][0]["hit_dice_used"] == 1
     d2 = client.post("/api/rest", json={"kind": "long"}).json()

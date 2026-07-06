@@ -1418,6 +1418,8 @@ function placeForm(pl) {
       ${field(req("Scene description"), `<textarea id="f_desc" placeholder="What players read when they arrive here.">${esc(v.description || "")}</textarea>`,
               "This is the opening scene whenever the party is here.")}
       ${field("Tags", `<input id="f_tags" value="${esc((v.tags || []).join(", "))}" placeholder="town, safe" />`)}
+      ${field("Safe haven", `<label class="chk" style="display:inline-flex"><input type="checkbox" id="f_safe"${v.safe_haven ? " checked" : ""}> A truly safe place to sleep</label>`,
+              "An inn, a temple, a guarded home. On stricter difficulty settings, a night here costs lodging coin and is never interrupted — anywhere else is wilderness rules (rations, and risk at the harshest settings).")}
       <div class="subform">
         <div class="sftitle">Ways out (exits)</div>
         <div id="exitList"></div>
@@ -1814,6 +1816,7 @@ function confirmPlace(original) {
   if (editorCtx.image) base.image = editorCtx.image; else delete base.image;
   const tags = csv(document.getElementById("f_tags").value);
   if (tags.length) base.tags = tags; else delete base.tags;
+  if (document.getElementById("f_safe").checked) base.safe_haven = true; else delete base.safe_haven;
   if (exits.length) base.exits = exits.map(e => e.label ? { to: e.to, label: e.label } : { to: e.to });
   else delete base.exits;
   if (sounds.length) base.sounds = sounds.map(cleanCue); else delete base.sounds;

@@ -123,7 +123,8 @@ def test_api_new_with_builds_creates_a_full_party():
 
 
 def _start_party():
-    client.post("/api/new", json={"builds": [
+    # A Story table: long rests stay one-click (the S3 gate is its own test file).
+    client.post("/api/new", json={"difficulty": {"preset": "story"}, "builds": [
         _fighter("Bron").model_dump(mode="json"),
         _fighter("Sera", _HIGH_CHA).model_dump(mode="json")]})
     for c in GAME.session.repo.party():   # wound everyone so recovery is observable

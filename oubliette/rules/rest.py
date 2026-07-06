@@ -20,6 +20,22 @@ from ..record.events import StateOp, EventKind
 from . import derive
 
 
+def rest_interrupted_recently(events) -> bool:
+    """Whether the party's latest rest was an INTERRUPTED night (S3) the DM
+    hasn't yet had a turn to weave in — true iff the most recent REST_TAKEN
+    carries interrupted=True and is more recent than the last in-character
+    player message. Same replay-stable derivation as the reprepare window."""
+    last_rest_seq, last_interrupted = -1, False
+    last_msg = -1
+    for e in events:
+        if e.kind == EventKind.REST_TAKEN.value and e.seq > last_rest_seq:
+            last_rest_seq = e.seq
+            last_interrupted = bool(e.payload.get("interrupted"))
+        elif e.kind == EventKind.PLAYER_MESSAGE.value:
+            last_msg = max(last_msg, e.seq)
+    return last_interrupted and last_rest_seq > last_msg
+
+
 def reprepare_window_open(events) -> bool:
     """Whether prepared casters may currently re-prepare their spells (C5).
 

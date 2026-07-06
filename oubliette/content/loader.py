@@ -63,6 +63,7 @@ class PlaceNode:
     sounds: tuple = ()           # soundscape cues (AudioCue dicts) — the location's audio
     battle: "BattleMap | None" = None  # authored battlefield (location-battles arc) —
                                  # the combat bridge reads it when a fight starts here
+    safe_haven: bool = False     # a safe overnight spot (rest gating, difficulty S3)
 
 
 @dataclass
@@ -528,7 +529,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
                                    parent=p.parent, exits=tuple(e.to for e in p.exits),
                                    image=p.image, map_image=p.map_image, position=p.position,
                                    sounds=tuple(c.model_dump() for c in p.sounds),
-                                   battle=p.battle)
+                                   battle=p.battle, safe_haven=p.safe_haven)
                    for p in places}
 
     # The session plays with a PACK-MERGED ruleset (module-kit S2/S3): the

@@ -41,8 +41,15 @@ def _sc():
     return client.get("/api/sheet").json()["party"][0]["spellcasting"]
 
 
+def _new_story_game(**extra) -> dict:
+    """A Story-table game: long rests stay one-click here (the S3 gate has its
+    own test file); these tests are about the re-prepare window."""
+    return client.post("/api/new",
+                       json={"difficulty": {"preset": "story"}, **extra}).json()
+
+
 def test_reprepare_flow_through_the_app():
-    assert client.post("/api/new", json={"builds": [_wizard()]}).json()["ok"]
+    assert _new_story_game(builds=[_wizard()])["ok"]
 
     # Before any long rest the window is shut.
     sc = _sc()
@@ -69,7 +76,7 @@ def test_reprepare_flow_through_the_app():
 
 
 def test_firewall_rejects_bad_picks():
-    assert client.post("/api/new", json={"builds": [_wizard()]}).json()["ok"]
+    assert _new_story_game(builds=[_wizard()])["ok"]
     client.post("/api/rest", json={"kind": "long"})
     count = _sc()["prepared_count"]
 
@@ -85,7 +92,7 @@ def test_firewall_rejects_bad_picks():
 
 
 def test_window_shut_rejects_without_long_rest():
-    assert client.post("/api/new", json={"builds": [_wizard()]}).json()["ok"]
+    assert _new_story_game(builds=[_wizard()])["ok"]
     # No long rest taken → endpoint refuses regardless of a valid pick.
     pool = [s["id"] for s in _sc()["prepare_pool"]]
     count = _sc()["prepared_count"]

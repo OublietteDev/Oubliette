@@ -36,6 +36,7 @@ from ..rules import derive
 from ..rules.chargen_view import chargen_options, preview_payload
 from ..rules.chargen import CharacterBuild, ChargenError, build_character
 from ..rules.rest import long_rest_ops, short_rest_ops, reprepare_window_open
+from ..rules.rest_gate import RestGateError, long_rest_cost, roll_interruption
 from ..rules.levelup import (LevelUpChoice, LevelUpError, level_up, level_up_plan,
                             xp_progress)
 from ..runtime.loop import TurnLoop
@@ -181,6 +182,9 @@ def _snapshot() -> dict:
         "combat_pending": GAME.session.pending_combat is not None,
         "time_of_day": GAME.session.time_of_day,
         "weather": GAME.session.weather,
+        # Rest gating (S3): the UI's Long Rest button routes through the story
+        # on a gated table; "free" keeps the direct one-click rest.
+        "rest_strictness": GAME.session.difficulty.rest_strictness,
         "pc": _pc_view(pc),                          # the lead PC (back-compat)
         "party": [_pc_view(c) for c in repo.party()],  # the whole roster (HUD)
         # The party's shared money (copper + a preformatted display string).
@@ -1465,24 +1469,61 @@ async def post_rest(body: RestIn) -> JSONResponse:
     as one REST_TAKEN event carrying each member's recovery ops. Short-rest hit-die
     healing is individual, so only the member whose sheet was used (`char_id`) spends
     the entered dice; the rest of the party still takes the short rest (features
-    recharge) with 0 dice. Hit-die rolls go through the seeded RNG."""
+    recharge) with 0 dice. Hit-die rolls go through the seeded RNG.
+
+    The S3 gate (difficulty): on a gated table a LONG rest needs the DM's standing
+    grant (propose_rest) and costs the night — lodging coin in a safe haven, a
+    ration per hero in the wild (the cost ops ride the same REST_TAKEN event). On
+    a 'dangerous' table an unsafe night may be INTERRUPTED: the party gets only a
+    short rest's recovery (the night's cost is still spent). Short rests are
+    never gated."""
     async with GAME.lock:
         rs = _ruleset()
         if body.kind not in ("short", "long"):
             return JSONResponse({"ok": False, "error": "rest kind must be 'short' or 'long'"}, status_code=400)
+        cost_ops: list = []
+        cost_desc: str | None = None
+        interrupted = False
+        gated = (body.kind == "long"
+                 and GAME.session.difficulty.rest_strictness != "free")
+        if gated:
+            if GAME.session.pending_rest != "long":
+                return JSONResponse({"ok": False, "error": "gated",
+                                     "message": "This table gates long rests — ask to make "
+                                     "camp in the story, and rest when the DM offers it."},
+                                    status_code=409)
+            place = (GAME.session.places.get(GAME.session.location)
+                     if GAME.session.location else None)
+            safe = bool(getattr(place, "safe_haven", False))
+            try:
+                cost_ops, cost_desc = long_rest_cost(GAME.session.repo, safe)
+            except RestGateError as e:
+                return JSONResponse({"ok": False, "error": "cost", "message": str(e)},
+                                    status_code=409)
+            if GAME.session.difficulty.rest_strictness == "dangerous" and not safe:
+                interrupted = roll_interruption(GAME.rng)
+        # An interrupted long rest grants a short rest's recovery AT BEST — no
+        # healing, no slots, no hit dice spent; the night's cost is still paid.
+        effective = "short" if (body.kind == "long" and interrupted) else body.kind
         ops: list = []
         for char in GAME.session.repo.party():
-            if body.kind == "long":
+            if effective == "long":
                 ops += long_rest_ops(char, rs)
+            elif body.kind == "long":                   # interrupted night
+                ops += short_rest_ops(char, rs, spend_hit_dice=0)
             else:
                 if body.hit_dice_by is not None:        # per-member spend (party popup)
                     hd = max(0, body.hit_dice_by.get(char.id, 0))
                 else:                                   # legacy: only the named member spends
                     hd = max(0, body.hit_dice) if char.id == body.char_id else 0
                 ops += short_rest_ops(char, rs, spend_hit_dice=hd, rng=GAME.rng)
-        GAME.session.emit_state(EventKind.REST_TAKEN, ops, rest=body.kind)
+        GAME.session.emit_state(EventKind.REST_TAKEN, ops + cost_ops, rest=effective,
+                                interrupted=interrupted, cost=cost_desc)
+        if gated:
+            GAME.session.pending_rest = None            # the grant is spent
         return JSONResponse({"ok": True, "party": [_sheet_member(c, rs) for c in GAME.session.repo.party()],
-                             "state": _snapshot()})
+                             "state": _snapshot(), "interrupted": interrupted,
+                             "cost": cost_desc})
 
 
 class PrepareSpellsIn(BaseModel):

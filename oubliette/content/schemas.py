@@ -506,6 +506,10 @@ class Place(_Strict):
     position: dict | None = None     # {x,y} percent — this place's PIN on its parent's map
     sounds: list[AudioCue] = Field(default_factory=list)      # the place's soundscape cues
     battle: BattleMap | None = None  # what a fight HERE looks/sounds like (Arena)
+    safe_haven: bool = False         # a truly safe overnight spot (an inn, a temple):
+                                     # long rests here cost lodging coin and are never
+                                     # interrupted; unflagged places follow wilderness
+                                     # rules — rations, and risk on dangerous tables (S3)
 
 
 # --- lore (authored world history/legend the DM can draw on) ----------------

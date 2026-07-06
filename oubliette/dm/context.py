@@ -189,7 +189,7 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   pending_rewards: list | None = None,
                   past_notes: list[str] | None = None,
                   notebook: list[str] | None = None,
-                  difficulty=None) -> str:
+                  difficulty=None, rest_interrupted: bool = False) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -234,6 +234,27 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
             strength += (" Keep fights AT or NEAR the party's weight — save trivial "
                          "encounters for when the fiction truly calls for one.")
         lines.append(strength)
+        # Difficulty S3: long rests are gated — the DM is the door.
+        if difficulty.rest_strictness != "free":
+            rest_rule = (
+                "LONG RESTS (table rule): gated — the party cannot simply sleep. A long "
+                "rest happens ONLY when you offer it with propose_rest; when the player "
+                "asks to rest, grant it if the fiction permits (a safe room, a quiet camp, "
+                "no pursuit, night hours) and refuse in the fiction otherwise, saying why. "
+                "A granted night costs the party lodging coin in a safe haven or a ration "
+                "per hero in the wild — code settles the bill; never charge it yourself. "
+                "Short rests need no grant.")
+            if difficulty.rest_strictness == "dangerous":
+                rest_rule += (" Camps outside a safe haven may be INTERRUPTED in the "
+                              "night — code rolls it and tells the player.")
+            lines.append(rest_rule)
+    if rest_interrupted:
+        lines.append(
+            "IN THE NIGHT: the party's last rest was INTERRUPTED — they woke to trouble "
+            "and got only a breather's worth of recovery (no spell slots or full healing "
+            "back). You decide what broke the camp: weave it into your next narration — "
+            "tracks at the treeline, a snuffed fire, something circling — and play out "
+            "any consequence the fiction demands.")
     # CS6: the mechanical 'card(s)' — who the PC(s) are in rules terms, so the DM
     # calls for the right checks/saves and narrates rules-aware (reference only).
     lines.extend(_character_cards(repo, ruleset))

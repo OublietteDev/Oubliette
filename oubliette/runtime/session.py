@@ -60,6 +60,9 @@ class Session:
         # cleared when the Arena returns; never event-sourced. While set, the turn
         # endpoints reject normal input (the D-COMBAT-3 hard lock).
         self.pending_combat = None          # combat.arena_launch.PendingCombat | None
+        self.pending_rest: str | None = None   # the DM's standing rest grant ("short"|"long",
+                                            # propose_rest tool) — the S3 gate /api/rest checks;
+                                            # transient: any new turn invalidates it
         self.table: TableContract = DEFAULT_TABLE   # campaign's tone + content boundaries
         self.difficulty: DifficultySettings = DEFAULT_DIFFICULTY   # campaign's danger dials
         self.ruleset = None                  # the global SRD ruleset (chargen/sheet/derivation)
