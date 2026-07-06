@@ -13,7 +13,8 @@ pyruntime.tar.gz
 *.sqlite3
 .DS_Store
 
-# Build output from package.bat (the shareable playtester zip).
+# Release build area: the git-archive zips AND the local-only release.bat
+# (the double-click release builder) both live here, gitignored on purpose.
 dist/
 
 # The Forge writes timestamped pack backups here before each save — local safety
