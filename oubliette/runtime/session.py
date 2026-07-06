@@ -24,6 +24,7 @@ from ..rules.chargen import build_character
 from ..seed import DEFAULT_SCENE
 from ..state.models import Character
 from ..state.repository import Repository
+from ..difficulty import DEFAULT_DIFFICULTY, DifficultySettings, normalize_difficulty
 from ..table import DEFAULT_TABLE, TableContract, normalize_contract
 
 if TYPE_CHECKING:
@@ -60,6 +61,7 @@ class Session:
         # endpoints reject normal input (the D-COMBAT-3 hard lock).
         self.pending_combat = None          # combat.arena_launch.PendingCombat | None
         self.table: TableContract = DEFAULT_TABLE   # campaign's tone + content boundaries
+        self.difficulty: DifficultySettings = DEFAULT_DIFFICULTY   # campaign's danger dials
         self.ruleset = None                  # the global SRD ruleset (chargen/sheet/derivation)
         self.mechanics_catalog: dict = {}    # {item_id: SrdEquipment} — SRD + pack items merged
                                              # (pack wins); the ONE catalog the bridge and use_item
@@ -140,6 +142,7 @@ class Session:
         location = start_location
         time_of_day, weather = "day", "clear"
         table = DEFAULT_TABLE
+        difficulty = DEFAULT_DIFFICULTY
         force_ended = False
         for event in sorted(events, key=lambda e: e.seq):
             if event.kind == EventKind.LOCATION_CHANGED.value:
@@ -149,6 +152,8 @@ class Session:
                 weather = event.payload.get("weather", weather)
             elif event.kind == EventKind.CONTRACT_SET.value:
                 table = TableContract.model_validate(event.payload["table"])
+            elif event.kind == EventKind.DIFFICULTY_SET.value:
+                difficulty = DifficultySettings.model_validate(event.payload["difficulty"])
             elif event.kind == EventKind.SESSION_MARKER.value and event.payload.get("marker") == "end":
                 force_ended = True
 
@@ -169,6 +174,7 @@ class Session:
         session.bestiary_gate = bestiary_gate
         session.force_ended = force_ended
         session.table = table
+        session.difficulty = difficulty
         session.ruleset = ruleset
         session.mechanics_catalog = mechanics_catalog
         session.authored_quests = authored_quests
@@ -206,6 +212,17 @@ class Session:
         normalized = normalize_contract(table)
         self.store.append(EventKind.CONTRACT_SET, {"table": normalized.model_dump(), "reason": reason})
         self.table = normalized
+        return normalized
+
+    def emit_difficulty(self, difficulty: DifficultySettings,
+                        reason: str = "difficulty set") -> DifficultySettings:
+        """Set this campaign's difficulty (preset + dials). Records a DIFFICULTY_SET
+        event (folded last-write-wins on reload, like the contract) and applies it.
+        Returns the normalized settings actually stored."""
+        normalized = normalize_difficulty(difficulty)
+        self.store.append(EventKind.DIFFICULTY_SET,
+                          {"difficulty": normalized.model_dump(), "reason": reason})
+        self.difficulty = normalized
         return normalized
 
     def emit_wrap(self, player_facing: str, dm_private: str,

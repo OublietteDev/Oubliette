@@ -449,7 +449,8 @@ def _build_npc(n: NPC, statblocks: dict[str, StatBlock],
 # --- public API --------------------------------------------------------------
 def available_packs(packs_root: Path | None = None) -> list[dict]:
     """List the worlds that can be played: every pack folder with a manifest,
-    as {id, name, version}. Used by the game's New Game world-picker."""
+    as {id, name, version, recommended_difficulty}. Used by the game's New Game
+    world-picker."""
     root = packs_root or _PACKS_ROOT
     out: list[dict] = []
     if root.is_dir():
@@ -461,7 +462,8 @@ def available_packs(packs_root: Path | None = None) -> list[dict]:
             if not isinstance(manifest, dict):
                 continue
             out.append({"id": d.name, "name": manifest.get("name") or d.name,
-                        "version": manifest.get("version")})
+                        "version": manifest.get("version"),
+                        "recommended_difficulty": manifest.get("recommended_difficulty")})
     return out
 
 

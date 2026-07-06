@@ -35,6 +35,8 @@ class EventKind(str, Enum):
     QUEST_STARTED = "quest_started"     # a new quest the DM introduced
     QUEST_UPDATED = "quest_updated"     # quest status change and/or an appended note
     CONTRACT_SET = "contract_set"       # per-campaign table contract (tone + lines/veils)
+    DIFFICULTY_SET = "difficulty_set"   # per-campaign difficulty settings (preset + dials);
+                                        # folded last-write-wins on reload, like the contract
     CHARACTER_CREATED = "character_created"  # chargen output: the built PC + granted SRD gear
     CHARACTER_LEVELED = "character_leveled"  # level-up output: the rebuilt PC (CS5)
     REST_TAKEN = "rest_taken"           # short/long rest: ops restoring hp/slots/hit-dice/resources

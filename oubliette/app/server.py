@@ -46,6 +46,7 @@ from ..dm.context import region_root
 from ..enums import Ability, Skill
 from ..state.models import Character
 from ..state.repository import StateError
+from ..difficulty import PRESET_BLURBS, PRESET_DIALS, DifficultySettings
 from ..table import TONE_PRESETS, TableContract
 from ..tools.dispatch import ToolApplyError
 from ..trade.service import (build_state, buy_transact, checkout_ops,
@@ -92,10 +93,12 @@ class _Game:
         self.loop.brain = Brain(client)
 
     def new_game(self, pack_id: str | None = None,
-                 table: TableContract | None = None) -> None:
+                 table: TableContract | None = None,
+                 difficulty: DifficultySettings | None = None) -> None:
         """Erase the save and start fresh — in `pack_id` if given, else the same
         world as before. `table` sets the campaign's contract (tone + boundaries)
-        agreed at New Game time; it's recorded so it persists and reaches the DM."""
+        and `difficulty` its danger dials, both agreed at New Game time; each is
+        recorded so it persists and reaches the engine."""
         self.store.close()
         self.journal.close()
         if os.path.exists(DB_PATH):
@@ -105,6 +108,8 @@ class _Game:
         self._open()
         if table is not None:
             self.session.emit_contract(table, reason="new game")
+        if difficulty is not None:
+            self.session.emit_difficulty(difficulty, reason="new game")
 
     def reload_world(self) -> None:
         """Re-read the pack from disk and rebuild the session by replaying the save —
@@ -517,6 +522,26 @@ async def put_table(body: TableContract) -> JSONResponse:
     async with GAME.lock:
         stored = GAME.session.emit_contract(body, reason="settings edit")
         return JSONResponse({"ok": True, "table": stored.model_dump()})
+
+
+@app.get("/api/difficulty")
+async def get_difficulty() -> JSONResponse:
+    """This campaign's difficulty settings + the presets (blurbs and the dial
+    bundle each stands for) for the New Game and Settings pickers."""
+    presets = {name: {"blurb": PRESET_BLURBS.get(name, ""), "dials": dials}
+               for name, dials in PRESET_DIALS.items()}
+    presets["custom"] = {"blurb": PRESET_BLURBS["custom"], "dials": None}
+    return JSONResponse({"difficulty": GAME.session.difficulty.model_dump(),
+                         "presets": presets})
+
+
+@app.put("/api/difficulty")
+async def put_difficulty(body: DifficultySettings) -> JSONResponse:
+    """Update the campaign's difficulty from Settings — recorded so it persists.
+    Changeable mid-campaign by design (including out of hardcore)."""
+    async with GAME.lock:
+        stored = GAME.session.emit_difficulty(body, reason="settings edit")
+        return JSONResponse({"ok": True, "difficulty": stored.model_dump()})
 
 
 @app.get("/api/world-image/{place_id}")
@@ -1551,6 +1576,7 @@ async def post_chargen_preview(body: CharacterBuild) -> JSONResponse:
 class NewGameIn(BaseModel):
     pack_id: str | None = None              # which world to start; None keeps the current one
     table: TableContract | None = None      # the table contract agreed at New Game (optional)
+    difficulty: DifficultySettings | None = None   # the danger dials agreed at New Game (optional)
     build: CharacterBuild | None = None     # legacy single character (a party of one)
     builds: list[CharacterBuild] | None = None  # the chargen party (preferred); None/[] = quick-start
     imports: list[dict] | None = None       # heroes carried over as character bundles (v0.9)
@@ -1589,7 +1615,8 @@ async def post_new(body: NewGameIn | None = None) -> JSONResponse:
                     return JSONResponse({"ok": False,
                                          "errors": [f"imported hero #{i + 1}: {e}"]},
                                         status_code=400)
-        GAME.new_game(body.pack_id if body else None, body.table if body else None)
+        GAME.new_game(body.pack_id if body else None, body.table if body else None,
+                      body.difficulty if body else None)
         if builds or parsed_imports:
             chars = GAME.session.emit_party_created(
                 builds, imports=[(c, defs) for c, defs, _ in parsed_imports])

@@ -44,6 +44,9 @@ class PackManifest(_Strict):
     world_map: str | None = None     # background image (in images/) for the top-level
                                      # map — the whole world, e.g. Atria; pins sit on it
     bestiary_gate: BestiaryGate = Field(default_factory=BestiaryGate)
+    recommended_difficulty: str | None = None   # the author's suggested preset
+                                     # ("story"/"adventure"/"challenge"/"hardcore");
+                                     # pre-selected at New Game, never binding
 
 
 # --- items -------------------------------------------------------------------
