@@ -247,12 +247,16 @@ def stage_combat(
     player_text: str = "",
     scratch_root: Path | None = None,
     portraits: PortraitDirs | None = None,
+    budget=None,
 ) -> StageOutcome:
     """Validate + stage a fight. A chosen non-combat exit resolves immediately
     (no Arena); otherwise the live party + resolved enemies are written to an
     encounter file and a `PendingCombat` is returned. `assessment`/`player_text`
     are the triggering turn's (carried so the post-combat report can be built).
-    `portraits` overrides the campaign's derived token-art dirs (tests)."""
+    `portraits` overrides the campaign's derived token-art dirs (tests).
+    `budget` (an `EncounterBudget`, difficulty S2) checks the resolved enemies
+    against the table's caps and raises `BudgetError` on a violation — the
+    runtime's bounce-back path; None (direct/authored callers) skips it."""
     # Non-combat exit short-circuit (parley/flee/bribe) — same contract as the
     # boundary; no tactical board needed.
     if request.chosen_exit is not None:
@@ -269,6 +273,9 @@ def stage_combat(
     if portraits is None:
         portraits = _portrait_dirs(session)
     enemies = _resolve_enemies(request, repo, session, portraits)
+    if budget is not None:
+        from .budget import check_encounter
+        check_encounter(enemies, budget)
     party = _resolve_allies(request, repo, repo.party() or [repo.pc()])
     # The ruleset rides along: the mechanics catalog turns drinkable consumables
     # into Arena item actions (B1) and equipped +X items into real bonuses (B3),

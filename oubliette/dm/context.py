@@ -188,7 +188,8 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   offerable: set | None = None, offered_here: set | None = None,
                   pending_rewards: list | None = None,
                   past_notes: list[str] | None = None,
-                  notebook: list[str] | None = None) -> str:
+                  notebook: list[str] | None = None,
+                  difficulty=None) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -217,6 +218,22 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
     # The party's money is ONE shared purse (coin ops on any PC land here).
     lines.append(f"PARTY PURSE: {format_cp(repo.party_cp)} "
                  "(shared — any hero spends from it; 1 gp = 10 sp = 100 cp).")
+    # Difficulty S2: the party's strength at a glance + the table's encounter
+    # budget, so the DM sizes improvised fights right the FIRST time (the
+    # staging funnel enforces the same caps as a backstop).
+    if difficulty is not None:
+        from ..combat.budget import budget_for
+        b = budget_for(party, difficulty.encounter_challenge)
+        lvl = (f"level {b.level_low}" if b.level_low == b.level_high
+               else f"levels {b.level_low}–{b.level_high}")
+        strength = (f"PARTY STRENGTH: {b.party_size} hero{'es' if b.party_size != 1 else ''}, "
+                    f"{lvl}. ENCOUNTER BUDGET ({difficulty.preset} table): improvised "
+                    f"fights must fit it — {b.describe()}. Recurring foes already in "
+                    "the story are exempt.")
+        if difficulty.encounter_challenge == "punishing":
+            strength += (" Keep fights AT or NEAR the party's weight — save trivial "
+                         "encounters for when the fiction truly calls for one.")
+        lines.append(strength)
     # CS6: the mechanical 'card(s)' — who the PC(s) are in rules terms, so the DM
     # calls for the right checks/saves and narrates rules-aware (reference only).
     lines.extend(_character_cards(repo, ruleset))

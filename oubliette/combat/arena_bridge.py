@@ -987,13 +987,16 @@ class EnemyInstance:
     Oubliette bookkeeping the back-map needs.
 
     `entity_id` is set iff this enemy is a persistent entity (its final HP is
-    written back); ephemeral template/bestiary spawns leave it None.
+    written back); ephemeral bestiary spawns leave it None. `cr` is the source
+    statblock's challenge rating (None for entity foes and unrated blocks) —
+    what the encounter budget reads (combat/budget).
     """
 
     creature: Creature
     xp: int = 0
     loot: list[ValueEntry] = field(default_factory=list)
     entity_id: str | None = None
+    cr: float | None = None
 
 
 def arena_monster_file(
@@ -1053,7 +1056,8 @@ def enemy_from_statblock(
                            [sb.portrait, f"{sb.id}.png"])
         if art:
             creature.token_image = art
-    return EnemyInstance(creature=creature, xp=sb.xp, loot=_loot_to_value(sb.loot))
+    return EnemyInstance(creature=creature, xp=sb.xp, loot=_loot_to_value(sb.loot),
+                         cr=sb.cr)
 
 
 def enemy_from_character(

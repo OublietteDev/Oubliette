@@ -15,6 +15,8 @@ from pydantic import ValidationError
 from ..combat import arena_launch
 from ..combat.arena_launch import stage_combat
 from ..combat.boundary import CombatError, result_to_ops
+from ..combat.budget import BudgetError, budget_for
+from ..difficulty import DEFAULT_DIFFICULTY
 from ..combat.schemas import CombatResult
 from ..dm.brain import Brain
 from ..dm.context import build_context
@@ -114,7 +116,8 @@ class TurnLoop:
             time_of_day=self.session.time_of_day, weather=self.session.weather,
             ruleset=self.session.ruleset,
             authored_quests=authored, offerable=eligible, offered_here=here,
-            past_notes=past_notes, notebook=notebook_notes(events))
+            past_notes=past_notes, notebook=notebook_notes(events),
+            difficulty=getattr(self.session, "difficulty", DEFAULT_DIFFICULTY))
 
     async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
         context = self._build_context(player_text)
@@ -158,7 +161,7 @@ class TurnLoop:
         # to the stream in one shot. The normal path streams token-by-token.
         report: TurnReport | None = None
         if assessment.encounter is not None:
-            report = self._run_combat(player_text, assessment)
+            report = await self._run_combat(player_text, assessment)
         elif assessment.trade is not None:
             report = self._open_trade(assessment)
         if report is not None:
@@ -336,24 +339,64 @@ class TurnLoop:
             session_force_ended=any(rt.force_end_session for rt in applied),
         )
 
-    def _run_combat(self, player_text: str, assessment: TurnAssessment) -> TurnReport:
+    async def _run_combat(self, player_text: str, assessment: TurnAssessment) -> TurnReport:
         """Summoned-tool branch (§8). Stage the fight: a non-combat exit
         (parley/flee/bribe) resolves instantly; a real fight is STAGED — written
         to an encounter file and held on the session — and the turn returns with
         the "⚔ Enter the Arena" signal. The fight is played (and its single
-        COMBAT_RESULT recorded) later, in `enter_combat`, when the player enters."""
-        try:
-            outcome = stage_combat(
-                assessment.encounter, self.repo, self.session,
-                assessment=assessment, player_text=player_text,
-            )
-        except CombatError as e:
-            self.debug.append("anomaly", stage="combat", error=str(e))
+        COMBAT_RESULT recorded) later, in `enter_combat`, when the player enters.
+
+        The encounter budget (difficulty S2) guards this door: an improvised
+        fight over the table's caps BOUNCES — the DM re-assesses the same turn
+        with the violation spelled out, invisibly to the player, up to twice —
+        before degrading to the no-fight narration. The developer codeword
+        bypasses the budget entirely (the test hook stages anything)."""
+        budget = None
+        if "etteilbuo" not in player_text.lower():
+            difficulty = getattr(self.session, "difficulty", DEFAULT_DIFFICULTY)
+            budget = budget_for(self.repo.party() or [self.repo.pc()],
+                                difficulty.encounter_challenge)
+        outcome = None
+        failure = "no stageable encounter"
+        for attempt in range(3):            # the first try + up to two bounces
+            try:
+                outcome = stage_combat(
+                    assessment.encounter, self.repo, self.session,
+                    assessment=assessment, player_text=player_text, budget=budget,
+                )
+                break
+            except BudgetError as e:
+                failure = str(e)
+                self.debug.append("anomaly", stage="combat_budget",
+                                  attempt=attempt, error=str(e))
+                if attempt == 2:
+                    break
+                correction = (
+                    "\n\nENCOUNTER CORRECTION (system — the player never sees this): "
+                    f"your previous encounter was rejected: {e} Re-assess the SAME "
+                    "player turn and fill `encounter` again so it fits the budget — "
+                    "fewer enemies, or a weaker creature serving the same fiction. "
+                    "Do not narrate the rejected creatures.")
+                try:
+                    reassessed = await self.brain.assess(
+                        player_text, self._build_context(player_text) + correction)
+                except (ValidationError, RuntimeError) as err:
+                    self.debug.append("anomaly", stage="combat_budget",
+                                      attempt=attempt, error=repr(err))
+                    break
+                if reassessed.encounter is None:
+                    break                    # the DM chose not to fight after all
+                assessment = reassessed
+            except CombatError as e:
+                failure = str(e)
+                self.debug.append("anomaly", stage="combat", error=str(e))
+                break
+        if outcome is None:
             narration = "The threat dissolves into confusion before anything is struck."
             self.debug.append("narration", text=narration)
             return TurnReport(
                 player_text=player_text, assessment=assessment, narration=narration,
-                meta_notice=f"combat could not be staged: {e}",
+                meta_notice=f"combat could not be staged: {failure}",
             )
 
         # Non-combat exit — resolved without the Arena, recorded immediately.
