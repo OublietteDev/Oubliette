@@ -792,6 +792,7 @@
           "extra_data": {}
         }
       ]
-    }
+    },
+    "safe_haven": true
   }
 ]

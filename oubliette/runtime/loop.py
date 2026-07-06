@@ -416,6 +416,13 @@ class TurnLoop:
 
         # A real fight: hold it pending and prompt the player to enter the Arena.
         self.session.pending_combat = outcome.pending
+        # Dev visibility (S2): the fight's CR arithmetic next to the budget it
+        # passed — readable at GET /api/debug/log.
+        staged_crs = {c.name_override: float(getattr(c.creature_data, "challenge_rating", 0) or 0)
+                      for c in outcome.pending.plan.encounter.combatants if c.team == "enemy"}
+        self.debug.append("combat_budget", stage="staged", enemies=staged_crs,
+                          total_cr=round(sum(staged_crs.values()), 3),
+                          budget=(budget.describe() if budget else "bypassed (dev codeword)"))
         names = ", ".join(c.name_override for c in outcome.pending.plan.encounter.combatants
                           if c.team == "enemy")
         narration = (f"Steel rings out — the fight is upon you ({names}). "

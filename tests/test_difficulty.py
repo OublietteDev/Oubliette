@@ -106,6 +106,12 @@ def test_new_game_records_the_chosen_difficulty():
     assert d["encounter_challenge"] == "punishing" and not d["hardcore"]
 
 
+def test_debug_log_endpoint_serves_entries():
+    assert client.post("/api/new", json={}).json()["ok"]
+    d = client.get("/api/debug/log").json()
+    assert "entries" in d and isinstance(d["entries"], list)
+
+
 def test_settings_change_mid_campaign_including_out_of_hardcore():
     assert client.post("/api/new", json={"difficulty": {"preset": "hardcore"}}).json()["ok"]
     assert client.get("/api/difficulty").json()["difficulty"]["hardcore"] is True

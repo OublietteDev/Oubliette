@@ -529,6 +529,18 @@ async def put_table(body: TableContract) -> JSONResponse:
         return JSONResponse({"ok": True, "table": stored.model_dump()})
 
 
+@app.get("/api/debug/log")
+async def get_debug_log(tail: int = 200) -> JSONResponse:
+    """A dev window into the loop's in-memory debug log — assessments, rolls,
+    combat staging with its CR-vs-budget arithmetic (`combat_budget` entries),
+    bounces, and anomalies. In-memory only: a server restart clears it."""
+    import json as _json
+    entries = GAME.loop.debug.entries[-max(1, min(tail, 1000)):]
+    safe = _json.loads(_json.dumps(
+        [{"seq": e.seq, "kind": e.kind, **e.data} for e in entries], default=str))
+    return JSONResponse({"entries": safe})
+
+
 @app.get("/api/difficulty")
 async def get_difficulty() -> JSONResponse:
     """This campaign's difficulty settings + the presets (blurbs and the dial

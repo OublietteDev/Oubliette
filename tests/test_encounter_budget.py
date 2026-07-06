@@ -158,6 +158,10 @@ def test_over_budget_encounter_bounces_and_the_dm_repicks():
     names = [c.name_override for c in s.pending_combat.plan.encounter.combatants
              if c.team == "enemy"]
     assert any("road bandit" in n for n in names)      # the re-pick, not the dragon
+    # Dev visibility: the staged fight's CR arithmetic landed in the debug log.
+    staged = [e for e in loop.debug.of_kind("combat_budget")
+              if e.data.get("stage") == "staged"]
+    assert staged and "total_cr" in staged[-1].data and "budget" in staged[-1].data
     arena_launch.cleanup(s.pending_combat)
     s.pending_combat = None
 
