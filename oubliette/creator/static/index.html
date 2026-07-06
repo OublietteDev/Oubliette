@@ -1906,9 +1906,9 @@ function statblockForm(sb) {
         <div class="row2">
           ${field("Size", `<select id="f_size"><option value="">(unset)</option>${CREATURE_SIZES.map(s =>
             `<option value="${s}"${s === (v.size || "") ? " selected" : ""}>${s}</option>`).join("")}</select>`)}
-          ${field("Challenge rating", `<select id="f_cr">${CR_CHOICES.map(([val, lab]) =>
+          ${field(req("Challenge rating"), `<select id="f_cr">${CR_CHOICES.map(([val, lab]) =>
             `<option value="${val}"${val === crSel ? " selected" : ""}>${lab}</option>`).join("")}</select>`,
-            "How tough it is, 5e-style. Also drives the bestiary knowledge gate.")}
+            "How tough it is, 5e-style. Drives the bestiary knowledge gate and difficulty settings.")}
         </div>
         <div class="row2">
           ${field("Type", `<input id="f_type" value="${esc(v.type || "")}" placeholder="beast, dragon, humanoid…" />`)}
@@ -2042,6 +2042,10 @@ function setCreaturePortrait(filename) {
 function confirmStatblock(original) {
   const name = document.getElementById("f_name").value.trim();
   if (!name) { fieldInvalid("f_name", "Please give it a name."); return null; }
+  // CR is required: every creature that can be dragged into a fight needs a
+  // challenge rating, or the encounter-difficulty machinery can't budget it.
+  const crRaw = document.getElementById("f_cr").value;
+  if (crRaw === "") { fieldInvalid("f_cr", "Give it a challenge rating — even harmless townsfolk are CR 0."); return null; }
   const base = original ? { ...original } : {};
   if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("statblocks").map(x => x.id)));
   base.name = name;
@@ -2060,8 +2064,7 @@ function confirmStatblock(original) {
   // languages = ticked standard ones + the free-text "other", joined into one string
   const langs = [...readChecklist("f_langs"), ...csv(document.getElementById("f_langs_other").value)];
   if (langs.length) base.languages = langs.join(", "); else delete base.languages;
-  const crRaw = document.getElementById("f_cr").value;
-  if (crRaw !== "") base.cr = Number(crRaw); else delete base.cr;
+  base.cr = Number(crRaw);
   // --- saving throw bonuses: only the abilities the author filled in ---
   const saves = {};
   ["str","dex","con","int","wis","cha"].forEach(k => { const t = document.getElementById("f_sv_" + k).value.trim(); if (t !== "") saves[k] = Number(t); });

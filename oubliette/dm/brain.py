@@ -9,13 +9,10 @@ capability (gap G3).
 
 from __future__ import annotations
 
-from ..combat.templates import ENEMY_TEMPLATES
 from ..enums import Tier
 from ..llm.client import ActResult, LLMClient, Msg
 from ..schemas import SessionNotes, TurnAssessment
 from ..tools.schemas import TOOL_MODELS
-
-_TEMPLATES = ", ".join(sorted(ENEMY_TEMPLATES))
 
 # Per-turn thinking effort (W4). The DM reasons on the turns where adjudication is genuinely
 # contested — a clever/edge-case attempt (RECOMBINED) or a bald claim to protected state that
@@ -50,12 +47,11 @@ ASSESS_SYSTEM = (
     "from the sheet) — you choose the check and the DC.\n"
     "COMBAT: if the player initiates violence or an NPC turns hostile, DO NOT narrate a "
     "fight — the tactical Arena plays it out. Instead fill `encounter` (EncounterRequest): "
-    "name each enemy by a template id "
-    f"[{_TEMPLATES}], an existing entity id, OR any SRD creature by its plain name (e.g. "
+    "name each enemy by an existing entity id OR any creature by its plain name (e.g. "
     "'goblin', 'dire wolf', 'ogre', 'skeleton', 'bandit captain') — the engine matches the "
-    "name to its stat block, so you are not limited to the templates. Set each enemy's "
-    "`count` and choose a `terrain.kind` ('open', 'ambush_cover', 'chokepoint') that fits "
-    "the scene. If unsure of a creature, fall back to the closest template. If the player "
+    "name to its stat block, this world's own bestiary first and then the full SRD. Set "
+    "each enemy's `count` and choose a `terrain.kind` ('open', 'ambush_cover', 'chokepoint') "
+    "that fits the scene. If unsure of a creature, pick the closest common SRD monster. If the player "
     "is trying to de-escalate (talk down, flee, surrender, bribe), set `encounter.chosen_exit` "
     "and list it in `allow_exits`. If a friendly NPC who is PRESENT would plainly fight on the "
     "player's side (a companion, a guard who sides with them), list their entity id in "

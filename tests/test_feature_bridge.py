@@ -22,7 +22,7 @@ from oubliette.combat.arena_bridge import (
     _spent_resources,
     build_encounter,
     character_to_player,
-    enemy_from_template,
+    enemy_from_statblock,
     result_to_combat_result,
 )
 from oubliette.combat.feature_bridge import (
@@ -31,7 +31,6 @@ from oubliette.combat.feature_bridge import (
     features_for,
 )
 from oubliette.combat.schemas import TerrainSpec
-from oubliette.combat.templates import ENEMY_TEMPLATES
 from oubliette.content.ruleset import load_ruleset
 from oubliette.enums import Ability
 from oubliette.rules import derive
@@ -272,7 +271,7 @@ def test_spent_resources_reverse_maps_engine_keys_to_story_names():
 def _manager_for(pc: Character):
     from arena.combat.manager import CombatManager
 
-    plan = build_encounter([pc], [enemy_from_template(ENEMY_TEMPLATES["bandit"])],
+    plan = build_encounter([pc], [enemy_from_statblock(RS.bestiary["bandit"])],
                            TerrainSpec(), ruleset=RS)
     cm = CombatManager()
     cm.load_encounter(plan.encounter, Path("."))

@@ -138,7 +138,7 @@ def test_killing_an_enemy_awards_its_xp_end_to_end():
 
     result = arena_launch.resolve_to_combat_result(pending, build_result(cm))
     assert result.outcome == "victory"
-    assert result.xp_award == 50                  # lean wolf = 50 XP, not 0
+    assert result.xp_award == 50                  # SRD wolf = 50 XP, not 0
     arena_launch.cleanup(pending)
 
 
@@ -650,7 +650,7 @@ def test_ephemeral_arena_enemy_never_becomes_a_persistent_entity(monkeypatch):
     asyncio.run(loop.take_turn("I draw my knife and attack the bandit."))
     asyncio.run(loop.enter_combat())
 
-    # the template bandit fought and fell, but no entity row was ever created
+    # the ephemeral bandit fought and fell, but no entity row was ever created
     for ref in ("bandit", "road bandit", "road bandit#1"):
         with pytest.raises(StateError):
             s.repo.get_character(ref)

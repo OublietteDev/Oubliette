@@ -4,10 +4,10 @@ state/content models and The Arena's tactical-engine models.
 Two directions, no I/O and no live-loop wiring (that is Stage 3 — "flip the
 switch"):
 
-  OUT  Oubliette party (`Character`) + chosen enemies (bestiary `StatBlock`,
-       ephemeral `CombatantTemplate`, or a persistent NPC `Character`) + an
-       `EncounterRequest` → an Arena `Encounter` (inline `creature_data`, teams,
-       starting hexes on a default grid keyed to terrain kind).
+  OUT  Oubliette party (`Character`) + chosen enemies (a bestiary `StatBlock`
+       or a persistent NPC `Character`) + an `EncounterRequest` → an Arena
+       `Encounter` (inline `creature_data`, teams, starting hexes on a default
+       grid keyed to terrain kind).
 
   BACK the Arena handoff result dict (`arena.handoff.build_result`) → an
        Oubliette `CombatResult` (absolute final HP per *persistent* entity,
@@ -57,7 +57,6 @@ from ..state.models import Character
 from ..tools.schemas import ValueEntry
 from .feature_bridge import engine_resource_key, feature_actions, features_for
 from .schemas import CombatResult, ConsumedItem, Outcome, TerrainSpec
-from .templates import CombatantTemplate
 
 # --- Defaults ------------------------------------------------------------
 
@@ -918,29 +917,6 @@ def statblock_to_monster(sb: StatBlock) -> Monster:
     )
 
 
-def template_to_monster(tmpl: CombatantTemplate) -> Monster:
-    """Map an ephemeral `CombatantTemplate` → an Arena `Monster`. Templates carry
-    no ability scores, so they default to 10s (mods 0) and the to-hit rides on
-    proficiency_bonus alone."""
-    short = {k: 10 for k in _ABILITY_LONG}
-    carrier, prof = _solve_to_hit(short, tmpl.attack_bonus)
-    return Monster(
-        name=tmpl.name,
-        ability_scores=_ability_scores(short),
-        armor_class=max(1, tmpl.armor_class),
-        max_hit_points=max(1, tmpl.hp),
-        proficiency_bonus=prof,
-        experience_points=tmpl.xp,
-        is_player_controlled=False,
-        actions=[
-            _basic_attack(
-                "Attack", short, tmpl.attack_bonus, tmpl.damage,
-                DEFAULT_DAMAGE_TYPE, prof, carrier,
-            )
-        ],
-    )
-
-
 def character_to_monster(char: Character) -> Monster:
     """Map a persistent NPC (`Character`, kind=npc) used as an enemy → a (AI-
     controlled) Arena `Monster`."""
@@ -1051,7 +1027,7 @@ def enemy_from_statblock(
 ) -> EnemyInstance:
     """Prefer the generated full-fidelity Arena monster when one exists for this id
     (essentially every SRD bestiary monster); otherwise fall back to the flat
-    basic-attack mapping (templates, synthetic ids). Either way, Oubliette's
+    basic-attack mapping (synthetic ids). Either way, Oubliette's
     bestiary stays the source of truth for the reward (its `xp`) and loot.
     Token art (B6): the statblock's `portrait` filename or `<id>.png`, pack
     dir first then SRD — the same convention the bestiary panel serves.
@@ -1078,13 +1054,6 @@ def enemy_from_statblock(
         if art:
             creature.token_image = art
     return EnemyInstance(creature=creature, xp=sb.xp, loot=_loot_to_value(sb.loot))
-
-
-def enemy_from_template(tmpl: CombatantTemplate) -> EnemyInstance:
-    # Templates are synthetic stand-ins with no portrait source — circle fallback.
-    return EnemyInstance(
-        creature=template_to_monster(tmpl), xp=tmpl.xp, loot=list(tmpl.loot)
-    )
 
 
 def enemy_from_character(

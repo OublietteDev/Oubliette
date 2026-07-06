@@ -43,12 +43,10 @@ from .arena_bridge import (
     build_encounter,
     enemy_from_character,
     enemy_from_statblock,
-    enemy_from_template,
     result_to_combat_result,
 )
 from .boundary import CombatError, _EXIT_DIGEST
 from .schemas import CombatResult, EncounterRequest, ExitKind
-from .templates import ENEMY_TEMPLATES
 
 # Project root (…/Oubliette) — the cwd the Arena subprocess needs so that
 # `import arena` resolves. This file is at oubliette/combat/arena_launch.py.
@@ -94,7 +92,7 @@ class StageOutcome:
     pending: PendingCombat | None = None
 
 
-# --- enemy resolution (templates → bestiary → persistent entities) -------
+# --- enemy resolution (persistent entities → bestiary) -------------------
 
 def _norm_ref(ref: str) -> str:
     """Normalise an enemy ref for tolerant matching: lowercase, trim, and treat
@@ -142,8 +140,8 @@ def _resolve_enemies(
     request: EncounterRequest, repo: Repository, session,
     portraits: PortraitDirs | None = None,
 ) -> list[EnemyInstance]:
-    """Resolve each `EnemyRef` to an `EnemyInstance`: template → persistent entity
-    → stat block. Raises `CombatError` on an unknown ref.
+    """Resolve each `EnemyRef` to an `EnemyInstance`: persistent entity → stat
+    block. Raises `CombatError` on an unknown ref.
 
     Precedence note (Forge Phase 4a): a persistent ENTITY is checked BEFORE a bare
     stat block, so a recurring creature-NPC (Seraphel, whose id matches her stat
@@ -168,11 +166,6 @@ def _resolve_enemies(
 
     out: list[EnemyInstance] = []
     for ref in request.enemies:
-        tmpl = ENEMY_TEMPLATES.get(ref.ref)
-        if tmpl is not None:
-            inst = enemy_from_template(tmpl)
-            out.extend(inst for _ in range(max(1, ref.count)))
-            continue
         ent = _try_entity(repo, ref.ref)
         if ent is not None:
             sb_id = npc_statblocks.get(ent.id)
@@ -196,7 +189,7 @@ def _resolve_enemies(
             out.extend(inst for _ in range(max(1, ref.count)))
             continue
         raise CombatError(
-            f"enemy ref {ref.ref!r} is neither a template, a bestiary monster, nor an entity"
+            f"enemy ref {ref.ref!r} is neither a bestiary monster nor an entity"
         )
     return out
 

@@ -1,7 +1,7 @@
 """Combat Stage 2 — the Arena bridge (`oubliette.combat.arena_bridge`).
 
 Pure data-mapping, both directions:
-  * Oubliette `Character` / `StatBlock` / `CombatantTemplate` → Arena creatures,
+  * Oubliette `Character` / `StatBlock` → Arena creatures,
     with the basic attack reproducing Oubliette's flat `attack_bonus` EXACTLY
     (asserted through the Arena's own `get_attack_modifier`) and real ability
     scores carried across.
@@ -25,14 +25,11 @@ from oubliette.combat.arena_bridge import (
     consumable_actions,
     enemy_from_character,
     enemy_from_statblock,
-    enemy_from_template,
     result_to_combat_result,
     statblock_to_monster,
-    template_to_monster,
     weapon_kit_actions,
 )
 from oubliette.combat.schemas import ConsumedItem, TerrainSpec
-from oubliette.combat.templates import ENEMY_TEMPLATES
 from oubliette.content.ruleset import load_ruleset
 from oubliette.content.schemas import Action as ContentAction
 from oubliette.content.schemas import LootEntry, StatBlock
@@ -121,15 +118,6 @@ def test_to_hit_falls_back_to_closest_when_unreachable(attack_bonus, expected):
     assert _carrier_attack(pc) == expected
 
 
-def test_template_to_monster_defaults_and_exact_to_hit():
-    bandit = ENEMY_TEMPLATES["bandit"]
-    mon = template_to_monster(bandit)
-    assert mon.max_hit_points == bandit.hp and mon.armor_class == bandit.armor_class
-    assert mon.experience_points == bandit.xp
-    assert mon.is_player_controlled is False
-    assert _carrier_attack(mon) == bandit.attack_bonus
-
-
 # --- encounter assembly --------------------------------------------------
 
 def test_build_encounter_assembles_valid_teams_positions_and_backmap():
@@ -171,7 +159,7 @@ def test_build_encounter_assembles_valid_teams_positions_and_backmap():
 
 def test_terrain_kind_keys_a_default_layout():
     party = [_pc()]
-    enemies = [enemy_from_template(ENEMY_TEMPLATES["bandit"])]
+    enemies = [enemy_from_statblock(RS.bestiary["bandit"])]
     open_plan = build_encounter(party, enemies, TerrainSpec(kind="open"))
     choke_plan = build_encounter(party, enemies, TerrainSpec(kind="chokepoint"))
     assert open_plan.encounter.terrain == []
@@ -299,7 +287,7 @@ def test_drinking_a_resistance_potion_grants_resistance_in_the_real_engine():
     from arena.combat.stat_modifiers import get_effective_damage_resistances
 
     pc = _pc(inventory=[ItemStack(item_id="potion_of_resistance_fire")])
-    plan = build_encounter([pc], [enemy_from_template(ENEMY_TEMPLATES["bandit"])],
+    plan = build_encounter([pc], [enemy_from_statblock(RS.bestiary["bandit"])],
                            TerrainSpec(), catalog=RS.equipment)
     cm = CombatManager()
     cm.load_encounter(plan.encounter, Path("."))
@@ -340,7 +328,7 @@ def test_drinking_giant_strength_sets_str_in_the_real_engine():
     from arena.combat.stat_modifiers import get_effective_ability_score
 
     pc = _pc(inventory=[ItemStack(item_id="potion_of_giant_strength_hill")])
-    plan = build_encounter([pc], [enemy_from_template(ENEMY_TEMPLATES["bandit"])],
+    plan = build_encounter([pc], [enemy_from_statblock(RS.bestiary["bandit"])],
                            TerrainSpec(), catalog=RS.equipment)
     cm = CombatManager()
     cm.load_encounter(plan.encounter, Path("."))
@@ -401,7 +389,7 @@ def test_without_ruleset_or_sheet_nothing_is_staged():
 
 
 def _plan_with(pc: Character):
-    enemies = [enemy_from_template(ENEMY_TEMPLATES["bandit"])]
+    enemies = [enemy_from_statblock(RS.bestiary["bandit"])]
     return build_encounter([pc], enemies, TerrainSpec(), ruleset=RS)
 
 

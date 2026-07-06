@@ -17,11 +17,10 @@ from oubliette.combat.arena_bridge import (
     arena_spell_action,
     build_encounter,
     character_to_player,
-    enemy_from_template,
+    enemy_from_statblock,
     spell_actions,
 )
 from oubliette.combat.schemas import TerrainSpec
-from oubliette.combat.templates import ENEMY_TEMPLATES
 from oubliette.content.ruleset import load_ruleset
 from oubliette.enums import Ability
 from oubliette.state.models import Character, CharacterSheet
@@ -127,7 +126,7 @@ def test_heroism_temp_hp_bakes_the_casting_modifier():
 def _combat_with(pc, spell_name):
     from arena.combat.manager import CombatManager
 
-    plan = build_encounter([pc], [enemy_from_template(ENEMY_TEMPLATES["bandit"])],
+    plan = build_encounter([pc], [enemy_from_statblock(RS.bestiary["bandit"])],
                            TerrainSpec(), ruleset=RS)
     cm = CombatManager()
     cm.load_encounter(plan.encounter, Path("."))

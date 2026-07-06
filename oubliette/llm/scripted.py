@@ -130,7 +130,7 @@ class ScriptedLLMClient:
                 Verb.SKILL_CHECK, Tier.RECOMBINED, skill=Skill.PERSUASION,
                 hint="Player tries to defuse the standoff; resolve via the parley exit.",
                 encounter=EncounterRequest(
-                    kind="standoff", enemies=[EnemyRef(ref="bandit", count=2)],
+                    kind="standoff", enemies=[EnemyRef(ref="road bandit", count=2)],
                     terrain=TerrainSpec(kind="open"),
                     allow_exits=[ExitKind.PARLEY, ExitKind.FLEE, ExitKind.BRIBE],
                     chosen_exit=ExitKind.PARLEY,
@@ -140,7 +140,7 @@ class ScriptedLLMClient:
         # Hostility: the narrator emits an encounter request (§8/§10).
         if any(w in player for w in ("attack", "strike", "fight", "swing at", "stab", "kill")) \
                 and any(w in player for w in ("bandit", "them", "raider", "wolf", "enemy")):
-            enemy = "wolf" if "wolf" in player else "bandit"
+            enemy = "wolf" if "wolf" in player else "road bandit"
             return assessment(
                 Verb.ATTACK, Tier.RECOMBINED,
                 hint="Player initiates combat; stage the encounter from live state.",

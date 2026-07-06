@@ -20,13 +20,12 @@ from oubliette.combat.arena_bridge import (
     arena_spell_action,
     build_encounter,
     character_to_player,
-    enemy_from_template,
+    enemy_from_statblock,
     result_to_combat_result,
     scroll_actions,
     spell_actions,
 )
 from oubliette.combat.schemas import TerrainSpec
-from oubliette.combat.templates import ENEMY_TEMPLATES
 from oubliette.content.ruleset import load_ruleset
 from oubliette.enums import Ability
 from oubliette.state.models import Character, CharacterSheet, ItemStack
@@ -293,7 +292,7 @@ def test_cleric_casts_cure_wounds_slot_spends_and_rounds_trip():
     from arena.handoff import build_result
 
     pc = _cleric(slots_used={1: 1})               # one slot already gone
-    plan = build_encounter([pc], [enemy_from_template(ENEMY_TEMPLATES["bandit"])],
+    plan = build_encounter([pc], [enemy_from_statblock(RS.bestiary["bandit"])],
                            TerrainSpec(), ruleset=RS)
     cm = CombatManager()
     cm.load_encounter(plan.encounter, Path("."))

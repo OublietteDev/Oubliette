@@ -1,7 +1,7 @@
 """The combat boundary: the only door between the narrator and the subsystem.
 
-`run_encounter` validates the request, instantiates combatants from templates +
-live state (D5), resolves, and returns a `CombatResult` — it does NOT touch state.
+`run_encounter` validates the request, instantiates combatants from live
+state (D5), resolves, and returns a `CombatResult` — it does NOT touch state.
 `apply_result` is the single point that writes combat's truth back to authoritative
 state and records ONE combat_result entry (the §8 single-event rule).
 """
@@ -15,7 +15,6 @@ from ..state.repository import Repository, StateError
 from ..tools.schemas import ValueEntry
 from .engine import auto_resolve
 from .schemas import Combatant, CombatResult, EncounterRequest, ExitKind
-from .templates import ENEMY_TEMPLATES
 
 
 class CombatError(Exception):
@@ -42,22 +41,13 @@ def _pc_combatant(repo: Repository) -> Combatant:
 def _instantiate_enemies(request: EncounterRequest, repo: Repository) -> list[Combatant]:
     out: list[Combatant] = []
     for ref in request.enemies:
-        tmpl = ENEMY_TEMPLATES.get(ref.ref)
-        if tmpl is not None:
-            # Template → ephemeral combatants (D5): no entity row, discarded on close.
-            for i in range(max(1, ref.count)):
-                out.append(Combatant(
-                    id=f"{ref.ref}#{i + 1}", name=tmpl.name, source="template",
-                    hp=tmpl.hp, max_hp=tmpl.hp, armor_class=tmpl.armor_class,
-                    attack_bonus=tmpl.attack_bonus, damage=tmpl.damage,
-                    xp=tmpl.xp, loot=list(tmpl.loot),
-                ))
-            continue
-        # Otherwise it must resolve to an existing persistent entity (recurring foe).
+        # Each ref must resolve to an existing persistent entity (recurring foe).
+        # Generic bestiary monsters fight in the Arena path (arena_launch), which
+        # resolves stat blocks; this legacy auto-resolve door only fights entities.
         try:
             ent = repo.get_character(ref.ref)
         except StateError as e:
-            raise CombatError(f"enemy ref {ref.ref!r} is neither a template nor an entity") from e
+            raise CombatError(f"enemy ref {ref.ref!r} is not a known entity") from e
         out.append(Combatant(
             id=ent.id, name=ent.name, source="entity", entity_id=ent.id,
             hp=ent.hp, max_hp=ent.max_hp, armor_class=ent.armor_class,
@@ -90,7 +80,7 @@ def run_encounter(request: EncounterRequest, repo: Repository, rng: Rng, log: De
     combatants = [pc] + enemies
     outcome = auto_resolve(combatants, rng, log)
 
-    # Persistent combatants get absolute write-backs (D7); ephemerals never do.
+    # Persistent combatants get absolute write-backs (D7).
     hp_final = {c.entity_id: c.hp for c in combatants if c.source == "entity" and c.entity_id}
 
     loot: list[ValueEntry] = []
@@ -101,7 +91,6 @@ def run_encounter(request: EncounterRequest, repo: Repository, rng: Rng, log: De
                 loot.extend(e.loot)
                 xp_award += e.xp
 
-    survivors = [c.id for c in combatants if c.source == "template" and c.hp > 0]
     fallen = [e.name for e in enemies if e.hp <= 0]
     if outcome == "victory":
         digest = (f"The fight ends in your favor. Fallen: {', '.join(fallen) or 'none'}. "
@@ -111,7 +100,7 @@ def run_encounter(request: EncounterRequest, repo: Repository, rng: Rng, log: De
 
     return CombatResult(
         outcome=outcome, hp_final=hp_final, conditions_final={}, loot=loot,
-        xp_award=xp_award, narrative_digest=digest, ephemeral_survivors=survivors,
+        xp_award=xp_award, narrative_digest=digest,
     )
 
 
