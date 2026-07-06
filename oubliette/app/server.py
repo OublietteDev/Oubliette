@@ -179,6 +179,7 @@ def _snapshot() -> dict:
         "pack_name": GAME.session.pack_name or "",   # the world you're playing (header)
         "location_trail": _location_trail(),         # parent > sublocation breadcrumb
         "force_ended": GAME.session.force_ended,
+        "campaign_ended": GAME.session.campaign_ended,   # hardcore TPK (S4): the tale is told
         "combat_pending": GAME.session.pending_combat is not None,
         "time_of_day": GAME.session.time_of_day,
         "weather": GAME.session.weather,

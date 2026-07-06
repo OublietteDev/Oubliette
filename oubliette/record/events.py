@@ -48,6 +48,9 @@ class EventKind(str, Enum):
     NOTEBOOK_NOTE = "notebook_note"     # DM's private working note (the dm_note tool, W4): plans, NPC true
                                         # intentions, foreshadowing. Durable prose, inert on replay; feeds the
                                         # DM's context (never the player's), never a source of protected state.
+    CAMPAIGN_ENDED = "campaign_ended"   # the campaign is truly over (hardcore TPK, S4): carries the
+                                        # ending narration; folded to a permanent lock on reload. Distinct
+                                        # from force_end (hostile-table close) and wrap (an ordinary pause).
 
 
 class StateOp(BaseModel):

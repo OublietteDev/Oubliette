@@ -12,7 +12,8 @@ from pydantic import BaseModel
 
 from ..combat.schemas import EncounterRequest, EnemyRef, ExitKind, TerrainSpec
 from ..enums import Ability, Skill, Tier, Verb, may_canonize
-from ..schemas import Intent, RollRequest, SessionNotes, TurnAssessment, TurnResolution
+from ..schemas import (CampaignEnding, Intent, RollRequest, SessionNotes, TurnAssessment,
+                       TurnResolution)
 from ..tools.schemas import (CreateEntity, EndSession, ForceEndSession, ProposeRest, StartQuest,
                              Transact, Travel, UpdateQuest, UseItem, ValueEntry)
 from ..trade.schemas import TradeRequest
@@ -46,6 +47,14 @@ class ScriptedLLMClient:
             return result
         if schema is SessionNotes:
             return self._notes(text)
+        if schema is CampaignEnding:
+            return CampaignEnding(
+                narration="[scripted ending] The last of you falls, and the tale closes "
+                          "here. What you dared is remembered. Farewell.",
+                player_facing="[scripted chronicle] The campaign ended with the party's "
+                              "fall — the tale is complete.",
+                dm_private="[scripted notes] Hardcore TPK; the campaign is sealed.",
+            )
         raise NotImplementedError(f"ScriptedLLMClient has no script for {schema.__name__}")
 
     async def act(self, *, system: str, messages: list[Msg],

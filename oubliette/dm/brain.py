@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from ..enums import Tier
 from ..llm.client import ActResult, LLMClient, Msg
-from ..schemas import SessionNotes, TurnAssessment
+from ..schemas import CampaignEnding, SessionNotes, TurnAssessment
 from ..tools.schemas import TOOL_MODELS
 
 # Per-turn thinking effort (W4). The DM reasons on the turns where adjudication is genuinely
@@ -237,6 +237,24 @@ RESOLVE_SYSTEM = (
     "narration and no tools. Don't describe your tool calls mechanically; let the prose read as story."
 )
 
+CAMPAIGN_END_SYSTEM = (
+    "You are the DM of Oubliette Table. The whole party has just fallen in battle, and this "
+    "table plays HARDCORE: there is no revival, no rescue, no next session — the campaign is "
+    "truly over, and this is the last thing you will ever say at this table. Write a "
+    "CampaignEnding:\n"
+    "- narration: the ending itself, in your DM voice. Narrate the party's fall with dignity "
+    "and finality — second person, grounded in how and where they fell. Do NOT soften it, "
+    "tease a sequel, or hint at revival. Give the tale a true last line, honor what they "
+    "dared and what they achieved across the whole campaign, and say goodbye to the player "
+    "as the DM — brief, warm, final.\n"
+    "- player_facing: the chronicle's FINAL entry — the campaign remembered whole: where it "
+    "began, where it went, what the party accomplished, and how it ended. Written to be "
+    "reread later, as an epitaph.\n"
+    "- dm_private: your own closing notes — the campaign's shape, secrets that died untold, "
+    "what the ending meant. No follow-ups; there is nothing to follow up.\n"
+    "Prose only; you change no state. Honor the table contract's tone to the last word."
+)
+
 WRAP_SYSTEM = (
     "You are the DM of Oubliette Table, stepping OUT of the fiction to close a play session. "
     "You are handed the full transcript of the session that just concluded (plus the current "
@@ -299,6 +317,27 @@ class Brain:
         if not result.narration.strip() and not result.tool_calls:
             raise RuntimeError("model returned an empty resolution (no narration, no tools)")
         return result
+
+    async def narrate_campaign_end(
+        self, transcript_text: str, context: str = "", table_prompt: str = "",
+    ) -> CampaignEnding:
+        """The campaign-over ritual (hardcore TPK, difficulty S4): one call that
+        writes the ending the players hear, the chronicle's final entry, and the
+        DM's own closing notes. Called once, after the fatal fight resolves;
+        code records it and locks the table."""
+        parts: list[str] = []
+        if context:
+            parts.append(context)
+            parts.append("")
+        parts.append("SESSION TRANSCRIPT (the campaign's final stretch — the party has "
+                      "just FALLEN in battle, all of them, and this table plays hardcore: "
+                      "the campaign is truly over):")
+        parts.append(transcript_text)
+        system = CAMPAIGN_END_SYSTEM + table_prompt if table_prompt else CAMPAIGN_END_SYSTEM
+        return await self.client.complete(
+            system=system, messages=[Msg(role="user", content="\n".join(parts))],
+            schema=CampaignEnding,
+        )
 
     async def write_session_notes(
         self, transcript_text: str, context: str = "", table_prompt: str = "",

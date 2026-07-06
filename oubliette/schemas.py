@@ -70,6 +70,21 @@ class SessionNotes(BaseModel):
                             "NPC hidden intentions, foreshadowing, what to follow up next time")
 
 
+class CampaignEnding(BaseModel):
+    """The campaign-over ritual (difficulty S4): on a hardcore table, the whole
+    party has fallen and the campaign is truly over. One call produces the
+    ending the players hear and the chronicle's final entry. Prose only —
+    the lock and the record are code's job."""
+
+    narration: str = Field(description="the ending, addressed to the players: narrate the "
+                           "party's fall with dignity and finality — no revival, no hooks, "
+                           "no next time. Close the tale, honor what they did, say goodbye.")
+    player_facing: str = Field(description="the chronicle's FINAL entry: what this campaign "
+                               "was — where it went, what the party achieved, how it ended")
+    dm_private: str = Field(description="your own closing notes: the shape of the campaign, "
+                            "secrets that died untold, what the ending meant")
+
+
 class TurnResolution(BaseModel):
     """Second model call of a turn: narrate the outcome and emit 0+ tool calls.
     `tool_calls` is the typed discriminated union from tools/schemas (gap G1), so

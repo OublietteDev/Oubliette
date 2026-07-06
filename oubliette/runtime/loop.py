@@ -517,7 +517,51 @@ class TurnLoop:
             result, pending.player_text or "⚔ (entered the Arena)", pending.assessment
         )
         self._record_beat(report)
+        # The campaign-over ritual (S4): on a hardcore table, a lost fight is the
+        # end — all of the party fell. The DM writes the ending + the chronicle's
+        # final entry, the notes seal like any wrap, and the table locks for good.
+        difficulty = getattr(self.session, "difficulty", DEFAULT_DIFFICULTY)
+        if result.outcome == "defeat" and difficulty.hardcore:
+            report = await self._end_campaign(report)
         return report
+
+    async def _end_campaign(self, report: TurnReport) -> TurnReport:
+        """Hardcore TPK: run the campaign-over ritual. One model call (retried
+        once) writes the ending; a failure still ends the campaign with a plain
+        epitaph — the lock is the promise, the prose is best-effort."""
+        events = self.session.store.read_all()
+        turns = transcript_turns(events)
+        transcript_text = "\n".join(
+            f'{"PLAYER" if t["role"] == "player" else "DM"}: {t["text"]}' for t in turns)
+        ending = None
+        for attempt in range(2):
+            try:
+                ending = await self.brain.narrate_campaign_end(
+                    transcript_text, self._build_context(),
+                    table_prompt=render_table_prompt(self.session.table))
+                break
+            except Exception as e:
+                self.debug.append("anomaly", stage="campaign_end", attempt=attempt,
+                                  error=repr(e))
+        if ending is None:
+            from ..schemas import CampaignEnding
+            ending = CampaignEnding(
+                narration="Here the tale ends: the whole party has fallen, and on this "
+                          "table the fallen stay fallen. Thank you for playing it out "
+                          "to the last.",
+                player_facing="The campaign ended with the party's fall in battle.",
+                dm_private="Campaign ended: hardcore total party defeat.")
+        # Seal the final notes like any wrap, then the terminal event + lock.
+        self.session.emit_wrap(ending.player_facing, ending.dm_private,
+                               reason="the campaign ended — the party fell")
+        self.session.emit_campaign_end("tpk", ending.narration)
+        self.debug.append("narration", text=ending.narration)
+        return TurnReport(
+            player_text=report.player_text, assessment=report.assessment,
+            narration=f"{report.narration}\n\n{ending.narration}",
+            combat_result=report.combat_result,
+            session_force_ended=True,
+        )
 
     async def wrap_session(self, write_notes: bool = True) -> WrapReport:
         """Wrap the session in progress (W5): the DM writes two-faced notes from the FULL

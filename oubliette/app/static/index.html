@@ -1362,7 +1362,10 @@ function renderState(s) {
     }
   }
 
-  if (s.force_ended && !gameEnded) {
+  if (s.campaign_ended && !gameEnded) {
+    gameEnded = true;
+    addMessage("System", "— The party has fallen, and on this table the fallen stay fallen. The campaign has ended; its final chapter is written in the chronicle. Start a New Game to begin another tale. —", "system");
+  } else if (s.force_ended && !gameEnded) {
     gameEnded = true;
     addMessage("System", "— The Phantom has closed the table. This session has ended; start a New Game to play again. —", "system");
   }

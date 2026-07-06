@@ -55,6 +55,8 @@ class Session:
         self.bestiary_gate = None           # per-world bestiary knowledge cutoff (manifest)
         self.force_ended: bool = False      # the DM terminally closed the game (force_end_session tool);
                                             # distinct from an ordinary session wrap-up, which continues play
+        self.campaign_ended: bool = False   # the campaign truly ENDED (hardcore TPK, S4) — permanent;
+                                            # also sets force_ended so every existing lock holds
         # A staged-but-unresolved tactical fight awaiting "⚔ Enter the Arena"
         # (combat Stage 3). Transient runtime state — set while a fight is pending,
         # cleared when the Arena returns; never event-sourced. While set, the turn
@@ -147,6 +149,7 @@ class Session:
         table = DEFAULT_TABLE
         difficulty = DEFAULT_DIFFICULTY
         force_ended = False
+        campaign_ended = False
         for event in sorted(events, key=lambda e: e.seq):
             if event.kind == EventKind.LOCATION_CHANGED.value:
                 location = event.payload.get("to", location)
@@ -159,6 +162,9 @@ class Session:
                 difficulty = DifficultySettings.model_validate(event.payload["difficulty"])
             elif event.kind == EventKind.SESSION_MARKER.value and event.payload.get("marker") == "end":
                 force_ended = True
+            elif event.kind == EventKind.CAMPAIGN_ENDED.value:
+                campaign_ended = True
+                force_ended = True          # a finished campaign inherits every lock
 
         session = cls(store, repo, canon, quests)
         session.places = places
@@ -176,6 +182,7 @@ class Session:
         session.world_map = world_map
         session.bestiary_gate = bestiary_gate
         session.force_ended = force_ended
+        session.campaign_ended = campaign_ended
         session.table = table
         session.difficulty = difficulty
         session.ruleset = ruleset
@@ -227,6 +234,15 @@ class Session:
                           {"difficulty": normalized.model_dump(), "reason": reason})
         self.difficulty = normalized
         return normalized
+
+    def emit_campaign_end(self, cause: str, narration: str) -> None:
+        """The campaign is truly over (hardcore TPK, S4). Records the CAMPAIGN_ENDED
+        event (folded to a permanent lock on reload) and locks the live session.
+        The final notes are sealed separately via emit_wrap, just before this."""
+        self.store.append(EventKind.CAMPAIGN_ENDED,
+                          {"cause": cause, "narration": narration})
+        self.campaign_ended = True
+        self.force_ended = True
 
     def emit_wrap(self, player_facing: str, dm_private: str,
                   reason: str = "session wrapped") -> None:
