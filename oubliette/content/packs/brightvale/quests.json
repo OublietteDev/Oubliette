@@ -3,7 +3,7 @@
     "id": "sunken_vault",
     "title": "The Drowned Vault of Aldermere",
     "hook": "Thom leans close: beneath the old bay lies a sealed vault, and the thing that guards it has drowned braver crews than yours. Only a true company of legend should even attempt it.",
-    "briefing": "A deadly high-level dungeon \u2014 gated so it never surfaces for a fresh party. If a low-level group is somehow offered this, the level gate has failed.",
+    "briefing": "A deadly high-level dungeon — gated so it never surfaces for a fresh party. If a low-level group is somehow offered this, the level gate has failed.",
     "giver_npc": "merchant_thom",
     "root": true,
     "min_party_level": 10,

@@ -1,24 +1,55 @@
 [
   {
-    "id": "brightvale_market", "name": "A Morning at Brightvale",
+    "id": "brightvale_market",
+    "name": "A Morning at Brightvale",
     "start_location": "brightvale_market",
     "scene_override": null,
     "party_source": "default",
     "default_party": [
       {
-        "id": "pc", "name": "You", "kind": "pc", "level": 3,
-        "abilities": {"str": 10, "dex": 12, "con": 12, "int": 10, "wis": 11, "cha": 14},
-        "skill_proficiencies": ["deception"],
-        "hp": 24, "max_hp": 24, "armor_class": 14,
-        "attack_bonus": 5, "damage": "1d8+3",
+        "id": "pc",
+        "name": "You",
+        "kind": "pc",
+        "level": 3,
+        "abilities": {
+          "str": 10,
+          "dex": 12,
+          "con": 12,
+          "int": 10,
+          "wis": 11,
+          "cha": 14
+        },
+        "skill_proficiencies": [
+          "deception"
+        ],
+        "hp": 24,
+        "max_hp": 24,
+        "armor_class": 14,
+        "attack_bonus": 5,
+        "damage": "1d8+3",
         "gold": 15,
         "inventory": [
-          {"item_id": "boots", "qty": 1},
-          {"item_id": "knife", "qty": 1},
-          {"item_id": "leather_jerkin", "qty": 1},
-          {"item_id": "healing_draught", "qty": 2}
+          {
+            "item_id": "boots",
+            "qty": 1
+          },
+          {
+            "item_id": "knife",
+            "qty": 1
+          },
+          {
+            "item_id": "leather_jerkin",
+            "qty": 1
+          },
+          {
+            "item_id": "healing_draught",
+            "qty": 2
+          }
         ],
-        "equipped": ["knife", "leather_jerkin"],
+        "equipped": [
+          "knife",
+          "leather_jerkin"
+        ],
         "description": "A traveler with scuffed boots and a silver tongue."
       }
     ]
