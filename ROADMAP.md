@@ -2,15 +2,17 @@
 
 Where Oubliette is headed. This is a direction, not a promise — priorities shift with what players actually ask for. Have an opinion? Open an issue.
 
-## Now — v0.9
+## Now — v0.9.2
 
 The current release. The full game, the Forge, and the Arena are all here and playable; see [FEATURES.md](FEATURES.md) for everything that already works, and [Known issues](README.md#known-issues) for the rough edges.
+
+**New in v0.9.2:** campaign **difficulty & challenge settings** (Story / Adventure / Challenge / Hardcore, or set the dials yourself — CR-budgeted encounters sized to your real party, gated long rests, quest level-gates, and a hardcore end-of-campaign ritual) and the **upgraded player journal** (a real parchment book with the Bookbinder, rich ink, and wax seals). Both are described in more detail below.
 
 ## Next — toward v1.0
 
 The push to a true one-click release:
 
-- **Polishing the known v0.9 issues** into a stable 1.0.
+- **Polishing the known v0.9.2 issues** into a stable 1.0.
 
 ## Later — candidates for v2.0
 
@@ -30,7 +32,7 @@ Unordered, and gated on demand. The big themes:
 - **Persistent NPC companions** you can recruit and level over a campaign (today allies join fight-by-fight).
 
 ### Rules & engine
-- **Difficulty & challenge settings** *(built — in testing on `main` for a future release)* — decide how dangerous your world feels. Choose a difficulty when you start a campaign (Story, Adventure, Challenge, or Hardcore, or set the dials yourself), changeable later in Settings. It caps the challenge rating of the encounters the AI improvises to the party's real strength, gates long rests behind the fiction (a night needs a safe-enough moment and costs lodging coin or rations, with interrupted camps on the harshest settings), lets Forge quests declare a minimum party level ("starts at party level 3+") that stays hidden until you've earned it, and gives the DM a clear read on the party's strength when it sizes up a fight. Pairs naturally with keyed encounters to shape a campaign's arc. Home, too, to hardcore mode: if the whole party falls, the DM narrates the end of the story, writes the campaign's final chapter, and says goodbye — that save is over for real.
+- **Difficulty & challenge settings** *(shipped in v0.9.2)* — decide how dangerous your world feels. Choose a difficulty when you start a campaign (Story, Adventure, Challenge, or Hardcore, or set the dials yourself), changeable later in Settings. It caps the challenge rating of the encounters the AI improvises to the party's real strength, gates long rests behind the fiction (a night needs a safe-enough moment and costs lodging coin or rations, with interrupted camps on the harshest settings), lets Forge quests declare a minimum party level ("starts at party level 3+") that stays hidden until you've earned it, and gives the DM a clear read on the party's strength when it sizes up a fight. Pairs naturally with keyed encounters to shape a campaign's arc. Home, too, to hardcore mode: if the whole party falls, the DM narrates the end of the story, writes the campaign's final chapter, and says goodbye — that save is over for real.
 - **House rules per world** — variant initiative, custom conditions, and other table tweaks.
 - **Attunement enforcement** — the 3-item limit and attune-on-rest ritual (the flag is already tracked).
 - **Arena test beds** - add the ability to preview spells, custom attack animations, or run simulations using existing combat AI to balance custom monsters and classes.
@@ -39,7 +41,7 @@ Unordered, and gated on demand. The big themes:
 ### The experience
 - **Voiced narration** — optional AI voice for the DM's turns, with the Forge letting you assign a preferred voice per character so NPCs sound like themselves. The plan is to use ElevenLabs (high latency, can be very expensive but superior quality) and Kokoro 82M locally (low latency, low cost, small memory footprint, decent quality but lacking emotion). Requires touching the DM prompt.
 - **Trinkets** - optional authored quest add-ons that can be stored in the player journal. A fragment of a map, a note from a powerful noble, etc.
-- **Upgraded player journal** *(built — in testing on `main` for a future release)* — the journal is now a real book: light parchment pages in a leather binding, opened from its cover. Pick your character's handwriting (six bundled hands), ink color, cover leather, cover emblem, and paper style at the Bookbinder; write directly on the page with bold/italics/underline/strikethrough, three text sizes, colored inks, and a pack of highlighters; stamp entries with wax seals ("In progress", "Done", or your own words). Entries flow across numbered pages with a page-turn, and a new journal opens with Quests/People/Places/Creatures tabs waiting for ink. Old notes carry over untouched. The page is already shaped to receive trinkets (see above) when they arrive.
+- **Upgraded player journal** *(shipped in v0.9.2)* — the journal is now a real book: light parchment pages in a leather binding, opened from its cover. Pick your character's handwriting (six bundled hands), ink color, cover leather, cover emblem, and paper style at the Bookbinder; write directly on the page with bold/italics/underline/strikethrough, three text sizes, colored inks, and a pack of highlighters; stamp entries with wax seals ("In progress", "Done", or your own words). Entries flow across numbered pages with a page-turn, and a new journal opens with Quests/People/Places/Creatures tabs waiting for ink. Old notes carry over untouched. The page is already shaped to receive trinkets (see above) when they arrive.
 
 ## Someday — the big maybes
 

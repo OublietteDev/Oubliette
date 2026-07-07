@@ -12,7 +12,7 @@ It ships as three programs that share one engine:
 | 🔨 **The Forge** | Build your own worlds — no coding, ever. | `forge.bat` |
 | ⚔️ **The Arena** | A full D&D 5e tactical combat engine. | launches from the game |
 
-> **Status: v0.9.** Feature-complete and very playable; a handful of known rough edges (see [Known issues](#known-issues)) are why this isn't 1.0 yet.
+> **Status: v0.9.2.** Feature-complete and very playable; a handful of known rough edges (see [Known issues](#known-issues)) are why this isn't 1.0 yet.
 
 ---
 
@@ -83,20 +83,19 @@ pytest                          # the full acceptance + engine suite
 
 ## Roadmap & known issues
 
-- 🗺️ **[ROADMAP.md](ROADMAP.md)** — what's planned beyond v0.9.
+- 🗺️ **[ROADMAP.md](ROADMAP.md)** — what's planned beyond v0.9.2.
 - 🐞 **[Known issues](#known-issues)** — see below.
 
 ## Known issues
 
-*v0.9 is stable and fun, but honest about its rough edges. Full list to be tracked in GitHub Issues.*
+*v0.9.2 is stable and fun, but honest about its rough edges. Full list to be tracked in GitHub Issues.*
 
 - **Bestiary art is ~20% complete.** Every creature works fully in the Arena — all abilities, actions, spells, and legendary actions — they just show a generic token until art is added. This grows slowly over time. Art added via a pack is unaffected and displays fine in the bestiary.
 - **API calls occasionally drop.** A dropped connection mid-call surfaces an error (no effect on gameplay or the DM's memory) — but it's annoying if it takes ~300 seconds to time out.
 - **The 12 SRD classes need another accuracy pass.** For example: Half-Orcs are missing Relentless Endurance (the engine supports it, it just needs wiring), and character-creation languages look static — every character seems to get 2 languages + 1 racial language.
 - **Walls are indestructible.** You can cheese melee enemies by dropping a Wall of Force or Wall of Stone and then plinking them with cantrips.
-- **Long rests are ungated.** You can open your character sheet and take unlimited long rests for free heals and spell slots outside of combat. A sensible cost mechanic is in the works.
 - **Charge attacks don't animate.** Pounce, Trample, and Charge resolve correctly in code but have no visual yet — needs investigation and a fix.
-- **Encounter difficulty is inconsistent** (my own runs lean *easy*). The combat evaluator has no party-CR rules yet, and CR math assumes a party of four, so even a "fair" solo fight can skew either way. This will take several balancing passes.
+- **Encounter balance is still being tuned.** v0.9.2 added a party-CR budget — improvised fights are now sized to the party's real levels and size and to your chosen difficulty (Story → Hardcore) — but the CR bands themselves will take several more balancing passes before every fight feels fair at every level.
 - **Arena token art can be sized inconsistently.** The plan is a token previewer that lets you adjust framing so your art (and the current bestiary art) is represented well.
 - **New Game character creation uses the current session's ruleset, not the chosen world's.** When you start a New Game, the background and spell options come from whichever world was last loaded — so a brand-new world's own pack content can't be picked at its own character creation. Workaround: start the New Game once with the world/pack you want, save and close, then start the New Game a second time — the options now reflect that world. This only matters if you regularly switch between multiple packs. (Your save is safe throughout: it isn't deleted until character generation finishes.)
 
