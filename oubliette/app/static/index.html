@@ -400,33 +400,146 @@
   .menu-item .ico { width: 20px; text-align: center; }
   .menu-item .soon { margin-left: auto; font-size: 10px; color: var(--faint); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; text-transform: uppercase; letter-spacing: .06em; }
 
-  /* journal */
-  .journal-modal { width: min(880px, 94vw); height: 86vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
-  .journal-head { display: flex; align-items: center; gap: 12px; padding: 15px 18px; border-bottom: 1px solid var(--line); }
-  .journal-head h2 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 18px; }
+  /* journal — the book. The one bright object in a dark app: light parchment in a
+     leather binding, written in the player's own hand. Fonts are bundled locally
+     (static/fonts, OFL) so Offline Mode keeps its penmanship. */
+  @font-face { font-family: "Caveat"; src: url("/journal-fonts/caveat.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
+  @font-face { font-family: "Kalam"; src: url("/journal-fonts/kalam-regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "Kalam"; src: url("/journal-fonts/kalam-bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+  @font-face { font-family: "Dancing Script"; src: url("/journal-fonts/dancing.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
+  @font-face { font-family: "Patrick Hand"; src: url("/journal-fonts/patrick.woff2") format("woff2"); font-display: swap; }
+  @font-face { font-family: "Shadows Into Light"; src: url("/journal-fonts/shadows.woff2") format("woff2"); font-display: swap; }
+  @font-face { font-family: "IM Fell English"; src: url("/journal-fonts/imfell.woff2") format("woff2"); font-style: normal; font-display: swap; }
+  @font-face { font-family: "IM Fell English"; src: url("/journal-fonts/imfell-italic.woff2") format("woff2"); font-style: italic; font-display: swap; }
+
+  .book-scene { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px;
+    --jpageh: clamp(420px, 78vh, 620px); }
+  .jbar { display: flex; align-items: center; gap: 10px; width: 100%; }
   .journal-note { font-size: 12px; color: var(--faint); font-style: italic; }
-  .journal-head .spacer { flex: 1; }
-  .journal-body { display: grid; grid-template-columns: 210px 1fr; flex: 1; min-height: 0; }
-  .journal-sections { border-right: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
-  .j-seclist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-  .j-seclist li { padding: 8px 10px; border-radius: 8px; cursor: pointer; font-family: var(--serif); font-size: 14.5px; color: var(--ink); }
-  .j-seclist li:hover { background: #241f1c; }
-  .j-seclist li.active { background: #2a231d; color: var(--gold); }
-  .journal-content { padding: 16px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-  .j-sechead { display: flex; align-items: center; gap: 10px; }
-  .j-secname { font-family: var(--serif); font-size: 17px; color: var(--gold); flex: 1; }
-  .j-secactions, .j-eacts { display: flex; gap: 6px; }
-  .j-secactions .act, .j-eacts .act { font-size: 12px; padding: 5px 9px; }
-  .j-group { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--faint); margin-top: 6px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
-  .j-entry { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
-  .j-etop { display: flex; align-items: center; gap: 10px; }
-  .j-etitle { font-family: var(--serif); font-size: 15px; flex: 1; }
-  .j-ebody { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
-  .j-in, .j-ta { width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 14px; }
-  .j-ta { min-height: 92px; resize: vertical; line-height: 1.45; }
-  .j-erow { display: flex; gap: 8px; }
-  .j-save { font: inherit; font-weight: 600; cursor: pointer; border: none; border-radius: 8px; padding: 7px 14px; background: var(--btn-grad); color: #fff; }
-  .j-empty { color: var(--faint); font-style: italic; }
+  .jbar .spacer { flex: 1; }
+
+  .book { position: relative; display: flex; border-radius: 12px 7px 7px 12px; padding: 13px 24px 13px 15px;
+    background: var(--jcover, #33241a); border: 1px solid rgba(0,0,0,.55);
+    box-shadow: var(--shadow), inset 0 0 46px rgba(0,0,0,.42); }
+  .book-ribbon { position: absolute; top: -7px; right: 110px; width: 24px; height: 64px; z-index: 3;
+    background: linear-gradient(180deg, #8c352a, #6e241c); border-radius: 0 0 5px 5px; box-shadow: 0 2px 5px rgba(0,0,0,.4); }
+  .book.closed .book-ribbon { display: none; }
+
+  /* the closed cover — the ritual of the object; click to open */
+  .book-cover { display: none; }
+  .book.closed .book-pages { display: none; }
+  .book.closed .book-cover { display: flex; width: 490px; height: var(--jpageh); cursor: pointer;
+    flex-direction: column; align-items: center; justify-content: center; gap: 20px; border-radius: 9px 5px 5px 9px;
+    box-shadow: inset 0 0 0 7px rgba(0,0,0,.18), inset 0 0 0 8px rgba(201,164,87,.5), inset 0 0 0 10px rgba(0,0,0,.15), inset 0 0 70px rgba(0,0,0,.35); }
+  .j-cover-emblem { width: 120px; height: 120px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+  .j-cover-title { font-family: "IM Fell English", var(--serif); font-size: 30px; letter-spacing: .14em; color: #c9a457; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  .j-cover-hint { font-family: "IM Fell English", var(--serif); font-size: 13px; font-style: italic; color: rgba(201,164,87,.55); }
+
+  .book-pages { display: flex; perspective: 1600px; }
+  .page { width: min(465px, 38vw); height: var(--jpageh); position: relative; overflow: hidden;
+    padding: 24px 28px 40px; background-color: #f0e4c6;
+    background-image: url("/journal-art/paper-clean.svg"); background-size: 100% 100%; }
+  .paper-weathered .page { background-image: url("/journal-art/paper-weathered.svg"); background-color: #e6d5a8; }
+  .paper-stained .page { background-image: url("/journal-art/paper-stained.svg"); background-color: #ecdfba; }
+  .page-left { border-radius: 7px 0 0 7px; box-shadow: inset -16px 0 24px -16px rgba(50,32,8,.6); }
+  .page-right { border-radius: 0 7px 7px 0; box-shadow: inset 16px 0 24px -16px rgba(50,32,8,.6); }
+  .j-pagein { height: 100%; overflow: hidden; }
+  .page.scrolly .j-pagein { overflow-y: auto; scrollbar-width: thin; }
+  .book-pages.turning .page-right { animation: jturn .3s ease; transform-origin: left center; }
+  .book-pages.turning-back .page-left { animation: jturnb .3s ease; transform-origin: right center; }
+  @keyframes jturn { from { transform: rotateY(-16deg); opacity: .3; } to { transform: none; opacity: 1; } }
+  @keyframes jturnb { from { transform: rotateY(16deg); opacity: .3; } to { transform: none; opacity: 1; } }
+
+  .j-sechead { display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid rgba(96,72,36,.4); padding-bottom: 6px; margin-bottom: 10px; }
+  .j-secname { font-family: "IM Fell English", var(--serif); font-size: 23px; color: var(--jink, #2c2418); flex: 1; }
+  .j-secact { font-family: var(--serif); font-size: 12.5px; font-style: italic; color: rgba(96,72,36,.55); cursor: pointer; border: none; background: none; padding: 2px 4px; }
+  .j-secact:hover { color: #6e2f22; }
+
+  .j-entry { position: relative; padding: 9px 56px 9px 2px; }
+  .j-entry + .j-entry { border-top: 1px dashed rgba(96,72,36,.3); }
+  .j-etr { display: flex; align-items: baseline; gap: 6px; }
+  .j-etitle { font-family: var(--jhand, "Caveat"), cursive; font-size: calc(var(--jhand-size, 19px) * 1.12); font-weight: 700; color: var(--jink, #2c2418); flex: 1; min-width: 0; }
+  .j-ebody { font-family: var(--jhand, "Caveat"), cursive; font-size: var(--jhand-size, 19px); line-height: var(--jhand-lh, 1.3); color: var(--jink, #2c2418); overflow-wrap: break-word; }
+  .j-ebody font[size="1"], .j-ebody font[size="2"] { font-size: .78em; }
+  .j-ebody font[size="4"] { font-size: 1.18em; }
+  .j-ebody font[size="5"], .j-ebody font[size="6"], .j-ebody font[size="7"] { font-size: 1.42em; }
+  .j-del { opacity: 0; border: none; background: none; color: rgba(96,72,36,.55); cursor: pointer; font-size: 12px; padding: 0 2px; }
+  .j-entry:hover .j-del { opacity: .7; }
+  .j-del:hover { color: #6e2f22; }
+  .j-entry [contenteditable] { outline: none; caret-color: var(--jink, #2c2418); }
+  .j-entry.editing { background: rgba(255,252,240,.35); outline: 1px dashed rgba(110,84,40,.45); outline-offset: 4px; border-radius: 4px; }
+  .j-etitle:empty::before, .j-ebody.editable:empty::before { content: attr(data-ph); color: rgba(96,72,36,.42); }
+  .j-erow { display: flex; gap: 8px; margin-top: 8px; }
+  .j-edone { font-family: "IM Fell English", var(--serif); font-size: 13px; background: none; border: 1px solid rgba(96,72,36,.5); color: #4a3418; border-radius: 5px; padding: 3px 12px; cursor: pointer; }
+  .j-edone:hover { background: rgba(96,72,36,.12); }
+
+  .j-stamp { position: absolute; top: 6px; right: 0; width: 50px; height: 50px; border-radius: 50%; z-index: 2;
+    display: flex; align-items: center; justify-content: center; text-align: center; padding: 4px;
+    transform: rotate(-12deg); font-family: "IM Fell English", var(--serif); font-size: 10px; line-height: 1.12; color: #f3dcb2;
+    background: radial-gradient(circle at 34% 28%, rgba(255,255,255,.25), transparent 46%), var(--jstamp, #8c2f22);
+    box-shadow: 0 1px 3px rgba(0,0,0,.4), inset 0 0 7px rgba(0,0,0,.4); cursor: pointer; }
+  .j-stamp.ghost { background: none; border: 1.6px dashed rgba(96,72,36,.5); color: rgba(96,72,36,.6); box-shadow: none; opacity: 0; }
+  .j-entry:hover .j-stamp.ghost { opacity: .7; }
+  .j-stampmenu { position: absolute; z-index: 9; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 5px; box-shadow: var(--shadow); }
+  .j-stampmenu button { font: inherit; font-size: 13px; text-align: left; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; cursor: pointer; }
+  .j-stampmenu button:hover { border-color: var(--accent); }
+
+  .j-trinket { position: relative; background: #dcc794; border: 1px solid #b49a63; padding: 10px; margin: 6px 4px;
+    transform: rotate(1.2deg); box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+  .j-trinket::before, .j-trinket::after { content: ""; position: absolute; width: 34px; height: 13px; background: rgba(199,181,142,.75); }
+  .j-trinket::before { top: -7px; left: 14px; transform: rotate(-4deg); }
+  .j-trinket::after { bottom: -6px; right: 18px; transform: rotate(6deg); }
+  .j-timg { max-width: 100%; display: block; margin: 0 auto; }
+  .j-tcap { font-family: var(--jhand, "Caveat"), cursive; font-size: calc(var(--jhand-size, 19px) * .9); text-align: center; color: var(--jink, #2c2418); margin-top: 6px; }
+
+  .j-addline { font-family: var(--jhand, "Caveat"), cursive; font-size: var(--jhand-size, 19px); color: rgba(96,72,36,.5); cursor: pointer; padding: 10px 2px; }
+  .j-addline:hover { color: rgba(96,72,36,.85); }
+  .j-pageno { position: absolute; bottom: 12px; font-family: "IM Fell English", var(--serif); font-size: 12px; color: rgba(84,62,28,.6); }
+  .page-left .j-pageno { left: 28px; }
+  .page-right .j-pageno { right: 28px; }
+  .j-nav { position: absolute; bottom: 6px; width: 34px; height: 30px; border: none; background: none; cursor: pointer; font-size: 17px; color: rgba(84,62,28,.55); font-family: var(--serif); }
+  .j-nav:hover { color: rgba(84,62,28,.95); }
+  .page-left .j-nav { left: 2px; }
+  .page-right .j-nav { right: 2px; }
+
+  .book-tabs { position: absolute; right: -21px; top: 34px; display: flex; flex-direction: column; gap: 6px; z-index: 1; }
+  .j-tab { writing-mode: vertical-rl; font-family: "IM Fell English", var(--serif); font-size: 12px; letter-spacing: .04em;
+    color: #ead9b5; background: var(--jtab, #5a4632); border-radius: 0 6px 6px 0; padding: 9px 5px; max-height: 118px; overflow: hidden;
+    cursor: pointer; border: 1px solid rgba(0,0,0,.4); border-left: none; box-shadow: 2px 2px 5px rgba(0,0,0,.35); }
+  .j-tab:hover { padding-right: 8px; }
+  .j-tab.active { padding-right: 10px; box-shadow: 2px 2px 7px rgba(0,0,0,.5); }
+  .j-tab.add { writing-mode: horizontal-tb; text-align: center; padding: 4px 7px; font-size: 14px; }
+
+  .quill-bar { position: absolute; left: 50%; bottom: -48px; transform: translateX(-50%); z-index: 6;
+    display: flex; align-items: center; gap: 5px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; box-shadow: var(--shadow); }
+  .quill-bar.hidden { display: none; }
+  .qb-btn { min-width: 27px; height: 27px; font-size: 13px; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+  .qb-btn:hover { border-color: var(--accent); }
+  .qb-sep { width: 1px; height: 18px; background: var(--line); margin: 0 3px; }
+  .qb-lab { font-size: 10.5px; color: var(--faint); text-transform: uppercase; letter-spacing: .07em; margin: 0 2px 0 4px; }
+  .qb-sw { width: 17px; height: 17px; border-radius: 50%; border: 1px solid rgba(0,0,0,.5); cursor: pointer; padding: 0; }
+  .qb-sw.hl { border-radius: 4px; }
+  .qb-sw:hover { transform: scale(1.15); }
+
+  .binder { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); z-index: 8; width: min(700px, 92vw); max-height: 78vh; overflow-y: auto;
+    background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 14px; }
+  .binder.hidden { display: none; }
+  .binder h3 { margin: 0; font-family: var(--serif); color: var(--gold); font-size: 17px; }
+  .b-row { display: flex; flex-direction: column; gap: 7px; }
+  .b-lab { font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--faint); }
+  .b-opts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .b-hand { padding: 4px 14px; background: #efe3c3; color: #2c2418; border: 2px solid transparent; border-radius: 8px; cursor: pointer; }
+  .b-hand.sel { border-color: var(--accent); }
+  .b-sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; box-shadow: inset 0 0 4px rgba(0,0,0,.4); padding: 0; }
+  .b-sw.sel { border-color: var(--gold); }
+  .b-emb { width: 56px; height: 56px; background: #33241a; border: 2px solid transparent; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 6px; }
+  .b-emb img { width: 100%; height: 100%; }
+  .b-emb.sel { border-color: var(--gold); }
+  .b-emb.none { color: var(--faint); font-size: 11px; }
+  .b-paper { width: 74px; height: 96px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; background-size: 100% 100%; padding: 0; }
+  .b-paper.sel { border-color: var(--gold); }
 
   /* inventory */
   .inv-modal { width: min(760px, 94vw); max-height: 88vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
@@ -867,20 +980,24 @@
 </div>
 
 <div id="journal-overlay" class="overlay hidden">
-  <div class="journal-modal">
-    <div class="journal-head">
-      <h2>Journal</h2>
+  <div class="book-scene">
+    <div class="jbar">
       <span class="journal-note">private — the DM cannot read this</span>
       <div class="spacer"></div>
+      <button class="act" id="j-bind">Rebind</button>
       <button class="act" id="journal-close">Close</button>
     </div>
-    <div class="journal-body">
-      <div class="journal-sections">
-        <ul class="j-seclist" id="j-sections"></ul>
-        <button class="act j-add" id="j-add-section">+ Section</button>
+    <div class="book closed" id="jbook">
+      <div class="book-ribbon"></div>
+      <div class="book-cover" id="j-cover"></div>
+      <div class="book-pages" id="j-pages">
+        <div class="page page-left" id="j-pl"></div>
+        <div class="page page-right" id="j-pr"></div>
       </div>
-      <div class="journal-content" id="j-content"></div>
+      <div class="book-tabs" id="j-tabs"></div>
     </div>
+    <div class="quill-bar hidden" id="j-quill"></div>
+    <div class="binder hidden" id="j-binder"></div>
   </div>
 </div>
 
@@ -2956,110 +3073,485 @@ $("map-overlay").addEventListener("click", (e) => { if (e.target.id === "map-ove
 window.addEventListener("resize", () => { if (!$("map-overlay").classList.contains("hidden")) wmLayoutStage(); });
 
 // --- journal (player-owned; never seen by the DM) -------------------------
-let journal = { sections: [] };
-let currentSection = null;
+// The book: parchment pages in a leather binding, written in the player's own
+// hand. Entry bodies are sanitized rich HTML (format "html"); legacy entries
+// are markdown (format "md") and convert the first time they're edited. The
+// binding (hand/ink/cover/emblem/paper) lives in the journal doc, per save.
+let journal = { style: {}, sections: [] };
+let jSection = null;        // current section id
+let jSpread = 0;            // index of the left page within the section's pages
+let jPagesIdx = [];         // pagination: array of pages, each a list of item ids
+let jEditing = null;        // entry id being edited (pagination frozen while set)
+let jEmblems = null;        // emblem files from the server (fetched once)
+
+const J_HANDS = {
+  caveat:  { label: "Quick Quill",  family: "Caveat",             size: 20,   lh: 1.28 },
+  dancing: { label: "Flourish",     family: "Dancing Script",     size: 19,   lh: 1.35 },
+  kalam:   { label: "Field Notes",  family: "Kalam",              size: 15.5, lh: 1.45 },
+  patrick: { label: "Steady Hand",  family: "Patrick Hand",       size: 16,   lh: 1.4  },
+  shadows: { label: "Hasty Scrawl", family: "Shadows Into Light", size: 18,   lh: 1.3  },
+  imfell:  { label: "Old Press",    family: "IM Fell English",    size: 15.5, lh: 1.5  },
+};
+const J_INKS   = { iron: "#2c2418", oak: "#4a3418", indigo: "#283350", forest: "#2d4430", crimson: "#58231f", violet: "#412f58" };
+const J_COVERS = { umber: "#33241a", oxblood: "#451d15", forest: "#223020", midnight: "#1b2331", slate: "#2c2c33" };
+const J_PAPERS = ["clean", "weathered", "stained"];
+const J_TABTINTS = ["#7a5a28", "#5a4632", "#4c5242", "#59394a", "#3e4a5a", "#5a3e3e"];
+const J_SEALS = [["In progress", "#8c2f22"], ["Done", "#3f5c33"], ["Failed", "#41403e"], ["Important", "#a06b1e"]];
+const J_HLS   = ["rgba(245,224,75,.6)", "rgba(247,168,196,.6)", "rgba(168,224,107,.6)", "rgba(143,212,240,.6)", "rgba(245,176,75,.6)"];
 
 function genId() { return "j" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function jCurSec() { return journal.sections.find(s => s.id === jSection); }
+
 function cleanJournal() {
-  return { sections: journal.sections.map(s => ({
-    id: s.id, name: s.name,
-    entries: s.entries.map(e => ({ id: e.id, title: e.title || "", status: e.status || "", body: e.body || "" })),
-  })) };
+  const st = journal.style || {};
+  return {
+    style: { hand: st.hand || "caveat", ink: st.ink || "iron", cover: st.cover || "umber",
+             emblem: st.emblem || "", paper: st.paper || "clean" },
+    sections: journal.sections.map(s => ({
+      id: s.id, name: s.name, color: s.color || "",
+      entries: s.entries.map(e => ({ id: e.id, title: e.title || "", status: e.status || "", body: e.body || "",
+                                     format: e.format || "md", kind: e.kind || "note",
+                                     image: e.image || "", caption: e.caption || "" })),
+    })),
+  };
 }
 async function saveJournal() {
   try { await fetch("/api/journal", { method: "PUT", headers: {"content-type": "application/json"}, body: JSON.stringify(cleanJournal()) }); }
   catch (e) { /* keep editing even if a save blips */ }
 }
+
 async function openJournal() {
   try {
     const data = await (await fetch("/api/journal")).json();
-    journal = data && data.sections ? data : { sections: [] };
-  } catch (e) { journal = { sections: [] }; }
-  currentSection = journal.sections.length ? journal.sections[0].id : null;
-  renderSections(); renderContent();
+    journal = data && data.sections ? data : { style: {}, sections: [] };
+  } catch (e) { journal = { style: {}, sections: [] }; }
+  journal.style = Object.assign({ hand: "caveat", ink: "iron", cover: "umber", emblem: "", paper: "clean" }, journal.style || {});
+  if (jEmblems === null) {
+    try { jEmblems = (await (await fetch("/api/journal/emblems")).json()).emblems || []; } catch (e) { jEmblems = []; }
+  }
+  jSection = journal.sections.length ? journal.sections[0].id : null;
+  jSpread = 0; jEditing = null;
+  applyBinding(); renderTabs(); renderCover();
   $("journal-overlay").classList.remove("hidden");
+  // metrics before pagination: make sure the chosen hand is actually loaded
+  const h = J_HANDS[journal.style.hand] || J_HANDS.caveat;
+  try {
+    await Promise.all([document.fonts.load(`16px "${h.family}"`), document.fonts.load(`700 16px "${h.family}"`),
+                       document.fonts.load('16px "IM Fell English"')]);
+  } catch (e) { /* fallback metrics are fine */ }
 }
-function closeJournal() { $("journal-overlay").classList.add("hidden"); }
+function closeJournal() {
+  if (jEditing) finishEdit(true);
+  hideStampMenu(); $("j-binder").classList.add("hidden");
+  $("journal-overlay").classList.add("hidden");
+}
 
-function renderSections() {
-  const list = $("j-sections"); list.innerHTML = "";
-  journal.sections.forEach(s => {
-    const li = el("li", s.id === currentSection ? "active" : null, s.name);
-    li.addEventListener("click", () => { currentSection = s.id; renderSections(); renderContent(); });
-    list.appendChild(li);
+function applyBinding() {
+  const st = journal.style, book = $("jbook");
+  book.style.setProperty("--jcover", J_COVERS[st.cover] || J_COVERS.umber);
+  book.style.setProperty("--jink", J_INKS[st.ink] || J_INKS.iron);
+  const h = J_HANDS[st.hand] || J_HANDS.caveat;
+  book.style.setProperty("--jhand", `"${h.family}"`);
+  book.style.setProperty("--jhand-size", h.size + "px");
+  book.style.setProperty("--jhand-lh", h.lh);
+  book.classList.remove("paper-clean", "paper-weathered", "paper-stained");
+  book.classList.add("paper-" + (J_PAPERS.includes(st.paper) ? st.paper : "clean"));
+}
+
+// --- the closed cover (click to open) ---
+function renderCover() {
+  const c = $("j-cover"); c.innerHTML = "";
+  $("jbook").classList.add("closed");
+  if (journal.style.emblem) {
+    const img = el("img", "j-cover-emblem"); img.src = "/journal-art/" + encodeURIComponent(journal.style.emblem); img.alt = "";
+    c.appendChild(img);
+  }
+  c.appendChild(el("div", "j-cover-title", "Journal"));
+  c.appendChild(el("div", "j-cover-hint", "open"));
+  c.onclick = () => { $("jbook").classList.remove("closed"); renderTabs(); renderSpread(true); };
+}
+
+// --- pagination: entries flow across numbered pages, chunked whole ---
+function jPageBox() {
+  const pl = $("j-pl"), cs = getComputedStyle(pl);
+  return { w: pl.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+           h: pl.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) };
+}
+
+function paginate() {
+  const sec = jCurSec();
+  jPagesIdx = [[]];
+  if (!sec) return;
+  const box = jPageBox();
+  const meas = el("div", null);
+  meas.style.cssText = `position:absolute; visibility:hidden; left:0; top:0; width:${box.w}px; overflow:hidden;`;
+  $("j-pl").appendChild(meas);
+  meas.appendChild(secHeadNode(sec, true));
+  const headH = meas.offsetHeight; meas.innerHTML = "";
+  const items = sec.entries.map(e => ({ id: e.id, node: readEntryNode(sec, e, true) }));
+  items.push({ id: "__add", node: addLineNode(true) });
+  let avail = box.h - headH;
+  items.forEach(it => {
+    meas.appendChild(it.node); const ih = it.node.offsetHeight + 1; meas.removeChild(it.node);
+    const cur = jPagesIdx[jPagesIdx.length - 1];
+    if (ih > avail && cur.length) { jPagesIdx.push([]); avail = box.h; }
+    jPagesIdx[jPagesIdx.length - 1].push(it.id); avail -= ih;
   });
-  if (!journal.sections.length) list.appendChild(el("div", "j-empty", "no sections yet"));
+  meas.remove();
 }
 
-function renderContent() {
-  const c = $("j-content"); c.innerHTML = "";
-  const sec = journal.sections.find(s => s.id === currentSection);
-  if (!sec) { c.appendChild(el("div", "j-empty", "Add a section to begin — e.g. Quests, NPCs, Locations.")); return; }
+function renderSpread(turn) {
+  hideStampMenu();
+  const sec = jCurSec();
+  const pl = $("j-pl"), pr = $("j-pr");
+  pl.innerHTML = ""; pr.innerHTML = "";
+  if (!sec) {
+    const inner = el("div", "j-pagein"); pl.appendChild(inner);
+    inner.appendChild(el("div", "j-addline", "✒ add a section with the + tab →"));
+    return;
+  }
+  if (!jEditing) paginate();
+  if (jSpread >= jPagesIdx.length) jSpread = Math.max(0, (jPagesIdx.length - 1) & ~1);
+  renderPage(pl, sec, jSpread);
+  renderPage(pr, sec, jSpread + 1);
+  if (turn !== undefined) {
+    const pages = $("j-pages");
+    pages.classList.remove("turning", "turning-back"); void pages.offsetWidth;
+    pages.classList.add(turn ? "turning" : "turning-back");
+  }
+}
+
+function renderPage(host, sec, idx) {
+  const ids = jPagesIdx[idx];
+  const inner = el("div", "j-pagein");
+  host.appendChild(inner);
+  if (ids) {
+    if (idx === 0) inner.appendChild(secHeadNode(sec));
+    ids.forEach(id => {
+      if (id === "__add") inner.appendChild(addLineNode());
+      else {
+        const e = sec.entries.find(x => x.id === id);
+        if (e) inner.appendChild(e.id === jEditing ? editEntryNode(sec, e) : readEntryNode(sec, e));
+      }
+    });
+  }
+  host.appendChild(el("div", "j-pageno", ids ? String(idx + 1) : ""));
+  if (idx % 2 === 0 && jSpread > 0) {
+    const b = el("button", "j-nav", "❮"); b.title = "previous pages";
+    b.onclick = () => { if (jEditing) finishEdit(true); jSpread -= 2; renderSpread(false); };
+    host.appendChild(b);
+  }
+  if (idx % 2 === 1 && jSpread + 2 < jPagesIdx.length) {
+    const b = el("button", "j-nav", "❯"); b.title = "next pages";
+    b.onclick = () => { if (jEditing) finishEdit(true); jSpread += 2; renderSpread(true); };
+    host.appendChild(b);
+  }
+  // an editing (growing) or oversized page scrolls within itself
+  const editingHere = ids && jEditing && ids.includes(jEditing);
+  host.classList.toggle("scrolly", !!editingHere || inner.scrollHeight > inner.clientHeight + 2);
+}
+
+function secHeadNode(sec, forMeasure) {
   const head = el("div", "j-sechead");
   head.appendChild(el("div", "j-secname", sec.name));
-  const acts = el("div", "j-secactions");
-  const add = el("button", "act", "+ Entry"); add.onclick = () => addEntry(sec);
-  const ren = el("button", "act", "Rename"); ren.onclick = () => renameSection(sec);
-  const del = el("button", "act", "Delete"); del.onclick = () => deleteSection(sec);
-  acts.append(add, ren, del); head.appendChild(acts); c.appendChild(head);
-
-  if (!sec.entries.length) { c.appendChild(el("div", "j-empty", "No entries yet. Add one with “+ Entry”.")); return; }
-  const groups = {}, order = [];
-  sec.entries.forEach(e => { const k = e.status || ""; if (!(k in groups)) { groups[k] = []; order.push(k); } groups[k].push(e); });
-  order.forEach(k => {
-    if (k) c.appendChild(el("div", "j-group", k));
-    groups[k].forEach(e => c.appendChild(entryCard(sec, e)));
-  });
+  if (!forMeasure) {
+    const ren = el("button", "j-secact", "rename"); ren.onclick = () => renameSection(sec);
+    const del = el("button", "j-secact", "tear out"); del.onclick = () => deleteSection(sec);
+    head.append(ren, del);
+  }
+  return head;
 }
 
-function entryCard(sec, e) {
+function readEntryNode(sec, e, forMeasure) {
   const card = el("div", "j-entry");
-  if (e._editing) {
-    const ti = el("input", "j-in"); ti.placeholder = "Title"; ti.value = e.title || "";
-    const st = el("input", "j-in"); st.placeholder = "Status (optional — e.g. In-Progress, Completed)"; st.value = e.status || "";
-    const bd = el("textarea", "j-ta"); bd.placeholder = "Notes (markdown ok)"; bd.value = e.body || "";
-    const save = el("button", "j-save", "Save");
-    save.onclick = () => { e.title = ti.value.trim(); e.status = st.value.trim(); e.body = bd.value; delete e._editing; delete e._isNew; saveJournal(); renderContent(); };
-    const cancel = el("button", "act", "Cancel");
-    cancel.onclick = () => { if (e._isNew) sec.entries = sec.entries.filter(x => x !== e); delete e._editing; delete e._isNew; renderContent(); };
-    const row = el("div", "j-erow"); row.append(save, cancel);
-    card.append(ti, st, bd, row);
-    setTimeout(() => ti.focus(), 0);
+  if (e.kind === "trinket") {
+    // a thing affixed to the page, not written on it (authored content, future)
+    const t = el("div", "j-trinket");
+    if (e.image) { const img = el("img", "j-timg"); img.src = e.image; img.alt = e.title || "trinket"; t.appendChild(img); }
+    if (e.caption || e.title) t.appendChild(el("div", "j-tcap", e.caption || e.title));
+    card.appendChild(t);
   } else {
-    const top = el("div", "j-etop");
-    top.appendChild(el("div", "j-etitle", e.title || "(untitled)"));
-    const acts = el("div", "j-eacts");
-    const ed = el("button", "act", "Edit"); ed.onclick = () => { e._editing = true; renderContent(); };
-    const del = el("button", "act", "Delete"); del.onclick = () => { if (confirm("Delete this entry?")) { sec.entries = sec.entries.filter(x => x !== e); saveJournal(); renderContent(); } };
-    acts.append(ed, del); top.appendChild(acts); card.appendChild(top);
-    if (e.body) { const b = el("div", "j-ebody"); b.innerHTML = md(e.body); card.appendChild(b); }
+    const row = el("div", "j-etr");
+    row.appendChild(el("div", "j-etitle", e.title || ""));
+    if (!forMeasure) {
+      const x = el("button", "j-del", "✕"); x.title = "tear out this entry";
+      x.onclick = (ev) => { ev.stopPropagation(); if (confirm("Tear out this entry?")) {
+        sec.entries = sec.entries.filter(q => q !== e); saveJournal(); renderSpread(); } };
+      row.appendChild(x);
+    }
+    card.appendChild(row);
+    const b = el("div", "j-ebody");
+    b.innerHTML = e.format === "html" ? sanitizeInk(e.body || "") : md(e.body || "");
+    card.appendChild(b);
+    if (!forMeasure) card.onclick = () => { if (jEditing) finishEdit(true); startEdit(sec, e); };
   }
+  const stamp = stampNode(sec, e, forMeasure);
+  if (stamp) card.appendChild(stamp);
   return card;
 }
 
+// --- writing directly on the page ---
+function startEdit(sec, e) {
+  if (e.format !== "html") { e.body = md(e.body || ""); e.format = "html"; }  // legacy md converts once
+  jEditing = e.id;
+  // make sure the entry's page is on this spread
+  paginateWithEditing(sec);
+  renderSpread(); showQuill();
+  const card = document.querySelector(".j-entry.editing");
+  if (!card) return;
+  const target = e.title ? card.querySelector(".j-ebody") : card.querySelector(".j-etitle");
+  target.focus();
+  const r = document.createRange(); r.selectNodeContents(target); r.collapse(false);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+function paginateWithEditing(sec) {
+  const saved = jEditing; jEditing = null; paginate(); jEditing = saved;
+  const pg = jPagesIdx.findIndex(p => p.includes(saved));
+  if (pg >= 0) jSpread = pg & ~1;
+}
+function editEntryNode(sec, e) {
+  const card = el("div", "j-entry editing");
+  const t = el("div", "j-etitle"); t.contentEditable = "true"; t.dataset.ph = "Title";
+  t.textContent = e.title || "";
+  t.addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); card.querySelector(".j-ebody").focus(); } });
+  const b = el("div", "j-ebody editable"); b.contentEditable = "true"; b.dataset.ph = "your notes…";
+  b.innerHTML = sanitizeInk(e.body || "");
+  const row = el("div", "j-erow");
+  const done = el("button", "j-edone", "✒ done"); done.onclick = (ev) => { ev.stopPropagation(); finishEdit(true); };
+  const disc = el("button", "j-edone", "discard"); disc.onclick = (ev) => { ev.stopPropagation(); finishEdit(false); };
+  row.append(done, disc);
+  card.append(t, b, row);
+  card.onclick = (ev) => ev.stopPropagation();
+  return card;
+}
+function finishEdit(commit) {
+  const sec = jCurSec();
+  const e = sec && sec.entries.find(x => x.id === jEditing);
+  const card = document.querySelector(".j-entry.editing");
+  if (e && card) {
+    if (commit) {
+      e.title = card.querySelector(".j-etitle").textContent.trim();
+      e.body = sanitizeInk(card.querySelector(".j-ebody").innerHTML);
+      const plain = card.querySelector(".j-ebody").textContent.trim();
+      if (e._new && !e.title && !plain) sec.entries = sec.entries.filter(q => q !== e);
+      delete e._new;
+      saveJournal();
+    } else if (e._new) {
+      sec.entries = sec.entries.filter(q => q !== e);
+    }
+  }
+  jEditing = null; hideQuill(); renderSpread();
+}
+
+// keep the ink clean: whitelist tags + the few styles the quill can apply.
+// Runs on save AND render, so imported saves can't smuggle anything live.
+const J_OKTAGS = new Set(["B", "STRONG", "I", "EM", "U", "S", "STRIKE", "DEL", "BR", "P", "DIV", "SPAN", "FONT", "UL", "OL", "LI"]);
+const J_ZAPTAGS = new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "LINK", "META", "SVG", "MATH", "FORM", "INPUT", "BUTTON", "TEXTAREA", "SELECT"]);
+function sanitizeInk(html) {
+  const tpl = document.createElement("template"); tpl.innerHTML = html || "";
+  (function walk(node) {
+    [...node.childNodes].forEach(ch => {
+      if (ch.nodeType === 3) return;
+      if (ch.nodeType !== 1) { ch.remove(); return; }
+      if (J_ZAPTAGS.has(ch.tagName)) { ch.remove(); return; }
+      walk(ch);
+      if (!J_OKTAGS.has(ch.tagName)) { ch.replaceWith(...ch.childNodes); return; }
+      [...ch.attributes].forEach(a => {
+        const n = a.name.toLowerCase();
+        if (n === "style") {
+          const keep = [];
+          if (ch.style.color) keep.push("color:" + ch.style.color);
+          if (ch.style.backgroundColor) keep.push("background-color:" + ch.style.backgroundColor);
+          if (ch.style.fontSize) keep.push("font-size:" + ch.style.fontSize);
+          if (keep.length) ch.setAttribute("style", keep.join(";")); else ch.removeAttribute("style");
+        } else if (!(ch.tagName === "FONT" && (n === "color" || n === "size"))) {
+          ch.removeAttribute(a.name);
+        }
+      });
+    });
+  })(tpl.content);
+  return tpl.innerHTML;
+}
+
+// --- the quill bar (rich ink while editing) ---
+function buildQuill() {
+  const q = $("j-quill");
+  const btn = (label, title, fn) => {
+    const b = el("button", "qb-btn"); b.innerHTML = label; b.title = title;
+    b.onmousedown = ev => ev.preventDefault();          // keep the selection alive
+    b.onclick = fn; q.appendChild(b); return b;
+  };
+  const exec = (c, v) => { document.execCommand("styleWithCSS", false, c === "foreColor" || c === "hiliteColor"); document.execCommand(c, false, v); };
+  btn("<b>B</b>", "bold (Ctrl+B)", () => exec("bold"));
+  btn("<i>I</i>", "italic (Ctrl+I)", () => exec("italic"));
+  btn("<u>U</u>", "underline (Ctrl+U)", () => exec("underline"));
+  btn("<s>S</s>", "strikethrough", () => exec("strikeThrough"));
+  q.appendChild(el("span", "qb-sep"));
+  btn('<span style="font-size:10px">A</span>', "small text", () => exec("fontSize", "2"));
+  btn("A", "normal text", () => exec("fontSize", "3"));
+  btn('<span style="font-size:16px">A</span>', "large text", () => exec("fontSize", "5"));
+  q.appendChild(el("span", "qb-sep"));
+  q.appendChild(el("span", "qb-lab", "ink"));
+  Object.values(J_INKS).concat("#8c2f22").forEach(c => {
+    const b = el("button", "qb-sw"); b.style.background = c; b.title = "ink color";
+    b.onmousedown = ev => ev.preventDefault(); b.onclick = () => exec("foreColor", c);
+    q.appendChild(b);
+  });
+  q.appendChild(el("span", "qb-lab", "mark"));
+  J_HLS.forEach(c => {
+    const b = el("button", "qb-sw hl"); b.style.background = c; b.title = "highlight";
+    b.onmousedown = ev => ev.preventDefault(); b.onclick = () => exec("hiliteColor", c);
+    q.appendChild(b);
+  });
+  const clr = el("button", "qb-sw hl"); clr.style.border = "1px dashed var(--faint)"; clr.title = "clear highlight";
+  clr.onmousedown = ev => ev.preventDefault(); clr.onclick = () => exec("hiliteColor", "transparent");
+  q.appendChild(clr);
+}
+function showQuill() { $("j-quill").classList.remove("hidden"); }
+function hideQuill() { $("j-quill").classList.add("hidden"); }
+
+// --- stamps (player-applied wax seals, in the margin so they never cover ink) ---
+let jStampMenuEl = null;
+function hideStampMenu() { if (jStampMenuEl) { jStampMenuEl.remove(); jStampMenuEl = null; } }
+function stampNode(sec, e, forMeasure) {
+  if (forMeasure) return null;                          // absolute: no height cost
+  let st;
+  if (e.status) {
+    const preset = J_SEALS.find(s => s[0].toLowerCase() === e.status.toLowerCase());
+    st = el("div", "j-stamp", e.status);
+    st.style.setProperty("--jstamp", preset ? preset[1] : "#6e2f4a");
+  } else {
+    st = el("div", "j-stamp ghost", "stamp");
+  }
+  st.onclick = (ev) => { ev.stopPropagation(); showStampMenu(st, sec, e); };
+  return st;
+}
+function showStampMenu(anchor, sec, e) {
+  hideStampMenu();
+  const scene = document.querySelector(".book-scene");
+  const m = el("div", "j-stampmenu");
+  J_SEALS.forEach(([t]) => { const b = el("button", null, t); b.onclick = () => { e.status = t; done(); }; m.appendChild(b); });
+  const c = el("button", null, "Custom…");
+  c.onclick = () => { const t = prompt("Stamp text (short):", e.status || ""); if (t != null) { e.status = t.trim().slice(0, 18); done(); } };
+  m.appendChild(c);
+  if (e.status) { const r = el("button", null, "Remove stamp"); r.onclick = () => { e.status = ""; done(); }; m.appendChild(r); }
+  function done() { hideStampMenu(); saveJournal(); renderSpread(); }
+  const sr = scene.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
+  m.style.left = Math.max(0, Math.min(ar.left - sr.left, sr.width - 160)) + "px";
+  m.style.top = (ar.bottom - sr.top + 4) + "px";
+  scene.appendChild(m); jStampMenuEl = m;
+}
+
+// --- entries / sections ---
+function addLineNode(forMeasure) {
+  const a = el("div", "j-addline", "✒ write a new entry…");
+  if (!forMeasure) a.onclick = () => addEntry();
+  return a;
+}
+function addEntry() {
+  const sec = jCurSec(); if (!sec) return;
+  const e = { id: genId(), title: "", status: "", body: "", format: "html", kind: "note", image: "", caption: "", _new: true };
+  sec.entries.push(e);
+  startEdit(sec, e);
+}
+function renderTabs() {
+  const host = $("j-tabs"); host.innerHTML = "";
+  const closed = $("jbook").classList.contains("closed");
+  journal.sections.forEach((s, i) => {
+    const t = el("div", "j-tab" + (s.id === jSection && !closed ? " active" : ""), s.name);
+    t.style.setProperty("--jtab", s.color || J_TABTINTS[i % J_TABTINTS.length]);
+    t.onclick = () => {
+      if (jEditing) finishEdit(true);
+      jSection = s.id; jSpread = 0;
+      $("jbook").classList.remove("closed");
+      renderTabs(); renderSpread(true);
+    };
+    host.appendChild(t);
+  });
+  const add = el("div", "j-tab add", "+"); add.title = "new section";
+  add.onclick = addSection; host.appendChild(add);
+}
 function addSection() {
-  const name = prompt("New section name (e.g. Quests, NPCs, Locations, Bestiary):");
+  const name = prompt("New section name (e.g. Quests, People, Places):");
   if (!name || !name.trim()) return;
-  const s = { id: genId(), name: name.trim(), entries: [] };
-  journal.sections.push(s); currentSection = s.id; saveJournal(); renderSections(); renderContent();
+  const s = { id: genId(), name: name.trim(), color: "", entries: [] };
+  journal.sections.push(s); jSection = s.id; jSpread = 0;
+  $("jbook").classList.remove("closed");
+  saveJournal(); renderTabs(); renderSpread(true);
 }
 function renameSection(sec) {
   const name = prompt("Section name:", sec.name);
   if (!name || !name.trim()) return;
-  sec.name = name.trim(); saveJournal(); renderSections(); renderContent();
+  sec.name = name.trim(); saveJournal(); renderTabs(); renderSpread();
 }
 function deleteSection(sec) {
-  if (!confirm(`Delete the “${sec.name}” section and its entries?`)) return;
+  if (!confirm(`Tear out “${sec.name}” and all its entries?`)) return;
   journal.sections = journal.sections.filter(s => s !== sec);
-  currentSection = journal.sections.length ? journal.sections[0].id : null;
-  saveJournal(); renderSections(); renderContent();
+  jSection = journal.sections.length ? journal.sections[0].id : null; jSpread = 0;
+  saveJournal(); renderTabs(); renderSpread();
 }
-function addEntry(sec) {
-  sec.entries.push({ id: genId(), title: "", status: "", body: "", _editing: true, _isNew: true });
-  renderContent();
+
+// --- the bookbinder (rebinding: hand, ink, cover, emblem, paper) ---
+function renderBinder() {
+  const b = $("j-binder"); b.innerHTML = "";
+  b.appendChild(el("h3", null, "The Bookbinder"));
+  const st = journal.style;
+  const row = (lab) => { const r = el("div", "b-row"); r.appendChild(el("div", "b-lab", lab));
+                         const o = el("div", "b-opts"); r.appendChild(o); b.appendChild(r); return o; };
+  const hRow = row("Handwriting");
+  Object.entries(J_HANDS).forEach(([k, h]) => {
+    const x = el("button", "b-hand" + (st.hand === k ? " sel" : ""), h.label);
+    x.style.fontFamily = `"${h.family}", cursive`; x.style.fontSize = Math.min(h.size + 2, 22) + "px";
+    x.onclick = () => { st.hand = k; bindAndSave(); };
+    hRow.appendChild(x);
+  });
+  const iRow = row("Ink");
+  Object.entries(J_INKS).forEach(([k, c]) => {
+    const x = el("button", "b-sw" + (st.ink === k ? " sel" : "")); x.style.background = c; x.title = k;
+    x.onclick = () => { st.ink = k; bindAndSave(); }; iRow.appendChild(x);
+  });
+  const cRow = row("Cover leather");
+  Object.entries(J_COVERS).forEach(([k, c]) => {
+    const x = el("button", "b-sw" + (st.cover === k ? " sel" : "")); x.style.background = c; x.style.borderRadius = "6px"; x.title = k;
+    x.onclick = () => { st.cover = k; bindAndSave(); }; cRow.appendChild(x);
+  });
+  const eRow = row("Cover emblem");
+  const none = el("button", "b-emb none" + (!st.emblem ? " sel" : ""), "plain");
+  none.onclick = () => { st.emblem = ""; bindAndSave(); }; eRow.appendChild(none);
+  (jEmblems || []).forEach(f => {
+    const x = el("button", "b-emb" + (st.emblem === f ? " sel" : ""));
+    const img = el("img"); img.src = "/journal-art/" + encodeURIComponent(f); img.alt = f; x.appendChild(img);
+    x.onclick = () => { st.emblem = f; bindAndSave(); }; eRow.appendChild(x);
+  });
+  const pRow = row("Paper");
+  J_PAPERS.forEach(p => {
+    const x = el("button", "b-paper" + (st.paper === p ? " sel" : "")); x.title = p;
+    x.style.backgroundImage = `url("/journal-art/paper-${p}.svg")`;
+    x.onclick = () => { st.paper = p; bindAndSave(); }; pRow.appendChild(x);
+  });
+  const doneRow = el("div", "b-row");
+  const done = el("button", "act", "Done"); done.onclick = () => $("j-binder").classList.add("hidden");
+  doneRow.appendChild(done); b.appendChild(doneRow);
 }
+function bindAndSave() {
+  applyBinding(); saveJournal(); renderBinder(); renderTabs();
+  if ($("jbook").classList.contains("closed")) renderCover(); else renderSpread();
+}
+
 $("journal-close").addEventListener("click", closeJournal);
-$("j-add-section").addEventListener("click", addSection);
+$("j-bind").addEventListener("click", () => {
+  if ($("j-binder").classList.contains("hidden")) { renderBinder(); $("j-binder").classList.remove("hidden"); }
+  else $("j-binder").classList.add("hidden");
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || $("journal-overlay").classList.contains("hidden")) return;
+  if (!$("j-binder").classList.contains("hidden")) { $("j-binder").classList.add("hidden"); return; }
+  if (jStampMenuEl) { hideStampMenu(); return; }
+  if (jEditing) { finishEdit(true); return; }          // Esc commits — ink is precious
+  closeJournal();
+});
+document.addEventListener("click", (e) => { if (jStampMenuEl && !jStampMenuEl.contains(e.target)) hideStampMenu(); });
+buildQuill();
 
 // --- inventory (per party member, category subsections, equip toggles) ----
 const INV_CATEGORIES = [

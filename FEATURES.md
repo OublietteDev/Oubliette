@@ -123,7 +123,7 @@ Hand-written code only — excludes JSON data/content, art, audio, `.venv`, and 
 ### UI/UX
 - **Two-column layout:** chat with roll/effect/combat/quest chips on the left; a live HUD (Scene, character card, Present NPCs, Active Quest) on the right.
 - **☰ Menu:** Journal, Inventory, Party Sheets, Bestiary, Map, Help, Settings, Wrap-up.
-- **Player journal** — markdown notes and status-grouped entries, **deliberately invisible to the DM** so a player can't induce a hallucination.
+- **Player journal** — a real book: parchment pages in a customizable leather binding (handwriting, ink, cover, emblem, paper — the Bookbinder), written on directly with rich ink (styles, sizes, colors, highlighters) and stamped with wax seals; entries flow across numbered pages. **Deliberately invisible to the DM** so a player can't induce a hallucination.
 - **In-chat confirmations** for entering the Arena, wrapping a session, and taking a proposed rest; a general-audience How-to-Play help panel; auto-opens the browser on launch.
 
 ---

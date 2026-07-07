@@ -39,7 +39,7 @@ Unordered, and gated on demand. The big themes:
 ### The experience
 - **Voiced narration** — optional AI voice for the DM's turns, with the Forge letting you assign a preferred voice per character so NPCs sound like themselves. The plan is to use ElevenLabs (high latency, can be very expensive but superior quality) and Kokoro 82M locally (low latency, low cost, small memory footprint, decent quality but lacking emotion). Requires touching the DM prompt.
 - **Trinkets** - optional authored quest add-ons that can be stored in the player journal. A fragment of a map, a note from a powerful noble, etc.
-- **Upgraded player journal** - different fonts, trinkets (see above), custom backgrounds to turn your journal into something that actually represents your journey. Possible "page turning" animations.
+- **Upgraded player journal** *(built — in testing on `main` for a future release)* — the journal is now a real book: light parchment pages in a leather binding, opened from its cover. Pick your character's handwriting (six bundled hands), ink color, cover leather, cover emblem, and paper style at the Bookbinder; write directly on the page with bold/italics/underline/strikethrough, three text sizes, colored inks, and a pack of highlighters; stamp entries with wax seals ("In progress", "Done", or your own words). Entries flow across numbered pages with a page-turn, and a new journal opens with Quests/People/Places/Creatures tabs waiting for ink. Old notes carry over untouched. The page is already shaped to receive trinkets (see above) when they arrive.
 
 ## Someday — the big maybes
 
