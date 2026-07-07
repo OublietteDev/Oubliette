@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 760" preserveAspectRatio="none">
+  <defs>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.014 0.010" numOctaves="5" seed="23" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.38  0 0 0 0 0.28  0 0 0 0 0.13  0 0 0 0.17 0"/>
+      <feComposite operator="over" in2="SourceGraphic"/>
+    </filter>
+    <filter id="blot"><feGaussianBlur stdDeviation="7"/></filter>
+    <radialGradient id="vign" cx="50%" cy="46%" r="72%">
+      <stop offset="48%" stop-color="#33250f" stop-opacity="0"/>
+      <stop offset="88%" stop-color="#33250f" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#2c1f0c" stop-opacity="0.30"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="760" fill="#e6d5a8" filter="url(#grain)"/>
+  <g filter="url(#blot)" fill="#8a6d3a">
+    <ellipse cx="64" cy="98" rx="30" ry="18" opacity="0.10"/>
+    <ellipse cx="548" cy="250" rx="22" ry="34" opacity="0.09"/>
+    <ellipse cx="120" cy="688" rx="42" ry="20" opacity="0.11"/>
+    <ellipse cx="512" cy="640" rx="26" ry="16" opacity="0.08"/>
+    <ellipse cx="310" cy="30" rx="46" ry="12" opacity="0.07"/>
+  </g>
+  <rect width="600" height="760" fill="url(#vign)"/>
+</svg>
