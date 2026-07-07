@@ -260,8 +260,11 @@ def test_journal_binding_persists_and_assets_serve():
     assert client.put("/api/journal", json=doc).json()["ok"] is True
     assert client.get("/api/journal").json()["style"]["cover"] == "oxblood"
 
-    emblems = client.get("/api/journal/emblems").json()["emblems"]
-    assert "emblem-d20.svg" in emblems and len(emblems) >= 6
+    art = client.get("/api/journal/art").json()
+    assert "emblem-d20.svg" in art["emblems"] and len(art["emblems"]) >= 6
+    # papers and seals are drop-a-file extensible; the three built-in papers ship
+    assert {"paper-clean.svg", "paper-weathered.svg", "paper-stained.svg"} <= set(art["papers"])
+    assert isinstance(art["seals"], list)
 
     # art + fonts serve; traversal is refused
     assert client.get("/journal-art/paper-weathered.svg").status_code == 200

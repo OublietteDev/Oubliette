@@ -437,10 +437,8 @@
 
   .book-pages { display: flex; perspective: 1600px; }
   .page { width: min(465px, 38vw); height: var(--jpageh); position: relative; overflow: hidden;
-    padding: 24px 28px 40px; background-color: #f0e4c6;
-    background-image: url("/journal-art/paper-clean.svg"); background-size: 100% 100%; }
-  .paper-weathered .page { background-image: url("/journal-art/paper-weathered.svg"); background-color: #e6d5a8; }
-  .paper-stained .page { background-image: url("/journal-art/paper-stained.svg"); background-color: #ecdfba; }
+    padding: 24px 28px 40px; background-color: #ecdfc0;
+    background-image: var(--jpaper, url("/journal-art/paper-clean.svg")); background-size: 100% 100%; }
   .page-left { border-radius: 7px 0 0 7px; box-shadow: inset -16px 0 24px -16px rgba(50,32,8,.6); }
   .page-right { border-radius: 0 7px 7px 0; box-shadow: inset 16px 0 24px -16px rgba(50,32,8,.6); }
   .j-pagein { height: 100%; overflow: hidden; }
@@ -478,6 +476,10 @@
     transform: rotate(-12deg); font-family: "IM Fell English", var(--serif); font-size: 10px; line-height: 1.12; color: #f3dcb2;
     background: radial-gradient(circle at 34% 28%, rgba(255,255,255,.25), transparent 46%), var(--jstamp, #8c2f22);
     box-shadow: 0 1px 3px rgba(0,0,0,.4), inset 0 0 7px rgba(0,0,0,.4); cursor: pointer; }
+  /* custom wax art (seal-*.png dropped in the journal art folder): the image IS the
+     wax; the status text sits on top, auto-scaled to the stamp */
+  .j-stamp.art { background: var(--jsealart) center / 100% 100% no-repeat; border-radius: 0; box-shadow: none;
+    text-shadow: 0 1px 2px rgba(0,0,0,.55); }
   .j-stamp.ghost { background: none; border: 1.6px dashed rgba(96,72,36,.5); color: rgba(96,72,36,.6); box-shadow: none; opacity: 0; }
   .j-entry:hover .j-stamp.ghost { opacity: .7; }
   .j-stampmenu { position: absolute; z-index: 9; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 5px; box-shadow: var(--shadow); }
@@ -502,15 +504,18 @@
   .page-left .j-nav { left: 2px; }
   .page-right .j-nav { right: 2px; }
 
-  .book-tabs { position: absolute; right: -21px; top: 34px; display: flex; flex-direction: column; gap: 6px; z-index: 1; }
+  /* tabs squeeze like a real crowded binder: bounded by the book's height, they
+     shrink and ellipsize rather than marching off the cover */
+  .book-tabs { position: absolute; right: -21px; top: 30px; bottom: 30px; display: flex; flex-direction: column; gap: 6px; z-index: 1; }
   .j-tab { writing-mode: vertical-rl; font-family: "IM Fell English", var(--serif); font-size: 12px; letter-spacing: .04em;
-    color: #ead9b5; background: var(--jtab, #5a4632); border-radius: 0 6px 6px 0; padding: 9px 5px; max-height: 118px; overflow: hidden;
+    color: #ead9b5; background: var(--jtab, #5a4632); border-radius: 0 6px 6px 0; padding: 9px 5px;
+    flex: 0 1 auto; min-height: 30px; max-height: 118px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     cursor: pointer; border: 1px solid rgba(0,0,0,.4); border-left: none; box-shadow: 2px 2px 5px rgba(0,0,0,.35); }
   .j-tab:hover { padding-right: 8px; }
   .j-tab.active { padding-right: 10px; box-shadow: 2px 2px 7px rgba(0,0,0,.5); }
-  .j-tab.add { writing-mode: horizontal-tb; text-align: center; padding: 4px 7px; font-size: 14px; }
+  .j-tab.add { writing-mode: horizontal-tb; text-align: center; padding: 4px 7px; font-size: 14px; flex-shrink: 0; min-height: 0; }
 
-  .quill-bar { position: absolute; left: 50%; bottom: -48px; transform: translateX(-50%); z-index: 6;
+  .quill-bar { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); z-index: 6;
     display: flex; align-items: center; gap: 5px;
     background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; box-shadow: var(--shadow); }
   .quill-bar.hidden { display: none; }
@@ -3082,7 +3087,8 @@ let jSection = null;        // current section id
 let jSpread = 0;            // index of the left page within the section's pages
 let jPagesIdx = [];         // pagination: array of pages, each a list of item ids
 let jEditing = null;        // entry id being edited (pagination frozen while set)
-let jEmblems = null;        // emblem files from the server (fetched once)
+let jArt = null;            // {emblems, papers, seals} from the server (fetched once);
+                            // every list is just files dropped in static/img/journal
 
 const J_HANDS = {
   caveat:  { label: "Quick Quill",  family: "Caveat",             size: 20,   lh: 1.28 },
@@ -3094,9 +3100,22 @@ const J_HANDS = {
 };
 const J_INKS   = { iron: "#2c2418", oak: "#4a3418", indigo: "#283350", forest: "#2d4430", crimson: "#58231f", violet: "#412f58" };
 const J_COVERS = { umber: "#33241a", oxblood: "#451d15", forest: "#223020", midnight: "#1b2331", slate: "#2c2c33" };
-const J_PAPERS = ["clean", "weathered", "stained"];
 const J_TABTINTS = ["#7a5a28", "#5a4632", "#4c5242", "#59394a", "#3e4a5a", "#5a3e3e"];
-const J_SEALS = [["In progress", "#8c2f22"], ["Done", "#3f5c33"], ["Failed", "#41403e"], ["Important", "#a06b1e"]];
+// label, wax color (when no art), art key — custom-text stamps use the "custom" key
+const J_SEALS = [["In progress", "#8c2f22", "progress"], ["Done", "#3f5c33", "done"],
+                 ["Failed", "#41403e", "failed"], ["Important", "#a06b1e", "important"]];
+
+// resolve a style key ("weathered") to a dropped file ("paper-weathered.svg"|.png|…)
+const jStem = (f, prefix) => f.replace(prefix, "").replace(/\.[^.]+$/, "");
+function jPaperFile(key) {
+  const papers = (jArt && jArt.papers) || [];
+  return papers.find(f => jStem(f, "paper-") === key) || "paper-clean.svg";
+}
+function jSealFile(status) {
+  const preset = J_SEALS.find(s => s[0].toLowerCase() === (status || "").toLowerCase());
+  const key = preset ? preset[2] : "custom";
+  return ((jArt && jArt.seals) || []).find(f => jStem(f, "seal-") === key) || null;
+}
 const J_HLS   = ["rgba(245,224,75,.6)", "rgba(247,168,196,.6)", "rgba(168,224,107,.6)", "rgba(143,212,240,.6)", "rgba(245,176,75,.6)"];
 
 function genId() { return "j" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -3126,8 +3145,8 @@ async function openJournal() {
     journal = data && data.sections ? data : { style: {}, sections: [] };
   } catch (e) { journal = { style: {}, sections: [] }; }
   journal.style = Object.assign({ hand: "caveat", ink: "iron", cover: "umber", emblem: "", paper: "clean" }, journal.style || {});
-  if (jEmblems === null) {
-    try { jEmblems = (await (await fetch("/api/journal/emblems")).json()).emblems || []; } catch (e) { jEmblems = []; }
+  if (jArt === null) {
+    try { jArt = await (await fetch("/api/journal/art")).json(); } catch (e) { jArt = { emblems: [], papers: [], seals: [] }; }
   }
   jSection = journal.sections.length ? journal.sections[0].id : null;
   jSpread = 0; jEditing = null;
@@ -3154,8 +3173,7 @@ function applyBinding() {
   book.style.setProperty("--jhand", `"${h.family}"`);
   book.style.setProperty("--jhand-size", h.size + "px");
   book.style.setProperty("--jhand-lh", h.lh);
-  book.classList.remove("paper-clean", "paper-weathered", "paper-stained");
-  book.classList.add("paper-" + (J_PAPERS.includes(st.paper) ? st.paper : "clean"));
+  book.style.setProperty("--jpaper", `url("/journal-art/${encodeURIComponent(jPaperFile(st.paper))}")`);
 }
 
 // --- the closed cover (click to open) ---
@@ -3417,9 +3435,15 @@ function stampNode(sec, e, forMeasure) {
   if (forMeasure) return null;                          // absolute: no height cost
   let st;
   if (e.status) {
-    const preset = J_SEALS.find(s => s[0].toLowerCase() === e.status.toLowerCase());
-    st = el("div", "j-stamp", e.status);
-    st.style.setProperty("--jstamp", preset ? preset[1] : "#6e2f4a");
+    const art = jSealFile(e.status);
+    if (art) {
+      st = el("div", "j-stamp art", e.status);
+      st.style.setProperty("--jsealart", `url("/journal-art/${encodeURIComponent(art)}")`);
+    } else {
+      const preset = J_SEALS.find(s => s[0].toLowerCase() === e.status.toLowerCase());
+      st = el("div", "j-stamp", e.status);
+      st.style.setProperty("--jstamp", preset ? preset[1] : "#6e2f4a");
+    }
   } else {
     st = el("div", "j-stamp ghost", "stamp");
   }
@@ -3518,15 +3542,16 @@ function renderBinder() {
   const eRow = row("Cover emblem");
   const none = el("button", "b-emb none" + (!st.emblem ? " sel" : ""), "plain");
   none.onclick = () => { st.emblem = ""; bindAndSave(); }; eRow.appendChild(none);
-  (jEmblems || []).forEach(f => {
+  ((jArt && jArt.emblems) || []).forEach(f => {
     const x = el("button", "b-emb" + (st.emblem === f ? " sel" : ""));
     const img = el("img"); img.src = "/journal-art/" + encodeURIComponent(f); img.alt = f; x.appendChild(img);
     x.onclick = () => { st.emblem = f; bindAndSave(); }; eRow.appendChild(x);
   });
   const pRow = row("Paper");
-  J_PAPERS.forEach(p => {
+  ((jArt && jArt.papers) || []).forEach(f => {
+    const p = jStem(f, "paper-");
     const x = el("button", "b-paper" + (st.paper === p ? " sel" : "")); x.title = p;
-    x.style.backgroundImage = `url("/journal-art/paper-${p}.svg")`;
+    x.style.backgroundImage = `url("/journal-art/${encodeURIComponent(f)}")`;
     x.onclick = () => { st.paper = p; bindAndSave(); }; pRow.appendChild(x);
   });
   const doneRow = el("div", "b-row");

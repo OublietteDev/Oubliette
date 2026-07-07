@@ -980,14 +980,22 @@ async def put_journal(body: Journal) -> JSONResponse:
         return JSONResponse({"ok": True})
 
 
-@app.get("/api/journal/emblems")
-async def journal_emblems() -> JSONResponse:
-    """Cover emblems the bookbinder can offer: every emblem-*.svg in the journal art
-    folder. Dropping a file there is the whole authoring story — the planned Forge
-    emblem editor will just write into it."""
+@app.get("/api/journal/art")
+async def journal_art_index() -> JSONResponse:
+    """Everything the Bookbinder can offer, read straight from the journal art
+    folder: emblem-* (cover emblems), paper-* (page styles), seal-* (wax stamp art,
+    keyed by status preset). Dropping a file in static/img/journal IS the whole
+    authoring story — for hand-made art and the planned Forge editor alike."""
     folder = STATIC / "img" / "journal"
-    names = sorted(p.name for p in folder.glob("emblem-*.svg")) if folder.is_dir() else []
-    return JSONResponse({"emblems": names})
+    exts = {".svg", ".png", ".jpg", ".jpeg", ".webp"}
+
+    def scan(prefix: str) -> list[str]:
+        if not folder.is_dir():
+            return []
+        return sorted(p.name for p in folder.iterdir()
+                      if p.suffix.lower() in exts and p.name.startswith(prefix))
+
+    return JSONResponse({"emblems": scan("emblem-"), "papers": scan("paper-"), "seals": scan("seal-")})
 
 
 @app.get("/journal-art/{filename}", response_model=None)
