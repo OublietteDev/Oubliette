@@ -1,8 +1,8 @@
 # Journal art — drop a file, get an option
 
 Everything in this folder is discovered by filename prefix and offered in the
-game automatically (`GET /api/journal/art`). No code changes, no registration:
-drop a file here, restart the app server, and it's in the Bookbinder.
+game automatically (`GET /api/journal/art`). No code changes, no registration,
+no restart: drop a file here, refresh the browser, and it's in the Bookbinder.
 Formats: `.svg`, `.png`, `.jpg`, `.webp`.
 
 ## Papers — `paper-<name>.png`
