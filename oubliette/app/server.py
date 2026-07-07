@@ -980,6 +980,34 @@ async def put_journal(body: Journal) -> JSONResponse:
         return JSONResponse({"ok": True})
 
 
+@app.get("/api/journal/emblems")
+async def journal_emblems() -> JSONResponse:
+    """Cover emblems the bookbinder can offer: every emblem-*.svg in the journal art
+    folder. Dropping a file there is the whole authoring story — the planned Forge
+    emblem editor will just write into it."""
+    folder = STATIC / "img" / "journal"
+    names = sorted(p.name for p in folder.glob("emblem-*.svg")) if folder.is_dir() else []
+    return JSONResponse({"emblems": names})
+
+
+@app.get("/journal-art/{filename}", response_model=None)
+async def journal_art(filename: str) -> FileResponse | JSONResponse:
+    """Journal art (paper textures, cover emblems) from static/img/journal."""
+    path = STATIC / "img" / "journal" / filename
+    if any(c in filename for c in ("/", "\\", "..")) or not path.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(path, headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/journal-fonts/{filename}", response_model=None)
+async def journal_font(filename: str) -> FileResponse | JSONResponse:
+    """Bundled handwriting fonts (local files so Offline Mode keeps its penmanship)."""
+    path = STATIC / "fonts" / filename
+    if any(c in filename for c in ("/", "\\", "..")) or not path.is_file():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return FileResponse(path, headers={"Cache-Control": "max-age=604800"})
+
+
 @app.get("/api/packs")
 async def get_packs() -> JSONResponse:
     """The worlds a new game can start in, and which one is playing now."""

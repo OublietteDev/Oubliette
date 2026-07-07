@@ -219,7 +219,10 @@ def test_stream_endpoint_yields_deltas_then_done():
 
 def test_journal_roundtrips_and_is_invisible_to_the_dm():
     _new()
-    assert client.get("/api/journal").json()["sections"] == []
+    # a never-written journal opens seeded (the blank-page fix), with default binding
+    fresh = client.get("/api/journal").json()
+    assert [s["name"] for s in fresh["sections"]] == ["Quests", "People", "Places", "Creatures"]
+    assert fresh["style"]["hand"] == "caveat" and fresh["style"]["paper"] == "clean"
 
     doc = {"sections": [{
         "id": "s1", "name": "Quests",
@@ -231,15 +234,39 @@ def test_journal_roundtrips_and_is_invisible_to_the_dm():
     got = client.get("/api/journal").json()
     assert got["sections"][0]["name"] == "Quests"
     assert got["sections"][0]["entries"][0]["title"] == "The Missing Children"
+    # a legacy entry (no format/kind keys) loads as markdown-format note
+    assert got["sections"][0]["entries"][0]["format"] == "md"
+    assert got["sections"][0]["entries"][0]["kind"] == "note"
+    # ...and the player's emptiness is respected once a row exists (no re-seeding)
+    assert client.put("/api/journal", json={"sections": []}).json()["ok"] is True
+    assert client.get("/api/journal").json()["sections"] == []
 
     # The guarantee: journal content NEVER reaches the DM's context, and writing it
     # produces no game events.
+    client.put("/api/journal", json=doc)
     from oubliette.app.server import GAME
     from oubliette.dm.context import build_context
     from oubliette.record.events import EventKind
     ctx = build_context(GAME.session.repo, "a scene")
     assert "Missing Children" not in ctx and "caves" not in ctx
     assert GAME.session.store.of_kind(EventKind.TOOL_APPLIED) == []
+
+
+def test_journal_binding_persists_and_assets_serve():
+    _new()
+    doc = {"style": {"hand": "kalam", "ink": "indigo", "cover": "oxblood",
+                     "emblem": "emblem-d20.svg", "paper": "weathered"},
+           "sections": []}
+    assert client.put("/api/journal", json=doc).json()["ok"] is True
+    assert client.get("/api/journal").json()["style"]["cover"] == "oxblood"
+
+    emblems = client.get("/api/journal/emblems").json()["emblems"]
+    assert "emblem-d20.svg" in emblems and len(emblems) >= 6
+
+    # art + fonts serve; traversal is refused
+    assert client.get("/journal-art/paper-weathered.svg").status_code == 200
+    assert client.get("/journal-fonts/kalam-regular.woff2").status_code == 200
+    assert client.get("/journal-art/..%2f..%2fserver.py").status_code == 404
 
 
 def test_table_endpoint_reports_contract_and_presets():
