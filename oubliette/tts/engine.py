@@ -123,18 +123,24 @@ class KokoroBackend:
         return None
 
 
-class QwenPlaceholder:
-    """Tier 2 — arrives in slice N3 (our own thin llama.cpp engine). The key is
-    recognized now so a dev config naming it degrades honestly, not confusingly."""
+class QwenLoader:
+    """Tier 2 — Qwen3-TTS 1.7B via our own llama.cpp engine (N3). The real
+    backend lives in qwen.py; this thin loader defers that import (and its
+    numpy/onnxruntime/tokenizers pulls) until the tier is actually chosen."""
 
     id = "qwen-1.7b"
 
+    def __new__(cls, root: Path):
+        from .qwen import QwenBackend
+        return QwenBackend(root)
+
     @classmethod
     def probe(cls, root: Path) -> str | None:
-        return "the Qwen narrator arrives in a later update"
+        from .qwen import QwenBackend
+        return QwenBackend.probe(root)
 
 
-BACKENDS = {"kokoro": KokoroBackend, "qwen-1.7b": QwenPlaceholder}
+BACKENDS = {"kokoro": KokoroBackend, "qwen-1.7b": QwenLoader}
 
 
 # --- the loaded engine (lazy, cached per config value) ----------------------

@@ -4747,7 +4747,17 @@ async function narrKick() {
 }
 
 // Kokoro voice ids read like "af_heart": accent (a/b) + voice (f/m) + name.
+// Qwen's nine CustomVoice speakers get plain descriptions (the narrator
+// direction — pace, accent — ships with the tier and rides every voice).
+const QWEN_VOICE_LABELS = {
+  vivian: "Vivian — clear female", serena: "Serena — warm female",
+  ryan: "Ryan — brisk male", aiden: "Aiden — casual male",
+  dylan: "Dylan — youthful male", eric: "Eric — gravelly male",
+  ono_anna: "Anna — light female", sohee: "Sohee — soft female",
+  uncle_fu: "Uncle Fu — elder male",
+};
 function voiceLabel(v) {
+  if (QWEN_VOICE_LABELS[v]) return QWEN_VOICE_LABELS[v];
   const m = /^([ab])([fm])_(.+)$/.exec(v);
   if (!m) return v;
   return m[3].charAt(0).toUpperCase() + m[3].slice(1) +

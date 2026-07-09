@@ -28,10 +28,23 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 # it). The Arena itself never imports numpy, and the game runs the Arena in its
 # own subprocess, so blocking it here changes nothing but the tests' stability.
 # (A None entry makes `import numpy` raise ImportError; pygame degrades cleanly.)
-# If an Oubliette test someday needs real numpy, this block must be revisited —
-# the two can't share a process until pygame and numpy make peace.
+# The block is needed only while pygame IMPORTS: its optional numpy support
+# binds at pygame-import time and never re-probes. Every arena test module
+# imports pygame during collection, so once collection ends the quarantine can
+# lift — Oubliette tests that need real numpy (the qwen narrator's, N3) then
+# import it freely, and pygame stays numpy-blind for the whole run. (Verified
+# 2026-07-09: the SDL_ttf font crash stays gone with the post-collection lift;
+# it was pygame's numpy binding, not mere coexistence.)
 if "numpy" not in sys.modules:
     sys.modules["numpy"] = None  # type: ignore[assignment]
+    _numpy_quarantined = True
+else:
+    _numpy_quarantined = False
+
+
+def pytest_collection_finish(session):
+    if _numpy_quarantined and sys.modules.get("numpy") is None:
+        del sys.modules["numpy"]     # pygame is loaded (numpy-blind) — safe now
 
 # The Arena package root (this file is arena/tests/conftest.py → parent.parent = arena/).
 _ARENA_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

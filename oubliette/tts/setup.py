@@ -34,6 +34,11 @@ class Artifact:
     filename: str
     sha256: str
     size: int              # bytes — for progress display and a fast installed-check
+    # Archives: verified zips are extracted, replaced by a "<filename>.sha256"
+    # stamp (the installed-check), and deleted. "all" keeps member paths;
+    # "dlls" flattens just *.dll into `into` (llama.cpp ships 20 exes we skip).
+    unpack: str | None = None      # None | "all" | "dlls"
+    into: str = ""                 # subdir under the tier dir to extract into
 
 
 @dataclass(frozen=True)
@@ -49,6 +54,8 @@ class Tier:
     unavailable_note: str = ""
     sample: str | None = None
 
+
+_QWEN_RELEASE = "https://github.com/OublietteDev/Oubliette/releases/download/tts-models-v1/"
 
 # The tier table IS the picker. The Brett-gate fallback ("remove the Qwen
 # option forever") = delete its entry here — nothing else refers to it.
@@ -79,11 +86,53 @@ TIERS: list[Tier] = [
     ),
     Tier(
         number=2, model="qwen-1.7b", name="Qwen (the good voice)",
-        blurb="expressive, nine speakers, takes pace instructions",
-        needs="a GPU with ~2 GB of memory to spare", disk="~1.4 GB",
+        blurb="expressive, nine speakers, a narrator with direction",
+        needs="a GPU with ~2 GB of memory to spare", disk="~2.0 GB",
         sample="qwen-1.7b.mp3",
-        available=False,                       # flips on in N3, behind the Brett gate
-        unavailable_note="arrives in a later update",
+        artifacts=(
+            # Model artifacts live on the Oubliette repo's own release, tagged
+            # tts-models-v1 — a models-only tag, so these URLs outlive game
+            # releases. llama.cpp comes straight from its official release
+            # (MIT), pinned to the exact build our ctypes binding matches.
+            Artifact(
+                url=_QWEN_RELEASE + "qwen3_tts_talker.q5_k.gguf",
+                filename="qwen3_tts_talker.q5_k.gguf",
+                sha256="04532771e2ee7217cf267dd4d7ab6f08bc36e1e15772c18a40c58aa9330e8728",
+                size=1_006_245_120,
+            ),
+            Artifact(
+                url=_QWEN_RELEASE + "qwen3_tts_predictor.q8_0.gguf",
+                filename="qwen3_tts_predictor.q8_0.gguf",
+                sha256="42c89bdea05c42afa5ea8f5d97ece0d7e62114416ab4262c8524531688c890c0",
+                size=151_124_320,
+            ),
+            Artifact(
+                url=_QWEN_RELEASE + "qwen3_tts_decoder.fp16.onnx",
+                filename="qwen3_tts_decoder.fp16.onnx",
+                sha256="e65c9eeb59c72c9cacaafa966adbca52b236c76b13084c3a2c8357c5dc675c61",
+                size=230_054_436,
+            ),
+            Artifact(
+                url=_QWEN_RELEASE + "tokenizer.json",
+                filename="tokenizer.json",
+                sha256="09267689b8362020b9763b65dd5be7e086b31e28d72e02837a9e781de9a91bc7",
+                size=11_423_986,
+            ),
+            Artifact(
+                url=_QWEN_RELEASE + "embeddings.zip",
+                filename="embeddings.zip",
+                sha256="9ff6819599865d3f6354fa44e1877e9df7b4c26c4da0badf6fe04752c59f3991",
+                size=616_401_257,
+                unpack="all",
+            ),
+            Artifact(
+                url="https://github.com/ggml-org/llama.cpp/releases/download/b9333/llama-b9333-bin-win-vulkan-x64.zip",
+                filename="llama-b9333-bin-win-vulkan-x64.zip",
+                sha256="0971a54893feafcc043b18d839dba9a42cb1038a5005030c18990e35fdc209d4",
+                size=32_836_469,
+                unpack="dlls", into="llama-bin",
+            ),
+        ),
     ),
 ]
 
@@ -197,17 +246,55 @@ def download_artifact(art: Artifact, dest_dir: Path, print_fn=print) -> None:
     if digest.hexdigest().lower() != art.sha256.lower():
         part.unlink(missing_ok=True)
         raise OSError(f"{art.filename}: the downloaded file failed its integrity check")
-    os.replace(part, final)
+    if art.unpack:
+        _unpack_artifact(art, part, dest_dir, print_fn)
+        part.unlink(missing_ok=True)
+    else:
+        os.replace(part, final)
+
+
+def _unpack_artifact(art: Artifact, archive: Path, dest_dir: Path, print_fn=print) -> None:
+    """Extract a checksum-verified zip, then leave a stamp file in the
+    archive's place — the stamp holding the pinned sha256 is the installed
+    check (the archive itself is deleted to give the disk space back)."""
+    import zipfile
+    target = dest_dir / art.into if art.into else dest_dir
+    target.mkdir(parents=True, exist_ok=True)
+    print_fn(f"    unpacking into {target} ...")
+    with zipfile.ZipFile(archive) as z:
+        for member in z.namelist():
+            name = member.replace("\\", "/")
+            if name.startswith("/") or ".." in name.split("/"):
+                raise OSError(f"{art.filename}: refusing a path-traversal entry ({member})")
+            if art.unpack == "dlls":
+                if not name.lower().endswith(".dll"):
+                    continue
+                with z.open(member) as src, open(target / Path(name).name, "wb") as out:
+                    shutil.copyfileobj(src, out)
+            else:
+                z.extract(member, target)
+    (dest_dir / (art.filename + ".sha256")).write_text(art.sha256.lower(), encoding="ascii")
+
+
+def artifact_installed(art: Artifact, tier_dir: Path) -> bool:
+    """This one file (or unpacked archive) already present and current."""
+    if art.unpack:
+        stamp = tier_dir / (art.filename + ".sha256")
+        try:
+            return stamp.read_text(encoding="ascii").strip() == art.sha256.lower()
+        except OSError:
+            return False
+    f = tier_dir / art.filename
+    return f.is_file() and f.stat().st_size == art.size
 
 
 def tier_installed(tier: Tier, models_root: Path) -> bool:
-    """All of a tier's files present at their exact expected sizes (fast check;
-    the full checksum ran at download time)."""
+    """All of a tier's artifacts present and current (sizes for plain files,
+    stamps for unpacked archives; full checksums ran at download time)."""
     if not tier.artifacts:
         return False
     root = models_root / (tier.model or "")
-    return all((root / a.filename).is_file() and (root / a.filename).stat().st_size == a.size
-               for a in tier.artifacts)
+    return all(artifact_installed(a, root) for a in tier.artifacts)
 
 
 # --- the interactive picker ---------------------------------------------------
@@ -309,6 +396,9 @@ def run(input_fn=input, print_fn=print,
             p(f"   Downloading {chosen.name} ({chosen.disk}) ...")
             try:
                 for art in chosen.artifacts:
+                    if artifact_installed(art, root / (chosen.model or "")):
+                        p(f"   - {art.filename} (already here - kept)")
+                        continue          # an interrupted install resumes, not restarts
                     p(f"   - {art.filename}")
                     download_fn(art, root / chosen.model, p)
             except OSError as e:

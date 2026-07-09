@@ -52,16 +52,22 @@ class Console:
 def _fake_download(installed: list):
     def dl(art, dest: Path, print_fn=print):
         dest.mkdir(parents=True, exist_ok=True)
-        (dest / art.filename).write_bytes(b"\0" * art.size)
+        if art.unpack:      # archives leave a stamp, not the archive itself
+            (dest / (art.filename + ".sha256")).write_text(art.sha256.lower())
+        else:
+            (dest / art.filename).write_bytes(b"\0" * art.size)
         installed.append(art.filename)
     return dl
 
 
 def _install_tier(model: str, root: Path):
     tier = next(t for t in TIERS if t.model == model)
+    (root / model).mkdir(parents=True, exist_ok=True)
     for a in tier.artifacts:
-        (root / model).mkdir(parents=True, exist_ok=True)
-        (root / model / a.filename).write_bytes(b"\0" * a.size)
+        if a.unpack:
+            (root / model / (a.filename + ".sha256")).write_text(a.sha256.lower())
+        else:
+            (root / model / a.filename).write_bytes(b"\0" * a.size)
 
 
 # --- classification & recommendation ----------------------------------------
@@ -74,28 +80,29 @@ def test_discrete_gpu_names_classify_correctly():
     assert not classify_discrete("AMD Radeon(TM) Graphics")     # an APU, not a card
 
 
-def test_recommendation_is_kokoro_while_qwen_is_gated():
-    # Even a strong GPU gets Kokoro today (the qwen tier flips on in N3) —
-    # with an honest "ready when it arrives" note.
-    tier, why = recommend(GpuInfo(name="RTX 3080", vram_mb=10240, discrete=True), TIERS)
-    assert tier.model == "kokoro" and "when it arrives" in why
-
-
 def test_recommendation_no_gpu_is_plain_kokoro():
     tier, why = recommend(GpuInfo(name="Intel UHD", discrete=False), TIERS)
     assert tier.model == "kokoro" and "any CPU" in why
 
 
-def test_recommendation_prefers_qwen_when_available_and_gpu_fits():
+def test_recommendation_prefers_qwen_on_a_discrete_gpu():
+    # N3: the tier is live — a strong GPU gets the expressive voice.
+    tier, why = recommend(GpuInfo(name="RTX 3080", vram_mb=10240, discrete=True), TIERS)
+    assert tier.model == "qwen-1.7b" and "discrete GPU" in why
+    # ...but not on a GPU with too little memory
+    tier, _ = recommend(GpuInfo(name="old card", vram_mb=1024, discrete=True), TIERS)
+    assert tier.model == "kokoro"
+
+
+def test_recommendation_honest_if_qwen_ever_gated_again():
+    # The Brett-gate fallback keeps working: an unavailable qwen tier drops
+    # the recommendation back to Kokoro with the "when it arrives" note.
     import dataclasses
     tiers = [t if t.model != "qwen-1.7b"
-             else dataclasses.replace(t, available=True, unavailable_note="")
+             else dataclasses.replace(t, available=False, unavailable_note="arrives later")
              for t in TIERS]
-    tier, _ = recommend(GpuInfo(name="RTX 3080", vram_mb=10240, discrete=True), tiers)
-    assert tier.model == "qwen-1.7b"
-    # ...but not on a GPU with too little memory
-    tier, _ = recommend(GpuInfo(name="old card", vram_mb=1024, discrete=True), tiers)
-    assert tier.model == "kokoro"
+    tier, why = recommend(GpuInfo(name="RTX 3080", vram_mb=10240, discrete=True), tiers)
+    assert tier.model == "kokoro" and "when it arrives" in why
 
 
 # --- the picker conversation --------------------------------------------------
@@ -149,7 +156,26 @@ def test_replaced_model_survives_a_no(cfg, tmp_path, monkeypatch):
     assert (tmp_path / "kokoro" / "kokoro-v1.0.onnx").exists()   # never silently deleted
 
 
+def test_pick_qwen_downloads_the_whole_tier(cfg, tmp_path, monkeypatch):
+    monkeypatch.setattr(tts_setup, "detect_gpu",
+                        lambda: GpuInfo(discrete=True, name="RTX 3080", vram_mb=10240))
+    got = []
+    console = Console(["2"])
+    rc = tts_setup.run(input_fn=console.input, print_fn=console.print,
+                       download_fn=_fake_download(got), models_root=tmp_path)
+    assert rc == 0 and tts_engine.tts_model() == "qwen-1.7b"
+    assert "qwen3_tts_talker.q5_k.gguf" in got and "embeddings.zip" in got
+    assert any("llama-b9333" in f for f in got)        # the pinned llama.cpp build
+
+
 def test_unavailable_tier_refused_honestly(cfg, tmp_path, monkeypatch):
+    # The refusal path stays exercised (the Brett gate re-locks it by flipping
+    # `available` — the conversation must still hold).
+    import dataclasses
+    gated = [t if t.model != "qwen-1.7b"
+             else dataclasses.replace(t, available=False, unavailable_note="arrives later")
+             for t in TIERS]
+    monkeypatch.setattr(tts_setup, "TIERS", gated)
     monkeypatch.setattr(tts_setup, "detect_gpu", lambda: GpuInfo(discrete=True, name="RTX"))
     console = Console(["2", "0"])                      # try qwen, get told, settle for none
     tts_setup.run(input_fn=console.input, print_fn=console.print,
@@ -188,3 +214,70 @@ def test_tier_installed_checks_exact_sizes(tmp_path):
     # a truncated file (interrupted copy) must not count as installed
     (tmp_path / "kokoro" / "voices-v1.0.bin").write_bytes(b"\0" * 10)
     assert not tier_installed(tier, tmp_path)
+
+
+# --- archives: verified zips unpack, stamp, and resume ------------------------
+
+def _zip_artifact(tmp_path, files: dict, unpack="all", into="") -> tuple:
+    """A real zip on disk + an Artifact pinned to its true sha256."""
+    import hashlib
+    import zipfile
+    from oubliette.tts.setup import Artifact
+    zpath = tmp_path / "asset.zip"
+    with zipfile.ZipFile(zpath, "w") as z:
+        for name, data in files.items():
+            z.writestr(name, data)
+    digest = hashlib.sha256(zpath.read_bytes()).hexdigest()
+    return zpath, Artifact(url="unused", filename="asset.zip", sha256=digest,
+                           size=zpath.stat().st_size, unpack=unpack, into=into)
+
+
+def test_unpack_all_extracts_and_stamps(tmp_path):
+    from oubliette.tts.setup import _unpack_artifact, artifact_installed
+    dest = tmp_path / "tier"
+    dest.mkdir()
+    zpath, art = _zip_artifact(tmp_path, {"embeddings/a.npy": b"AA", "embeddings/b.npy": b"BB"})
+    _unpack_artifact(art, zpath, dest)
+    assert (dest / "embeddings" / "a.npy").read_bytes() == b"AA"
+    assert artifact_installed(art, dest)               # the stamp is the installed-check
+    (dest / "asset.zip.sha256").write_text("deadbeef") # a stale stamp doesn't count
+    assert not artifact_installed(art, dest)
+
+
+def test_unpack_dlls_takes_only_dlls_flattened(tmp_path):
+    from oubliette.tts.setup import _unpack_artifact
+    dest = tmp_path / "tier"
+    dest.mkdir()
+    zpath, art = _zip_artifact(
+        tmp_path, {"llama.dll": b"L", "ggml.dll": b"G", "llama-server.exe": b"X"},
+        unpack="dlls", into="llama-bin")
+    _unpack_artifact(art, zpath, dest)
+    names = sorted(p.name for p in (dest / "llama-bin").iterdir())
+    assert names == ["ggml.dll", "llama.dll"]          # the 20 exes stay behind
+
+
+def test_unpack_refuses_path_traversal(tmp_path):
+    import pytest
+    from oubliette.tts.setup import _unpack_artifact
+    dest = tmp_path / "tier"
+    dest.mkdir()
+    zpath, art = _zip_artifact(tmp_path, {"../escape.txt": b"nope"})
+    with pytest.raises(OSError, match="path-traversal"):
+        _unpack_artifact(art, zpath, dest)
+
+
+def test_interrupted_qwen_install_resumes_not_restarts(cfg, tmp_path, monkeypatch):
+    monkeypatch.setattr(tts_setup, "detect_gpu",
+                        lambda: GpuInfo(discrete=True, name="RTX 3080", vram_mb=10240))
+    tier = next(t for t in TIERS if t.model == "qwen-1.7b")
+    # the big talker file already landed on a previous (interrupted) run
+    talker = tier.artifacts[0]
+    (tmp_path / "qwen-1.7b").mkdir(parents=True)
+    (tmp_path / "qwen-1.7b" / talker.filename).write_bytes(b"\0" * talker.size)
+    got = []
+    console = Console(["2"])
+    tts_setup.run(input_fn=console.input, print_fn=console.print,
+                  download_fn=_fake_download(got), models_root=tmp_path)
+    assert talker.filename not in got                  # a gigabyte not re-downloaded
+    assert "embeddings.zip" in got
+    assert "already here" in console.text()

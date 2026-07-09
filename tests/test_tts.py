@@ -107,10 +107,16 @@ def test_status_honest_on_unknown_model(monkeypatch, tmp_path):
     tts_engine.invalidate()
 
 
-def test_qwen_tier_is_recognized_but_not_yet_live(monkeypatch, tmp_path):
+def test_qwen_reports_missing_model_files(monkeypatch, tmp_path):
+    # N3: the tier is live — an empty models dir gets the honest "not fully
+    # downloaded, re-run setup" reason, never a crash and never a stale
+    # "later update".
     _use_config(monkeypatch, tmp_path, {"tts_model": "qwen-1.7b"})
+    monkeypatch.setenv("OUBLIETTE_MODELS", str(tmp_path / "models"))
+    tts_engine.invalidate()
     s = tts_engine.status()
-    assert s["enabled"] is False and "later update" in s["reason"]
+    assert s["enabled"] is False
+    assert "downloaded" in s["reason"] and "setup.bat" in s["reason"]
     tts_engine.invalidate()
 
 
@@ -254,3 +260,127 @@ def test_benchmark_respects_a_requested_voice(monkeypatch):
 def test_benchmark_refused_when_no_engine(monkeypatch):
     monkeypatch.setattr(tts_engine, "get_engine", lambda: (None, "no narrator"))
     assert client.post("/api/tts/benchmark", json={}).status_code == 409
+
+
+# --- the qwen engine (N3): the pure parts, no model files -------------------
+
+def test_qwen_speakers_contract():
+    from oubliette.tts.qwen import SPEAKERS, QwenBackend
+    assert list(SPEAKERS)[0] == "vivian"              # the locked default narrator
+    assert len(SPEAKERS) == 9                         # the CustomVoice roster
+    assert all(2800 <= sid <= 3071 for sid in SPEAKERS.values())
+
+
+def test_qwen_prompt_layout():
+    """The talker prompt is embedding SUMS in a fixed order: prefix rows, then
+    think/lang/speaker (tts_pad + codec), TTS_BOS row, first-text row — and
+    the rest of the text lands in the trailing pool with a TTS_EOS cap."""
+    import numpy as np
+    from oubliette.tts import qwen
+
+    class StubAssets:
+        def __init__(self):
+            dim = 4
+            self.codec = [np.arange(3072, dtype=np.float32)[:, None] * np.ones(dim)
+                          for _ in range(16)]
+            self.tts_pad = np.full(dim, 0.5, dtype=np.float32)
+
+        def text_row(self, tid):
+            return np.full(4, float(tid), dtype=np.float32)
+
+        def text_rows(self, tids):
+            import numpy as np
+            return np.stack([self.text_row(t) for t in tids])
+
+    a = StubAssets()
+    text_ids = [11, 22, 33]
+    prompt, trailing = qwen.build_prompt(a, [a.text_row(7)], text_ids, speaker_id=3065)
+
+    # 1 prefix + 4 think/lang + 1 speaker + 1 TTS_BOS + 1 first-text = 8 rows
+    assert prompt.shape == (8, 4)
+    assert np.allclose(prompt[0], 7.0)                                  # the prefix row
+    assert np.allclose(prompt[1], 0.5 + qwen.THINK)                     # tts_pad + codec row
+    assert np.allclose(prompt[3], 0.5 + qwen.LANG_ENGLISH)              # english is baked in
+    assert np.allclose(prompt[5], 0.5 + 3065)                           # the speaker row
+    assert np.allclose(prompt[6], qwen.TTS_BOS + qwen.CODEC_PAD)
+    assert np.allclose(prompt[7], 11 + qwen.CODEC_BOS)                  # first text + BOS
+    # trailing: the remaining text one row per frame, then the EOS cap
+    assert trailing.shape == (3, 4)
+    assert np.allclose(trailing[0], 22) and np.allclose(trailing[1], 33)
+    assert np.allclose(trailing[2], qwen.TTS_EOS)
+
+
+def test_qwen_single_token_sentence_still_gets_an_eos_pool():
+    import numpy as np
+    from oubliette.tts import qwen
+
+    class StubAssets:
+        codec = [np.zeros((3072, 4), dtype=np.float32) for _ in range(16)]
+        tts_pad = np.zeros(4, dtype=np.float32)
+
+        def text_row(self, tid):
+            return np.full(4, float(tid), dtype=np.float32)
+
+        def text_rows(self, tids):
+            return np.stack([self.text_row(t) for t in tids])
+
+    prompt, trailing = qwen.build_prompt(StubAssets(), [], [42], speaker_id=3066)
+    assert prompt.shape[0] == 7                       # no prefix rows this time
+    assert trailing.shape == (1, 4)                   # just the TTS_EOS cap
+    assert np.allclose(trailing[0], qwen.TTS_EOS)
+
+
+def test_qwen_decoder_driver_chunks_and_flushes():
+    """The stateful-decoder driver: ≤12 frames per call, state threaded through,
+    non-final chunks contribute their valid samples, the final call flushes in
+    full — total PCM = frames × 1920 no matter how the chunking falls."""
+    import numpy as np
+    from oubliette.tts import qwen
+
+    calls = []
+
+    class FakeSession:
+        def get_outputs(self):
+            names = ["final_wav", "valid_samples", "next_pre_conv_history",
+                     "next_latent_buffer", "next_conv_history"]
+            names += [f"next_key_{i}" for i in range(8)] + [f"next_value_{i}" for i in range(8)]
+            return [type("O", (), {"name": n}) for n in names]
+
+        def run(self, names, feed):
+            n = feed["audio_codes"].shape[1]
+            calls.append((n, float(feed["is_last"][0]), feed["past_key_0"].shape[2]))
+            final = feed["is_last"][0] > 0
+            held = 4                                   # the export's lookahead frames
+            latent = feed["latent_buffer"].shape[2]
+            if final:
+                wav = np.zeros((1, (latent + n) * 1920), dtype=np.float16)
+                valid = np.array([wav.shape[1]])
+            else:
+                wav = np.zeros((1, (latent + n) * 1920), dtype=np.float16)
+                valid = np.array([max(0, (latent + n - held)) * 1920])
+            out = {"final_wav": wav, "valid_samples": valid,
+                   "next_pre_conv_history": np.zeros((1, 512, 2), dtype=np.float16),
+                   "next_latent_buffer": np.zeros((1, 1024, held), dtype=np.float16),
+                   "next_conv_history": np.zeros((1, 1024, 4), dtype=np.float16)}
+            kv = min(feed["past_key_0"].shape[2] + n, 72)
+            for i in range(8):
+                out[f"next_key_{i}"] = np.zeros((1, 16, kv, 64), dtype=np.float16)
+                out[f"next_value_{i}"] = np.zeros((1, 16, kv, 64), dtype=np.float16)
+            return [out[n] for n in names]
+
+    dec = qwen._Decoder.__new__(qwen._Decoder)      # skip __init__ (no real ONNX)
+    dec.sess = FakeSession()
+    dec.out_names = [o.name for o in dec.sess.get_outputs()]
+
+    pcm = dec.render(np.zeros((30, 16), dtype=np.int64))
+    assert len(pcm) == 30 * 1920                     # every frame accounted for once
+    assert [c[0] for c in calls] == [12, 12, 6]      # 30 frames in 12/12/6 chunks
+    assert [c[1] for c in calls] == [0.0, 0.0, 1.0]  # is_last only on the flush
+    assert calls[1][2] == 12 and calls[2][2] == 24   # KV state threaded through
+
+
+def test_qwen_probe_lists_whats_missing(tmp_path):
+    from oubliette.tts.qwen import QwenBackend
+    reason = QwenBackend.probe(tmp_path)
+    assert "setup.bat" in reason
+    assert "llama-bin" in reason and "tokenizer.json" in reason
