@@ -371,3 +371,81 @@ def test_active_authored_quest_retains_briefing_and_reward(tmp_path, monkeypatch
     assert "ACTIVE QUESTS" in ctx
     assert "the secret truth" in ctx                   # briefing retained
     assert "30 gp" in ctx and "favor owed" in ctx      # intended reward retained
+
+
+# --- trinkets: quest-earned keepsakes ----------------------------------------
+# Authored on the quest, granted by quest STATE (accept / completion+outcome),
+# never seen by the DM. Earned is a pure event-log derivation like the offer set;
+# whether one is taped into the journal is the journal document's own business.
+from oubliette.content.schemas import QuestTrinket                          # noqa: E402
+
+
+def test_trinket_shape():
+    t = QuestTrinket(id="t1", image="trinket-map.png", caption="a torn corner")
+    assert t.when == "completed" and t.outcome == ""
+    with pytest.raises(ValidationError):
+        QuestTrinket(id="t1", image="   ")                          # image required
+    with pytest.raises(ValidationError):                            # filter is completion-only
+        QuestTrinket(id="t1", image="x.png", when="accepted", outcome="spared")
+
+
+def test_trinket_ids_unique_and_outcome_filters_must_exist():
+    with pytest.raises(ValidationError):                            # duplicate ids
+        AuthoredQuest(id="q", title="X", giver_npc="b",
+                      trinkets=[QuestTrinket(id="t1", image="a.png"),
+                                QuestTrinket(id="t1", image="b.png")])
+    with pytest.raises(ValidationError):                            # unknown outcome label
+        AuthoredQuest(id="q", title="X", giver_npc="b",
+                      trinkets=[QuestTrinket(id="t1", image="a.png", outcome="spared")])
+    ok = AuthoredQuest(id="q", title="X", giver_npc="b",
+                       branches=[QuestBranch(outcome="spared", to="q2")],
+                       trinkets=[QuestTrinket(id="t1", image="a.png", outcome="spared")])
+    assert ok.trinkets[0].outcome == "spared"
+
+
+# q1 leaves three keepsakes: a map fragment on accepting, a letter only if the
+# bandit was spared, and a coin for any ending.
+_TRINKET_CHAIN = [
+    {**_CHAIN[0], "trinkets": [
+        {"id": "map", "image": "trinket-map.png", "caption": "a torn map corner", "when": "accepted"},
+        {"id": "letter", "image": "trinket-letter.png", "when": "completed", "outcome": "spared"},
+        {"id": "coin", "image": "trinket-coin.png", "when": "completed"}]},
+    _CHAIN[1], _CHAIN[2],
+]
+
+
+def _earned(s):
+    return {t["key"] for t in
+            offers.earned_trinkets(s.authored_quests, s.store.read_all(), s.quests)}
+
+
+def test_trinkets_earn_at_accept_and_completion(tmp_path, monkeypatch):
+    s = _session(tmp_path, monkeypatch, _TRINKET_CHAIN)
+    assert _earned(s) == set()                          # nothing before the quest is taken
+    s.emit_quest_accept(s.authored_quests["q1"], "r")
+    assert _earned(s) == {"q1:map"}                     # accepted → the map fragment only
+    s.emit_quest_update(s.quests.active()[0].id, status="completed", outcome="spared", reason="r")
+    assert _earned(s) == {"q1:map", "q1:letter", "q1:coin"}
+
+
+def test_outcome_gated_trinket_never_exists_on_the_other_ending(tmp_path, monkeypatch):
+    s = _session(tmp_path, monkeypatch, _TRINKET_CHAIN)
+    s.emit_quest_accept(s.authored_quests["q1"], "r")
+    s.emit_quest_update(s.quests.active()[0].id, status="completed", outcome="killed", reason="r")
+    assert _earned(s) == {"q1:map", "q1:coin"}          # the spared-only letter stays unearned
+
+
+def test_failed_quest_keeps_the_accept_trinket_but_grants_no_completion(tmp_path, monkeypatch):
+    s = _session(tmp_path, monkeypatch, _TRINKET_CHAIN)
+    s.emit_quest_accept(s.authored_quests["q1"], "r")
+    s.emit_quest_update(s.quests.active()[0].id, status="failed", reason="r")
+    assert _earned(s) == {"q1:map"}                     # the fragment is still in hand
+
+
+def test_earned_trinkets_are_replay_stable(tmp_path, monkeypatch):
+    s = _session(tmp_path, monkeypatch, _TRINKET_CHAIN)
+    s.emit_quest_accept(s.authored_quests["q1"], "r")
+    s.emit_quest_update(s.quests.active()[0].id, status="completed", outcome="spared", reason="r")
+    before = _earned(s)
+    reloaded = Session.open(s.store, pack_id="t")       # same log, fresh replay
+    assert _earned(reloaded) == before

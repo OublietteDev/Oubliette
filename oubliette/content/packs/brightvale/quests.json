@@ -1,5 +1,30 @@
 [
   {
+    "id": "torn_nets",
+    "title": "The Torn Nets",
+    "hook": "Thom slides a ragged scrap of chart across the counter: his supplier's nets keep coming up shredded in the shallows, and he'll pay to know why.",
+    "briefing": "Testbed quest for trinkets: accepting it grants the map scrap, completing it grants Thom's letter. Droppable before a release.",
+    "giver_npc": "merchant_thom",
+    "root": true,
+    "reward": {
+      "gold": 25
+    },
+    "trinkets": [
+      {
+        "id": "net_map",
+        "image": "trinket-net-map.png",
+        "caption": "Thom's chart of the shallows, torn at the corner",
+        "when": "accepted"
+      },
+      {
+        "id": "thom_letter",
+        "image": "trinket-thom-letter.png",
+        "caption": "the letter from the nets",
+        "when": "completed"
+      }
+    ]
+  },
+  {
     "id": "sunken_vault",
     "title": "The Drowned Vault of Aldermere",
     "hook": "Thom leans close: beneath the old bay lies a sealed vault, and the thing that guards it has drowned braver crews than yours. Only a true company of legend should even attempt it.",

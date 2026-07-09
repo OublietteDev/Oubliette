@@ -126,6 +126,15 @@
   .quest-cap { padding: 9px 14px 11px; text-align: center; }
   .quest-kind { display: block; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); opacity: .85; }
   .quest-card.failed .quest-kind { color: #b9533f; }
+  /* a keepsake card in the chat stream: the earned object itself, offered for the journal */
+  .trinket-card { width: 80%; max-width: 80%; border: 1px solid var(--gold); border-radius: 13px;
+    background: var(--bg); padding: 13px 14px 11px; text-align: center; }
+  .trinket-card .j-twrap { margin: 9px auto 2px; transform: rotate(-1deg); }
+  .trinket-card .j-timg { max-height: 200px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
+  .t-cap { color: var(--muted); font-size: 12.5px; font-style: italic; margin-top: 7px; }
+  .t-open { margin-top: 9px; font: inherit; font-size: 12px; color: var(--gold); background: none;
+    border: 1px solid var(--gold); border-radius: 8px; padding: 4px 12px; cursor: pointer; opacity: .85; }
+  .t-open:hover { opacity: 1; }
   .quest-title { display: block; font-family: var(--serif); font-size: 16px; color: var(--ink); margin-top: 3px; }
 
   .thinking { color: var(--muted); font-style: italic; font-size: 14px; display: flex; gap: 8px; align-items: center; }
@@ -486,13 +495,35 @@
   .j-stampmenu button { font: inherit; font-size: 13px; text-align: left; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; cursor: pointer; }
   .j-stampmenu button:hover { border-color: var(--accent); }
 
-  .j-trinket { position: relative; background: #dcc794; border: 1px solid #b49a63; padding: 10px; margin: 6px 4px;
-    transform: rotate(1.2deg); box-shadow: 0 2px 6px rgba(0,0,0,.18); }
-  .j-trinket::before, .j-trinket::after { content: ""; position: absolute; width: 34px; height: 13px; background: rgba(199,181,142,.75); }
-  .j-trinket::before { top: -7px; left: 14px; transform: rotate(-4deg); }
-  .j-trinket::after { bottom: -6px; right: 18px; transform: rotate(6deg); }
-  .j-timg { max-width: 100%; display: block; margin: 0 auto; }
+  /* trinkets: the earned keepsake itself, taped straight onto the page. Tape strips
+     are PLACED BY CODE (smart tape): the image's alpha channel is sampled and each
+     strip lands on the first opaque paper it finds — a torn corner gets its tape on
+     the tear, not floating in the missing part. Opaque art degrades to the top edge. */
+  .j-trinket { position: relative; margin: 8px 4px; text-align: center; }
+  .j-twrap { position: relative; display: inline-block; transform: rotate(1.2deg); }
+  .j-trinket:nth-child(even) .j-twrap { transform: rotate(-1.4deg); }
+  .j-timg { max-width: 100%; max-height: 240px; display: block;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.28)); }
+  .j-tape { position: absolute; width: 36px; height: 14px; z-index: 2; pointer-events: none;
+    background: linear-gradient(rgba(222,209,178,.78), rgba(206,190,155,.7));
+    box-shadow: 0 1px 2px rgba(0,0,0,.14);
+    border-left: 1px solid rgba(255,255,255,.25); border-right: 1px solid rgba(255,255,255,.25); }
+  .j-peel { position: absolute; top: -4px; right: -14px; z-index: 3; opacity: 0;
+    border: none; background: none; color: rgba(96,72,36,.55); cursor: pointer; font-size: 12px; }
+  .j-entry:hover .j-peel { opacity: .7; }
   .j-tcap { font-family: var(--jhand, "Caveat"), cursive; font-size: calc(var(--jhand-size, 19px) * .9); text-align: center; color: var(--jink, #2c2418); margin-top: 6px; }
+
+  /* the keepsake pocket: earned-but-untaped trinkets tucked at the book's left edge —
+     click one to tape it onto the section that's open */
+  .loose-tray { position: absolute; left: -88px; top: 34px; width: 76px; z-index: 2;
+    display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  .loose-hint { font-family: "IM Fell English", var(--serif); font-size: 10.5px; text-align: center;
+    color: #cdb98f; opacity: .85; letter-spacing: .05em; line-height: 1.3; }
+  .loose-item { position: relative; cursor: pointer; border: none; background: none; padding: 0; transition: transform .15s; }
+  .loose-item img { max-width: 70px; max-height: 64px; display: block;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); transform: rotate(-5deg); }
+  .loose-item:nth-child(even) img { transform: rotate(4deg); }
+  .loose-item:hover { transform: scale(1.12); }
 
   .j-addline { font-family: var(--jhand, "Caveat"), cursive; font-size: var(--jhand-size, 19px); color: rgba(96,72,36,.5); cursor: pointer; padding: 10px 2px; }
   .j-addline:hover { color: rgba(96,72,36,.85); }
@@ -1000,6 +1031,7 @@
         <div class="page page-right" id="j-pr"></div>
       </div>
       <div class="book-tabs" id="j-tabs"></div>
+      <div class="loose-tray hidden" id="j-loose"></div>
     </div>
     <div class="quill-bar hidden" id="j-quill"></div>
     <div class="binder hidden" id="j-binder"></div>
@@ -1218,6 +1250,64 @@ function addQuestCard(b) {
   cap.appendChild(el("span", "quest-kind", QUEST_KIND[b.kind] || "Quest"));
   cap.appendChild(el("span", "quest-title", caption));
   card.appendChild(img); card.appendChild(cap);
+  row.appendChild(card); log.appendChild(row); scrollDown();
+}
+
+// --- trinkets: quest-earned keepsakes ---------------------------------------
+// Smart tape: sample the image's alpha channel on a small offscreen canvas and
+// drop each tape strip where the paper actually begins — a torn-off corner gets
+// its tape on the tear, not floating over the missing part. Opaque art (or a
+// canvas hiccup) falls back to the top corners.
+const tapeSpotCache = {};   // src -> [{x,y} in % of the image box]
+function computeTapeSpots(img) {
+  if (tapeSpotCache[img.src]) return tapeSpotCache[img.src];
+  let spots = null;
+  try {
+    const w = 96, h = Math.max(1, Math.round(img.naturalHeight / img.naturalWidth * w));
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    const cx = cv.getContext("2d", { willReadFrequently: true });
+    cx.drawImage(img, 0, 0, w, h);
+    const a = cx.getImageData(0, 0, w, h).data;
+    const firstInk = (x) => { for (let y = 0; y < h; y++) if (a[(y * w + x) * 4 + 3] > 60) return y; return -1; };
+    spots = [];
+    for (const [fx, dir] of [[0.20, 1], [0.80, -1]]) {   // two strips; torn columns slide inward
+      for (let t = 0; t < 5; t++) {
+        const x = Math.min(w - 1, Math.max(0, Math.round(fx * (w - 1)) + dir * t * Math.round(w * 0.08)));
+        const y = firstInk(x);
+        if (y >= 0) { spots.push({ x: x / (w - 1) * 100, y: y / h * 100 }); break; }
+      }
+    }
+    if (!spots.length) spots = null;
+  } catch (e) { spots = null; }
+  return (tapeSpotCache[img.src] = spots || [{ x: 18, y: 0 }, { x: 82, y: 0 }]);
+}
+function applyTape(wrap, img) {
+  const place = () => computeTapeSpots(img).forEach((s, i) => {
+    const t = el("div", "j-tape");
+    t.style.left = s.x + "%"; t.style.top = s.y + "%";
+    t.style.transform = `translate(-50%, -55%) rotate(${i % 2 ? 5 : -6}deg)`;
+    wrap.appendChild(t);
+  });
+  if (img.complete && img.naturalWidth) place();
+  else img.addEventListener("load", place, { once: true });
+}
+function trinketNode(t) {   // the taped object itself: shared by chat card + journal page
+  const wrap = el("div", "j-twrap");
+  const img = el("img", "j-timg"); img.src = t.image; img.alt = t.caption || "keepsake";
+  wrap.appendChild(img); applyTape(wrap, img);
+  return wrap;
+}
+// A keepsake card in the chat when a quest leaves something in the party's hands.
+// Purely player-facing — the DM doesn't know trinkets exist.
+function addTrinketCard(t) {
+  const row = el("div", "row quest");
+  const card = el("div", "trinket-card");
+  card.appendChild(el("span", "quest-kind", "Keepsake — " + t.quest));
+  card.appendChild(trinketNode(t));
+  if (t.caption) card.appendChild(el("div", "t-cap", t.caption));
+  const b = el("button", "t-open", "tuck it into your journal");
+  b.onclick = openJournal;   // it's waiting in the keepsake pocket
+  card.appendChild(b);
   row.appendChild(card); log.appendChild(row); scrollDown();
 }
 // tiny markdown: **bold**, *italic* / _italic_, paragraph + line breaks
@@ -1579,6 +1669,7 @@ async function send(textOverride) {
     if (data.soundscape) setSoundscape(data.soundscape);   // travel may have changed the mix
     if (data.trade) openTrade(data.trade);
     (data.quest_beats || []).forEach(addQuestCard);
+    (data.trinkets || []).forEach(addTrinketCard);
     // One bar at a time (combat > wrap > rest): a staged fight silences proposals, and a
     // wrap offer outranks a rest offer if the DM somehow emits both in one turn.
     if (data.wrap_pending && !combatPending) showWrapBar();
@@ -1670,6 +1761,7 @@ async function enterArena() {
     if (data.state) renderState(data.state);            // combat_pending now false → unlocks
     if (data.soundscape) setSoundscape(data.soundscape);
     (data.quest_beats || []).forEach(addQuestCard);
+    (data.trinkets || []).forEach(addTrinketCard);
   } catch (e) {
     addMessage("System", "The Arena could not be reached: " + e, "system");
   } finally {
@@ -3121,6 +3213,53 @@ const J_HLS   = ["rgba(245,224,75,.6)", "rgba(247,168,196,.6)", "rgba(168,224,10
 function genId() { return "j" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 function jCurSec() { return journal.sections.find(s => s.id === jSection); }
 
+// --- the keepsake pocket: earned trinkets not yet taped in -------------------
+// Earned comes from the server (replay-derived from quest state); TAPED lives only
+// in the journal document itself — the entry id encodes the trinket key, so the
+// pocket is always just earned-minus-taped. Tearing one out returns it here.
+let jTrinkets = [];          // [{key, quest, image, caption, when}] from /api/trinkets
+
+function tapedTrinketIds() {
+  const ids = new Set();
+  journal.sections.forEach(s => s.entries.forEach(e => { if (e.kind === "trinket") ids.add(e.id); }));
+  return ids;
+}
+function looseTrinkets() {
+  const taped = tapedTrinketIds();
+  return jTrinkets.filter(t => !taped.has("trinket:" + t.key));
+}
+function renderLoose() {
+  const tray = $("j-loose"); tray.innerHTML = "";
+  const loose = looseTrinkets();
+  tray.classList.toggle("hidden", !loose.length);
+  if (!loose.length) return;
+  tray.appendChild(el("div", "loose-hint", "keepsakes — click to tape one onto the open page"));
+  loose.forEach(t => {
+    const b = el("button", "loose-item");
+    b.title = (t.caption || t.quest) + " — tape it in";
+    const img = el("img"); img.src = t.image; img.alt = t.caption || "keepsake";
+    b.appendChild(img);
+    b.onclick = () => tapeTrinket(t);
+    tray.appendChild(b);
+  });
+}
+function tapeTrinket(t) {
+  if ($("jbook").classList.contains("closed")) { $("jbook").classList.remove("closed"); renderTabs(); }
+  if (jEditing) finishEdit(true);
+  let sec = jCurSec();
+  if (!sec) {   // an emptied journal: give the keepsake a home
+    sec = { id: genId(), name: "Keepsakes", color: "", entries: [] };
+    journal.sections.push(sec); jSection = sec.id; renderTabs();
+  }
+  sec.entries.push({ id: "trinket:" + t.key, title: t.quest, status: "", body: "", format: "html",
+                     kind: "trinket", image: t.image, caption: t.caption || "" });
+  saveJournal(); renderLoose();
+  paginate();   // land the spread on the page it was taped into
+  const idx = jPagesIdx.findIndex(ids => ids.includes("trinket:" + t.key));
+  if (idx >= 0) jSpread = idx & ~1;
+  renderSpread(true);
+}
+
 function cleanJournal() {
   const st = journal.style || {};
   return {
@@ -3148,9 +3287,11 @@ async function openJournal() {
   if (jArt === null) {
     try { jArt = await (await fetch("/api/journal/art")).json(); } catch (e) { jArt = { emblems: [], papers: [], seals: [] }; }
   }
+  try { jTrinkets = (await (await fetch("/api/trinkets")).json()).trinkets || []; } catch (e) { jTrinkets = []; }
+  jTrinkets.forEach(t => { const i = new Image(); i.src = t.image; });   // warm the cache so pagination measures true heights
   jSection = journal.sections.length ? journal.sections[0].id : null;
   jSpread = 0; jEditing = null;
-  applyBinding(); renderTabs(); renderCover();
+  applyBinding(); renderTabs(); renderCover(); renderLoose();
   $("journal-overlay").classList.remove("hidden");
   // metrics before pagination: make sure the chosen hand is actually loaded
   const h = J_HANDS[journal.style.hand] || J_HANDS.caveat;
@@ -3283,9 +3424,19 @@ function secHeadNode(sec, forMeasure) {
 function readEntryNode(sec, e, forMeasure) {
   const card = el("div", "j-entry");
   if (e.kind === "trinket") {
-    // a thing affixed to the page, not written on it (authored content, future)
+    // an earned keepsake affixed to the page, not written on it
     const t = el("div", "j-trinket");
-    if (e.image) { const img = el("img", "j-timg"); img.src = e.image; img.alt = e.title || "trinket"; t.appendChild(img); }
+    const wrap = trinketNode({ image: e.image, caption: e.caption || e.title });
+    if (!forMeasure) {
+      const img = wrap.querySelector("img");
+      if (!(img.complete && img.naturalWidth))   // measured before load → repaginate once it arrives
+        img.addEventListener("load", () => { if (!jEditing) renderSpread(); }, { once: true });
+      const x = el("button", "j-peel", "✕"); x.title = "peel it off (it returns to your keepsakes)";
+      x.onclick = (ev) => { ev.stopPropagation();
+        sec.entries = sec.entries.filter(q => q !== e); saveJournal(); renderLoose(); renderSpread(); };
+      wrap.appendChild(x);
+    }
+    t.appendChild(wrap);
     if (e.caption || e.title) t.appendChild(el("div", "j-tcap", e.caption || e.title));
     card.appendChild(t);
   } else {

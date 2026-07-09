@@ -774,7 +774,10 @@ function openEditor(kind, index) {
   }
   if (kind === "statblocks") { editorCtx.loot = ((original?.loot) || []).filter(l => l.item).map(l => ({ item: l.item, qty: l.qty || 1 })); editorCtx.statblockId = original?.id || null; }
   if (kind === "npcs") { editorCtx.inv = buildInvRows(original); editorCtx.original = original; editorCtx.statBlockSel = original?.stat_block || ""; }
-  if (kind === "quests") editorCtx.branches = ((original?.branches) || []).map(b => ({ ...b }));
+  if (kind === "quests") {
+    editorCtx.branches = ((original?.branches) || []).map(b => ({ ...b }));
+    editorCtx.trinkets = ((original?.trinkets) || []).map(t => ({ ...t }));
+  }
   if (kind === "backgrounds") editorCtx.bgeq = ((original?.equipment) || []).map(g => ({ item: g.item, qty: g.qty || 1 }));
 
   const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, lore: loreForm, quests: questForm, scenarios: scenarioForm, ai_profiles: aiProfileForm, backgrounds: backgroundForm, spells: spellForm };
@@ -3642,6 +3645,12 @@ function questForm(q) {
         <button class="btn mini" id="addBranch" type="button">+ Add an outcome</button>
         <div class="help" style="margin-top:8px">Each outcome unlocks the next quest when this one is completed with that result (e.g. “spared” → one quest, “killed” → another). Leave empty for a one-shot. Create the follow-up quests first, then point to them here.</div>
       </div>
+      <div class="subform"><div class="sftitle">Trinkets (keepsakes for the player's journal)</div>
+        <div id="trinketList"></div>
+        <button class="btn mini" id="addTrinket" type="button">+ Add a trinket</button>
+        <input type="file" id="trinketFile" accept="image/png,image/webp,image/jpeg" style="display:none" />
+        <div class="help" style="margin-top:8px">A physical keepsake this quest leaves in the party's hands — a torn map corner, a note from a noble. It appears when the quest is accepted or completed, and the player can tape it into their journal. The DM never knows trinkets exist, so they cost nothing at the table. PNGs with transparent, torn edges look best — the tape finds the paper on its own, so ragged shapes are encouraged.</div>
+      </div>
       ${field("Tags", `<input id="f_tags" value="${esc((v.tags || []).join(", "))}" placeholder="comma, separated" />`)}
       <div class="invalid" id="f_err"></div>
     </div>
@@ -3664,6 +3673,67 @@ function renderBranches() {
   box.querySelectorAll("[data-br-del]").forEach(b =>
     b.addEventListener("click", e => { editorCtx.branches.splice(+e.target.dataset.brDel, 1); renderBranches(); }));
 }
+function renderTrinkets() {
+  const box = document.getElementById("trinketList");
+  box.innerHTML = editorCtx.trinkets.map((t, i) => `
+    <div class="exit-row" style="align-items:center">
+      ${t.image ? `<img src="/api/pack/${encodeURIComponent(state.id)}/image/${encodeURIComponent(t.image)}?b=${Date.now()}" alt="" style="height:34px; max-width:60px; object-fit:contain; flex:none" />` : ""}
+      <button class="btn mini" type="button" data-tk-img="${i}">${t.image ? "Replace…" : "Choose image…"}</button>
+      <input data-tk-cap="${i}" value="${esc(t.caption || "")}" placeholder="caption, written under it" style="flex:1" />
+      <select data-tk-when="${i}" style="flex:none; width:auto">
+        <option value="accepted"${t.when === "accepted" ? " selected" : ""}>on accepting</option>
+        <option value="completed"${t.when !== "accepted" ? " selected" : ""}>on completing</option>
+      </select>
+      <input data-tk-out="${i}" value="${esc(t.outcome || "")}" placeholder="any ending"
+        title="Only grant it when the quest completes with this outcome label. Blank = any ending."
+        style="flex:none; width:100px; display:${t.when === "accepted" ? "none" : ""}" />
+      <button class="btn mini danger" type="button" data-tk-del="${i}">✕</button>
+    </div>`).join("") || '<div class="nothing" style="margin-bottom:8px">No trinkets — the quest leaves nothing behind.</div>';
+  box.querySelectorAll("[data-tk-img]").forEach(b =>
+    b.addEventListener("click", e => { editorCtx._tkImgFor = +e.target.dataset.tkImg;
+      document.getElementById("trinketFile").click(); }));
+  box.querySelectorAll("[data-tk-cap]").forEach(inp =>
+    inp.addEventListener("input", e => { editorCtx.trinkets[+e.target.dataset.tkCap].caption = e.target.value; }));
+  box.querySelectorAll("[data-tk-when]").forEach(s =>
+    s.addEventListener("change", e => { editorCtx.trinkets[+e.target.dataset.tkWhen].when = e.target.value; renderTrinkets(); }));
+  box.querySelectorAll("[data-tk-out]").forEach(inp =>
+    inp.addEventListener("input", e => { editorCtx.trinkets[+e.target.dataset.tkOut].outcome = e.target.value; }));
+  box.querySelectorAll("[data-tk-del]").forEach(b =>
+    b.addEventListener("click", e => { editorCtx.trinkets.splice(+e.target.dataset.tkDel, 1); renderTrinkets(); }));
+}
+// Trinket art keeps its alpha channel (torn edges are the point) — resize on a bare
+// canvas and save as PNG, unlike illustrations, which flatten to JPEG.
+function resizeKeepAlpha(file, maxW) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(img.src);
+      resolve(c.toDataURL("image/png"));
+    };
+    img.onerror = () => reject(new Error("could not read that image"));
+    img.src = URL.createObjectURL(file);
+  });
+}
+async function onChooseTrinketImage(file) {
+  const i = editorCtx._tkImgFor;
+  if (i == null || !editorCtx.trinkets[i]) return;
+  const title = document.getElementById("f_title").value.trim();
+  if (!title) { fieldInvalid("f_title", "Name the quest first, then add its trinket art."); return; }
+  try {
+    const dataUrl = await resizeKeepAlpha(file, 900);
+    const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/image`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: `trinket-${slugify(title)}-${i + 1}.png`, data: dataUrl }),
+    })).json();
+    if (res.error) { toast(res.error); return; }
+    editorCtx.trinkets[i].image = res.filename;
+    renderTrinkets();
+  } catch (e) { toast(String(e.message || e)); }
+}
 function wireQuestForm() {
   const sync = () => {
     const t = document.getElementById("f_srctype").value;
@@ -3674,6 +3744,11 @@ function wireQuestForm() {
   renderBranches();
   document.getElementById("addBranch").addEventListener("click",
     () => { editorCtx.branches.push({ outcome: "", to: "" }); renderBranches(); });
+  renderTrinkets();
+  document.getElementById("addTrinket").addEventListener("click",
+    () => { editorCtx.trinkets.push({ id: "", image: "", caption: "", when: "completed", outcome: "" }); renderTrinkets(); });
+  document.getElementById("trinketFile").addEventListener("change",
+    e => { if (e.target.files[0]) onChooseTrinketImage(e.target.files[0]); e.target.value = ""; });
 }
 function confirmQuest(original) {
   const title = document.getElementById("f_title").value.trim(), err = document.getElementById("f_err");
@@ -3690,6 +3765,13 @@ function confirmQuest(original) {
     document.querySelectorAll("[data-br-outcome]").forEach(i => { if (!i.value.trim()) i.classList.add("bad"); });
     markEmptyRows("data-br-to");
     err.textContent = "Every outcome needs both a label and a target quest (or remove it)."; return; }
+  if (editorCtx.trinkets.some(t => !t.image)) {
+    err.textContent = "Every trinket needs an image (or remove it)."; return; }
+  const branchLabels = new Set(branches.map(b => b.outcome.trim()));
+  for (const t of editorCtx.trinkets) {
+    if (t.when !== "accepted" && (t.outcome || "").trim() && !branchLabels.has(t.outcome.trim())) {
+      err.textContent = `A trinket is tied to the outcome “${t.outcome.trim()}”, which isn't one of this quest's outcomes.`; return; }
+  }
 
   const base = original ? { ...original } : {};
   if (!base.id) base.id = uniqueId(slugify(title), new Set(listOf("quests").map(x => x.id)));
@@ -3714,6 +3796,19 @@ function confirmQuest(original) {
   setOrDel("chain", document.getElementById("f_chain").value.trim());
   if (branches.length) base.branches = branches.map(b => ({ outcome: b.outcome.trim(), to: b.to }));
   else delete base.branches;
+  if (editorCtx.trinkets.length) {
+    const used = new Set(editorCtx.trinkets.map(t => t.id).filter(Boolean));
+    base.trinkets = editorCtx.trinkets.map((t, i) => {
+      let id = t.id;                       // an id, once minted, is stable — the player's
+      if (!id) {                           // journal keys on it across pack edits
+        id = uniqueId("trinket" + (i + 1), used); used.add(id);
+      }
+      const out = { id, image: t.image, when: t.when === "accepted" ? "accepted" : "completed" };
+      if ((t.caption || "").trim()) out.caption = t.caption.trim();
+      if (out.when === "completed" && (t.outcome || "").trim()) out.outcome = t.outcome.trim();
+      return out;
+    });
+  } else delete base.trinkets;
   setOrDel("tags", csv(document.getElementById("f_tags").value));
   commitEntry("quests", original, base);
 }

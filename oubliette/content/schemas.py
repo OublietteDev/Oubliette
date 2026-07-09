@@ -548,6 +548,28 @@ class QuestReward(_Strict):
         return self
 
 
+class QuestTrinket(_Strict):
+    """A keepsake the quest leaves in the party's hands — a torn map corner, a note
+    from a noble — offered to the PLAYER (never the DM) to tape into their journal.
+    Purely cosmetic: no stats, no inventory entry, never in the DM's context. The
+    engine surfaces it when its moment arrives; the journal does the rest."""
+
+    id: str                          # stable within the quest (the Forge autofills)
+    image: str                       # filename in the pack's images/ folder
+    caption: str = ""                # the words under the taped-in thing
+    when: Literal["accepted", "completed"] = "completed"
+    outcome: str = ""                # completion-only filter: granted only when this
+                                     # outcome was reported ("" = any ending)
+
+    @model_validator(mode="after")
+    def _shape(self) -> "QuestTrinket":
+        if not self.image.strip():
+            raise ValueError("a trinket needs an image")
+        if self.outcome and self.when != "completed":
+            raise ValueError("an outcome filter only applies to a completion trinket")
+        return self
+
+
 class QuestBranch(_Strict):
     """One outcome -> next-quest edge of a branching chain. At completion the DM reports an
     `outcome` label (from the quest's OUTCOMES shown in context); the matching branch unlocks
@@ -581,6 +603,7 @@ class AuthoredQuest(_Strict):
                                      # never sees a gated quest until the party qualifies, so
                                      # it can't leak it early and the context stays lean (S2).
     branches: list[QuestBranch] = Field(default_factory=list)
+    trinkets: list[QuestTrinket] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
@@ -591,6 +614,15 @@ class AuthoredQuest(_Strict):
             raise ValueError("a place-given quest needs a `discovery` note (how it's found)")
         if self.giver_npc is not None and self.discovery.strip():
             raise ValueError("`discovery` only applies to a place-given quest")
+        ids = [t.id for t in self.trinkets]
+        if len(ids) != len(set(ids)):
+            raise ValueError("trinket ids must be unique within a quest")
+        labels = {b.outcome for b in self.branches}
+        for t in self.trinkets:
+            if t.outcome and t.outcome not in labels:
+                raise ValueError(
+                    f"trinket {t.id!r} filters on outcome {t.outcome!r}, "
+                    "which is not one of this quest's branch outcomes")
         return self
 
 

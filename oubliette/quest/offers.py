@@ -87,6 +87,28 @@ def offerable_ids(authored: dict, events: list[Event], quests,
             if qid in authored and qid not in started and _level_ok(authored[qid])}
 
 
+def earned_trinkets(authored: dict, events: list[Event], quests) -> list[dict]:
+    """Every trinket the party has EARNED, a pure derivation like the offer set.
+    Accepting an authored quest grants its "accepted" trinkets — kept even if the
+    quest later fails (the map fragment is still in hand); completing it grants
+    "completed" trinkets whose outcome filter matches ("" = any ending). Whether a
+    trinket is TAPED into the journal is the journal's own business — the
+    player-owned document is the only record of that, and the DM never sees any
+    of this."""
+    started = started_authored_ids(quests)
+    outcomes = completed_outcomes(events)
+    out: list[dict] = []
+    for aid, q in authored.items():
+        for t in getattr(q, "trinkets", []):
+            granted = (t.when == "accepted" and aid in started) or (
+                t.when == "completed" and aid in outcomes
+                and (not t.outcome or t.outcome == outcomes[aid]))
+            if granted:
+                out.append({"key": f"{aid}:{t.id}", "quest": q.title,
+                            "image": t.image, "caption": t.caption, "when": t.when})
+    return out
+
+
 def offered_here(eligible: set[str], authored: dict, location: str | None,
                  present_npc_ids: set[str]) -> set[str]:
     """Narrow an eligible set to quests whose SOURCE is present right now: a giver NPC

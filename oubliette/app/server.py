@@ -29,6 +29,7 @@ from ..content.loader import (DEFAULT_PACK, _PACKS_ROOT, PackValidationError,
                               available_packs, load_pack)
 from ..content.ruleset import Ruleset, load_ruleset
 from ..journal.store import Journal, JournalStore
+from ..quest import offers as quest_offers
 from ..record.events import EventKind, StateOp
 from ..record.store import SqliteEventStore
 from ..record.rng import Rng
@@ -418,6 +419,39 @@ def _quest_beats(report) -> list[dict]:
     return beats
 
 
+def _trinket_url(image: str) -> str:
+    return f"/api/pack-image/{quote(image)}"
+
+
+def _trinket_beats(report) -> list[dict]:
+    """Trinkets whose granting moment is THIS turn — a player-facing keepsake card
+    for the chat stream. The DM has no tool for this and never knows it happened:
+    the moment is derived from the quest tools it already uses (accept_quest /
+    update_quest-to-completed), so authored trinkets cost it nothing."""
+    beats: list[dict] = []
+    for rt in report.applied:
+        aq, granted_when, outcome = None, None, ""
+        if rt.quest_accept is not None:
+            aq = GAME.session.authored_quests.get(rt.quest_accept.quest_id)
+            granted_when = "accepted"
+        elif rt.quest_update is not None and rt.quest_update.status == "completed":
+            q = GAME.session.quests.get(rt.quest_update.quest_id)
+            if q is not None and q.authored_id:
+                aq = GAME.session.authored_quests.get(q.authored_id)
+                granted_when = "completed"
+                outcome = rt.quest_update.outcome or ""
+        if aq is None:
+            continue
+        for t in aq.trinkets:
+            if t.when != granted_when:
+                continue
+            if t.when == "completed" and t.outcome and t.outcome != outcome:
+                continue
+            beats.append({"key": f"{aq.id}:{t.id}", "quest": aq.title,
+                          "image": _trinket_url(t.image), "caption": t.caption})
+    return beats
+
+
 def _turn_payload(report) -> dict:
     roll = None
     if report.roll_outcome is not None and report.assessment.roll is not None:
@@ -437,6 +471,7 @@ def _turn_payload(report) -> dict:
         # get no chip — _describe_applied returns None for all of those, so drop the Nones.
         "applied": [d for rt in report.applied if (d := _describe_applied(rt)) is not None],
         "quest_beats": _quest_beats(report),
+        "trinkets": _trinket_beats(report),
         "combat": combat,
         "trade": report.trade_open.model_dump() if report.trade_open is not None else None,
         "meta_notice": report.meta_notice,
@@ -688,9 +723,11 @@ async def get_map() -> JSONResponse:
 
 
 @app.get("/api/map-image/{filename}", response_model=None)
+@app.get("/api/pack-image/{filename}", response_model=None)
 async def map_image(filename: str) -> FileResponse | JSONResponse:
-    """Serve a pack map background (the world map, or a place's sub-map) by filename,
-    from the loaded pack's images/ folder."""
+    """Serve any image from the loaded pack's images/ folder by filename — map
+    backgrounds and sub-maps under the historical /api/map-image name, trinket art
+    (and anything future) under the general /api/pack-image alias."""
     if "/" in filename or "\\" in filename or ".." in filename:
         return JSONResponse({"error": "not found"}, status_code=404)
     path = _PACKS_ROOT / (GAME.pack_id or "") / "images" / filename
@@ -978,6 +1015,19 @@ async def put_journal(body: Journal) -> JSONResponse:
     async with GAME.lock:
         GAME.journal.put(body)
         return JSONResponse({"ok": True})
+
+
+@app.get("/api/trinkets")
+async def get_trinkets() -> JSONResponse:
+    """Every trinket the party has EARNED (quest-granted keepsakes), replay-derived
+    from the event log like the offer set. Whether one is taped into the journal
+    lives in the journal document itself — the client compares keys. Player-facing
+    only; none of this ever enters the DM's context."""
+    earned = quest_offers.earned_trinkets(
+        GAME.session.authored_quests, GAME.session.store.read_all(), GAME.session.quests)
+    for t in earned:
+        t["image"] = _trinket_url(t["image"])
+    return JSONResponse({"trinkets": earned})
 
 
 @app.get("/api/journal/art")

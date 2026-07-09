@@ -8,14 +8,16 @@ end with no API key. Swap in `AnthropicLLMClient` for an actual DM.
 
 from __future__ import annotations
 
+import re
+
 from pydantic import BaseModel
 
 from ..combat.schemas import EncounterRequest, EnemyRef, ExitKind, TerrainSpec
 from ..enums import Ability, Skill, Tier, Verb, may_canonize
 from ..schemas import (CampaignEnding, Intent, RollRequest, SessionNotes, TurnAssessment,
                        TurnResolution)
-from ..tools.schemas import (CreateEntity, EndSession, ForceEndSession, ProposeRest, StartQuest,
-                             Transact, Travel, UpdateQuest, UseItem, ValueEntry)
+from ..tools.schemas import (AcceptQuest, CreateEntity, EndSession, ForceEndSession, ProposeRest,
+                             StartQuest, Transact, Travel, UpdateQuest, UseItem, ValueEntry)
 from ..trade.schemas import TradeRequest
 from .client import ActResult, Msg
 
@@ -242,8 +244,20 @@ class ScriptedLLMClient:
                 tool_calls=[ProposeRest(kind="short", reason="A safe hour to catch their breath.")],
             )
 
-        # Quests — start one on acceptance, complete it when reported done.
+        # Quests — start one on acceptance, complete it when reported done. If an
+        # AUTHORED quest is offered here, take that one up (accept_quest, like the
+        # real DM would) so staging can exercise the authored path — trinkets ride it.
         if any(p in player for p in ("accept the task", "take the job", "i'll help", "accept the quest")):
+            offered = None
+            if "accept the quest" in player and "QUESTS OFFERED HERE" in text:
+                offered = re.search(r"^\s*- \[([^\]]+)\]",
+                                    text[text.index("QUESTS OFFERED HERE"):], re.M)
+            if offered is not None:
+                return TurnResolution(
+                    narration="\"You'll take it on? Good.\" The task is yours to see through now.",
+                    tool_calls=[AcceptQuest(quest_id=offered.group(1),
+                                            reason="The player took up the offered quest.")],
+                )
             return TurnResolution(
                 narration="\"You'll do it? Bless you.\" The errand is yours to see through now.",
                 tool_calls=[StartQuest(title="A Favor Asked",
