@@ -19,7 +19,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 from ..coin import authored_to_cp, format_cp
@@ -53,6 +53,8 @@ from ..table import TONE_PRESETS, TableContract
 from ..tools.dispatch import ToolApplyError
 from ..trade.service import (build_state, buy_transact, checkout_ops,
                              hand_over_transact, sell_transact)
+from ..tts import engine as tts_engine
+from ..tts.chunker import SentenceChunker, clean_for_speech
 from ..llm import providers
 from .repl import _load_dotenv, _pick_client
 
@@ -490,6 +492,7 @@ def _turn_payload(report) -> dict:
 class TurnIn(BaseModel):
     text: str
     ooc: bool = False          # player's explicit out-of-character signal (composer toggle)
+    narrate: bool = False      # this player wants the turn read aloud (narration toggle)
 
 
 @app.get("/")
@@ -796,6 +799,62 @@ async def audio_file(filename: str) -> FileResponse | JSONResponse:
     return FileResponse(path)
 
 
+# --- voiced narration (design: oubliette-voiced-narration) ------------------
+# Synthesized sentence clips live in memory only — a turn's audio is spoken once
+# and forgotten, never written to disk. The store is a small ring: old clips
+# fall off the back long after the browser has fetched them.
+_TTS_CLIPS: dict[str, bytes] = {}
+_TTS_CLIPS_MAX = 128
+_TTS_POOL = None           # lazy single worker: sentences synthesize in order
+
+
+def _tts_pool():
+    global _TTS_POOL
+    if _TTS_POOL is None:
+        from concurrent.futures import ThreadPoolExecutor
+        _TTS_POOL = ThreadPoolExecutor(max_workers=1, thread_name_prefix="tts")
+    return _TTS_POOL
+
+
+def _store_clip(wav: bytes) -> str:
+    import uuid
+    cid = uuid.uuid4().hex
+    _TTS_CLIPS[cid] = wav
+    while len(_TTS_CLIPS) > _TTS_CLIPS_MAX:
+        _TTS_CLIPS.pop(next(iter(_TTS_CLIPS)))
+    return cid
+
+
+@app.get("/api/tts/status")
+async def tts_status() -> JSONResponse:
+    """Can narration run, with which voices — and if not, an honest why."""
+    return JSONResponse(tts_engine.status())
+
+
+class TtsIn(BaseModel):
+    voice: str
+
+
+@app.put("/api/tts")
+async def put_tts(body: TtsIn) -> JSONResponse:
+    """Save the narrator voice (per model — the host's storyteller)."""
+    engine, reason = tts_engine.get_engine()
+    if engine is None:
+        return JSONResponse({"error": reason}, status_code=409)
+    if body.voice not in engine.voices():
+        return JSONResponse({"error": f"unknown voice '{body.voice}'"}, status_code=400)
+    tts_engine.set_tts_voice(engine.id, body.voice)
+    return JSONResponse(tts_engine.status())
+
+
+@app.get("/api/tts/clip/{clip_id}", response_model=None)
+async def tts_clip(clip_id: str) -> Response | JSONResponse:
+    wav = _TTS_CLIPS.get(clip_id)
+    if wav is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return Response(content=wav, media_type="audio/wav")
+
+
 @app.post("/api/turn")
 async def post_turn(body: TurnIn) -> JSONResponse:
     text = body.text.strip()
@@ -829,9 +888,36 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
     loop = asyncio.get_running_loop()
     queue: asyncio.Queue = asyncio.Queue()
 
+    # Voiced narration (opt-in per request): finished sentences go to the TTS as
+    # the text streams, and each clip is announced on this same stream as
+    # {"t":"audio", url, upto} — `upto` being how many raw narration chars the
+    # clip covers (movie mode reveals text up to it). Unavailable/failed
+    # narration NEVER blocks the turn: the text flows exactly as today.
+    engine, tts_reason = tts_engine.get_engine() if body.narrate else (None, None)
+    chunker = SentenceChunker() if engine is not None else None
+    voice = tts_engine.active_voice() if engine is not None else None
+    clip_jobs: list = []
+
+    def _synth(raw: str, upto: int) -> None:      # runs on the TTS worker thread
+        speakable = clean_for_speech(raw)
+        if not speakable:
+            return
+        try:
+            wav = engine.synthesize(speakable, voice=voice)
+        except Exception as e:                    # a bad sentence loses its clip, nothing more
+            GAME.loop.debug.append("anomaly", stage="tts", error=repr(e))
+            return
+        _emit({"t": "audio", "url": f"/api/tts/clip/{_store_clip(wav)}", "upto": upto})
+
+    def _speak(sentences: list) -> None:
+        for raw, upto in sentences:
+            clip_jobs.append(_tts_pool().submit(_synth, raw, upto))
+
     def on_text(delta: str) -> None:
         # Called from the model's worker thread → hop back onto the loop safely.
         loop.call_soon_threadsafe(queue.put_nowait, {"t": "delta", "v": delta})
+        if chunker is not None:
+            _speak(chunker.feed(delta))
 
     def _emit(item: dict) -> None:
         # Enqueue via the loop so a final 'done' lands AFTER all delta callbacks
@@ -842,8 +928,22 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
         async with GAME.lock:
             try:
                 report = await GAME.loop.take_turn(text, on_text=on_text, ooc=body.ooc)
+                if chunker is not None:
+                    if chunker.fed == 0 and report.narration:
+                        # Nothing streamed (a non-streaming path) — voice the final text.
+                        _speak(chunker.feed(report.narration))
+                    _speak(chunker.flush())
+                    if clip_jobs:
+                        # Let the tail clips land before 'done' so the client sees
+                        # every audio event inside the stream. Kokoro runs ~5× faster
+                        # than real-time, so this wait is normally near-zero; the
+                        # timeout is the never-block-a-turn promise.
+                        from concurrent.futures import wait as _fwait
+                        await loop.run_in_executor(None, lambda: _fwait(clip_jobs, timeout=15))
                 payload = _turn_payload(report)
                 payload["t"] = "done"
+                if body.narrate and engine is None:
+                    payload["tts_off"] = tts_reason   # asked for a voice we can't give — say why
                 _emit(payload)
             except Exception as e:  # surface failures to the client, don't hang
                 # …but never silently: keep the full traceback (console + debug log)

@@ -12,12 +12,26 @@ GUI/audio tests run headless on a machine with no display or sound device.
 """
 
 import os
+import sys
 
 import pytest
 
 # Headless pygame: set before any pygame import happens during collection.
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+
+# Keep numpy OUT of the test process. pygame eagerly imports numpy when it can
+# (optional array support), and pygame 2.6.1 + numpy 2.x in one process corrupts
+# memory — SDL_ttf font calls start access-violating several init/quit cycles
+# later (surfaced 2026-07-09 when the narration arc's kokoro-onnx brought numpy
+# into the venv; the crash reproduced with numpy installed and vanished without
+# it). The Arena itself never imports numpy, and the game runs the Arena in its
+# own subprocess, so blocking it here changes nothing but the tests' stability.
+# (A None entry makes `import numpy` raise ImportError; pygame degrades cleanly.)
+# If an Oubliette test someday needs real numpy, this block must be revisited —
+# the two can't share a process until pygame and numpy make peace.
+if "numpy" not in sys.modules:
+    sys.modules["numpy"] = None  # type: ignore[assignment]
 
 # The Arena package root (this file is arena/tests/conftest.py → parent.parent = arena/).
 _ARENA_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

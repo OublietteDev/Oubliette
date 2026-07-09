@@ -797,6 +797,8 @@
         <input type="range" id="vol-music" min="0" max="100" value="70" />
         <div class="lbl">Sound effects</div>
         <input type="range" id="vol-sfx" min="0" max="100" value="70" />
+        <div class="lbl hidden" id="voice-lbl">Narrator</div>
+        <input type="range" id="vol-voice" class="hidden" min="0" max="100" value="80" />
         <button class="act" id="sound-mute">Mute all</button>
       </div>
     </div>
@@ -949,6 +951,7 @@
     <div class="newgame-list">
       <div class="contract-form" id="settings-difficulty"></div>
       <div class="contract-form" id="settings-contract"></div>
+      <div class="contract-form" id="settings-narration"></div>
     </div>
     <div class="ng-foot">
       <div class="spacer"></div>
@@ -1649,6 +1652,14 @@ async function send(textOverride) {
   const CATCHUP_BACKLOG = 220;   // above this many buffered chars, speed up to catch up
   let bubble = null, body = null, acc = "", pending = "", removedThink = false;
   let streamDone = false, finalized = false, rafId = null, doneData = null, lastTick = null;
+  // A new message is the player barging in: stop any leftover narration. The send
+  // click is a user gesture, so it can also unlock audio after a page reload.
+  if (narrOn && TTS.enabled && !soundOn) enableSound();
+  narrReset();
+  // Movie mode holds the typewriter back so text appears in step with the voice
+  // (upto = how far the currently-playing clip covers). Any failure — no clips,
+  // a rewritten turn, a dropped connection — releases the gate: text always wins.
+  let movieGate = narrOn && narrMode === "movie" && TTS.enabled && soundOn;
   function ensureBubble() {
     if (bubble) return;
     if (!removedThink) { thinkRow.remove(); removedThink = true; }
@@ -1683,11 +1694,17 @@ async function send(textOverride) {
     if (pending.length) {
       let rate = REVEAL_CPS;
       if (pending.length > CATCHUP_BACKLOG) rate *= pending.length / CATCHUP_BACKLOG;
-      const n = Math.max(1, Math.round(dt * rate / 1000));
-      acc += pending.slice(0, n);
-      pending = pending.slice(n);
-      render(true);
-      scrollDown();
+      let n = Math.max(1, Math.round(dt * rate / 1000));
+      if (movieGate) {
+        if (streamDone && narrIdle()) movieGate = false;       // the voice finished (or failed)
+        else n = Math.min(n, Math.max(0, NARR.upto - acc.length));
+      }
+      if (n > 0) {
+        acc += pending.slice(0, n);
+        pending = pending.slice(n);
+        render(true);
+        scrollDown();
+      }
     }
     if (pending.length || !streamDone) rafId = requestAnimationFrame(pump);
     else finalize();                                       // drained AND stream closed
@@ -1698,6 +1715,8 @@ async function send(textOverride) {
       ensureBubble();
       pending += data.v;                                   // buffer; the pump reveals it
       startPump();
+    } else if (data.t === "audio") {
+      narrEnqueue(data);                                   // a narration clip is ready — queue it
     } else if (data.t === "done") {
       ensureBubble();
       doneData = data;
@@ -1706,19 +1725,24 @@ async function send(textOverride) {
       // if a retry diverged (acc isn't a prefix), snap to the final text.
       const full = (data.narration != null) ? data.narration : (acc + pending);
       if (full.startsWith(acc)) { pending = full.slice(acc.length); }
-      else { acc = full; pending = ""; }
+      else { acc = full; pending = ""; movieGate = false; } // rewritten text: clip offsets are stale
+      if (data.tts_off && narrOn && !narrWarned) {
+        narrWarned = true;                                 // honest, and said once — not every turn
+        addMessage("System", "The narrator is unavailable: " + data.tts_off, "system");
+      }
       streamDone = true;
       startPump();
     } else if (data.t === "error") {
       if (!removedThink) { thinkRow.remove(); removedThink = true; }
       streamDone = true;                                   // let any running pump stop
+      movieGate = false;
       addMessage("System", data.error || "something went wrong", "system");
     }
   }
   try {
     const res = await fetch("/api/turn/stream", {
       method: "POST", headers: {"content-type": "application/json"},
-      body: JSON.stringify({ text, ooc: oocMode })
+      body: JSON.stringify({ text, ooc: oocMode, narrate: narrOn && TTS.enabled && soundOn })
     });
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -1737,6 +1761,7 @@ async function send(textOverride) {
   } catch (e) {
     if (!removedThink) thinkRow.remove();
     streamDone = true;                       // stop the reveal pump if the socket dropped mid-stream
+    movieGate = false;                       // …and never leave text waiting on a voice that died with it
     addMessage("System", "Connection lost: " + e, "system");
   } finally { setBusy(false); }
 }
@@ -1745,6 +1770,7 @@ async function send(textOverride) {
 // server, blocks until you exit it, then renders the DM's post-combat beat.
 async function enterArena() {
   if (!combatPending) return;
+  narrReset();                               // the Arena takes the stage — hush the storyteller
   enterArenaBtn.disabled = true;
   enterArenaBtn.textContent = "⚔ Fighting…";
   addMessage("System", "⚔ The Arena opens in a separate window — play out the fight, then return here.", "system");
@@ -2676,6 +2702,9 @@ async function openSettings() {
   const dd = await (await fetch("/api/difficulty")).json();
   buildDifficultyForm($("settings-difficulty"), dd.presets || {});
   fillDifficultyForm($("settings-difficulty"), dd.difficulty, null);
+  await refreshTtsStatus();                        // narration: re-check what's installed
+  buildNarrationForm($("settings-narration"));
+  fillNarrationForm($("settings-narration"));
   $("settings-overlay").classList.remove("hidden");
 }
 function closeSettings() { $("settings-overlay").classList.add("hidden"); }
@@ -2690,6 +2719,7 @@ async function saveSettings() {
     method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify(difficulty),
   });
+  await saveNarrationForm($("settings-narration"));
   closeSettings();
   addMessage("System", "The table is updated — it takes effect on your next turn.", "system");
 }
@@ -4467,11 +4497,13 @@ $("lu-confirm").addEventListener("click", confirmLevelUp);
 // move whole categories. Browsers block audio until a user gesture, so a one-time "Enable
 // sound" click resumes the context. (One-shots, time/weather arrive in later seams.)
 let audioCtx = null, masterGain = null, musicGain = null, sfxGain = null;
-let soundOn = false, soundMuted = false, musicVol = 0.7, sfxVol = 0.7;
+let voiceGain = null, duckGain = null;   // narration bus + the "ambience steps back" control
+let soundOn = false, soundMuted = false, musicVol = 0.7, sfxVol = 0.7, voiceVol = 0.8;
 const SS = { spec: [], beds: new Map(), buffers: new Map(), shots: new Map(), fires: 0 };  // beds/shots: file -> handle
 const clamp01 = v => Math.max(0, Math.min(1, v));
 try { const m = localStorage.getItem("ob-music"); if (m != null) musicVol = clamp01(+m); } catch (e) {}
 try { const s = localStorage.getItem("ob-sfx"); if (s != null) sfxVol = clamp01(+s); } catch (e) {}
+try { const v = localStorage.getItem("ob-voice"); if (v != null) voiceVol = clamp01(+v); } catch (e) {}
 try { soundMuted = localStorage.getItem("ob-muted") === "1"; } catch (e) {}
 
 function enableSound() {
@@ -4482,9 +4514,15 @@ function enableSound() {
   masterGain = audioCtx.createGain();                  // master = the mute control
   masterGain.gain.value = soundMuted ? 0 : 1;
   masterGain.connect(audioCtx.destination);
-  musicGain = audioCtx.createGain(); musicGain.gain.value = musicVol;   // the two player buses
+  // Ambience (music + sfx) routes through a duck stage so the whole soundscape can
+  // step back while the narrator speaks — without touching the player's sliders.
+  duckGain = audioCtx.createGain(); duckGain.gain.value = 1;
+  duckGain.connect(masterGain);
+  musicGain = audioCtx.createGain(); musicGain.gain.value = musicVol;   // the player buses
   sfxGain = audioCtx.createGain();   sfxGain.gain.value = sfxVol;
-  musicGain.connect(masterGain); sfxGain.connect(masterGain);
+  musicGain.connect(duckGain); sfxGain.connect(duckGain);
+  voiceGain = audioCtx.createGain(); voiceGain.gain.value = voiceVol;   // the narrator — never ducked
+  voiceGain.connect(masterGain);
   soundOn = true;
   audioCtx.resume();
   updateSoundBtn();
@@ -4597,6 +4635,15 @@ function setSfxVol(v) {
   try { localStorage.setItem("ob-sfx", String(sfxVol)); } catch (e) {}
   if (sfxGain) sfxGain.gain.linearRampToValueAtTime(sfxVol, audioCtx.currentTime + 0.08);
 }
+function setVoiceVol(v) {
+  voiceVol = clamp01(v);
+  try { localStorage.setItem("ob-voice", String(voiceVol)); } catch (e) {}
+  if (voiceGain) voiceGain.gain.linearRampToValueAtTime(voiceVol, audioCtx.currentTime + 0.08);
+  // one volume, wherever it's shown: the popover and Settings sliders mirror each other
+  const pv = $("vol-voice"); if (pv) pv.value = Math.round(voiceVol * 100);
+  const sv = document.querySelector("#settings-narration .nr-vol");
+  if (sv) sv.value = Math.round(voiceVol * 100);
+}
 function setMuted(m) {
   soundMuted = m;
   try { localStorage.setItem("ob-muted", m ? "1" : "0"); } catch (e) {}
@@ -4610,6 +4657,10 @@ function updateSoundBtn() {
   const mute = $("sound-mute"); if (mute) mute.textContent = soundMuted ? "Unmute" : "Mute all";
   const vm = $("vol-music"); if (vm) vm.value = Math.round(musicVol * 100);
   const vs = $("vol-sfx"); if (vs) vs.value = Math.round(sfxVol * 100);
+  const vv = $("vol-voice"); if (vv) vv.value = Math.round(voiceVol * 100);
+  // the narrator slider appears only when a voice model is actually installed
+  $("voice-lbl").classList.toggle("hidden", !TTS.enabled);
+  $("vol-voice").classList.toggle("hidden", !TTS.enabled);
 }
 $("sound-btn").addEventListener("click", (e) => {
   e.stopPropagation();
@@ -4618,13 +4669,148 @@ $("sound-btn").addEventListener("click", (e) => {
 });
 $("vol-music").addEventListener("input", (e) => setMusicVol(+e.target.value / 100));
 $("vol-sfx").addEventListener("input", (e) => setSfxVol(+e.target.value / 100));
+$("vol-voice").addEventListener("input", (e) => setVoiceVol(+e.target.value / 100));
 $("sound-mute").addEventListener("click", () => setMuted(!soundMuted));
 document.addEventListener("click", (e) => {
   if (!$("sound-pop").classList.contains("hidden") && !e.target.closest(".sound-wrap")) $("sound-pop").classList.add("hidden");
 });
+
+// --- voiced narration: the campfire storyteller ---------------------------
+// The server synthesizes each DM sentence as the turn streams and announces the
+// clips as {"t":"audio", url, upto} events; we play them in order through the
+// voice bus, ducking the ambience while anything speaks. Narration off — or
+// broken, or absent — is exactly today's game: the text never waits on audio.
+let TTS = { enabled: false, model: null, reason: null, voices: [], voice: null, default_voice: null };
+let narrOn = false, narrMode = "read", narrWarned = false;
+try { narrOn = localStorage.getItem("ob-narr") === "1"; } catch (e) {}
+try { if (localStorage.getItem("ob-narr-mode") === "movie") narrMode = "movie"; } catch (e) {}
+
+async function refreshTtsStatus() {
+  try { TTS = await (await fetch("/api/tts/status")).json(); }
+  catch (e) { TTS = { enabled: false, voices: [] }; }
+  updateSoundBtn();
+}
+
+// `gen` guards against a stale clip starting after the player moved on (a new
+// message, the Arena, a new game) — anything fetched under an old gen is dropped.
+const NARR = { queue: [], playing: null, upto: 0, gen: 0, fetching: false };
+function duckTo(v, t) {
+  if (!duckGain) return;
+  const g = duckGain.gain;
+  g.cancelScheduledValues(audioCtx.currentTime);
+  g.setValueAtTime(g.value, audioCtx.currentTime);
+  g.linearRampToValueAtTime(v, audioCtx.currentTime + t);
+}
+function narrIdle() { return !NARR.playing && !NARR.fetching && !NARR.queue.length; }
+function narrReset() {
+  NARR.gen++;
+  NARR.queue.length = 0;
+  NARR.upto = 0;
+  NARR.fetching = false;
+  if (NARR.playing) { try { NARR.playing.stop(); } catch (e) {} NARR.playing = null; }
+  if (soundOn) duckTo(1, 0.4);
+}
+function narrEnqueue(ev) {
+  if (!narrOn || !soundOn || !TTS.enabled) { NARR.upto = Math.max(NARR.upto, ev.upto || 0); return; }
+  NARR.queue.push(ev);
+  narrKick();
+}
+async function narrKick() {
+  if (NARR.playing || NARR.fetching || !NARR.queue.length) return;
+  const gen = NARR.gen;
+  const ev = NARR.queue.shift();
+  NARR.fetching = true;
+  let buf = null;
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 10000);
+    const res = await fetch(ev.url, { signal: ctl.signal });
+    clearTimeout(timer);
+    if (res.ok) buf = await audioCtx.decodeAudioData(await res.arrayBuffer());
+  } catch (e) { /* a lost clip must never break play */ }
+  if (gen !== NARR.gen) return;                    // the table moved on while we fetched
+  NARR.fetching = false;
+  NARR.upto = Math.max(NARR.upto, ev.upto || 0);   // movie mode may now reveal through this clip
+  if (!buf) { narrKick(); return; }                // skip the clip, keep the story moving
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  src.connect(voiceGain);
+  NARR.playing = src;
+  duckTo(0.35, 0.25);
+  src.onended = () => {
+    if (gen !== NARR.gen) return;
+    NARR.playing = null;
+    if (NARR.queue.length) narrKick(); else duckTo(1, 0.9);
+  };
+  src.start();
+}
+
+// Kokoro voice ids read like "af_heart": accent (a/b) + voice (f/m) + name.
+function voiceLabel(v) {
+  const m = /^([ab])([fm])_(.+)$/.exec(v);
+  if (!m) return v;
+  return m[3].charAt(0).toUpperCase() + m[3].slice(1) +
+    " — " + (m[1] === "a" ? "American" : "British") + " " + (m[2] === "f" ? "female" : "male");
+}
+function buildNarrationForm(root) {
+  if (!TTS.enabled) {
+    root.innerHTML = `<label>Narration</label>
+      <div class="hint">The narrator isn't available: ${escapeHtml(TTS.reason || "no voice model is installed")}.</div>`;
+    return;
+  }
+  root.innerHTML = `
+    <label>Narration</label>
+    <label class="df-check"><input type="checkbox" class="nr-on"> The narrator reads the DM's turns aloud</label>
+    <label>Mode</label>
+    <select class="nr-mode">
+      <option value="read">Read-along — the text streams ahead, the voice follows</option>
+      <option value="movie">Movie — the text appears in step with the voice</option>
+    </select>
+    <label>Narrator voice</label>
+    <select class="nr-voice"></select>
+    <label>Narrator volume</label>
+    <input type="range" class="nr-vol" min="0" max="100" />`;
+  const vsel = root.querySelector(".nr-voice");
+  (TTS.voices || []).forEach(v => {
+    const o = el("option");
+    o.value = v;
+    o.textContent = voiceLabel(v) + (v === TTS.default_voice ? " (default)" : "");
+    vsel.appendChild(o);
+  });
+  // volume applies live and mirrors the 🔊 popover slider — one volume, two handles
+  root.querySelector(".nr-vol").addEventListener("input", (e) => setVoiceVol(+e.target.value / 100));
+}
+function fillNarrationForm(root) {
+  if (!TTS.enabled || !root.querySelector(".nr-on")) return;
+  root.querySelector(".nr-on").checked = narrOn;
+  root.querySelector(".nr-mode").value = narrMode;
+  root.querySelector(".nr-voice").value = TTS.voice || TTS.default_voice || "";
+  root.querySelector(".nr-vol").value = Math.round(voiceVol * 100);
+}
+async function saveNarrationForm(root) {
+  if (!TTS.enabled || !root.querySelector(".nr-on")) return;
+  narrOn = root.querySelector(".nr-on").checked;
+  narrMode = root.querySelector(".nr-mode").value;
+  try {
+    localStorage.setItem("ob-narr", narrOn ? "1" : "0");
+    localStorage.setItem("ob-narr-mode", narrMode);
+  } catch (e) {}
+  if (narrOn && !soundOn) enableSound();      // the Save click doubles as the autoplay gesture
+  const voice = root.querySelector(".nr-voice").value;
+  if (voice && voice !== TTS.voice) {
+    try {
+      TTS = await (await fetch("/api/tts", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voice }),
+      })).json();
+    } catch (e) {}
+  }
+}
+
 updateSoundBtn();
 
 async function boot() {
+  refreshTtsStatus();                        // narration availability (fire-and-forget)
   const [stateRes, txRes] = await Promise.all([fetch("/api/state"), fetch("/api/transcript")]);
   const data = await stateRes.json();
   const tx = await txRes.json();

@@ -27,6 +27,10 @@ pack-backups/
 # Combat handoff: the transient Arena→Oubliette result JSON (runtime output).
 result.json
 
+# Downloaded narrator voice models (models/kokoro/, models/qwen-1.7b/) — large
+# binaries fetched per-player by setup's picker, never committed.
+models/
+
 # Per-run combat log dump (diagnostics; overwritten every fight).
 arena/last_combat_log.txt
 
@@ -56,3 +60,4 @@ preview-test-config.json
 /docs/feedback/
 /docs/media/
 /docs/README.md
+/spike/
