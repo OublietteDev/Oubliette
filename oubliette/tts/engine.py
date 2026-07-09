@@ -55,6 +55,17 @@ def set_tts_voice(model: str, voice: str) -> None:
     save_config(cfg)
 
 
+def set_tts_model(model: str | None) -> None:
+    """Write the chosen tier (setup's picker owns this; None = narration off).
+    "Off" is stored as an explicit null — so the picker can tell a deliberate
+    "no narration" apart from "never been asked" and default accordingly.
+    Drops the cached engine so a running server notices the change."""
+    cfg = load_config()
+    cfg["tts_model"] = model
+    save_config(cfg)
+    invalidate()
+
+
 # --- backends ---------------------------------------------------------------
 
 class KokoroBackend:

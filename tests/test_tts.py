@@ -134,15 +134,28 @@ def test_voice_saved_per_model(monkeypatch, tmp_path):
 # --- the server: audio events on the turn stream ---------------------------
 
 class FakeBackend:
-    """Synthesizes instantly recognizable bytes — the plumbing under test."""
+    """Synthesizes a real (silent) WAV instantly — the plumbing under test,
+    including the benchmark's duration parsing."""
     id = "kokoro"
     default_voice = "af_heart"
+
+    def __init__(self):
+        self.spoken = []
 
     def voices(self):
         return ["af_heart", "am_puck", "bm_george"]
 
     def synthesize(self, text, voice, speed=1.0):
-        return b"RIFFfake:" + text.encode("utf-8")
+        import io
+        import wave
+        self.spoken.append((text, voice))
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(24000)
+            w.writeframes(b"\0\0" * 2400)          # 0.1 s of silence
+        return buf.getvalue()
 
 
 def _fake_engine(monkeypatch):
@@ -180,7 +193,7 @@ def test_stream_announces_audio_clips_then_done(monkeypatch):
         r = client.get(e["url"])
         assert r.status_code == 200
         assert r.headers["content-type"].startswith("audio/wav")
-        assert r.content.startswith(b"RIFFfake:")
+        assert r.content.startswith(b"RIFF")
 
 
 def test_stream_without_narrate_has_no_audio_events(monkeypatch):
@@ -216,3 +229,28 @@ def test_put_voice_refused_when_no_engine(monkeypatch):
 
 def test_unknown_clip_is_404():
     assert client.get("/api/tts/clip/deadbeef").status_code == 404
+
+
+def test_benchmark_measures_and_hands_back_a_preview(monkeypatch, tmp_path):
+    monkeypatch.setenv("OUBLIETTE_CONFIG", str(tmp_path / "cfg.json"))  # no saved voice bleeding in
+    fake = _fake_engine(monkeypatch)
+    r = client.post("/api/tts/benchmark", json={})
+    assert r.status_code == 200
+    d = r.json()
+    assert d["verdict"] == "fast"                     # instant fake → outruns real time
+    assert d["audio_seconds"] > 0 and d["voice"] == "af_heart"
+    assert client.get(d["url"]).status_code == 200    # the measurement IS the preview
+    # it warmed up first, then measured the real sentence
+    texts = [t for t, _ in fake.spoken]
+    assert texts[0] == "Ready." and "drowned pilings" in texts[1]
+
+
+def test_benchmark_respects_a_requested_voice(monkeypatch):
+    _fake_engine(monkeypatch)
+    d = client.post("/api/tts/benchmark", json={"voice": "am_puck"}).json()
+    assert d["voice"] == "am_puck"
+
+
+def test_benchmark_refused_when_no_engine(monkeypatch):
+    monkeypatch.setattr(tts_engine, "get_engine", lambda: (None, "no narrator"))
+    assert client.post("/api/tts/benchmark", json={}).status_code == 409

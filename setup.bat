@@ -103,13 +103,19 @@ echo  Installing Oubliette and its dependencies.
 echo  (The first run downloads packages - it can take a few minutes.)
 echo.
 ".venv\Scripts\python.exe" -m pip install --upgrade pip
-".venv\Scripts\python.exe" -m pip install -e ".[web,arena]"
+".venv\Scripts\python.exe" -m pip install -e ".[web,arena,tts]"
 if errorlevel 1 (
   echo.
   echo  [X] Install failed - please send the messages above to OublietteDev.
   pause
   exit /b 1
 )
+
+REM --- voiced narration (optional): pick a narrator voice model -------------
+REM The picker looks at this machine, recommends a tier, points at the sample
+REM clips in voice-samples\, downloads the chosen model and writes the config.
+REM Narration is entirely optional - a failure here never blocks the game.
+".venv\Scripts\python.exe" -m oubliette.tts.setup
 
 echo.
 echo ==================================================

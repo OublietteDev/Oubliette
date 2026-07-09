@@ -401,6 +401,7 @@
   .sound-pop.hidden { display: none; }
   .sound-pop .lbl { font-size: 12px; color: var(--muted); }
   .sound-pop input[type=range] { width: 100%; accent-color: var(--accent); }
+  .contract-form input[type=range] { width: 100%; accent-color: var(--accent); }
   .sound-pop .act { font-size: 12px; padding: 6px 10px; }
   #sound-btn.attn { border-color: var(--gold); color: var(--gold); }
   .menu-item { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 8px; cursor: pointer; color: var(--ink); font-size: 14px; }
@@ -4769,7 +4770,13 @@ function buildNarrationForm(root) {
     <label>Narrator voice</label>
     <select class="nr-voice"></select>
     <label>Narrator volume</label>
-    <input type="range" class="nr-vol" min="0" max="100" />`;
+    <input type="range" class="nr-vol" min="0" max="100" />
+    <button class="act nr-test" type="button">🔊 Test the narrator</button>
+    <div class="hint nr-test-out"></div>
+    <div class="hint">If the DM itself runs on a local model, use Kokoro or no narration —
+      two local models will fight over this machine.</div>
+    <div class="hint">Want a different voice model? Re-run setup.bat — it keeps your game
+      and lands right on the voice step.</div>`;
   const vsel = root.querySelector(".nr-voice");
   (TTS.voices || []).forEach(v => {
     const o = el("option");
@@ -4779,6 +4786,42 @@ function buildNarrationForm(root) {
   });
   // volume applies live and mirrors the 🔊 popover slider — one volume, two handles
   root.querySelector(".nr-vol").addEventListener("input", (e) => setVoiceVol(+e.target.value / 100));
+  // the self-benchmark doubles as a voice preview: hear the pick, see the speed
+  root.querySelector(".nr-test").addEventListener("click", async () => {
+    const out = root.querySelector(".nr-test-out");
+    out.textContent = "The narrator clears her throat…";
+    if (!soundOn) enableSound();                 // this click is the autoplay gesture
+    try {
+      const r = await fetch("/api/tts/benchmark", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voice: root.querySelector(".nr-voice").value }),
+      });
+      const d = await r.json();
+      if (!r.ok) { out.textContent = "The narrator is unavailable: " + (d.error || r.status); return; }
+      try { localStorage.setItem("ob-narr-bench-" + (TTS.model || ""), d.verdict); } catch (e) {}
+      playVoicePreview(d.url);
+      out.textContent = benchVerdictLine(d);
+    } catch (e) { out.textContent = "The test failed: " + e; }
+  });
+}
+function benchVerdictLine(d) {
+  const speed = d.rtf > 0 ? (1 / d.rtf).toFixed(1) : "?";
+  if (d.verdict === "fast") return `✓ Plenty fast — this machine speaks ${speed}× faster than real time.`;
+  if (d.verdict === "borderline") return `Just about keeps up (${speed}× real time) — the voice may trail on long turns.`;
+  return `Too slow for live narration (${speed}× real time) — consider re-running setup.bat for a lighter tier.`;
+}
+async function playVoicePreview(url) {
+  if (!soundOn) enableSound();
+  if (!soundOn) return;
+  narrReset();                                   // don't talk over a leftover turn
+  try {
+    const res = await fetch(url);
+    const buf = await audioCtx.decodeAudioData(await res.arrayBuffer());
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(voiceGain);
+    src.start();
+  } catch (e) { /* a failed preview must never break Settings */ }
 }
 function fillNarrationForm(root) {
   if (!TTS.enabled || !root.querySelector(".nr-on")) return;
@@ -4804,6 +4847,24 @@ async function saveNarrationForm(root) {
         body: JSON.stringify({ voice }),
       })).json();
     } catch (e) {}
+  }
+  // Measure, don't promise: the first time narration comes on for this model,
+  // benchmark it quietly and say so honestly if this machine can't keep up.
+  if (narrOn) {
+    const key = "ob-narr-bench-" + (TTS.model || "");
+    let known = null;
+    try { known = localStorage.getItem(key); } catch (e) {}
+    if (!known) {
+      fetch("/api/tts/benchmark", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+      }).then(r => r.json()).then(d => {
+        if (!d || !d.verdict) return;
+        try { localStorage.setItem(key, d.verdict); } catch (e) {}
+        if (d.verdict === "slow") {
+          addMessage("System", benchVerdictLine(d) + " Narration stays on, but the voice will lag behind the story.", "system");
+        }
+      }).catch(() => {});                     // no measurement is not a reason to block
+    }
   }
 }
 

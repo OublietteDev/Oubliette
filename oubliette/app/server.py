@@ -12,6 +12,7 @@ to the chat window. Uses the real model when ANTHROPIC_API_KEY is set (env or
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import os
 import traceback
@@ -853,6 +854,51 @@ async def tts_clip(clip_id: str) -> Response | JSONResponse:
     if wav is None:
         return JSONResponse({"error": "not found"}, status_code=404)
     return Response(content=wav, media_type="audio/wav")
+
+
+# The self-benchmark sentence — same one the shipped voice samples read, so what
+# the player hears at setup, in Settings, and in the measurement all line up.
+_TTS_BENCH_TEXT = ("Beneath the old bay, past the drowned pilings, something has "
+                   "been tearing the nets — and whatever it is, it leaves no wake.")
+
+
+class TtsBenchIn(BaseModel):
+    voice: str | None = None    # try a specific voice; default = the saved one
+
+
+@app.post("/api/tts/benchmark")
+async def tts_benchmark(body: TtsBenchIn) -> JSONResponse:
+    """Measure narration speed on THIS machine (the measure-don't-promise lock)
+    and hand back the synthesized clip so the test doubles as a voice preview.
+    Speed is reported as real-time factor: synthesis seconds per second of audio
+    — under 1.0 means the voice outruns its own reading."""
+    engine, reason = tts_engine.get_engine()
+    if engine is None:
+        return JSONResponse({"error": reason}, status_code=409)
+    voice = body.voice if body.voice in engine.voices() else tts_engine.active_voice()
+
+    def _measure() -> dict:
+        import time
+        import wave as _wave
+        engine.synthesize("Ready.", voice=voice)          # steady-state, not first-call warmup
+        t0 = time.perf_counter()
+        wav = engine.synthesize(_TTS_BENCH_TEXT, voice=voice)
+        synth_s = time.perf_counter() - t0
+        with _wave.open(io.BytesIO(wav)) as w:
+            audio_s = w.getnframes() / w.getframerate()
+        rtf = synth_s / audio_s if audio_s else float("inf")
+        verdict = "fast" if rtf < 0.8 else ("borderline" if rtf <= 1.25 else "slow")
+        return {"rtf": round(rtf, 2), "synth_seconds": round(synth_s, 2),
+                "audio_seconds": round(audio_s, 2), "verdict": verdict,
+                "voice": voice, "url": f"/api/tts/clip/{_store_clip(wav)}"}
+
+    try:
+        result = await asyncio.get_running_loop().run_in_executor(
+            _tts_pool(), _measure)
+    except Exception as e:      # a broken benchmark is an answer too — an honest one
+        GAME.loop.debug.append("anomaly", stage="tts_benchmark", error=repr(e))
+        return JSONResponse({"error": f"the narrator failed to speak: {e}"}, status_code=500)
+    return JSONResponse(result)
 
 
 @app.post("/api/turn")
