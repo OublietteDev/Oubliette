@@ -51,6 +51,11 @@ class EventKind(str, Enum):
     CAMPAIGN_ENDED = "campaign_ended"   # the campaign is truly over (hardcore TPK, S4): carries the
                                         # ending narration; folded to a permanent lock on reload. Distinct
                                         # from force_end (hostile-table close) and wrap (an ordinary pause).
+    COMPANION_RECRUITED = "companion_recruited"  # an NPC joins the party as a standing companion
+                                        # (companions S1): carries the full character snapshot (stored
+                                        # whole, D9), flagged companion=True; player-confirmed.
+    COMPANION_DISMISSED = "companion_dismissed"  # a companion parts ways: carries the char id; the
+                                        # character stays a plain NPC (where they GO is story, not state).
 
 
 class StateOp(BaseModel):
@@ -197,6 +202,26 @@ def install_character(payload: dict, repo: "Repository") -> None:
     repo.install_party([Character.model_validate(r) for r in raws])
 
 
+def recruit_companion(payload: dict, repo: "Repository") -> None:
+    """Apply a COMPANION_RECRUITED payload: install the companion's snapshot into the
+    roster (overwriting the plain-NPC entity in place, same id). The snapshot rides the
+    event flagged companion=True and is stored whole, never re-derived (D9) — so replay
+    reproduces the companion even if the source NPC was a runtime creation."""
+    from ..state.models import Character
+    repo.adopt_companion(Character.model_validate(payload["character"]))
+
+
+def dismiss_companion(payload: dict, repo: "Repository") -> None:
+    """Apply a COMPANION_DISMISSED payload: clear the character's companion flag —
+    they leave the party but remain a tracked NPC. Tolerant of a missing character
+    (a legacy or hand-edited log must never brick a save)."""
+    from ..state.repository import StateError
+    try:
+        repo.release_companion(payload["char_id"])
+    except StateError as e:
+        print(f"[oubliette] replay: skipped companion dismissal — {e}")
+
+
 def relevel_character(payload: dict, repo: "Repository") -> None:
     """Apply a CHARACTER_LEVELED payload: register any gear, then swap the rebuilt PC
     in place — preserving the rest of the party (create replaces the party; level-up
@@ -251,6 +276,12 @@ def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = N
         return
     if event.kind == EventKind.CHARACTER_LEVELED.value:
         relevel_character(event.payload, repo)
+        return
+    if event.kind == EventKind.COMPANION_RECRUITED.value:
+        recruit_companion(event.payload, repo)
+        return
+    if event.kind == EventKind.COMPANION_DISMISSED.value:
+        dismiss_companion(event.payload, repo)
         return
     apply_ops(event.state_ops(), repo, strict=strict)
 

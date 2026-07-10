@@ -133,6 +133,36 @@ class ProposeRest(BaseModel):
                         "e.g. 'the party makes camp beneath the overhang'")
 
 
+class ProposeRecruit(BaseModel):
+    """PROPOSE that a present NPC join the party as a standing COMPANION — from then
+    on they travel with the party, appear in every fight under the player's control,
+    and count toward the party's strength when code sizes up encounters. Like
+    propose_rest, this is an offer, not an act: it surfaces a prompt and THE PLAYER
+    confirms. Emit it only when the fiction has truly arrived there — the NPC offered,
+    or agreed when the party asked; never press-gang someone into the roster. The
+    party holds at most 6 members including companions. Never narrate them as already
+    a member in the same turn you propose: narrate the offer, and let the player
+    welcome them."""
+
+    tool: Literal["propose_recruit"] = "propose_recruit"
+    char: str = Field(description="the joining NPC's id (or exact name) from PRESENT")
+    reason: str = Field(description="the in-fiction moment, e.g. 'the wolf pup has "
+                        "chosen them' or 'Roric offers his sword to the cause'")
+
+
+class ProposeDismiss(BaseModel):
+    """PROPOSE that a companion LEAVE the party — a parting of ways the player must
+    confirm. Emit it only when the player has said goodbye, asked them to go, or the
+    story has clearly closed their road together; never dismiss a companion on your
+    own initiative. Narrate the farewell after the player confirms, and decide in the
+    fiction where they go — the world keeps them as an NPC."""
+
+    tool: Literal["propose_dismiss"] = "propose_dismiss"
+    char: str = Field(description="the departing companion's id from COMPANIONS")
+    reason: str = Field(description="the in-fiction parting, e.g. 'Roric stays to "
+                        "guard his village'")
+
+
 class AwardXp(BaseModel):
     """Grant experience points for a meaningful accomplishment — finishing a quest,
     overcoming a challenge or a tense social encounter, a milestone in the story.
@@ -286,7 +316,7 @@ class AcceptQuest(BaseModel):
 ToolCall = Annotated[
     Union[Transact, Give, Take, UseItem, AwardXp, CreateEntity, PromoteCanon, Travel,
           EndSession, ForceEndSession, StartQuest, UpdateQuest, AcceptQuest,
-          SetEnvironment, DmNote, ProposeRest],
+          SetEnvironment, DmNote, ProposeRest, ProposeRecruit, ProposeDismiss],
     Field(discriminator="tool"),
 ]
 
@@ -296,5 +326,5 @@ ToolCall = Annotated[
 TOOL_MODELS: tuple[type[BaseModel], ...] = (
     Transact, Give, Take, UseItem, AwardXp, CreateEntity, PromoteCanon, Travel,
     EndSession, ForceEndSession, StartQuest, UpdateQuest, AcceptQuest,
-    SetEnvironment, DmNote, ProposeRest,
+    SetEnvironment, DmNote, ProposeRest, ProposeRecruit, ProposeDismiss,
 )

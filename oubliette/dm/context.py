@@ -208,13 +208,22 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
         lines.append(f"ENVIRONMENT: it is {time_of_day or 'day'}, weather {weather or 'clear'} "
                      f"(these carry forward on their own; emit set_environment only when the story turns them).")
     party = repo.party()
-    if len(party) == 1:
-        lines.append(f"PARTY: {_party_line(party[0])}")
+    heroes = [p for p in party if not p.companion]
+    companions = [p for p in party if p.companion]
+    if len(heroes) == 1:
+        lines.append(f"PARTY: {_party_line(heroes[0])}")
     else:
         lines.append("PARTY (the player controls ALL of these heroes — address them by name/id, "
                      "call for whoever's check fits, and award XP/loot to each):")
-        for p in party:
+        for p in heroes:
             lines.append(f"  - {_party_line(p)}")
+    if companions:
+        lines.append("COMPANIONS (they TRAVEL with the party and fight at its side, "
+                     "player-controlled — but they are still your characters to voice: "
+                     "give each a presence, react through them, let them speak):")
+        for c in companions:
+            kind = "person" if c.sheet is not None else "creature"
+            lines.append(f"  - {_party_line(c)} [{kind}, level {c.level}]")
     # The party's money is ONE shared purse (coin ops on any PC land here).
     lines.append(f"PARTY PURSE: {format_cp(repo.party_cp)} "
                  "(shared — any hero spends from it; 1 gp = 10 sp = 100 cp).")

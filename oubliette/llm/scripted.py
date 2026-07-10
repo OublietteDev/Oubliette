@@ -16,8 +16,9 @@ from ..combat.schemas import EncounterRequest, EnemyRef, ExitKind, TerrainSpec
 from ..enums import Ability, Skill, Tier, Verb, may_canonize
 from ..schemas import (CampaignEnding, Intent, RollRequest, SessionNotes, TurnAssessment,
                        TurnResolution)
-from ..tools.schemas import (AcceptQuest, CreateEntity, EndSession, ForceEndSession, ProposeRest,
-                             StartQuest, Transact, Travel, UpdateQuest, UseItem, ValueEntry)
+from ..tools.schemas import (AcceptQuest, CreateEntity, EndSession, ForceEndSession, ProposeDismiss,
+                             ProposeRecruit, ProposeRest, StartQuest, Transact, Travel, UpdateQuest,
+                             UseItem, ValueEntry)
 from ..trade.schemas import TradeRequest
 from .client import ActResult, Msg
 
@@ -31,6 +32,24 @@ def _field(text: str, key: str) -> str:
         if line.upper().startswith(key.upper() + ":"):
             return line.split(":", 1)[1].strip()
     return ""
+
+
+def _char_in_block(text: str, header: str, player: str) -> str | None:
+    """Scan a context block ('PRESENT…' / 'COMPANIONS…') for `- Name (id: x)` entries
+    and return the id of the one the player's message names (by id or any name word).
+    The block ends at the first line that isn't an entry."""
+    idx = text.find(header)
+    if idx < 0:
+        return None
+    for line in text[idx:].splitlines()[1:]:
+        m = re.match(r"\s+- (.+?) \(id: ([a-z0-9_]+)\)", line)
+        if m is None:
+            break
+        name, cid = m.group(1).strip().lower(), m.group(2)
+        words = set(player.replace(",", " ").replace(".", " ").split())
+        if cid in words or (set(name.split()) & words):
+            return cid
+    return None
 
 
 class ScriptedLLMClient:
@@ -243,6 +262,27 @@ class ScriptedLLMClient:
                 narration="You find a sheltered spot to catch your breath and see to your gear.",
                 tool_calls=[ProposeRest(kind="short", reason="A safe hour to catch their breath.")],
             )
+
+        # Companions (S1) — propose a recruit/parting when the player asks in the
+        # fiction; the id comes from the PRESENT / COMPANIONS context blocks.
+        if "join us" in player or "join the party" in player:
+            cid = _char_in_block(text, "PRESENT", player)
+            if cid is not None:
+                return TurnResolution(
+                    narration=("They weigh the road ahead, and nod. \"If you'll have me, "
+                               "I'll walk it with you.\""),
+                    tool_calls=[ProposeRecruit(char=cid,
+                                               reason="The party asked them to join.")],
+                )
+        if "part ways with" in player:
+            cid = _char_in_block(text, "COMPANIONS", player)
+            if cid is not None:
+                return TurnResolution(
+                    narration=("A long clasp of hands at the crossroads. \"It was a good "
+                               "road,\" they say. \"Walk safe.\""),
+                    tool_calls=[ProposeDismiss(char=cid,
+                                               reason="The party said their goodbyes.")],
+                )
 
         # Quests — start one on acceptance, complete it when reported done. If an
         # AUTHORED quest is offered here, take that one up (accept_quest, like the

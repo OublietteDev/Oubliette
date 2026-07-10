@@ -18,7 +18,8 @@ from ..content.loader import DEFAULT_PACK, load_pack
 from ..quest.models import Quest, QuestStatus
 from ..quest.store import QuestStore
 from ..record.events import (Event, EventKind, StateOp, apply_ops,
-                             install_character, relevel_character, replay)
+                             dismiss_companion, install_character,
+                             recruit_companion, relevel_character, replay)
 from ..record.store import EventStore
 from ..rules.chargen import build_character
 from ..seed import DEFAULT_SCENE
@@ -65,6 +66,10 @@ class Session:
         self.pending_rest: str | None = None   # the DM's standing rest grant ("short"|"long",
                                             # propose_rest tool) — the S3 gate /api/rest checks;
                                             # transient: any new turn invalidates it
+        self.pending_companion: dict | None = None  # the DM's standing companion proposal
+                                            # ({action: "recruit"|"dismiss", char_id, name, kind,
+                                            # origin, reason}) — POST /api/companion confirms;
+                                            # transient like pending_rest: a new turn invalidates it
         self.table: TableContract = DEFAULT_TABLE   # campaign's tone + content boundaries
         self.difficulty: DifficultySettings = DEFAULT_DIFFICULTY   # campaign's danger dials
         self.ruleset = None                  # the global SRD ruleset (chargen/sheet/derivation)
@@ -347,6 +352,27 @@ class Session:
         """Single-character convenience wrapper over `emit_party_created` (a party of
         one) — back-compat for callers/tests that build a lone PC."""
         return self.emit_party_created([build], reason=reason)[0]
+
+    def emit_companion_recruited(self, char: Character, origin: str = "recruited",
+                                 reason: str = "joined the party") -> Character:
+        """Record-then-apply a COMPANION_RECRUITED event (companions S1): the NPC's
+        full snapshot rides the event flagged companion=True (stored whole, D9), so
+        replay reproduces the roster without depending on the NPC's seed. Called only
+        AFTER the player confirms (POST /api/companion) — the firewall's door."""
+        snap = char.model_copy(deep=True,
+                               update={"companion": True, "companion_origin": origin})
+        payload = {"character": snap.model_dump(mode="json"), "reason": reason}
+        self.store.append(EventKind.COMPANION_RECRUITED, payload)
+        recruit_companion(payload, self.repo)
+        return self.repo.get_character(snap.id)
+
+    def emit_companion_dismissed(self, char_id: str, reason: str = "parted ways") -> None:
+        """Record-then-apply a COMPANION_DISMISSED event: the companion leaves the
+        roster (flag cleared, character stays a tracked NPC). Player-confirmed, like
+        recruitment — membership never changes on the DM's word alone."""
+        payload = {"char_id": char_id, "reason": reason}
+        self.store.append(EventKind.COMPANION_DISMISSED, payload)
+        dismiss_companion(payload, self.repo)
 
     def emit_character_leveled(self, char: Character, reason: str = "level up") -> Character:
         """Record-then-apply a CHARACTER_LEVELED event carrying the rebuilt PC (CS5).

@@ -57,6 +57,8 @@ class TurnReport:
     trade_open: TradeState | None = None   # set when a trade window is summoned
     wrap_pending: bool = False             # the DM proposed wrapping the session (player confirms)
     rest_pending: str | None = None        # the DM proposed a rest: "short"|"long" (player confirms)
+    companion_pending: dict | None = None  # the DM proposed a recruit/dismissal (player confirms):
+                                           # {action, char_id, name, kind, origin, reason}
     session_force_ended: bool = False      # the DM terminally closed the game (force_end_session)
 
 
@@ -127,6 +129,8 @@ class TurnLoop:
         # coupon. Out-of-character table-talk leaves the offer standing.
         if not ooc:
             self.session.pending_rest = None
+            self.session.pending_companion = None   # same contract: the proposal was
+                                                    # for THAT moment, not a coupon
         context = self._build_context(player_text)
         # `ooc` is the player's explicit "out-of-character" signal (the composer
         # toggle). When set, the turn is table-talk — no model guessing, no combat
@@ -285,9 +289,11 @@ class TurnLoop:
                     self.session.emit_travel(rt.travel_to, rt.reason)
                 elif rt.force_end_session:
                     self.session.emit_force_end(rt.reason)
-                elif rt.wrap_proposed or rt.rest_proposed is not None:
+                elif (rt.wrap_proposed or rt.rest_proposed is not None
+                      or rt.recruit_proposed is not None or rt.dismiss_proposed is not None):
                     pass    # proposals only — nothing is recorded; the player confirms the
-                            # wrap (POST /api/wrap) or the rest (POST /api/rest). Surfaced below.
+                            # wrap (POST /api/wrap), the rest (POST /api/rest), or the
+                            # companion change (POST /api/companion). Surfaced below.
                 elif rt.quest_start is not None:
                     self.session.emit_quest_start(
                         rt.quest_start.title, rt.quest_start.text, rt.reason)
@@ -345,14 +351,35 @@ class TurnLoop:
         if rest_pending is not None:
             # The DM's grant (S3): on a gated table this is what opens /api/rest.
             self.session.pending_rest = rest_pending
+        companion_pending = self._companion_pending(applied)
+        if companion_pending is not None:
+            # The DM's companion proposal (companions S1): what opens /api/companion.
+            self.session.pending_companion = companion_pending
         return TurnReport(
             player_text=player_text, assessment=assessment, narration=narration,
             roll_outcome=roll_outcome, roll_result=roll_result, applied=applied,
             meta_notice=meta_notice,
             wrap_pending=any(rt.wrap_proposed for rt in applied),
             rest_pending=rest_pending,
+            companion_pending=companion_pending,
             session_force_ended=any(rt.force_end_session for rt in applied),
         )
+
+    def _companion_pending(self, applied: list[ResolvedTool]) -> dict | None:
+        """The turn's companion proposal (recruit or dismissal), shaped for the
+        confirm bar + POST /api/companion. First one wins if the model somehow
+        emitted both; `kind` tells the UI whether a person or a creature is at
+        the door (a person carries a class sheet, a creature doesn't)."""
+        for rt in applied:
+            char_id = rt.recruit_proposed or rt.dismiss_proposed
+            if char_id is None:
+                continue
+            char = self.repo.get_character(char_id)
+            return {"action": "recruit" if rt.recruit_proposed else "dismiss",
+                    "char_id": char.id, "name": char.name,
+                    "kind": "person" if char.sheet is not None else "creature",
+                    "origin": "recruited", "reason": rt.reason}
+        return None
 
     async def _run_combat(self, player_text: str, assessment: TurnAssessment) -> TurnReport:
         """Summoned-tool branch (§8). Stage the fight: a non-combat exit

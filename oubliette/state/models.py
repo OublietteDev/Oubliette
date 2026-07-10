@@ -108,6 +108,13 @@ class Character(BaseModel):
     id: str
     name: str
     kind: Literal["pc", "npc"] = "npc"
+    # Standing party membership for an NPC (companions arc S1). A companion travels
+    # with the party, fights player-controlled in every encounter, and counts toward
+    # party strength. Membership is PROTECTED state, event-sourced via
+    # COMPANION_RECRUITED / COMPANION_DISMISSED — never set it outside those paths.
+    # `kind` stays "npc": a companion is a promoted NPC, not a new species of member.
+    companion: bool = False
+    companion_origin: Literal["recruited", "purchased"] | None = None
     level: int = 1
     abilities: dict[Ability, int] = Field(default_factory=dict)
     skill_proficiencies: set[Skill] = Field(default_factory=set)

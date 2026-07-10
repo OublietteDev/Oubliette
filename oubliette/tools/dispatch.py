@@ -18,8 +18,10 @@ from ..record.events import StateOp
 from ..record.rng import dice_average
 from ..state.repository import Repository, StateError
 from .schemas import (AcceptQuest, AwardXp, CreateEntity, DmNote, EndSession, ForceEndSession, Give,
-                      PromoteCanon, ProposeRest, SetEnvironment, StartQuest, Take, ToolCall,
-                      Transact, Travel, UpdateQuest, UseItem, ValueEntry)
+                      PromoteCanon, ProposeDismiss, ProposeRecruit, ProposeRest, SetEnvironment,
+                      StartQuest, Take, ToolCall, Transact, Travel, UpdateQuest, UseItem, ValueEntry)
+
+PARTY_CAP = 6   # PCs + companions, total (companions design lock 2026-07-06)
 
 
 class ToolApplyError(Exception):
@@ -47,6 +49,8 @@ class ResolvedTool:
     env_weather: str | None = None                       # set_environment -> new weather
     note_text: str | None = None                         # dm_note -> a private DM notebook entry (W4)
     rest_proposed: str | None = None                     # propose_rest -> "short"|"long" (player confirms)
+    recruit_proposed: str | None = None                  # propose_recruit -> NPC id (player confirms)
+    dismiss_proposed: str | None = None                  # propose_dismiss -> companion id (player confirms)
 
 
 class Dispatcher:
@@ -82,6 +86,12 @@ class Dispatcher:
             return ResolvedTool(call.tool, call.reason, ops=self._resolve_use_item(call))
         if isinstance(call, ProposeRest):
             return ResolvedTool(call.tool, call.reason, rest_proposed=call.kind)
+        if isinstance(call, ProposeRecruit):
+            return ResolvedTool(call.tool, call.reason,
+                                recruit_proposed=self._resolve_recruit(call.char))
+        if isinstance(call, ProposeDismiss):
+            return ResolvedTool(call.tool, call.reason,
+                                dismiss_proposed=self._resolve_dismiss(call.char))
         if isinstance(call, AwardXp):
             self._assert_char(call.to)         # XP goes to a tracked character (the party)
             return ResolvedTool(call.tool, call.reason, ops=[StateOp.xp(call.to, call.amount)])
@@ -145,6 +155,57 @@ class Dispatcher:
             if len(hits) == 1:
                 return hits[0]
         raise ToolApplyError(f"cannot travel to unknown place {ref!r}")
+
+    def _resolve_char_ref(self, ref: str) -> "Character | None":
+        """Map a character reference (id OR name, loosely) to a tracked character —
+        the DM may name an NPC by their prose label, mirroring place/item resolution.
+        Exact id first, then exact name, then a unique word-subset match."""
+        try:
+            return self.repo.get_character(ref)
+        except StateError:
+            pass
+        norm = ref.strip().lower().replace("_", " ")
+        pool = self.repo.npcs() + self.repo.companions()
+        for c in pool:
+            if c.name.strip().lower() == norm or c.id.replace("_", " ") == norm:
+                return c
+        ref_words = set(norm.split())
+        if ref_words:
+            hits = [c for c in pool if ref_words <= set(c.name.lower().split())]
+            if len(hits) == 1:
+                return hits[0]
+        return None
+
+    def _resolve_recruit(self, ref: str) -> str:
+        """Validate a companion proposal (companions S1): the joiner must be an
+        established NPC (not a hero, not already traveling) and the party must have
+        a seat free. Returns the NPC's canonical id; nothing is mutated — the player
+        confirms via POST /api/companion."""
+        char = self._resolve_char_ref(ref)
+        if char is None:
+            raise ToolApplyError(
+                f"{ref!r} isn't a tracked character who could join the party — only an "
+                "established NPC can become a companion (create_entity alone isn't "
+                "enough; they must exist as a character)")
+        if char.kind == "pc":
+            raise ToolApplyError(f"{char.name} is already one of the heroes")
+        if char.companion:
+            raise ToolApplyError(f"{char.name} already travels with the party")
+        if len(self.repo.party()) >= PARTY_CAP:
+            raise ToolApplyError(
+                f"the party is full ({PARTY_CAP} members including companions) — "
+                "someone must part ways before another can join")
+        return char.id
+
+    def _resolve_dismiss(self, ref: str) -> str:
+        """Validate a parting proposal: only a current companion can be dismissed."""
+        char = self._resolve_char_ref(ref)
+        if char is None or not char.companion:
+            name = char.name if char is not None else ref
+            raise ToolApplyError(
+                f"{name!r} isn't a companion traveling with the party — only a "
+                "recruited companion can part ways")
+        return char.id
 
     # --- resolvers ------------------------------------------------------------
     def _resolve_use_item(self, call: UseItem) -> list[StateOp]:

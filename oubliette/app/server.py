@@ -131,11 +131,13 @@ GAME = _Game()
 
 # --- serialization ----------------------------------------------------------
 def _pc_view(pc) -> dict:
-    """The HUD view of one player character (the sidebar + party roster)."""
+    """The HUD view of one party member (the sidebar + party roster) — a hero or,
+    since companions S1, a standing companion (flagged so the UI can badge them)."""
     return {
         "id": pc.id, "name": pc.name, "hp": pc.hp, "max_hp": pc.max_hp,
         "xp": pc.xp, "xp_progress": xp_progress(pc),
         "armor_class": pc.armor_class,
+        "companion": bool(getattr(pc, "companion", False)),
         "conditions": list(pc.conditions),
         "inventory": [
             {"id": s.item_id, "name": _stack_label(_ruleset(), s), "qty": s.qty,
@@ -481,6 +483,7 @@ def _turn_payload(report) -> dict:
         "combat_pending": getattr(report, "combat_pending", False),
         "wrap_pending": getattr(report, "wrap_pending", False),
         "rest_pending": getattr(report, "rest_pending", None),   # "short"|"long"|None (DM proposal)
+        "companion_pending": getattr(report, "companion_pending", None),  # recruit/dismiss proposal
         "session_force_ended": report.session_force_ended,
         "verb": report.assessment.intent.verb.value,
         "tier": report.assessment.tier.value,
@@ -1778,6 +1781,53 @@ async def post_rest(body: RestIn) -> JSONResponse:
         return JSONResponse({"ok": True, "party": [_sheet_member(c, rs) for c in GAME.session.repo.party()],
                              "state": _snapshot(), "interrupted": interrupted,
                              "cost": cost_desc})
+
+
+class CompanionIn(BaseModel):
+    accept: bool = True
+
+
+@app.post("/api/companion")
+async def post_companion(body: CompanionIn) -> JSONResponse:
+    """Confirm (or decline) the DM's standing companion proposal (companions S1) —
+    the propose_rest pattern: the DM offered via propose_recruit/propose_dismiss,
+    and THIS is the player's word that changes the roster. Accepting a recruit
+    emits COMPANION_RECRUITED (the NPC's full snapshot rides the event); accepting
+    a parting emits COMPANION_DISMISSED. Declining just clears the proposal — the
+    DM sees the roster unchanged and plays on."""
+    async with GAME.lock:
+        pending = GAME.session.pending_companion
+        if not pending:
+            return JSONResponse({"ok": False, "error": "no companion proposal is standing — "
+                                 "raise it in the story first"}, status_code=409)
+        GAME.session.pending_companion = None            # one answer spends the offer
+        if not body.accept:
+            return JSONResponse({"ok": True, "accepted": False, "state": _snapshot()})
+        try:
+            char = GAME.session.repo.get_character(pending["char_id"])
+        except StateError as e:
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+        from ..tools.dispatch import PARTY_CAP
+        if pending["action"] == "recruit":
+            # Re-validate at the door: the world may have moved since the proposal.
+            if char.companion or char.kind == "pc":
+                return JSONResponse({"ok": False, "error": f"{char.name} is already "
+                                     "with the party"}, status_code=409)
+            if len(GAME.session.repo.party()) >= PARTY_CAP:
+                return JSONResponse({"ok": False, "error": f"the party is full "
+                                     f"({PARTY_CAP} members)"}, status_code=409)
+            GAME.session.emit_companion_recruited(
+                char, origin=pending.get("origin") or "recruited",
+                reason=pending.get("reason") or "joined the party")
+        else:
+            if not char.companion:
+                return JSONResponse({"ok": False, "error": f"{char.name} isn't a "
+                                     "companion"}, status_code=409)
+            GAME.session.emit_companion_dismissed(
+                char.id, reason=pending.get("reason") or "parted ways")
+        return JSONResponse({"ok": True, "accepted": True,
+                             "action": pending["action"],
+                             "name": char.name, "state": _snapshot()})
 
 
 class PrepareSpellsIn(BaseModel):

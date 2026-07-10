@@ -28,6 +28,9 @@ class StateError(Exception):
 class Repository(Protocol):
     def pc(self) -> Character: ...
     def party(self) -> list[Character]: ...
+    def companions(self) -> list[Character]: ...
+    def adopt_companion(self, char: Character) -> None: ...
+    def release_companion(self, char_id: str) -> None: ...
     def get_character(self, char_id: str) -> Character: ...
     def get_item(self, item_id: str) -> Item: ...
     def resolve_item_id(self, ref: str) -> str: ...
@@ -84,10 +87,20 @@ class InMemoryRepository:
         return self._chars[self._pc_id]
 
     def party(self) -> list[Character]:
-        return [c for c in self._chars.values() if c.kind == "pc"]
+        """The heroes PLUS any standing companions (companions S1) — everyone who
+        travels, fights player-controlled, and counts toward party strength. PCs
+        first (install order), companions after (recruit order)."""
+        chars = list(self._chars.values())
+        return ([c for c in chars if c.kind == "pc"]
+                + [c for c in chars if c.companion and c.kind != "pc"])
+
+    def companions(self) -> list[Character]:
+        return [c for c in self._chars.values() if c.companion and c.kind != "pc"]
 
     def npcs(self) -> list[Character]:
-        return [c for c in self._chars.values() if c.kind == "npc"]
+        """The world's NPCs — EXCLUDING companions, who travel with the party and
+        must not double-list as scene-present locals."""
+        return [c for c in self._chars.values() if c.kind == "npc" and not c.companion]
 
     def get_character(self, char_id: str) -> Character:
         try:
@@ -240,6 +253,20 @@ class InMemoryRepository:
         """Replace the whole party with a single chargen-built PC (the one-character
         case of `install_party`). Kept for legacy single-PC saves."""
         self.install_party([char])
+
+    # --- companions (COMPANION_RECRUITED / COMPANION_DISMISSED apply/replay) ---
+    def adopt_companion(self, char: Character) -> None:
+        """Install a companion snapshot into the roster (overwriting the plain-NPC
+        entity in place — same id, now flagged companion). Their pocket coin stays
+        their own: the party purse pools only the HEROES' money."""
+        self._chars[char.id] = char
+
+    def release_companion(self, char_id: str) -> None:
+        """A companion parts ways: clear the membership flag. The character remains
+        a tracked NPC — where they go is story, not state."""
+        c = self.get_character(char_id)
+        c.companion = False
+        c.companion_origin = None
 
     def replace_character(self, char: Character) -> None:
         """Swap ONE character in place (level-up: CHARACTER_LEVELED), preserving the

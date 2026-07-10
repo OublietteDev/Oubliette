@@ -6,10 +6,11 @@ actually traveling. Two caps, both riding the same idea (a monster's CR ≈ the
 hero level it's a fair match for):
 
   * `single_cap` — the toughest single enemy allowed
-                   (band multiplier × the party's average level)
+                   (band multiplier × the HEROES' average level; companions
+                    don't dilute it)
   * `total_cap`  — the encounter's summed CR
-                   (band multiplier × the party's summed levels ÷ 4,
-                    the classic four-hero baseline)
+                   (band multiplier × EVERYONE's summed levels ÷ 4,
+                    the classic four-hero baseline — companions add volume)
 
 Enforcement is prompt-first: the DM sees its budget in context (dm/context)
 and is expected to improvise within it. `check_encounter` at the staging
@@ -74,10 +75,15 @@ class EncounterBudget:
 
 def budget_for(party, dial: str) -> EncounterBudget:
     """The budget for THIS party at THIS dial. Companions count simply by being
-    party members — a bigger party affords bigger fights (their soft cap)."""
+    party members — a bigger party affords bigger fights (their soft cap). They
+    count as VOLUME (the total cap's sum), but the single-foe cap anchors to the
+    HEROES' average alone: a low-level pup joining must never dilute the heroes'
+    weight class and make the world gentler."""
     levels = [max(1, getattr(c, "level", 1)) for c in party] or [1]
+    hero_levels = [max(1, getattr(c, "level", 1)) for c in party
+                   if not getattr(c, "companion", False)] or levels
     band = BANDS.get(dial, BANDS["standard"])
-    avg = sum(levels) / len(levels)
+    avg = sum(hero_levels) / len(hero_levels)
     single = max(0.25, band.single_mult * avg)
     total = max(single, band.total_mult * sum(levels) / 4)
     return EncounterBudget(
