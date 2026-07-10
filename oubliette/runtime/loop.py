@@ -61,6 +61,8 @@ class TurnReport:
                                            # {action, char_id, name, kind, origin, reason}
     growth: list = field(default_factory=list)  # creature companions that grew THIS turn
                                            # (S2 story moment): [{char_id, name, from, to}]
+    companion_deaths: list = field(default_factory=list)  # companions the fight truly took
+                                           # (S3, companion_death ON): [{char_id, name}]
     session_force_ended: bool = False      # the DM terminally closed the game (force_end_session)
 
 
@@ -412,7 +414,13 @@ class TurnLoop:
         """The turn's companion proposal (recruit or dismissal), shaped for the
         confirm bar + POST /api/companion. First one wins if the model somehow
         emitted both; `kind` tells the UI whether a person or a creature is at
-        the door (a person carries a class sheet, a creature doesn't)."""
+        the door (a person carries a class sheet, a creature doesn't). A recruit
+        the party PAID for this same turn (a purse debit rode along — the kennel
+        was settled with transact) is recorded with origin 'purchased' (S3)."""
+        paid = any(
+            op.op == "coin" and (op.delta or 0) < 0
+            and self.repo.get_character(op.char).kind == "pc"
+            for rt in applied for op in rt.ops)
         for rt in applied:
             char_id = rt.recruit_proposed or rt.dismiss_proposed
             if char_id is None:
@@ -421,7 +429,8 @@ class TurnLoop:
             return {"action": "recruit" if rt.recruit_proposed else "dismiss",
                     "char_id": char.id, "name": char.name,
                     "kind": "person" if char.sheet is not None else "creature",
-                    "origin": "recruited", "reason": rt.reason}
+                    "origin": "purchased" if (paid and rt.recruit_proposed) else "recruited",
+                    "reason": rt.reason}
         return None
 
     async def _run_combat(self, player_text: str, assessment: TurnAssessment) -> TurnReport:
@@ -567,12 +576,32 @@ class TurnLoop:
         if result.ephemeral_survivors:
             self.debug.append("note", stage="combat", promotion_candidates=result.ephemeral_survivors)
 
+        deaths = self._companion_deaths(result)
         narration = result.narrative_digest  # Phase 1/2: digest IS the narration.
+        for d in deaths:
+            narration += (f"\n\n{d['name']} does not rise. On this table, the fallen "
+                          "stay fallen — they will not travel with you again.")
         self.debug.append("narration", text=narration)
         return TurnReport(
             player_text=player_text, assessment=assessment, narration=narration,
-            combat_result=result,
+            combat_result=result, companion_deaths=deaths,
         )
+
+    def _companion_deaths(self, result: CombatResult) -> list[dict]:
+        """Companion mortality (S3): with the table's `companion_death` dial ON, a
+        companion the fight left at 0 HP truly dies — a COMPANION_DIED event removes
+        them from the roster for good (revival is whatever the SRD offers anyone).
+        With the dial off (the default), they get the same narrated 'out' a downed
+        hero gets today: hp 0, story continues, nobody is taken from the player."""
+        difficulty = getattr(self.session, "difficulty", DEFAULT_DIFFICULTY)
+        if not difficulty.companion_death:
+            return []
+        deaths: list[dict] = []
+        for comp in list(self.repo.companions()):
+            if comp.id in result.hp_final and self.repo.get_character(comp.id).hp <= 0:
+                self.session.emit_companion_died(comp.id, comp.name)
+                deaths.append({"char_id": comp.id, "name": comp.name})
+        return deaths
 
     async def enter_combat(self) -> TurnReport:
         """Play the staged fight: spawn The Arena (blocking, in a thread so the web

@@ -59,6 +59,9 @@ class EventKind(str, Enum):
     COMPANION_EVOLVED = "companion_evolved"  # a creature companion grew into its next authored form
                                         # (companions S2): carries the rebuilt snapshot + the new
                                         # StatBlock id (folded over npc_statblocks on reload).
+    COMPANION_DIED = "companion_died"   # a companion truly fell (companions S3, companion_death
+                                        # dial ON): leaves the roster, marked dead; revival is
+                                        # whatever the SRD offers anyone.
 
 
 class StateOp(BaseModel):
@@ -233,6 +236,22 @@ def dismiss_companion(payload: dict, repo: "Repository") -> None:
         print(f"[oubliette] replay: skipped companion dismissal — {e}")
 
 
+def kill_companion(payload: dict, repo: "Repository") -> None:
+    """Apply a COMPANION_DIED payload (companion_death dial ON): the companion
+    leaves the roster and is marked dead — still a tracked character, so whatever
+    revival the SRD offers can target them; their pack-seeded home is cleared so
+    the dead don't reappear as scene locals on reload. Tolerant of a missing
+    character, like dismissal."""
+    from ..state.repository import StateError
+    try:
+        char_id = payload["char_id"]
+        repo.release_companion(char_id)
+        repo.set_conditions(char_id, ["dead"])
+        repo.get_character(char_id).home_location = None
+    except StateError as e:
+        print(f"[oubliette] replay: skipped companion death — {e}")
+
+
 def relevel_character(payload: dict, repo: "Repository") -> None:
     """Apply a CHARACTER_LEVELED payload: register any gear, then swap the rebuilt PC
     in place — preserving the rest of the party (create replaces the party; level-up
@@ -296,6 +315,9 @@ def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = N
         return
     if event.kind == EventKind.COMPANION_DISMISSED.value:
         dismiss_companion(event.payload, repo)
+        return
+    if event.kind == EventKind.COMPANION_DIED.value:
+        kill_companion(event.payload, repo)
         return
     apply_ops(event.state_ops(), repo, strict=strict)
 

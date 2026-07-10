@@ -142,7 +142,9 @@ class ProposeRecruit(BaseModel):
     or agreed when the party asked; never press-gang someone into the roster. The
     party holds at most 6 members including companions. Never narrate them as already
     a member in the same turn you propose: narrate the offer, and let the player
-    welcome them."""
+    welcome them. A BOUGHT creature (a kennel's wolf pup, a stable's horse) composes
+    naturally: settle the payment with `transact` in this same turn, then propose the
+    animal here — code records it as purchased."""
 
     tool: Literal["propose_recruit"] = "propose_recruit"
     char: str = Field(description="the joining NPC's id (or exact name) from PRESENT")

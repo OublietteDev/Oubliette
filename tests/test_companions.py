@@ -309,6 +309,90 @@ def test_creature_companions_never_dilute_the_xp_split():
     assert [(o.char, o.delta) for o in ops if o.op == "xp"] == [("pc", 100)]
 
 
+# --- mortality (S3): the companion_death dial ---------------------------------
+
+def _fallen_result(char_id: str):
+    from oubliette.combat.schemas import CombatResult
+    return CombatResult(outcome="victory", hp_final={char_id: 0}, xp_award=0,
+                        narrative_digest="The fight ends, but at a price.")
+
+
+def _dial(s: Session, companion_death: bool):
+    d = s.difficulty.model_copy(update={"preset": "custom",
+                                        "companion_death": companion_death})
+    s.emit_difficulty(d)
+
+
+def test_companion_death_on_a_mortal_table_is_permanent():
+    s = Session.open(InMemoryEventStore())
+    _dial(s, companion_death=True)
+    s.emit_companion_recruited(s.repo.get_character("stray_pup"))
+    loop = _loop(s)
+    report = loop._emit_combat_result(_fallen_result("stray_pup"), "⚔", _assessment())
+    assert report.companion_deaths == [{"char_id": "stray_pup", "name": "Scrap"}]
+    assert "fallen stay fallen" in report.narration
+    assert s.repo.companions() == []                     # gone from the roster
+    scrap = s.repo.get_character("stray_pup")            # ...but not from the world
+    assert scrap.conditions == ["dead"] and scrap.home_location is None
+    kinds = [e.kind for e in s.store.read_all()]
+    assert EventKind.COMPANION_DIED.value in kinds
+
+
+def test_companion_death_replays():
+    store = InMemoryEventStore()
+    s = Session.open(store)
+    _dial(s, companion_death=True)
+    s.emit_companion_recruited(s.repo.get_character("stray_pup"))
+    _loop(s)._emit_combat_result(_fallen_result("stray_pup"), "⚔", _assessment())
+    reloaded = Session.open(store)
+    assert reloaded.repo.companions() == []
+    assert reloaded.repo.get_character("stray_pup").conditions == ["dead"]
+
+
+def test_downed_companion_on_a_gentle_table_gets_the_narrated_out():
+    s = Session.open(InMemoryEventStore())               # default: companion_death off
+    s.emit_companion_recruited(s.repo.get_character("stray_pup"))
+    report = _loop(s)._emit_combat_result(_fallen_result("stray_pup"), "⚔", _assessment())
+    assert report.companion_deaths == []
+    scrap = s.repo.get_character("stray_pup")
+    assert scrap.companion and scrap.hp == 0             # down, not gone
+    kinds = [e.kind for e in s.store.read_all()]
+    assert EventKind.COMPANION_DIED.value not in kinds
+
+
+def test_a_companion_who_sat_the_fight_out_cannot_die_in_it():
+    s = Session.open(InMemoryEventStore())
+    _dial(s, companion_death=True)
+    s.emit_companion_recruited(s.repo.get_character("stray_pup"))
+    report = _loop(s)._emit_combat_result(_fallen_result("pc"), "⚔", _assessment())
+    assert report.companion_deaths == []
+    assert s.repo.get_character("stray_pup").companion
+
+
+def _assessment():
+    from oubliette.enums import Tier, Verb
+    from oubliette.schemas import Intent, TurnAssessment
+    return TurnAssessment(intent=Intent(raw_text="⚔", verb=Verb.ATTACK),
+                          tier=Tier.FREESTYLE, resolution_hint="")
+
+
+# --- economy (S3): a paid recruit is recorded as purchased ---------------------
+
+def test_a_recruit_paid_for_this_turn_is_recorded_as_purchased():
+    from oubliette.record.events import StateOp
+    from oubliette.tools.dispatch import ResolvedTool
+    s = Session.open(InMemoryEventStore())
+    loop = _loop(s)
+    paid = ResolvedTool("transact", "bought the pup",
+                        ops=[StateOp.coin("pc", -500), StateOp.coin("merchant_thom", 500)])
+    offer = ResolvedTool("propose_recruit", "the pup is theirs now",
+                         recruit_proposed="stray_pup")
+    pending = loop._companion_pending([paid, offer])
+    assert pending["origin"] == "purchased"
+    free = loop._companion_pending([offer])
+    assert free["origin"] == "recruited"
+
+
 # --- the player's word: POST /api/companion -----------------------------------
 
 def _propose(action="recruit", char_id="merchant_thom", name="Thom"):

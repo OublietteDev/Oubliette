@@ -1331,6 +1331,15 @@ function addGrowthCard(g) {
   card.appendChild(el("div", "quest-text", `${g.from} → ${g.to}`));
   row.appendChild(card); log.appendChild(row); scrollDown();
 }
+// A companion truly fell (companions S3, companion-death table): a quiet marker.
+function addCompanionDeathCard(d) {
+  const row = el("div", "row quest");
+  const card = el("div", "quest-card");
+  card.appendChild(el("span", "quest-kind", "🕯 Fallen"));
+  card.appendChild(el("div", "quest-title", `${d.name} has fallen.`));
+  card.appendChild(el("div", "quest-text", "On this table, the fallen stay fallen."));
+  row.appendChild(card); log.appendChild(row); scrollDown();
+}
 // tiny markdown: **bold**, *italic* / _italic_, paragraph + line breaks
 function md(s) {
   let h = escapeHtml(s);
@@ -1702,6 +1711,7 @@ async function send(textOverride) {
     (data.quest_beats || []).forEach(addQuestCard);
     (data.trinkets || []).forEach(addTrinketCard);
     (data.growth || []).forEach(addGrowthCard);
+    (data.companion_deaths || []).forEach(addCompanionDeathCard);
     // One bar at a time (combat > wrap > rest > companion): a staged fight silences
     // proposals, and a wrap offer outranks the others if the DM somehow emits several.
     if (data.wrap_pending && !combatPending) showWrapBar();
@@ -1811,6 +1821,7 @@ async function enterArena() {
     (data.quest_beats || []).forEach(addQuestCard);
     (data.trinkets || []).forEach(addTrinketCard);
     (data.growth || []).forEach(addGrowthCard);
+    (data.companion_deaths || []).forEach(addCompanionDeathCard);
   } catch (e) {
     addMessage("System", "The Arena could not be reached: " + e, "system");
   } finally {

@@ -19,7 +19,8 @@ from ..quest.models import Quest, QuestStatus
 from ..quest.store import QuestStore
 from ..record.events import (Event, EventKind, StateOp, apply_ops,
                              dismiss_companion, evolve_companion, install_character,
-                             recruit_companion, relevel_character, replay)
+                             kill_companion, recruit_companion, relevel_character,
+                             replay)
 from ..record.store import EventStore
 from ..rules.chargen import build_character
 from ..seed import DEFAULT_SCENE
@@ -387,6 +388,15 @@ class Session:
         evolve_companion(payload, self.repo)
         self.npc_statblocks = {**self.npc_statblocks, snapshot.id: to_statblock}
         return self.repo.get_character(snapshot.id)
+
+    def emit_companion_died(self, char_id: str, name: str,
+                            reason: str = "fell in battle") -> None:
+        """Record-then-apply a COMPANION_DIED event (companions S3, companion_death
+        dial ON): the fallen leave the roster and stay fallen — marked dead, home
+        cleared, still a tracked character so SRD revival can reach them."""
+        payload = {"char_id": char_id, "name": name, "reason": reason}
+        self.store.append(EventKind.COMPANION_DIED, payload)
+        kill_companion(payload, self.repo)
 
     def emit_companion_dismissed(self, char_id: str, reason: str = "parted ways") -> None:
         """Record-then-apply a COMPANION_DISMISSED event: the companion leaves the
