@@ -48,10 +48,11 @@ from ..state.models import Character
 
 STATIC = Path(__file__).parent / "static"
 _DEFAULT_PACKS_ROOT = Path(__file__).parent.parent / "content" / "packs"
-_TYPES = ["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios",
-          "ai_profiles", "backgrounds", "spells"]
+_TYPES = ["items", "statblocks", "npcs", "places", "lore", "quests", "factions",
+          "scenarios", "ai_profiles", "backgrounds", "spells"]
 _TYPE_WORD = {"items": "items", "statblocks": "creatures", "npcs": "characters",
               "places": "places", "lore": "lore entries", "quests": "quests",
+              "factions": "factions",
               "scenarios": "opening setups", "ai_profiles": "AI personalities",
               "backgrounds": "backgrounds", "spells": "spells"}
 
@@ -61,7 +62,7 @@ def _slug(name: str) -> str:
 
 # The per-type files a pack is made of (the world recipe).
 PACK_FILES = ["pack", "items", "statblocks", "npcs", "places", "lore", "quests",
-              "scenarios", "ai_profiles", "backgrounds", "spells"]
+              "factions", "scenarios", "ai_profiles", "backgrounds", "spells"]
 
 app = FastAPI(title="Oubliette: The Forge")
 

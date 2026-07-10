@@ -33,6 +33,7 @@ from ..table import render_table_prompt
 from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
 from ..trade.schemas import TradeState
 from ..trade.service import build_state, has_stock
+from ..world import factions as faction_standing
 from ..world import keyed as keyed_triggers
 from .session import Session
 from .transcript import notebook_notes, recent_beats, session_notes, transcript_turns
@@ -91,7 +92,8 @@ class TurnLoop:
         self.dispatcher = Dispatcher(session.repo, session.canon, session.places,
                                      session.quests, ruleset=session.ruleset,
                                      authored_quests=session.authored_quests, rng=rng,
-                                     mechanics=(session.mechanics_catalog or None))
+                                     mechanics=(session.mechanics_catalog or None),
+                                     factions=getattr(session, "factions", None))
         # Short-term continuity beats (gap G5). Rehydrated from the durable record on
         # construction (W3): a reload rebuilds the DM's recent memory of THIS session from
         # the stored beats, so it resumes with the same short-term context it had before —
@@ -135,7 +137,8 @@ class TurnLoop:
             companion_growth=growth,
             keyed_directive=({"names": self._keyed_names(keyed),
                               "briefing": keyed.briefing}
-                             if keyed is not None else None))
+                             if keyed is not None else None),
+            factions=self._faction_context())
 
     async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
         # A new in-character turn moves the fiction on: any standing rest grant
@@ -339,9 +342,43 @@ class TurnLoop:
         party_level = max((c.level for c in self.repo.party()), default=1)
         eligible = offers.offerable_ids(authored, self.session.store.read_all(),
                                         self.session.quests, party_level=party_level)
+        # Standing-gate (living-world W2): min_standing quests stay invisible until
+        # the party's tier with that faction warms up — same lean-context contract.
+        factions = getattr(self.session, "factions", None) or {}
+        if factions:
+            tiers = {fid: faction_standing.tier_for(score)
+                     for fid, score in self._faction_scores().items()}
+            eligible = faction_standing.filter_offerable(eligible, authored, tiers)
         loc = self.session.location
         present = {n.id for n in self.repo.npcs() if loc is None or n.home_location == loc}
         return authored, eligible, offers.offered_here(eligible, authored, loc, present)
+
+    def _faction_scores(self) -> dict:
+        """{faction id: score} for this turn — the one derivation everything
+        reads (context, offer gate); empty when the pack authors no factions."""
+        factions = getattr(self.session, "factions", None) or {}
+        if not factions:
+            return {}
+        return faction_standing.standing_map(
+            factions, self.session.authored_quests,
+            self.session.store.read_all(), self.session.quests)
+
+    def _faction_context(self) -> list[dict] | None:
+        """The FACTION STANDING payload for build_context: every authored faction
+        with its current tier, score, DM-secret agenda, and whether the PARTY
+        knows it yet. None when the pack authors none (the section vanishes)."""
+        factions = getattr(self.session, "factions", None) or {}
+        if not factions:
+            return None
+        scores = self._faction_scores()
+        known = faction_standing.known_ids(
+            factions, self.session.authored_quests,
+            self.session.store.read_all(), self.session.quests)
+        return [{"id": fid, "name": f.name, "agenda": f.agenda,
+                 "score": scores.get(fid, 0),
+                 "tier": faction_standing.tier_for(scores.get(fid, 0)),
+                 "known": fid in known}
+                for fid, f in factions.items()]
 
     def _retrieval_query(self, player_text: str) -> str:
         """Canon/lore search terms: the player's words + the situation. The location
@@ -459,6 +496,14 @@ class TurnLoop:
                         s.emit_environment(nt, nw, reason=rt.reason)
                 elif rt.note_text is not None:
                     self.session.emit_notebook_note(rt.note_text)   # dm_note (W4): durable DM memory
+                elif rt.standing_faction is not None:
+                    # adjust_standing (living-world W2): a bounded nudge (already
+                    # clamped at resolution) — or, at delta 0, the reveal. The
+                    # record is the state: standing derives from these on replay.
+                    self.session.emit_log(
+                        EventKind.FACTION_STANDING_CHANGED,
+                        faction=rt.standing_faction, delta=rt.standing_delta,
+                        reason=rt.reason)
                 else:
                     self.session.emit_state(
                         EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
@@ -854,6 +899,10 @@ class TurnLoop:
                     v for v in (rt.env_time, rt.env_weather) if v))
             elif rt.note_text is not None:
                 parts.append("jotted a DM note")
+            elif rt.standing_faction is not None:
+                parts.append(f"standing[{rt.standing_faction}] "
+                             f"{rt.standing_delta:+d}" if rt.standing_delta
+                             else f"revealed faction {rt.standing_faction}")
             else:
                 parts.append(f"effect({rt.tool}): {self._ops_summary(rt.ops)}")
         if report.combat_result is not None:

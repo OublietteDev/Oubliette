@@ -66,6 +66,11 @@ class EventKind(str, Enum):
                                         # fired (living-world W1): carries {place, encounter_id}.
                                         # Inert on replay — the trigger module derives fired-state
                                         # (and `once`) from these records, like quest offers.
+    FACTION_STANDING_CHANGED = "faction_standing_changed"  # the DM nudged the party's standing
+                                        # with a faction (living-world W2): carries {faction, delta,
+                                        # reason}; delta 0 = the party LEARNS of the faction (reveal).
+                                        # Inert on replay — standing is a pure derivation (default +
+                                        # authored quest deltas + these nudges), like quest offers.
 
 
 class StateOp(BaseModel):

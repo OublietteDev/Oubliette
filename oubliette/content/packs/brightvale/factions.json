@@ -1,0 +1,16 @@
+[
+  {
+    "id": "brightvale_watch",
+    "name": "The Brightvale Watch",
+    "description": "The town's guard company — gate duty, market patrols, and the keeping of the peace.",
+    "agenda": "Captain Hedra quietly suspects someone on the town council is paying the road bandits to keep caravan tolls high, and wants proof before she accuses anyone.",
+    "known_from_start": true
+  },
+  {
+    "id": "gray_hand",
+    "name": "The Gray Hand",
+    "description": "A smugglers' brotherhood said to move goods past the toll gates by night.",
+    "agenda": "Buy the old mill for a pittance, dig out the flooded undercroft, and run contraband beneath the town wall itself. The wolves denning there are a convenient deterrent.",
+    "default_standing": -20
+  }
+]

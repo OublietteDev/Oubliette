@@ -382,6 +382,9 @@ class StatBlock(_Strict):
     # "default_monster". Resolved to an AIProfile by the Arena bridge.
     ai_profile: str | None = None
 
+    # --- allegiance (living-world W2) ----------------------------------------
+    faction: str | None = None       # -> Faction id this creature belongs to
+
     # --- authored growth (companions S2) ------------------------------------
     # The next form(s) this creature can grow INTO when kept as a companion —
     # "pseudodragon → adolescent → drake". Each stage names another StatBlock and
@@ -445,6 +448,8 @@ class NPC(_Strict):
     disposition: str = ""            # feeds the DM's DC-setting (D8)
     description: str = ""
     role: str = ""                   # "merchant", "quest_giver", ... (advisory)
+    faction: str | None = None       # -> Faction id (living-world W2): the DM plays
+                                     # them loyal, and their tier colors the scene
     home_location: str | None = None  # -> Place id (where they're present)
     gold: int | str = 0              # pocket money: int = gp, a string names its unit ("5 sp")
     inventory: list[InvEntry] = Field(default_factory=list)
@@ -503,6 +508,24 @@ class BattleMap(_Strict):
     grid_width: int = Field(default=20, ge=5, le=40)
     grid_height: int = Field(default=15, ge=5, le=40)
     terrain: list[BattleTerrain] = Field(default_factory=list)
+
+
+# --- factions (living-world W2) -----------------------------------------------
+class Faction(_Strict):
+    """An organized power in the world — a watch, a guild, a cult. The party holds
+    a CODE-OWNED standing score with each faction (event-sourced; the DM only
+    nudges it, authored quests make the big moves), spoken everywhere in five
+    tiers: hostile / unfriendly / neutral / friendly / allied. `agenda` is
+    DM-secret fuel; players see name, description, and tier — and nothing at all
+    until the faction is KNOWN."""
+
+    id: str
+    name: str
+    description: str = ""            # player-facing: who they are, as commonly known
+    agenda: str = ""                 # DM-ONLY secret: what they actually want
+    default_standing: int = Field(default=0, ge=-50, le=50)
+    known_from_start: bool = False   # in the party's Factions panel from turn one;
+                                     # otherwise ??? until standing first moves
 
 
 # --- keyed encounters (living-world W1: authored fights bound to a place) ----
@@ -614,6 +637,34 @@ class QuestTrinket(_Strict):
         return self
 
 
+class QuestStanding(_Strict):
+    """A standing consequence the quest carries (living-world W2): taking it up
+    or completing it moves the party's standing with a faction. These are the
+    BIG, authored moves — the DM's adjust_standing tool only nudges. Completion
+    deltas can filter on an outcome, like trinkets."""
+
+    faction: str                     # -> Faction id
+    delta: int = Field(ge=-50, le=50)  # raw standing points (a tier is 20 wide)
+    when: Literal["accepted", "completed"] = "completed"
+    outcome: str = ""                # completion-only filter ("" = any ending)
+
+    @model_validator(mode="after")
+    def _shape(self) -> "QuestStanding":
+        if self.delta == 0:
+            raise ValueError("a standing consequence needs a non-zero delta")
+        if self.outcome and self.when != "completed":
+            raise ValueError("an outcome filter only applies to a completion delta")
+        return self
+
+
+class MinStanding(_Strict):
+    """A quest gate (living-world W2): hidden until the party's standing with
+    `faction` has reached `tier` — the reputation sibling of min_party_level."""
+
+    faction: str                     # -> Faction id
+    tier: Literal["hostile", "unfriendly", "neutral", "friendly", "allied"] = "friendly"
+
+
 class QuestBranch(_Strict):
     """One outcome -> next-quest edge of a branching chain. At completion the DM reports an
     `outcome` label (from the quest's OUTCOMES shown in context); the matching branch unlocks
@@ -648,6 +699,9 @@ class AuthoredQuest(_Strict):
                                      # it can't leak it early and the context stays lean (S2).
     branches: list[QuestBranch] = Field(default_factory=list)
     trinkets: list[QuestTrinket] = Field(default_factory=list)
+    standing: list[QuestStanding] = Field(default_factory=list)  # faction consequences (W2)
+    min_standing: MinStanding | None = None  # gate: hidden until the party's standing
+                                     # with a faction reaches a tier (W2); None = no gate
     tags: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
@@ -667,6 +721,11 @@ class AuthoredQuest(_Strict):
                 raise ValueError(
                     f"trinket {t.id!r} filters on outcome {t.outcome!r}, "
                     "which is not one of this quest's branch outcomes")
+        for st in self.standing:
+            if st.outcome and st.outcome not in labels:
+                raise ValueError(
+                    f"a standing delta for {st.faction!r} filters on outcome "
+                    f"{st.outcome!r}, which is not one of this quest's branch outcomes")
         return self
 
 

@@ -269,6 +269,23 @@ class SetEnvironment(BaseModel):
         return self
 
 
+class AdjustStanding(BaseModel):
+    """Nudge the party's STANDING with a faction when the fiction just earned it —
+    they helped a member in front of witnesses, insulted a captain, were seen working
+    with the faction's enemy. Small bounded moves only (±5; a full tier is 20 points):
+    the big swings belong to authored quests, not to you. Standing is code-owned —
+    never claim a tier changed unless FACTION STANDING says so.
+    delta 0 is the REVEAL: the party has just LEARNED this faction exists (it appears
+    on their Factions page). Use it the moment a hidden faction steps into the light —
+    named by an NPC, its sigil recognized, its hand revealed."""
+
+    tool: Literal["adjust_standing"] = "adjust_standing"
+    faction: str = Field(description="the faction id from FACTION STANDING")
+    delta: int = Field(ge=-5, le=5,
+                       description="-5..+5 standing points (0 = reveal the faction, no change)")
+    reason: str = Field(description="the fiction that earned the shift")
+
+
 class StartQuest(BaseModel):
     """Begin tracking a goal the party has taken on (an NPC's request, a mystery
     they're chasing). Code records it as an active quest."""
@@ -318,7 +335,8 @@ class AcceptQuest(BaseModel):
 ToolCall = Annotated[
     Union[Transact, Give, Take, UseItem, AwardXp, CreateEntity, PromoteCanon, Travel,
           EndSession, ForceEndSession, StartQuest, UpdateQuest, AcceptQuest,
-          SetEnvironment, DmNote, ProposeRest, ProposeRecruit, ProposeDismiss],
+          SetEnvironment, DmNote, ProposeRest, ProposeRecruit, ProposeDismiss,
+          AdjustStanding],
     Field(discriminator="tool"),
 ]
 
@@ -329,4 +347,5 @@ TOOL_MODELS: tuple[type[BaseModel], ...] = (
     Transact, Give, Take, UseItem, AwardXp, CreateEntity, PromoteCanon, Travel,
     EndSession, ForceEndSession, StartQuest, UpdateQuest, AcceptQuest,
     SetEnvironment, DmNote, ProposeRest, ProposeRecruit, ProposeDismiss,
+    AdjustStanding,
 )

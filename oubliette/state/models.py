@@ -148,6 +148,8 @@ class Character(BaseModel):
     # OPEN (flavor; not event-sourced — D-OPEN-1) -----------------------------
     description: str = ""
     disposition: str = ""    # NPC demeanor — context for the DM's DC-setting (D8)
+    faction: str | None = None   # Faction id an NPC belongs to (living-world W2) —
+                                 # authored membership; the DM plays them loyal
     home_location: str | None = None   # Place id an NPC belongs to (scopes "who's present")
     price_list: dict[str, int] = Field(default_factory=dict)  # merchant asking prices in CP (soft, §11)
 

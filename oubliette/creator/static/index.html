@@ -390,14 +390,19 @@
 
 <script>
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const EDITABLE = new Set(["items", "statblocks", "npcs", "places", "lore", "quests", "scenarios", "ai_profiles", "backgrounds", "spells"]);
+const EDITABLE = new Set(["items", "statblocks", "npcs", "places", "lore", "quests", "factions", "scenarios", "ai_profiles", "backgrounds", "spells"]);
 const SINGULAR = { items: "item", statblocks: "creature", npcs: "character", places: "place",
-                   lore: "lore entry", quests: "quest", scenarios: "opening", ai_profiles: "personality",
+                   lore: "lore entry", quests: "quest", factions: "faction", scenarios: "opening", ai_profiles: "personality",
                    backgrounds: "background", spells: "spell" };
 const TITLES = { items: "Items", statblocks: "Creatures", npcs: "Characters & NPCs",
-                 places: "Places", lore: "Lore", quests: "Quests", scenarios: "Opening setup",
+                 places: "Places", lore: "Lore", quests: "Quests", factions: "Factions", scenarios: "Opening setup",
                  ai_profiles: "AI Personalities", backgrounds: "Backgrounds", spells: "Spells" };
-const ORDER = ["items", "statblocks", "npcs", "backgrounds", "spells", "places", "lore", "quests", "scenarios", "ai_profiles"];
+const ORDER = ["items", "statblocks", "npcs", "backgrounds", "spells", "places", "lore", "quests", "factions", "scenarios", "ai_profiles"];
+// Faction standing tiers (living-world W2): the Forge authors in tier words;
+// the stored default_standing is the tier's representative score.
+const FACTION_TIERS = [["hostile", -40, "Hostile"], ["unfriendly", -20, "Unfriendly"],
+                       ["neutral", 0, "Neutral"], ["friendly", 20, "Friendly"], ["allied", 40, "Allied"]];
+const tierForScore = s => { let out = "Hostile"; FACTION_TIERS.forEach(([, floor, lab]) => { if ((s ?? 0) >= floor - 10) out = lab; }); return out; };
 const CATEGORIES = ["weapon", "armor", "gear", "consumable", "treasure", "misc"];
 const SLOTS = ["", "main_hand", "off_hand", "body", "feet", "hands", "waist", "head", "neck", "ring"];
 const ARMOR_TYPES = ["light", "medium", "heavy", "shield"];
@@ -547,6 +552,14 @@ function describe(kind, e) {
     const about = (e.subjects || []).length ? `about ${(e.subjects || []).join(", ")} — ` : "";
     const body = (e.text || "").replace(/\s+/g, " ");
     return about + (body.length > 120 ? body.slice(0, 120) + "…" : body);
+  }
+  if (kind === "factions") {
+    const bits = [`starts ${tierForScore(e.default_standing).toLowerCase()} to the party`];
+    bits.push(e.known_from_start ? "known from the start" : "hidden until met");
+    const members = listOf("npcs").filter(n => n.faction === e.id).length
+                  + listOf("statblocks").filter(s => s.faction === e.id).length;
+    if (members) bits.push(`${members} member(s)`);
+    return bits.join(" · ") + (e.description ? ` — ${e.description}` : "");
   }
   if (kind === "backgrounds") {
     const bits = [];
@@ -789,12 +802,13 @@ function openEditor(kind, index) {
   if (kind === "quests") {
     editorCtx.branches = ((original?.branches) || []).map(b => ({ ...b }));
     editorCtx.trinkets = ((original?.trinkets) || []).map(t => ({ ...t }));
+    editorCtx.qstanding = ((original?.standing) || []).map(s => ({ ...s }));
   }
   if (kind === "backgrounds") editorCtx.bgeq = ((original?.equipment) || []).map(g => ({ item: g.item, qty: g.qty || 1 }));
 
-  const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, lore: loreForm, quests: questForm, scenarios: scenarioForm, ai_profiles: aiProfileForm, backgrounds: backgroundForm, spells: spellForm };
+  const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, lore: loreForm, quests: questForm, factions: factionForm, scenarios: scenarioForm, ai_profiles: aiProfileForm, backgrounds: backgroundForm, spells: spellForm };
   const WIRES = { statblocks: wireStatblockForm, npcs: wireNpcForm, places: wirePlaceForm, items: wireItemForm, quests: wireQuestForm, ai_profiles: wireAiProfileForm, backgrounds: wireBackgroundForm, spells: wireSpellForm };
-  const CONFIRMS = { items: confirmItem, statblocks: confirmStatblock, npcs: confirmNpc, places: confirmPlace, lore: confirmLore, quests: confirmQuest, scenarios: confirmScenario, ai_profiles: confirmAiProfile, backgrounds: confirmBackground, spells: confirmSpell };
+  const CONFIRMS = { items: confirmItem, statblocks: confirmStatblock, npcs: confirmNpc, places: confirmPlace, lore: confirmLore, quests: confirmQuest, factions: confirmFaction, scenarios: confirmScenario, ai_profiles: confirmAiProfile, backgrounds: confirmBackground, spells: confirmSpell };
 
   const modal = document.getElementById("modal");
   modal.innerHTML = FORMS[kind](original);
@@ -2093,6 +2107,8 @@ function statblockForm(sb) {
       ${field("Special traits", `<input id="f_traits" value="${esc((v.traits || []).join(", "))}" placeholder="keen senses, pack tactics" />`, "Free-form notes, comma-separated. Real mechanical abilities (extra attacks, breath weapons) come from the attacks editor.")}
       ${field("Personality (how it fights)", `<select id="f_ai_profile">${aiProfileOptions(v.ai_profile)}</select>`,
               "Its battle behaviour. Built-in styles, or a personality you authored in “AI Personalities”. Competence (its attacks, spells, breath) is always automatic.")}
+      ${listOf("factions").length ? field("Faction", `<select id="f_faction">${optionList("factions", v.faction || "", "(none)")}</select>`,
+              "Which power these creatures serve — every character using this stat line inherits it unless they set their own.") : ""}
       <div class="subform"><div class="sftitle">Growth — companion stages <span style="font-weight:400;opacity:.6">— optional</span></div>
         <div class="help" style="margin-bottom:9px">If the party keeps this creature as a <b>companion</b>, it can grow into another creature of this world when the heroes reach a level — a pseudodragon becoming a drake. Author the next stage on <i>that</i> creature to continue the chain. A creature with no stages stays itself, loyally.</div>
         <div id="growthList"></div>
@@ -2244,6 +2260,8 @@ function confirmStatblock(original) {
   if (desc) base.description = desc; else delete base.description;
   const prof = document.getElementById("f_ai_profile").value;
   if (prof) base.ai_profile = prof; else delete base.ai_profile;
+  const sbFac = document.getElementById("f_faction");   // rendered only when factions exist
+  if (sbFac) { if (sbFac.value) base.faction = sbFac.value; else delete base.faction; }
   const growth = editorCtx.growth
     .filter(g => g.to)
     .map(g => ({ to: g.to, at_party_level: Math.max(1, Math.min(20, Number(g.at_party_level) || 1)) }));
@@ -2834,6 +2852,8 @@ function npcForm(npc) {
       ${field("Temperament", `<textarea id="f_disp" placeholder="cautious and shrewd; greedy when flattered">${esc(v.disposition || "")}</textarea>`,
               "How they act — the DM uses this to judge how hard they are to sway.")}
       ${field("Description", `<textarea id="f_desc" placeholder="A leather-goods merchant.">${esc(v.description || "")}</textarea>`)}
+      ${listOf("factions").length ? field("Faction", `<select id="f_faction">${optionList("factions", v.faction || "", "(none)")}</select>`,
+              "Which power they belong to — the AI DM plays them loyal to it, warm or cold with the party's standing.") : ""}
       <div class="row2">
         ${field("Lives at", `<select id="f_home">${optionList("places", v.home_location || "", "(nowhere in particular)")}</select>`, "Pick a place.")}
         ${field("How they fight", `<select id="f_combat_kind">
@@ -2927,6 +2947,8 @@ function npcEntryFromForm(original, forceKind) {
   setOrDel("role", document.getElementById("f_role").value.trim());
   setOrDel("disposition", document.getElementById("f_disp").value.trim());
   setOrDel("description", document.getElementById("f_desc").value.trim());
+  const facEl = document.getElementById("f_faction");   // rendered only when factions exist
+  if (facEl) setOrDel("faction", facEl.value);
   setOrDel("home_location", document.getElementById("f_home").value);
   const kind = forceKind || document.getElementById("f_combat_kind").value || "none";
   const sbEl = document.getElementById("f_sb");
@@ -3703,6 +3725,48 @@ async function cgSaveCharacter() {
   toast("Character built and saved.");
 }
 
+// ---- faction form (living-world W2) ----
+function factionForm(fa) {
+  const v = fa || {};
+  const cur = tierForScore(v.default_standing).toLowerCase();
+  const tierOpts = FACTION_TIERS.map(([key, score, lab]) =>
+    `<option value="${score}"${key === cur ? " selected" : ""}>${lab}</option>`).join("");
+  return `
+    <div class="mhead">${fa ? "Edit faction" : "New faction"}</div>
+    <div class="mbody">
+      ${field(req("Name"), `<input id="f_name" value="${esc(v.name || "")}" placeholder="The Brightvale Watch" />`)}
+      ${field("Description", `<textarea id="f_desc" placeholder="Who they are, as commonly known.">${esc(v.description || "")}</textarea>`,
+              "Player-facing — this is what their Factions page shows once they know the faction.")}
+      ${field("Agenda (secret)", `<textarea id="f_agenda" placeholder="What they actually want — the hand they play behind the curtain.">${esc(v.agenda || "")}</textarea>`,
+              "DM-only fuel. Players never see this.")}
+      <div class="row2">
+        ${field("Starts out", `<select id="f_standing">${tierOpts}</select>`,
+                "How they regard the party at campaign start.")}
+        ${field("Known from the start", `<label class="chk" style="display:inline-flex"><input type="checkbox" id="f_known"${v.known_from_start ? " checked" : ""}> The party knows of them</label>`,
+                "Unchecked: they show as ??? until the party learns of them in play.")}
+      </div>
+      <div class="help">Standing moves in play: quests can carry big shifts (see a quest's “Faction standing” section), and the AI DM nudges it when the fiction earns it. Tag characters and creatures as members in their own editors.</div>
+      <div class="invalid" id="f_err"></div>
+    </div>
+    <div class="mfoot"><button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" data-confirm>${fa ? "Update" : "Add"} faction</button></div>`;
+}
+function confirmFaction(original) {
+  const name = document.getElementById("f_name").value.trim();
+  if (!name) { fieldInvalid("f_name", "Please give the faction a name."); return; }
+  const base = original ? { ...original } : {};
+  if (!base.id) base.id = uniqueId(slugify(name), new Set(listOf("factions").map(x => x.id)));
+  base.name = name;
+  const setOrDel = (k, val) => { if (val === "" || val == null) delete base[k]; else base[k] = val; };
+  setOrDel("description", document.getElementById("f_desc").value.trim());
+  setOrDel("agenda", document.getElementById("f_agenda").value.trim());
+  const standing = Number(document.getElementById("f_standing").value || 0);
+  if (standing) base.default_standing = standing; else delete base.default_standing;
+  if (document.getElementById("f_known").checked) base.known_from_start = true;
+  else delete base.known_from_start;
+  commitEntry("factions", original, base);
+}
+
 // ---- lore form ----
 function entityNameOptions() {
   const names = [...listOf("npcs"), ...listOf("places")].map(e => e.name).filter(Boolean);
@@ -3781,12 +3845,23 @@ function questForm(q) {
         </div>
         <div class="help">Set gold OR an item (or neither — just a note). The engine never auto-grants it; it's a reminder for the DM, who can even renegotiate.</div>
       </div>
+      ${listOf("factions").length ? `<div class="subform"><div class="sftitle">Faction standing (consequences)</div>
+        <div id="qStandingList"></div>
+        <button class="btn mini" id="addQStanding" type="button">+ Add a consequence</button>
+        <div class="help" style="margin-top:8px">Taking or finishing this quest moves how a faction regards the party — these are the BIG, authored shifts (the AI DM only nudges). 20 points = a full tier (neutral → friendly). Tie a consequence to an outcome label to make endings matter: sparing the smuggler pleases one power and angers another.</div>
+      </div>` : ""}
       <div class="subform"><div class="sftitle">Chain</div>
         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:8px">
           <input type="checkbox" id="f_root" ${v.root ? "checked" : ""} style="width:auto; flex:none; margin:0" />
           A starting quest (available from the beginning)
         </label>
         ${field("Starts at party level", `<input id="f_minlvl" type="number" min="1" max="20" value="${v.min_party_level ?? ""}" placeholder="any" />`, "Optional gate: the quest stays hidden — the DM never even sees it — until the party reaches this level. Leave blank for no requirement.")}
+        ${listOf("factions").length ? `<div class="row2">
+          ${field("Needs a faction's trust", `<select id="f_msfac">${optionList("factions", (v.min_standing || {}).faction || "", "(no standing gate)")}</select>`,
+                  "Optional gate: hidden until the party's standing with this faction reaches the tier.")}
+          ${field("At least", `<select id="f_mstier">${["hostile", "unfriendly", "neutral", "friendly", "allied"].map(t =>
+                    `<option value="${t}"${((v.min_standing || {}).tier || "friendly") === t ? " selected" : ""}>${t[0].toUpperCase() + t.slice(1)}</option>`).join("")}</select>`)}
+        </div>` : ""}
         ${field("Arc name (optional)", `<input id="f_chain" value="${esc(v.chain || "")}" placeholder="The Smuggler's Trail" />`, "Just a label to group the parts of one story arc.")}
         <div class="sftitle" style="margin-top:10px">Leads on to…</div>
         <div id="branchList"></div>
@@ -3820,6 +3895,34 @@ function renderBranches() {
     s.addEventListener("change", e => { editorCtx.branches[+e.target.dataset.brTo].to = e.target.value; }));
   box.querySelectorAll("[data-br-del]").forEach(b =>
     b.addEventListener("click", e => { editorCtx.branches.splice(+e.target.dataset.brDel, 1); renderBranches(); }));
+}
+function renderQStanding() {
+  const box = document.getElementById("qStandingList");
+  if (!box) return;                                  // no factions authored → no section
+  box.innerHTML = editorCtx.qstanding.map((s, i) => `
+    <div class="exit-row" style="align-items:center">
+      <select data-qs-fac="${i}" style="flex:1">${optionList("factions", s.faction || "", "(choose a faction)")}</select>
+      <input data-qs-delta="${i}" type="number" min="-50" max="50" value="${s.delta ?? 10}"
+        title="standing points; 20 = a full tier" style="flex:none; width:70px" />
+      <select data-qs-when="${i}" style="flex:none; width:auto">
+        <option value="accepted"${s.when === "accepted" ? " selected" : ""}>on accepting</option>
+        <option value="completed"${s.when !== "accepted" ? " selected" : ""}>on completing</option>
+      </select>
+      <input data-qs-out="${i}" value="${esc(s.outcome || "")}" placeholder="any ending"
+        title="Only apply when the quest completes with this outcome label. Blank = any ending."
+        style="flex:none; width:100px; display:${s.when === "accepted" ? "none" : ""}" />
+      <button class="btn mini danger" type="button" data-qs-del="${i}">✕</button>
+    </div>`).join("") || '<div class="nothing" style="margin-bottom:8px">No consequences — the world’s powers don’t care how this one ends.</div>';
+  box.querySelectorAll("[data-qs-fac]").forEach(s =>
+    s.addEventListener("change", e => { editorCtx.qstanding[+e.target.dataset.qsFac].faction = e.target.value; }));
+  box.querySelectorAll("[data-qs-delta]").forEach(inp =>
+    inp.addEventListener("input", e => { editorCtx.qstanding[+e.target.dataset.qsDelta].delta = e.target.value; }));
+  box.querySelectorAll("[data-qs-when]").forEach(s =>
+    s.addEventListener("change", e => { editorCtx.qstanding[+e.target.dataset.qsWhen].when = e.target.value; renderQStanding(); }));
+  box.querySelectorAll("[data-qs-out]").forEach(inp =>
+    inp.addEventListener("input", e => { editorCtx.qstanding[+e.target.dataset.qsOut].outcome = e.target.value; }));
+  box.querySelectorAll("[data-qs-del]").forEach(b =>
+    b.addEventListener("click", e => { editorCtx.qstanding.splice(+e.target.dataset.qsDel, 1); renderQStanding(); }));
 }
 function renderTrinkets() {
   const box = document.getElementById("trinketList");
@@ -3895,6 +3998,10 @@ function wireQuestForm() {
   renderTrinkets();
   document.getElementById("addTrinket").addEventListener("click",
     () => { editorCtx.trinkets.push({ id: "", image: "", caption: "", when: "completed", outcome: "" }); renderTrinkets(); });
+  renderQStanding();
+  const addQs = document.getElementById("addQStanding");
+  if (addQs) addQs.addEventListener("click",
+    () => { editorCtx.qstanding.push({ faction: "", delta: 10, when: "completed", outcome: "" }); renderQStanding(); });
   document.getElementById("trinketFile").addEventListener("change",
     e => { if (e.target.files[0]) onChooseTrinketImage(e.target.files[0]); e.target.value = ""; });
 }
@@ -3919,6 +4026,16 @@ function confirmQuest(original) {
   for (const t of editorCtx.trinkets) {
     if (t.when !== "accepted" && (t.outcome || "").trim() && !branchLabels.has(t.outcome.trim())) {
       err.textContent = `A trinket is tied to the outcome “${t.outcome.trim()}”, which isn't one of this quest's outcomes.`; return; }
+  }
+  const qstanding = editorCtx.qstanding || [];
+  if (qstanding.some(s => !s.faction)) {
+    markEmptyRows("data-qs-fac");
+    err.textContent = "Every standing consequence needs a faction (or remove it)."; return; }
+  if (qstanding.some(s => !Number(s.delta))) {
+    err.textContent = "Every standing consequence needs a non-zero shift (20 = a full tier)."; return; }
+  for (const s of qstanding) {
+    if (s.when !== "accepted" && (s.outcome || "").trim() && !branchLabels.has(s.outcome.trim())) {
+      err.textContent = `A standing consequence is tied to the outcome “${s.outcome.trim()}”, which isn't one of this quest's outcomes.`; return; }
   }
 
   const base = original ? { ...original } : {};
@@ -3957,6 +4074,19 @@ function confirmQuest(original) {
       return out;
     });
   } else delete base.trinkets;
+  if (qstanding.length) {
+    base.standing = qstanding.map(s => {
+      const out = { faction: s.faction,
+                    delta: Math.max(-50, Math.min(50, Number(s.delta))),
+                    when: s.when === "accepted" ? "accepted" : "completed" };
+      if (out.when === "completed" && (s.outcome || "").trim()) out.outcome = s.outcome.trim();
+      return out;
+    });
+  } else delete base.standing;
+  const msfacEl = document.getElementById("f_msfac");
+  if (msfacEl && msfacEl.value) {
+    base.min_standing = { faction: msfacEl.value, tier: document.getElementById("f_mstier").value };
+  } else delete base.min_standing;
   setOrDel("tags", csv(document.getElementById("f_tags").value));
   commitEntry("quests", original, base);
 }

@@ -39,6 +39,16 @@
     }
   },
   {
+    "id": "gate_guard_maren",
+    "name": "Guardswoman Maren",
+    "stat_block": "commoner",
+    "faction": "brightvale_watch",
+    "role": "guard",
+    "disposition": "dutiful and dry-humored; warms to anyone who makes a long shift shorter",
+    "description": "The bored Watch guardswoman leaning on a spear at the north gate. (Testbed fixture for factions — droppable before a release.)",
+    "home_location": "brightvale_gate"
+  },
+  {
     "id": "stray_pup",
     "name": "Scrap",
     "stat_block": "wolf_pup",

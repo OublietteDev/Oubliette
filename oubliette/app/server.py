@@ -192,6 +192,9 @@ def _snapshot() -> dict:
         # Rest gating (S3): the UI's Long Rest button routes through the story
         # on a gated table; "free" keeps the direct one-click rest.
         "rest_strictness": GAME.session.difficulty.rest_strictness,
+        # Living-world W2: whether this world authors factions at all — drives
+        # the menu item; the Factions page itself is served (redacted) separately.
+        "has_factions": bool(getattr(GAME.session, "factions", None)),
         "pc": _pc_view(pc),                          # the lead PC (back-compat)
         "party": [_pc_view(c) for c in repo.party()],  # the whole roster (HUD)
         # The party's shared money (copper + a preformatted display string).
@@ -1396,6 +1399,33 @@ def _creature_known(scope: str, mid: str, cr, gate, encountered) -> bool:
     if _cr_value(cr) <= gate.max_known_cr:
         return True
     return f"{scope}:{mid}" in encountered
+
+
+@app.get("/api/factions")
+async def get_factions() -> JSONResponse:
+    """The party's Factions page (living-world W2). Redaction happens HERE,
+    server-side, like the map's undiscovered places: an unknown faction ships
+    only `{known: false}` — its name, description, and standing never reach the
+    browser until the party learns of it (the ??? row keeps the promise that
+    there is more world to meet without saying what). Standing ships as the
+    TIER WORD only; the raw score never leaves the engine."""
+    from ..world.factions import known_ids, standing_map, tier_for
+    s = GAME.session
+    factions = getattr(s, "factions", None) or {}
+    if not factions:
+        return JSONResponse({"factions": []})
+    events = s.store.read_all()
+    scores = standing_map(factions, s.authored_quests, events, s.quests)
+    known = known_ids(factions, s.authored_quests, events, s.quests)
+    out = []
+    for fid, f in factions.items():
+        if fid in known:
+            out.append({"known": True, "id": fid, "name": f.name,
+                        "description": f.description,
+                        "tier": tier_for(scores.get(fid, 0))})
+        else:
+            out.append({"known": False})
+    return JSONResponse({"factions": out})
 
 
 @app.get("/api/bestiary")

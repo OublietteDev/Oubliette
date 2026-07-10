@@ -717,6 +717,22 @@
     .bestiary-grid.show-detail .best-list { display: none; }
     .bestiary-grid:not(.show-detail) .best-detail { display: none; }
   }
+  /* --- factions (living-world W2): the party's ledger of the world's powers --- */
+  .factions-modal { width: min(620px, 94vw); }
+  .fac-body { overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+  .fac-row { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--panel-2); }
+  .fac-top { display: flex; align-items: center; gap: 10px; }
+  .fac-name { font-family: var(--serif); font-size: 16px; color: var(--gold); flex: 1; }
+  .fac-desc { font-size: 13px; color: var(--muted); line-height: 1.45; margin-top: 6px; }
+  .fac-tier { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; white-space: nowrap; color: var(--muted); }
+  .fac-tier.hostile { color: var(--bad-soft); border-color: var(--bad); }
+  .fac-tier.unfriendly { color: var(--bad-soft); }
+  .fac-tier.friendly { color: var(--good); }
+  .fac-tier.allied { color: var(--gold); border-color: var(--gold); }
+  .fac-row.unknown { border-style: dashed; opacity: .65; }
+  .fac-row.unknown .fac-name { color: var(--faint); }
+  .fac-row.unknown .fac-desc { font-style: italic; }
+  .fac-empty { color: var(--muted); font-style: italic; padding: 8px 2px; }
   /* --- help (how to play) --- */
   .help-modal { width: min(680px, 94vw); }
   .help-body { gap: 0; }
@@ -1114,6 +1130,17 @@
       <div class="best-list" id="best-list"></div>
       <div class="best-detail" id="best-detail"></div>
     </div>
+  </div>
+</div>
+
+<div id="factions-overlay" class="overlay hidden">
+  <div class="inv-modal factions-modal">
+    <div class="inv-head">
+      <h2>Factions</h2>
+      <div class="spacer"></div>
+      <button class="act" id="fac-close">Close</button>
+    </div>
+    <div class="fac-body" id="fac-body"></div>
   </div>
 </div>
 
@@ -1542,6 +1569,7 @@ function envLabel(t, w) {
 function renderState(s) {
   $("scene").textContent = s.scene || "";
   $("env-badge").textContent = envLabel(s.time_of_day, s.weather);
+  hasFactions = !!s.has_factions;   // living-world W2: drives the Factions menu item
   // Header: the world/pack you're playing. Location breadcrumb: parent > sublocation,
   // with the innermost spot highlighted — a quick "where am I" for the scene card.
   $("world-name").textContent = s.pack_name || "";
@@ -3139,6 +3167,42 @@ $("best-close").addEventListener("click", closeBestiary);
 $("best-search").addEventListener("input", (e) => renderBestiaryList(e.target.value));
 $("bestiary-overlay").addEventListener("click", (e) => { if (e.target.id === "bestiary-overlay") closeBestiary(); });
 
+// --- factions (living-world W2): the party's ledger of the world's powers ---
+// The server redacts unknown factions to bare {known:false} rows and ships
+// standing as a TIER WORD only — the raw score never reaches the browser.
+const TIER_WORD = { hostile: "Hostile", unfriendly: "Unfriendly", neutral: "Neutral",
+                    friendly: "Friendly", allied: "Allied" };
+async function openFactions() {
+  let rows = [];
+  try { rows = (await (await fetch("/api/factions")).json()).factions || []; } catch (e) {}
+  const body = $("fac-body");
+  body.innerHTML = "";
+  if (!rows.length) {
+    body.appendChild(el("div", "fac-empty",
+      "No banners, no guilds — this world's powers keep to themselves."));
+  }
+  rows.forEach(f => {
+    if (!f.known) {
+      const row = el("div", "fac-row unknown");
+      row.appendChild(el("div", "fac-name", "???"));
+      row.appendChild(el("div", "fac-desc", "A power you have yet to meet moves in this world."));
+      body.appendChild(row);
+      return;
+    }
+    const row = el("div", "fac-row");
+    const top = el("div", "fac-top");
+    top.appendChild(el("div", "fac-name", f.name));
+    top.appendChild(el("span", "fac-tier " + f.tier, TIER_WORD[f.tier] || f.tier));
+    row.appendChild(top);
+    if (f.description) row.appendChild(el("div", "fac-desc", f.description));
+    body.appendChild(row);
+  });
+  $("factions-overlay").classList.remove("hidden");
+}
+function closeFactions() { $("factions-overlay").classList.add("hidden"); }
+$("fac-close").addEventListener("click", closeFactions);
+$("factions-overlay").addEventListener("click", (e) => { if (e.target.id === "factions-overlay") closeFactions(); });
+
 // --- help (how to play; static prose) --------------------------------------
 function openHelp() { $("help-overlay").classList.remove("hidden"); }
 function closeHelp() { $("help-overlay").classList.add("hidden"); }
@@ -3149,6 +3213,7 @@ const MENU_ITEMS = [
   { key: "journal",   label: "Journal",          icon: "📖", enabled: true,  open: () => openJournal() },
   { key: "inventory", label: "Inventory",        icon: "🎒", enabled: true,  open: () => openInventory() },
   { key: "party",     label: "Party Sheets",     icon: "👥", enabled: true,  open: () => openSheet() },
+  { key: "factions",  label: "Factions",         icon: "⚜️", enabled: true,  open: () => openFactions() },
   { key: "bestiary",  label: "Bestiary",         icon: "📚", enabled: true,  open: () => openBestiary() },
   { key: "map",       label: "Map",              icon: "🗺️", enabled: true,  open: () => openWorldMap() },
   { key: "help",      label: "Help",             icon: "❓", enabled: true,  open: () => openHelp() },
@@ -3156,9 +3221,10 @@ const MENU_ITEMS = [
   { key: "wrap",      label: "Wrap up session",  icon: "🌙", enabled: true,  open: () => wrapSession(false) },
 ];
 const menuPop = $("menu-pop");
+let hasFactions = false;   // from state snapshots — worlds without factions hide the page
 function renderMenu() {
   menuPop.innerHTML = "";
-  MENU_ITEMS.forEach(it => {
+  MENU_ITEMS.filter(it => it.key !== "factions" || hasFactions).forEach(it => {
     const row = el("div", "menu-item" + (it.enabled ? "" : " disabled"));
     row.appendChild(el("span", "ico", it.icon));
     row.appendChild(el("span", null, it.label));

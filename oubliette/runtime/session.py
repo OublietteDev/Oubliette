@@ -83,6 +83,8 @@ class Session:
                                              # read magic mechanics from (module-kit S1)
         self.authored_quests: dict = {}      # {id: AuthoredQuest} the pack ships (offered in play,
                                              # not canon); deterministic baseline, re-seeded on open
+        self.factions: dict = {}             # {id: Faction} the pack ships (living-world W2);
+                                             # standing derives from the log, never stored here
 
     def _scene_for(self, location: str | None) -> str:
         """The prose for a location — the pack's opening text at the start spot
@@ -117,6 +119,7 @@ class Session:
             npc_statblocks = world.npc_statblocks
             bestiary_gate = world.bestiary_gate
             authored_quests = {q.id: q for q in world.quests}
+            factions = {f.id: f for f in world.factions}
             mechanics_catalog = world.mechanics_catalog
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
         else:
@@ -133,6 +136,7 @@ class Session:
             npc_statblocks = {}
             bestiary_gate = None
             authored_quests = {}
+            factions = {}
             mechanics_catalog = {}
             marker = {}
         canon = CanonStore()
@@ -206,6 +210,7 @@ class Session:
         session.ruleset = ruleset
         session.mechanics_catalog = mechanics_catalog
         session.authored_quests = authored_quests
+        session.factions = factions
         if events:
             replay(events, repo, canon, quests)   # existing session: rebuild to current
         else:

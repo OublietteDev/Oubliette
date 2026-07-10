@@ -17,9 +17,10 @@ from ..coin import format_cp
 from ..record.events import StateOp
 from ..record.rng import dice_average
 from ..state.repository import Repository, StateError
-from .schemas import (AcceptQuest, AwardXp, CreateEntity, DmNote, EndSession, ForceEndSession, Give,
-                      PromoteCanon, ProposeDismiss, ProposeRecruit, ProposeRest, SetEnvironment,
-                      StartQuest, Take, ToolCall, Transact, Travel, UpdateQuest, UseItem, ValueEntry)
+from .schemas import (AcceptQuest, AdjustStanding, AwardXp, CreateEntity, DmNote, EndSession,
+                      ForceEndSession, Give, PromoteCanon, ProposeDismiss, ProposeRecruit,
+                      ProposeRest, SetEnvironment, StartQuest, Take, ToolCall, Transact, Travel,
+                      UpdateQuest, UseItem, ValueEntry)
 
 PARTY_CAP = 6   # PCs + companions, total (companions design lock 2026-07-06)
 
@@ -51,13 +52,16 @@ class ResolvedTool:
     rest_proposed: str | None = None                     # propose_rest -> "short"|"long" (player confirms)
     recruit_proposed: str | None = None                  # propose_recruit -> NPC id (player confirms)
     dismiss_proposed: str | None = None                  # propose_dismiss -> companion id (player confirms)
+    standing_faction: str | None = None                  # adjust_standing -> faction id (W2);
+    standing_delta: int = 0                              # clamped nudge (0 = reveal only)
 
 
 class Dispatcher:
     def __init__(self, repo: Repository, canon: CanonStore | None = None,
                  places: dict | None = None, quests=None, ruleset=None,
                  authored_quests: dict | None = None, rng=None,
-                 mechanics: dict | None = None) -> None:
+                 mechanics: dict | None = None,
+                 factions: dict | None = None) -> None:
         self.repo = repo
         self.canon = canon
         self.rng = rng                   # seeded Rng — rolls a consumable's healing (use_item);
@@ -70,6 +74,7 @@ class Dispatcher:
         self.authored_quests = authored_quests or {}   # {id: AuthoredQuest} the pack ships
         self.offered_here: set = set()   # authored quest ids acceptable RIGHT NOW (source
                                          # present); the loop refreshes it each turn
+        self.factions = factions or {}   # {id: Faction} the pack ships (living-world W2)
 
     def resolve(self, call: ToolCall) -> ResolvedTool:
         if isinstance(call, Transact):
@@ -109,6 +114,15 @@ class Dispatcher:
                                 env_time=call.time_of_day, env_weather=call.weather)
         if isinstance(call, DmNote):
             return ResolvedTool(call.tool, "dm note", note_text=call.note)
+        if isinstance(call, AdjustStanding):
+            if call.faction not in self.factions:
+                raise ToolApplyError(
+                    f"no faction {call.faction!r} exists in this world — use an id "
+                    "from FACTION STANDING")
+            from ..world.factions import clamp_dm_delta
+            return ResolvedTool(call.tool, call.reason,
+                                standing_faction=call.faction,
+                                standing_delta=clamp_dm_delta(call.delta))
         if isinstance(call, EndSession):
             return ResolvedTool(call.tool, call.reason, wrap_proposed=True)
         if isinstance(call, ForceEndSession):

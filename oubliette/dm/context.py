@@ -180,6 +180,16 @@ def _reward_text(repo: Repository, reward) -> str:
     return ", ".join(bits)
 
 
+# How the DM plays a faction's members at each standing tier (living-world W2).
+_TIER_PLAY = {
+    "hostile": "Members refuse the party trade, aid, and courtesy — and may move against them",
+    "unfriendly": "Members are cold and unhelpful; favors cost extra, doors stay shut",
+    "neutral": "",
+    "friendly": "Members are warm and forthcoming; small favors come easily",
+    "allied": "Members treat the party as their own — real aid, real trust, real secrets",
+}
+
+
 def build_context(repo: Repository, scene: str = "", recent: list[str] | None = None,
                   canon: list[CanonRecord] | None = None, location: str | None = None,
                   places: dict | None = None, quests: list | None = None,
@@ -191,7 +201,8 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   notebook: list[str] | None = None,
                   difficulty=None, rest_interrupted: bool = False,
                   companion_growth: list | None = None,
-                  keyed_directive: dict | None = None) -> str:
+                  keyed_directive: dict | None = None,
+                  factions: list | None = None) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -303,8 +314,11 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
         npcs = [n for n in npcs if n.home_location == location]
     if npcs:
         lines.append("PRESENT (NPCs you may reference by id):")
+        faction_names = {f["id"]: f["name"] for f in factions or ()}
         for n in npcs:
             note = n.disposition or n.description or "no notes"
+            if getattr(n, "faction", None) and n.faction in faction_names:
+                note = f"[{faction_names[n.faction]}] {note}"
             # Surface a merchant's priced stock so the DM can negotiate (it was
             # "blind to the trade window contents" otherwise).
             stock = ""
@@ -316,6 +330,23 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                     stock = "; sells " + ", ".join(items)
             lines.append(f"  - {n.name} (id: {n.id}) — {note}; "
                          f"carries {format_cp(n.coin)}{stock}.")
+    # Faction standing (living-world W2): every authored faction, its code-owned
+    # tier, and the DM's marching orders per tier. The party's own view (the
+    # Factions panel) is redacted server-side; the DM sees everything, including
+    # who the party hasn't met — so it can play a hidden hand without leaking it.
+    if factions:
+        lines.append(
+            "FACTION STANDING (code-owned; play members TRUE to their tier; nudge with "
+            "adjust_standing (±5) only when the fiction just earned it — authored quests "
+            "make the big moves; delta 0 reveals a faction the party just learned of):")
+        for f in factions:
+            vis = ("known to the party" if f["known"] else
+                   "UNKNOWN to the party (shows as ??? in their list — never speak of it "
+                   "as familiar; adjust_standing delta 0 the moment they learn of it)")
+            play = _TIER_PLAY.get(f["tier"], "")
+            agenda = f" Agenda (secret): {f['agenda']}" if f.get("agenda") else ""
+            lines.append(f"  - {f['name']} (id: {f['id']}) — {f['tier']} ({f['score']:+d}); "
+                         f"{vis}.{' ' + play + '.' if play else ''}{agenda}")
     # Where the party can travel from here (exits, sublocations, neighbours). The DM
     # moves them with the travel tool, naming the destination by id.
     dests = _reachable(location, places or {})

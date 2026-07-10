@@ -28,7 +28,7 @@ from ..state.models import Character, Item as StateItem, ItemStack
 from ..state.repository import InMemoryRepository
 from .ruleset import _VALID_SKILLS, Ruleset, load_ruleset
 from .schemas import (NPC, AiProfile, AuthoredQuest, BattleMap, BestiaryGate,
-                      Item, Lore, Place, PackManifest, Scenario, StatBlock)
+                      Faction, Item, Lore, Place, PackManifest, Scenario, StatBlock)
 from .srd_schemas import Background, PackSpell, SrdEquipment
 
 DEFAULT_PACK = "brightvale"
@@ -89,6 +89,7 @@ class LoadedWorld:
     statblocks: tuple = ()         # the pack's authored StatBlocks (this-world bestiary section)
     bestiary_gate: "BestiaryGate | None" = None   # per-world bestiary knowledge cutoff (manifest)
     quests: tuple = ()             # the pack's authored quests (offered during play, not canon)
+    factions: tuple = ()           # the pack's authored Factions (living-world W2)
     ai_profiles: tuple = ()        # the pack's authored AI personalities (Forge-authored monster behavior)
     # Forge Phase 4a: {npc entity id -> its StatBlock id}, only for NPCs that carry
     # one. Lets the combat bridge give a recurring creature-NPC (Seraphel) her full
@@ -288,6 +289,30 @@ def _lint_keyed_encounters(places: list[Place], statblocks: list[StatBlock],
                                   f"block (pack or SRD) nor a pack NPC")
 
 
+def _lint_factions(factions: list[Faction], npcs: list[NPC],
+                   statblocks: list[StatBlock], quests: list[AuthoredQuest],
+                   errors: list[str]) -> None:
+    """Factions (living-world W2): ids unique, and every membership or standing
+    reference resolving — an NPC's or creature's `faction`, a quest's standing
+    deltas, a quest's min_standing gate. A standing consequence against a faction
+    that doesn't exist would silently do nothing at the table."""
+    _dup_ids(factions, "factions", errors)
+    ids = {f.id for f in factions}
+    for n in npcs:
+        if n.faction is not None and n.faction not in ids:
+            errors.append(f"npcs: {n.id}.faction references unknown faction {n.faction!r}")
+    for s in statblocks:
+        if s.faction is not None and s.faction not in ids:
+            errors.append(f"statblocks: {s.id}.faction references unknown faction {s.faction!r}")
+    for q in quests:
+        for st in q.standing:
+            if st.faction not in ids:
+                errors.append(f"quests: {q.id}.standing references unknown faction {st.faction!r}")
+        if q.min_standing is not None and q.min_standing.faction not in ids:
+            errors.append(f"quests: {q.id}.min_standing references unknown faction "
+                          f"{q.min_standing.faction!r}")
+
+
 def _lint_backgrounds(backgrounds: list[Background], items: list[Item],
                       ruleset: Ruleset, errors: list[str]) -> None:
     """Pack-authored backgrounds (module-kit S2): ids unique and non-shadowing
@@ -454,6 +479,7 @@ def _build_person_npc(n: NPC, char: Character) -> Character:
         "id": n.id, "name": n.name, "kind": "npc",
         "disposition": n.disposition or char.disposition,
         "description": n.description or char.description,
+        "faction": n.faction,
         "home_location": n.home_location if n.home_location is not None else char.home_location,
     })
 
@@ -481,6 +507,9 @@ def _build_npc(n: NPC, statblocks: dict[str, StatBlock],
         price_list={k: authored_to_cp(v) for k, v in n.price_list.items()},
         description=n.description,
         disposition=n.disposition,
+        # Membership: the NPC's own tag, else its creature kind's (a Watch guard
+        # authored once on the statblock covers every guard NPC using it).
+        faction=n.faction or (sb.faction if sb else None),
         home_location=n.home_location,
         **extra,
     )
@@ -532,6 +561,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     lore = _parse_list(base / "lore.json", Lore, "lore.json", errors)
     scenarios = _parse_list(base / "scenarios.json", Scenario, "scenarios.json", errors)
     quests = _parse_list(base / "quests.json", AuthoredQuest, "quests.json", errors)
+    factions = _parse_list(base / "factions.json", Faction, "factions.json", errors)
     ai_profiles = _parse_list(base / "ai_profiles.json", AiProfile, "ai_profiles.json", errors)
     backgrounds = _parse_list(base / "backgrounds.json", Background, "backgrounds.json", errors)
     spells = _parse_list(base / "spells.json", PackSpell, "spells.json", errors)
@@ -542,6 +572,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
 
     _lint(manifest, items, statblocks, npcs, places, scenarios, quests, errors)
     _lint_keyed_encounters(places, statblocks, npcs, ruleset, errors)
+    _lint_factions(factions, npcs, statblocks, quests, errors)
     _dup_ids(lore, "lore", errors)        # subjects are free-form, so only ids are checked
     _dup_ids(ai_profiles, "ai_profiles", errors)
     _lint_backgrounds(backgrounds, items, ruleset, errors)
@@ -595,6 +626,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
         ruleset=ruleset,
         pack_name=manifest.name, statblocks=tuple(statblocks),
         bestiary_gate=manifest.bestiary_gate, quests=tuple(quests),
+        factions=tuple(factions),
         ai_profiles=tuple(ai_profiles),
         npc_statblocks={n.id: n.stat_block for n in npcs if n.stat_block},
         mechanics_catalog=merged_equipment,

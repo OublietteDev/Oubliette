@@ -23,6 +23,7 @@
     "id": "road_bandit",
     "name": "road bandit",
     "kind": "monster",
+    "faction": "gray_hand",
     "cr": 0.125,
     "abilities": {
       "str": 11,
