@@ -29,7 +29,7 @@ from ..state.repository import InMemoryRepository
 from .ruleset import _VALID_SKILLS, Ruleset, load_ruleset
 from .schemas import (NPC, AiProfile, AuthoredQuest, BattleMap, BestiaryGate,
                       Faction, Item, Lore, Place, PackManifest, Scenario, StatBlock,
-                      TravelScale)
+                      TravelScale, WorldEvent)
 from .srd_schemas import Background, PackSpell, SrdEquipment
 
 DEFAULT_PACK = "brightvale"
@@ -93,6 +93,7 @@ class LoadedWorld:
     bestiary_gate: "BestiaryGate | None" = None   # per-world bestiary knowledge cutoff (manifest)
     quests: tuple = ()             # the pack's authored quests (offered during play, not canon)
     factions: tuple = ()           # the pack's authored Factions (living-world W2)
+    world_events: tuple = ()       # the pack's scheduled WorldEvents (living-world W4)
     ai_profiles: tuple = ()        # the pack's authored AI personalities (Forge-authored monster behavior)
     # Forge Phase 4a: {npc entity id -> its StatBlock id}, only for NPCs that carry
     # one. Lets the combat bridge give a recurring creature-NPC (Seraphel) her full
@@ -290,6 +291,52 @@ def _lint_keyed_encounters(places: list[Place], statblocks: list[StatBlock],
                 elif norm(e.ref) not in known:
                     errors.append(f"{where} enemy ref {e.ref!r} is neither a stat "
                                   f"block (pack or SRD) nor a pack NPC")
+
+
+def _lint_world_events(world_events: list[WorldEvent], places: list[Place],
+                       quests: list[AuthoredQuest], factions: list[Faction],
+                       errors: list[str]) -> None:
+    """Timed world events (living-world W4): every reference resolving — venue
+    place, quest conditions/effects, faction shifts, and the keyed encounter an
+    event arms. And the reverse: a `when: "event"` encounter that NO event ever
+    names is unreachable — a fight authored to wait for a signal that cannot
+    come (mirrors the unreachable-quest check)."""
+    _dup_ids(world_events, "events", errors)
+    place_ids = {p.id: p for p in places}
+    quest_ids = {q.id for q in quests}
+    faction_ids = {f.id for f in factions}
+    armed: set[tuple[str, str]] = set()
+    for ev in world_events:
+        where = f"events: {ev.id}"
+        if ev.place is not None and ev.place not in place_ids:
+            errors.append(f"{where}.place references unknown place {ev.place!r}")
+        for label, ref in (("quest_done", ev.quest_done),
+                           ("unlock_quest", ev.unlock_quest),
+                           ("retire_quest", ev.retire_quest)):
+            if ref is not None and ref not in quest_ids:
+                errors.append(f"{where}.{label} references unknown quest {ref!r}")
+        if ev.min_standing is not None and ev.min_standing.faction not in faction_ids:
+            errors.append(f"{where}.min_standing references unknown faction "
+                          f"{ev.min_standing.faction!r}")
+        for st in ev.standing:
+            if st.faction not in faction_ids:
+                errors.append(f"{where}.standing references unknown faction {st.faction!r}")
+        if ev.encounter is not None:
+            node = place_ids.get(ev.encounter.place)
+            encs = {e.id for e in (node.encounters if node else ())}
+            if node is None:
+                errors.append(f"{where}.encounter references unknown place "
+                              f"{ev.encounter.place!r}")
+            elif ev.encounter.encounter not in encs:
+                errors.append(f"{where}.encounter: place {ev.encounter.place!r} has no "
+                              f"encounter {ev.encounter.encounter!r}")
+            else:
+                armed.add((ev.encounter.place, ev.encounter.encounter))
+    for p in places:
+        for enc in p.encounters:
+            if enc.trigger.when == "event" and (p.id, enc.id) not in armed:
+                errors.append(f"places: {p.id}.encounters[{enc.id}] waits for a world "
+                              "event, but no event arms it — it can never fire")
 
 
 def _lint_travel_scale(manifest: PackManifest | None, places: list[Place],
@@ -592,6 +639,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     scenarios = _parse_list(base / "scenarios.json", Scenario, "scenarios.json", errors)
     quests = _parse_list(base / "quests.json", AuthoredQuest, "quests.json", errors)
     factions = _parse_list(base / "factions.json", Faction, "factions.json", errors)
+    world_events = _parse_list(base / "events.json", WorldEvent, "events.json", errors)
     ai_profiles = _parse_list(base / "ai_profiles.json", AiProfile, "ai_profiles.json", errors)
     backgrounds = _parse_list(base / "backgrounds.json", Background, "backgrounds.json", errors)
     spells = _parse_list(base / "spells.json", PackSpell, "spells.json", errors)
@@ -603,6 +651,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     _lint(manifest, items, statblocks, npcs, places, scenarios, quests, errors)
     _lint_keyed_encounters(places, statblocks, npcs, ruleset, errors)
     _lint_factions(factions, npcs, statblocks, quests, errors)
+    _lint_world_events(world_events, places, quests, factions, errors)
     _lint_travel_scale(manifest, places, errors)
     _dup_ids(lore, "lore", errors)        # subjects are free-form, so only ids are checked
     _dup_ids(ai_profiles, "ai_profiles", errors)
@@ -658,7 +707,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
         ruleset=ruleset,
         pack_name=manifest.name, statblocks=tuple(statblocks),
         bestiary_gate=manifest.bestiary_gate, quests=tuple(quests),
-        factions=tuple(factions),
+        factions=tuple(factions), world_events=tuple(world_events),
         ai_profiles=tuple(ai_profiles),
         npc_statblocks={n.id: n.stat_block for n in npcs if n.stat_block},
         mechanics_catalog=merged_equipment,

@@ -69,14 +69,19 @@ def _quest_deltas(factions: dict, authored: dict, events: list[Event],
 
 
 def standing_map(factions: dict, authored: dict, events: list[Event],
-                 quests) -> dict[str, int]:
+                 quests, extra: dict[str, int] | None = None) -> dict[str, int]:
     """{faction id: current score} for every authored faction: default + quest
-    deltas + the DM's recorded nudges, clamped to the score range."""
+    deltas + the DM's recorded nudges, clamped to the score range. `extra` is
+    a precomputed overlay of additional deltas — world-event shifts (W4),
+    handed in by the loop so this module never imports the events layer."""
     if not factions:
         return {}
     scores = {fid: f.default_standing for fid, f in factions.items()}
     for fid, d in _quest_deltas(factions, authored, events, quests).items():
         scores[fid] = scores.get(fid, 0) + d
+    for fid, d in (extra or {}).items():
+        if fid in scores:
+            scores[fid] += d
     for ev in events:
         if ev.kind == EventKind.FACTION_STANDING_CHANGED.value:
             fid = ev.payload.get("faction")

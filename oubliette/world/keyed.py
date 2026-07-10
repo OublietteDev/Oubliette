@@ -54,13 +54,20 @@ def _fired(events: list[Event], place_id: str) -> list[tuple[str, int]]:
 
 
 def due_encounter(node, events: list[Event], *, start_location: str | None,
-                  time_of_day: str, party_level: int):
+                  time_of_day: str, party_level: int,
+                  armed: set | None = None):
     """The one keyed encounter that fires THIS turn at `node` (the party's
     current PlaceNode), or None. Encounters are checked in authored order and
     at most one fires per turn — a second eligible ambush waits its turn.
 
     Predicates are ANDed, one per trigger field, so later arcs bolt on quest/
-    faction conditions here without touching the callers."""
+    faction conditions here without touching the callers.
+
+    `armed` (living-world W4) is the set of (place, encounter id) pairs a
+    world event has ARMED: an armed encounter skips its when/time/level
+    conditions entirely — the event outranks them — and a `when: "event"`
+    encounter fires ONLY this way. Once-per-visit and once-per-campaign
+    still hold."""
     encounters = getattr(node, "encounters", ()) or ()
     if not encounters:
         return None
@@ -77,7 +84,11 @@ def due_encounter(node, events: list[Event], *, start_location: str | None,
             continue
         if enc.once and enc.id in fired_ever:
             continue
+        if (node.id, enc.id) in (armed or ()):
+            return enc                                  # the event said NOW
         trig = enc.trigger
+        if trig.when == "event":
+            continue                                    # dormant until armed
         if trig.when == "first_visit" and not first_visit:
             continue
         if trig.time_of_day != "any" and trig.time_of_day != time_of_day:

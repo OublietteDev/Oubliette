@@ -71,6 +71,10 @@ class EventKind(str, Enum):
                                         # reason}; delta 0 = the party LEARNS of the faction (reveal).
                                         # Inert on replay — standing is a pure derivation (default +
                                         # authored quest deltas + these nudges), like quest offers.
+    WORLD_EVENT = "world_event"         # a scheduled world event fired (living-world W4): carries
+                                        # {event_id, day, place, present}. Inert on replay — its
+                                        # EFFECTS (standing shifts, armed encounters, quest offers)
+                                        # derive from this record + the authored def, never applied.
 
 
 class StateOp(BaseModel):

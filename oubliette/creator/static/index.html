@@ -390,14 +390,14 @@
 
 <script>
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const EDITABLE = new Set(["items", "statblocks", "npcs", "places", "lore", "quests", "factions", "scenarios", "ai_profiles", "backgrounds", "spells"]);
+const EDITABLE = new Set(["items", "statblocks", "npcs", "places", "lore", "quests", "factions", "events", "scenarios", "ai_profiles", "backgrounds", "spells"]);
 const SINGULAR = { items: "item", statblocks: "creature", npcs: "character", places: "place",
-                   lore: "lore entry", quests: "quest", factions: "faction", scenarios: "opening", ai_profiles: "personality",
+                   lore: "lore entry", quests: "quest", factions: "faction", events: "world event", scenarios: "opening", ai_profiles: "personality",
                    backgrounds: "background", spells: "spell" };
 const TITLES = { items: "Items", statblocks: "Creatures", npcs: "Characters & NPCs",
-                 places: "Places", lore: "Lore", quests: "Quests", factions: "Factions", scenarios: "Opening setup",
+                 places: "Places", lore: "Lore", quests: "Quests", factions: "Factions", events: "World events", scenarios: "Opening setup",
                  ai_profiles: "AI Personalities", backgrounds: "Backgrounds", spells: "Spells" };
-const ORDER = ["items", "statblocks", "npcs", "backgrounds", "spells", "places", "lore", "quests", "factions", "scenarios", "ai_profiles"];
+const ORDER = ["items", "statblocks", "npcs", "backgrounds", "spells", "places", "lore", "quests", "factions", "events", "scenarios", "ai_profiles"];
 // Faction standing tiers (living-world W2): the Forge authors in tier words;
 // the stored default_standing is the tier's representative score.
 const FACTION_TIERS = [["hostile", -40, "Hostile"], ["unfriendly", -20, "Unfriendly"],
@@ -560,6 +560,19 @@ function describe(kind, e) {
                   + listOf("statblocks").filter(s => s.faction === e.id).length;
     if (members) bits.push(`${members} member(s)`);
     return bits.join(" · ") + (e.description ? ` — ${e.description}` : "");
+  }
+  if (kind === "events") {
+    const when = e.every_days
+      ? (e.on_day ? `day ${e.on_day}, then every ${e.every_days} day(s)` : `every ${e.every_days} day(s)`)
+      : `day ${e.on_day}`;
+    const bits = [when];
+    if (e.place) bits.push(`at ${placeName(e.place)}`);
+    if ((e.standing || []).length) bits.push("shifts standing");
+    if (e.encounter) bits.push("arms a fight");
+    if (e.unlock_quest) bits.push("opens a quest");
+    if (e.retire_quest) bits.push("closes a quest");
+    if (e.environment) bits.push("turns the sky");
+    return bits.join(" · ") + (e.announce ? ` — ${e.announce}` : "");
   }
   if (kind === "backgrounds") {
     const bits = [];
@@ -804,11 +817,12 @@ function openEditor(kind, index) {
     editorCtx.trinkets = ((original?.trinkets) || []).map(t => ({ ...t }));
     editorCtx.qstanding = ((original?.standing) || []).map(s => ({ ...s }));
   }
+  if (kind === "events") editorCtx.evs = ((original?.standing) || []).map(s => ({ ...s }));
   if (kind === "backgrounds") editorCtx.bgeq = ((original?.equipment) || []).map(g => ({ item: g.item, qty: g.qty || 1 }));
 
-  const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, lore: loreForm, quests: questForm, factions: factionForm, scenarios: scenarioForm, ai_profiles: aiProfileForm, backgrounds: backgroundForm, spells: spellForm };
-  const WIRES = { statblocks: wireStatblockForm, npcs: wireNpcForm, places: wirePlaceForm, items: wireItemForm, quests: wireQuestForm, ai_profiles: wireAiProfileForm, backgrounds: wireBackgroundForm, spells: wireSpellForm };
-  const CONFIRMS = { items: confirmItem, statblocks: confirmStatblock, npcs: confirmNpc, places: confirmPlace, lore: confirmLore, quests: confirmQuest, factions: confirmFaction, scenarios: confirmScenario, ai_profiles: confirmAiProfile, backgrounds: confirmBackground, spells: confirmSpell };
+  const FORMS = { items: itemForm, statblocks: statblockForm, npcs: npcForm, places: placeForm, lore: loreForm, quests: questForm, factions: factionForm, events: eventForm, scenarios: scenarioForm, ai_profiles: aiProfileForm, backgrounds: backgroundForm, spells: spellForm };
+  const WIRES = { statblocks: wireStatblockForm, npcs: wireNpcForm, places: wirePlaceForm, items: wireItemForm, quests: wireQuestForm, events: wireEventForm, ai_profiles: wireAiProfileForm, backgrounds: wireBackgroundForm, spells: wireSpellForm };
+  const CONFIRMS = { items: confirmItem, statblocks: confirmStatblock, npcs: confirmNpc, places: confirmPlace, lore: confirmLore, quests: confirmQuest, factions: confirmFaction, events: confirmEvent, scenarios: confirmScenario, ai_profiles: confirmAiProfile, backgrounds: confirmBackground, spells: confirmSpell };
 
   const modal = document.getElementById("modal");
   modal.innerHTML = FORMS[kind](original);
@@ -1560,8 +1574,9 @@ function renderEncounters() {
       <button class="btn mini" type="button" data-enc-eadd="${i}">+ Add an enemy</button>
       <div class="cue-row" style="margin-top:8px; gap:8px; flex-wrap:wrap">
         <label>Fires <select data-enc-when="${i}">
-          <option value="every_visit"${(en.trigger && en.trigger.when) === "first_visit" ? "" : " selected"}>any visit</option>
+          <option value="every_visit"${["first_visit", "event"].includes(en.trigger && en.trigger.when) ? "" : " selected"}>any visit</option>
           <option value="first_visit"${(en.trigger && en.trigger.when) === "first_visit" ? " selected" : ""}>first visit only</option>
+          <option value="event"${(en.trigger && en.trigger.when) === "event" ? " selected" : ""}>when a world event arms it</option>
         </select></label>
         <label>Time <select data-enc-time="${i}">
           <option value="any">any</option>
@@ -3765,6 +3780,150 @@ function confirmFaction(original) {
   if (document.getElementById("f_known").checked) base.known_from_start = true;
   else delete base.known_from_start;
   commitEntry("factions", original, base);
+}
+
+// ---- world event form (living-world W4) ----
+function evQuestOptions(selected, noneLabel) {
+  return `<option value="">${esc(noneLabel)}</option>` + listOf("quests").map(q =>
+    `<option value="${esc(q.id)}"${q.id === selected ? " selected" : ""}>${esc(q.title || q.id)}</option>`).join("");
+}
+function evEncOptions(placeId, selected) {
+  const p = listOf("places").find(x => x.id === placeId);
+  const encs = (p && p.encounters) || [];
+  return `<option value="">(choose an encounter)</option>` + encs.map(e =>
+    `<option value="${esc(e.id)}"${e.id === selected ? " selected" : ""}>${esc(e.id)}</option>`).join("");
+}
+function eventForm(evt) {
+  const v = evt || {};
+  const ms = v.min_standing || {};
+  const env = v.environment || {};
+  const enc = v.encounter || {};
+  const hasFacs = listOf("factions").length > 0;
+  const tierOpts = ["hostile", "unfriendly", "neutral", "friendly", "allied"].map(t =>
+    `<option value="${t}"${(ms.tier || "friendly") === t ? " selected" : ""}>${t[0].toUpperCase() + t.slice(1)}</option>`).join("");
+  return `
+    <div class="mhead">${evt ? "Edit world event" : "New world event"}</div>
+    <div class="mbody">
+      ${field(req("Title"), `<input id="f_name" value="${esc(v.title || "")}" placeholder="The Gray Hand buys the mill" />`,
+              "A label for you — players never see it.")}
+      <div class="subform"><div class="sftitle">When it happens</div>
+        <div class="row2">
+          ${field("On day", `<input id="f_ev_onday" type="number" min="1" max="10000" value="${v.on_day ?? ""}" placeholder="e.g. 3" />`,
+                  "The campaign day it fires (the game's header counts the days).")}
+          ${field("Repeats every … days", `<input id="f_ev_every" type="number" min="1" max="1000" value="${v.every_days ?? ""}" placeholder="(never — fires once)" />`,
+                  "Set only this for a rhythm (market day); set both for “first on day N, then every M”.")}
+        </div>
+        <div class="row2">
+          ${field("Only after a quest completes", `<select id="f_ev_qdone">${evQuestOptions(v.quest_done || "", "(no quest condition)")}</select>`)}
+          ${hasFacs ? field("Only at standing", `<div style="display:flex; gap:8px"><select id="f_ev_msfac" style="flex:1">${optionList("factions", ms.faction || "", "(no standing condition)")}</select><select id="f_ev_mstier" style="width:auto">${tierOpts}</select></div>`,
+                  "Fires only once the party's tier with this faction is at least this warm.") : ""}
+        </div>
+        <div class="help">Late is fine: if a condition isn't met on the day, the event waits and fires the first turn everything holds. One event fires per turn — an overdue backlog trickles in like news.</div>
+      </div>
+      ${field("Where it happens", `<select id="f_ev_place">${optionList("places", v.place || "", "(nowhere in particular — the wide world)")}</select>`,
+              "If the party is there (or anywhere inside it), they witness it live; anywhere else, the news reaches them as rumor. It happens either way.")}
+      ${field("What the world learns", `<textarea id="f_ev_announce" placeholder="Word spreads that strangers bought the old mill for a song.">${esc(v.announce || "")}</textarea>`,
+              "The DM conveys this — as a scene if the party is present, as arriving news if not.")}
+      ${field("The truth behind it (secret)", `<textarea id="f_ev_brief" placeholder="It was the Gray Hand, through a proxy. They want what's under the millpond.">${esc(v.briefing || "")}</textarea>`,
+              "DM-only fuel. Players never see this.")}
+      <div class="subform"><div class="sftitle">Effects <span style="font-weight:400;opacity:.6">— all optional</span></div>
+        ${hasFacs ? `<div style="margin:2px 0 4px; font-size:12px; opacity:.8">Faction standing shifts (silent — an event's shift never reveals a hidden faction)</div>
+        <div id="evsList"></div>
+        <button class="btn mini" type="button" id="addEvs">+ Add a shift</button>` : ""}
+        <div class="row2" style="margin-top:10px">
+          ${field("Arm a fight at", `<select id="f_ev_encplace">${optionList("places", enc.place || "", "(no fight)")}</select>`,
+                  "The named encounter triggers on the party's next visit — instantly if they stand there.")}
+          ${field("…the encounter", `<select id="f_ev_encid">${evEncOptions(enc.place || "", enc.encounter || "")}</select>`,
+                  "Author it on the place first. Set its “Fires” to “when a world event arms it” for a fight that exists only because this happened.")}
+        </div>
+        <div class="row2">
+          ${field("Turn the sky", `<select id="f_ev_time"><option value="">(unchanged)</option><option value="day"${env.time_of_day === "day" ? " selected" : ""}>day</option><option value="night"${env.time_of_day === "night" ? " selected" : ""}>night</option></select>`)}
+          ${field("Turn the weather", `<select id="f_ev_weather"><option value="">(unchanged)</option>${["clear", "rain", "storm", "wind"].map(w =>
+            `<option value="${w}"${env.weather === w ? " selected" : ""}>${w}</option>`).join("")}</select>`)}
+        </div>
+        <div class="row2">
+          ${field("Open a quest", `<select id="f_ev_unlock">${evQuestOptions(v.unlock_quest || "", "(none)")}</select>`,
+                  "Makes it offerable — even one that isn't a starting quest.")}
+          ${field("Close a quest", `<select id="f_ev_retire">${evQuestOptions(v.retire_quest || "", "(none)")}</select>`,
+                  "Withdraws an untaken offer; a quest already taken is unaffected.")}
+        </div>
+      </div>
+      <div class="invalid" id="f_err"></div>
+    </div>
+    <div class="mfoot"><button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" data-confirm>${evt ? "Update" : "Add"} world event</button></div>`;
+}
+function renderEvStanding() {
+  const box = document.getElementById("evsList");
+  if (!box) return;                                  // no factions authored → no rows
+  box.innerHTML = editorCtx.evs.map((s, i) => `
+    <div class="exit-row" style="align-items:center">
+      <select data-evs-fac="${i}" style="flex:1">${optionList("factions", s.faction || "", "(choose a faction)")}</select>
+      <input data-evs-delta="${i}" type="number" min="-50" max="50" value="${s.delta ?? 10}"
+        title="standing points; 20 = a full tier" style="flex:none; width:70px" />
+      <button class="btn mini danger" type="button" data-evs-del="${i}">✕</button>
+    </div>`).join("") || '<div class="nothing" style="margin-bottom:8px">No shifts.</div>';
+  box.querySelectorAll("[data-evs-fac]").forEach(s =>
+    s.addEventListener("change", e => { editorCtx.evs[+e.target.dataset.evsFac].faction = e.target.value; }));
+  box.querySelectorAll("[data-evs-delta]").forEach(inp =>
+    inp.addEventListener("input", e => { editorCtx.evs[+e.target.dataset.evsDelta].delta = e.target.value; }));
+  box.querySelectorAll("[data-evs-del]").forEach(b =>
+    b.addEventListener("click", e => { editorCtx.evs.splice(+e.target.dataset.evsDel, 1); renderEvStanding(); }));
+}
+function wireEventForm() {
+  renderEvStanding();
+  const add = document.getElementById("addEvs");
+  if (add) add.addEventListener("click",
+    () => { editorCtx.evs.push({ faction: "", delta: 10 }); renderEvStanding(); });
+  const pl = document.getElementById("f_ev_encplace");
+  pl.addEventListener("change", () => {
+    document.getElementById("f_ev_encid").innerHTML = evEncOptions(pl.value, "");
+  });
+}
+function confirmEvent(original) {
+  const title = gid("f_name").value.trim(), err = gid("f_err");
+  if (!title) { fieldInvalid("f_name", "Please give the event a title."); return; }
+  const onday = gid("f_ev_onday").value, every = gid("f_ev_every").value;
+  if (onday === "" && every === "") {
+    fieldInvalid("f_ev_onday", "When does it happen? Set a day, a repeat interval, or both."); return; }
+  const evs = editorCtx.evs || [];
+  if (evs.some(s => !s.faction)) { err.textContent = "Every standing shift needs a faction (or remove it)."; return; }
+  if (evs.some(s => !Number(s.delta))) { err.textContent = "Every standing shift needs a non-zero amount (20 = a full tier)."; return; }
+  const encPlace = gid("f_ev_encplace").value, encId = gid("f_ev_encid").value;
+  if (encPlace && !encId) {
+    err.textContent = "Pick which encounter at that place the event arms — author one on the place first."; return; }
+  const announce = gid("f_ev_announce").value.trim(), brief = gid("f_ev_brief").value.trim();
+  const time = gid("f_ev_time").value, weather = gid("f_ev_weather").value;
+  const unlock = gid("f_ev_unlock").value, retire = gid("f_ev_retire").value;
+  if (!announce && !brief && !evs.length && !encPlace && !time && !weather && !unlock && !retire) {
+    err.textContent = "The event needs something to say or do — an announcement, a briefing, or an effect."; return; }
+  if (unlock && unlock === retire) { err.textContent = "An event can't open and close the same quest."; return; }
+  const base = original ? { ...original } : {};
+  if (!base.id) base.id = uniqueId(slugify(title), new Set(listOf("events").map(x => x.id)));
+  base.title = title;
+  const setOrDel = (k, val) => { if (val === "" || val == null) delete base[k]; else base[k] = val; };
+  if (onday !== "" && Number(onday) >= 1) base.on_day = Number(onday); else delete base.on_day;
+  if (every !== "" && Number(every) >= 1) base.every_days = Number(every); else delete base.every_days;
+  setOrDel("quest_done", gid("f_ev_qdone").value);
+  const msfac = gid("f_ev_msfac");
+  if (msfac && msfac.value) base.min_standing = { faction: msfac.value, tier: gid("f_ev_mstier").value };
+  else delete base.min_standing;
+  setOrDel("place", gid("f_ev_place").value);
+  setOrDel("announce", announce);
+  setOrDel("briefing", brief);
+  if (evs.length) base.standing = evs.map(s =>
+    ({ faction: s.faction, delta: Math.max(-50, Math.min(50, Number(s.delta))) }));
+  else delete base.standing;
+  if (encPlace && encId) base.encounter = { place: encPlace, encounter: encId };
+  else delete base.encounter;
+  if (time || weather) {
+    base.environment = {};
+    if (time) base.environment.time_of_day = time;
+    if (weather) base.environment.weather = weather;
+  } else delete base.environment;
+  setOrDel("unlock_quest", unlock);
+  setOrDel("retire_quest", retire);
+  commitEntry("events", original, base);
 }
 
 // ---- lore form ----

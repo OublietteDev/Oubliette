@@ -1,0 +1,27 @@
+[
+  {
+    "id": "gray_hand_moves_in",
+    "title": "The Gray Hand buys the mill",
+    "on_day": 2,
+    "place": "brightvale_old_mill",
+    "announce": "Word crosses the market like a dropped coin: someone has bought the ruined old mill, sight unseen, for a song. Nobody knows who signed.",
+    "briefing": "The buyer is the Gray Hand, through a proxy. They want the flooded undercroft — and they have already sent men to hold the place. (Testbed fixture for world events — droppable before a release.)",
+    "standing": [
+      {
+        "faction": "gray_hand",
+        "delta": -5
+      }
+    ],
+    "encounter": {
+      "place": "brightvale_old_mill",
+      "encounter": "mill_toughs"
+    }
+  },
+  {
+    "id": "market_day",
+    "title": "Market day",
+    "every_days": 3,
+    "place": "brightvale_market",
+    "announce": "Market day in Brightvale: the square doubles in stalls and noise, farm carts queue at the gate, and coin moves faster than gossip — which is saying something."
+  }
+]

@@ -555,9 +555,14 @@ class KeyedEnemy(_Strict):
 class KeyedTrigger(_Strict):
     """When a keyed encounter fires. `when` picks the visit rule; the other
     fields are extra conditions ANDed on top. One predicate per field, so later
-    arcs (quest state, faction standing) add fields here — not surgery."""
+    arcs (quest state, faction standing) add fields here — not surgery.
 
-    when: Literal["first_visit", "every_visit"] = "every_visit"
+    `when: "event"` (living-world W4) makes the encounter DORMANT: it never
+    fires on its own — only after a world event ARMS it (the event names this
+    place + encounter). The armed fight waits for the party's next visit, and
+    time/level conditions are skipped: the event outranks them."""
+
+    when: Literal["first_visit", "every_visit", "event"] = "every_visit"
     time_of_day: Literal["any", "day", "night"] = "any"
     min_party_level: int | None = Field(default=None, ge=1, le=20)
 
@@ -741,6 +746,83 @@ class AuthoredQuest(_Strict):
                 raise ValueError(
                     f"a standing delta for {st.faction!r} filters on outcome "
                     f"{st.outcome!r}, which is not one of this quest's branch outcomes")
+        return self
+
+
+# --- timed world events (living-world W4) -------------------------------------
+class EventStanding(_Strict):
+    """A standing shift a world event carries. Unlike quest deltas, an event's
+    shift does NOT reveal the faction — the world can turn against the party
+    in the dark (reveal it with the DM's delta-0 when the story surfaces it)."""
+
+    faction: str                     # -> Faction id
+    delta: int = Field(ge=-50, le=50)
+
+    @model_validator(mode="after")
+    def _nonzero(self) -> "EventStanding":
+        if self.delta == 0:
+            raise ValueError("an event standing shift needs a non-zero delta")
+        return self
+
+
+class EventEncounter(_Strict):
+    """ARM a keyed encounter: after the event fires, the named fight triggers
+    on the party's next visit to its place (immediately if they stand there).
+    Pair it with a `when: "event"` encounter for a fight that exists ONLY
+    because this event happened."""
+
+    place: str                       # -> Place id
+    encounter: str                   # -> KeyedEncounter id at that place
+
+
+class EventEnvironment(_Strict):
+    time_of_day: Literal["day", "night"] | None = None
+    weather: Literal["clear", "rain", "storm", "wind"] | None = None
+
+    @model_validator(mode="after")
+    def _at_least_one(self) -> "EventEnvironment":
+        if self.time_of_day is None and self.weather is None:
+            raise ValueError("an environment change must set time_of_day and/or weather")
+        return self
+
+
+class WorldEvent(_Strict):
+    """A scheduled happening — the world moving whether the party attends or
+    not. The CODE decides it fires (against the campaign clock + conditions);
+    the DM narrates it live if the party is at its place, or lets the news
+    arrive as rumor if they're elsewhere. At most ONE event fires per turn;
+    an overdue backlog trickles in turn by turn."""
+
+    id: str
+    title: str = ""                  # Forge display label
+    # -- when (at least one of on_day / every_days) ---------------------------
+    on_day: int | None = Field(default=None, ge=1, le=10_000)   # first (or only) firing day
+    every_days: int | None = Field(default=None, ge=1, le=1000)  # repeat interval; with no
+                                     # on_day the first firing lands after one interval
+    quest_done: str | None = None    # condition: this authored quest is completed
+    min_standing: MinStanding | None = None   # condition: party tier with a faction
+    # -- where (presentation only — the event fires regardless) ---------------
+    place: str | None = None         # venue; party present = seen live, absent = rumor
+    # -- what (at least one) ---------------------------------------------------
+    announce: str = ""               # what the world learns — the DM conveys this
+    briefing: str = ""               # DM-secret truth behind it
+    standing: list[EventStanding] = Field(default_factory=list)
+    encounter: EventEncounter | None = None
+    environment: EventEnvironment | None = None
+    unlock_quest: str | None = None  # make an authored quest offerable (even a non-root)
+    retire_quest: str | None = None  # withdraw an authored quest from offer
+
+    @model_validator(mode="after")
+    def _shape(self) -> "WorldEvent":
+        if self.on_day is None and self.every_days is None:
+            raise ValueError("an event needs a schedule: on_day and/or every_days")
+        if not (self.announce.strip() or self.briefing.strip() or self.standing
+                or self.encounter or self.environment
+                or self.unlock_quest or self.retire_quest):
+            raise ValueError("an event needs something to say or do "
+                             "(announce/briefing, or an effect)")
+        if self.unlock_quest is not None and self.unlock_quest == self.retire_quest:
+            raise ValueError("an event cannot unlock and retire the same quest")
         return self
 
 

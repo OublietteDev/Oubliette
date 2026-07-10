@@ -203,7 +203,8 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   companion_growth: list | None = None,
                   keyed_directive: dict | None = None,
                   factions: list | None = None,
-                  day: int | None = None) -> str:
+                  day: int | None = None,
+                  world_event: dict | None = None) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -227,6 +228,30 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                      f"(these carry forward on their own; emit set_environment only when the story turns them"
                      + (", and the day number advances by itself when the party sleeps or travels)."
                         if day else ")."))
+    if world_event is not None:
+        # Timed world event (living-world W4): the ENGINE fired it — schedule
+        # and conditions already checked, effects already real. The DM's job is
+        # presentation: witnessed live, or arriving as news.
+        wt = "WORLD EVENT — IT HAS JUST HAPPENED"
+        if world_event.get("place_name"):
+            wt += f" at {world_event['place_name']}"
+        parts = [wt + f": {world_event.get('announce') or '(no public account — see the secret briefing)'}"]
+        if world_event.get("briefing"):
+            parts.append(f"The truth behind it (secret): {world_event['briefing']}")
+        if world_event.get("present"):
+            parts.append("The party is THERE. Weave it into this turn's narration — "
+                         "they witness it with their own eyes.")
+        elif world_event.get("place_name"):
+            parts.append("It happened AWAY from the party. Do NOT narrate it before "
+                         "their eyes — let the news arrive naturally (a traveler's "
+                         "word, a notice, a rider on the road), this turn if it fits "
+                         "or soon after. Distant things reach ears as rumor.")
+        else:
+            parts.append("The world has moved. Work the consequences into the "
+                         "fiction where natural.")
+        if world_event.get("effects"):
+            parts.append("Already in force: " + "; ".join(world_event["effects"]) + ".")
+        lines.append(" ".join(parts))
     if keyed_directive is not None:
         # Keyed encounter (living-world W1): the ENGINE decided this fight fires —
         # already evaluated, already certain. The DM's whole job this turn is the

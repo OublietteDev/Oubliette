@@ -263,4 +263,4 @@ def test_brightvale_testbed_pack_still_lints():
     from oubliette.content.loader import load_pack
     world = load_pack("brightvale")
     mill = world.places["brightvale_old_mill"]
-    assert [e.id for e in mill.encounters] == ["mill_wolves"]
+    assert [e.id for e in mill.encounters] == ["mill_wolves", "mill_toughs"]

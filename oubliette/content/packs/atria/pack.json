@@ -6,5 +6,10 @@
   "author": "",
   "description": "",
   "entry_scenario": "opening",
-  "world_map": "atria_map.jpg"
+  "world_map": "atria_map.jpg",
+  "travel_scale": {
+    "a": "brightvale",
+    "b": "seraphel_s_roost",
+    "days": 5
+  }
 }

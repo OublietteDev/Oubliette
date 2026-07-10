@@ -34,6 +34,7 @@ from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
 from ..trade.schemas import TradeState
 from ..trade.service import build_state, has_stock
 from ..world import clock as world_clock
+from ..world import events as timed_events
 from ..world import factions as faction_standing
 from ..world import keyed as keyed_triggers
 from .session import Session
@@ -106,7 +107,7 @@ class TurnLoop:
         self._keyed_broken: set = set()
 
     def _build_context(self, player_text: str = "", growth: list | None = None,
-                       keyed=None) -> str:
+                       keyed=None, world_event: dict | None = None) -> str:
         """Assemble the per-turn DM context (state, scene, present NPCs, canon, quests,
         past-session notes, recent beats). Shared by `take_turn` and `wrap_session` so the
         DM writes its session notes with the same picture it plays from. Retrieves canon by
@@ -140,7 +141,8 @@ class TurnLoop:
                               "briefing": keyed.briefing}
                              if keyed is not None else None),
             factions=self._faction_context(),
-            day=world_clock.current_day(events))
+            day=world_clock.current_day(events),
+            world_event=world_event)
 
     async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
         # A new in-character turn moves the fiction on: any standing rest grant
@@ -165,7 +167,12 @@ class TurnLoop:
         # (hard directive in the context) and the engine stages the fight itself
         # after the prose — the DM styles the moment, never decides it.
         keyed = None if ooc else self._due_keyed_encounter()
-        context = self._build_context(player_text, growth=notes, keyed=keyed)
+        # Timed world event (living-world W4): fired AFTER keyed evaluation (an
+        # encounter it arms waits for the next turn's check) and BEFORE the
+        # context builds — the DM narrates a world that has ALREADY changed.
+        world_event = None if ooc else self._fire_world_event()
+        context = self._build_context(player_text, growth=notes, keyed=keyed,
+                                      world_event=world_event)
         # `ooc` is the player's explicit "out-of-character" signal (the composer
         # toggle). When set, the turn is table-talk — no model guessing, no combat
         # or trade — so in-character play is never mistaken for meta.
@@ -275,11 +282,15 @@ class TurnLoop:
         node = (self.session.places or {}).get(loc) if loc else None
         if node is None:
             return None
+        wev = getattr(self.session, "world_events", None) or {}
+        armed = (timed_events.armed_encounters(wev, self.session.store.read_all())
+                 if wev else None)
         enc = keyed_triggers.due_encounter(
             node, self.session.store.read_all(),
             start_location=getattr(self.session, "start_location", None),
             time_of_day=self.session.time_of_day,
-            party_level=max((c.level for c in self.repo.party()), default=1))
+            party_level=max((c.level for c in self.repo.party()), default=1),
+            armed=armed)
         if enc is not None and (loc, enc.id) in self._keyed_broken:
             return None
         return enc
@@ -332,6 +343,61 @@ class TurnLoop:
         report.combat_pending = True
         return report
 
+    def _fire_world_event(self) -> dict | None:
+        """Fire the one due WorldEvent (living-world W4), if any: record it,
+        apply its authored environment turn, and return the context payload.
+        The record IS the state — standing shifts, armed fights, and quest
+        moves all derive from it, so by the time the context builds this turn,
+        the world has already changed."""
+        wev = getattr(self.session, "world_events", None) or {}
+        if not wev:
+            return None
+        events = self.session.store.read_all()
+        day = world_clock.current_day(events)
+        tiers = {fid: faction_standing.tier_for(s)
+                 for fid, s in self._faction_scores().items()}
+        ev = timed_events.due_event(wev, events, day=day, standing_tiers=tiers,
+                                    quests=self.session.quests)
+        if ev is None:
+            return None
+        # "Present" walks the parent chain: an event at Brightvale is witnessed
+        # from any place inside Brightvale.
+        places = self.session.places or {}
+        present, cur, seen = False, self.session.location, set()
+        while ev.place is not None and cur in places and cur not in seen:
+            if cur == ev.place:
+                present = True
+                break
+            seen.add(cur)
+            cur = places[cur].parent
+        self.session.emit_log(EventKind.WORLD_EVENT, event_id=ev.id, day=day,
+                              place=ev.place, present=present)
+        if ev.environment is not None:
+            s = self.session
+            nt = (ev.environment.time_of_day
+                  if ev.environment.time_of_day and ev.environment.time_of_day != s.time_of_day
+                  else None)
+            nw = (ev.environment.weather
+                  if ev.environment.weather and ev.environment.weather != s.weather
+                  else None)
+            if nt or nw:
+                s.emit_environment(nt, nw, reason=f"world event {ev.id}")
+        self.debug.append("world_event", event_id=ev.id, day=day,
+                          place=ev.place, present=present)
+        node = places.get(ev.place) if ev.place else None
+        effects = []
+        if ev.standing:
+            effects.append("faction standing has shifted (already real — see FACTION STANDING)")
+        if ev.encounter is not None:
+            effects.append("a fight now lies in wait (secret — never announce it)")
+        if ev.unlock_quest is not None:
+            effects.append("a new opportunity has opened (see the quest offers)")
+        if ev.retire_quest is not None:
+            effects.append("an opportunity has closed — it can no longer be taken up")
+        return {"announce": ev.announce, "briefing": ev.briefing,
+                "place_name": (node.name if node else ev.place), "present": present,
+                "effects": effects}
+
     def _compute_offers(self) -> tuple[dict, set, set]:
         """(authored defs, chain-eligible ids, offered-here ids) for this turn. Eligible is
         replay-derived from the log; here is eligible narrowed to quests whose source NPC is
@@ -351,6 +417,17 @@ class TurnLoop:
             tiers = {fid: faction_standing.tier_for(score)
                      for fid, score in self._faction_scores().items()}
             eligible = faction_standing.filter_offerable(eligible, authored, tiers)
+        # World-event overlay (living-world W4): a fired event can OPEN a quest
+        # (explicit unlock outranks chain/level/standing gates — the author
+        # scheduled it deliberately) or WITHDRAW one; retire always wins last.
+        # Quests already taken never re-offer, unlocked or not.
+        wev = getattr(self.session, "world_events", None) or {}
+        if wev:
+            unlocked, retired = timed_events.quest_overlay(
+                wev, self.session.store.read_all())
+            taken = offers.started_authored_ids(self.session.quests)
+            eligible |= {qid for qid in unlocked if qid in authored and qid not in taken}
+            eligible -= retired
         loc = self.session.location
         present = {n.id for n in self.repo.npcs() if loc is None or n.home_location == loc}
         return authored, eligible, offers.offered_here(eligible, authored, loc, present)
@@ -361,9 +438,13 @@ class TurnLoop:
         factions = getattr(self.session, "factions", None) or {}
         if not factions:
             return {}
+        events = self.session.store.read_all()
+        wev = getattr(self.session, "world_events", None) or {}
+        extra = (timed_events.standing_deltas(wev, factions, events)
+                 if wev else None)
         return faction_standing.standing_map(
-            factions, self.session.authored_quests,
-            self.session.store.read_all(), self.session.quests)
+            factions, self.session.authored_quests, events,
+            self.session.quests, extra=extra)
 
     def _faction_context(self) -> list[dict] | None:
         """The FACTION STANDING payload for build_context: every authored faction

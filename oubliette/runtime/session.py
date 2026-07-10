@@ -87,6 +87,8 @@ class Session:
                                              # standing derives from the log, never stored here
         self.travel_scale = None             # manifest two-pin journey-time calibration (W3);
                                              # the day count derives from the log, never stored
+        self.world_events: dict = {}         # {id: WorldEvent} the pack ships (living-world W4);
+                                             # fired-state derives from the log, never stored
 
     def _scene_for(self, location: str | None) -> str:
         """The prose for a location — the pack's opening text at the start spot
@@ -123,6 +125,7 @@ class Session:
             authored_quests = {q.id: q for q in world.quests}
             factions = {f.id: f for f in world.factions}
             travel_scale = world.travel_scale
+            world_events = {e.id: e for e in world.world_events}
             mechanics_catalog = world.mechanics_catalog
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
         else:
@@ -141,6 +144,7 @@ class Session:
             authored_quests = {}
             factions = {}
             travel_scale = None
+            world_events = {}
             mechanics_catalog = {}
             marker = {}
         canon = CanonStore()
@@ -216,6 +220,7 @@ class Session:
         session.authored_quests = authored_quests
         session.factions = factions
         session.travel_scale = travel_scale
+        session.world_events = world_events
         if events:
             replay(events, repo, canon, quests)   # existing session: rebuild to current
         else:

@@ -73,6 +73,20 @@
         },
         "once": false,
         "briefing": "The pack pours out of the undercroft — low shapes cutting between the ruined beams, circling to block the path back east."
+      },
+      {
+        "id": "mill_toughs",
+        "enemies": [
+          {
+            "ref": "road_bandit",
+            "count": 2
+          }
+        ],
+        "trigger": {
+          "when": "event"
+        },
+        "once": true,
+        "briefing": "Two Gray Hand toughs step out from behind the seized wheel, crowbars in hand — the mill has an owner now, and the party is trespassing. (Testbed fixture for world events — droppable before a release.)"
       }
     ]
   }
