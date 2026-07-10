@@ -323,6 +323,12 @@ class Action(_Strict):
     damage_type: str | None = None   # "slashing", "fire", ...
 
 
+class GrowthStage(_Strict):
+    """One authored growth step for a creature companion (companions S2)."""
+    to: str                          # the StatBlock id of the next form
+    at_party_level: int = 1          # unlocked when the strongest HERO reaches this level
+
+
 class StatBlock(_Strict):
     id: str
     name: str
@@ -375,6 +381,14 @@ class StatBlock(_Strict):
     # ("berserker", "coward", ...) or the id of a pack-authored AiProfile. None =
     # "default_monster". Resolved to an AIProfile by the Arena bridge.
     ai_profile: str | None = None
+
+    # --- authored growth (companions S2) ------------------------------------
+    # The next form(s) this creature can grow INTO when kept as a companion —
+    # "pseudodragon → adolescent → drake". Each stage names another StatBlock and
+    # the party level that unlocks it; chains live one hop per form (the adolescent
+    # block carries the drake stage). Unauthored creatures never grow — a loyal
+    # pet, not a scaling asset.
+    growth: list[GrowthStage] = Field(default_factory=list)
 
 
 # --- AI personalities --------------------------------------------------------

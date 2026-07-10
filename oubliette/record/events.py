@@ -56,6 +56,9 @@ class EventKind(str, Enum):
                                         # whole, D9), flagged companion=True; player-confirmed.
     COMPANION_DISMISSED = "companion_dismissed"  # a companion parts ways: carries the char id; the
                                         # character stays a plain NPC (where they GO is story, not state).
+    COMPANION_EVOLVED = "companion_evolved"  # a creature companion grew into its next authored form
+                                        # (companions S2): carries the rebuilt snapshot + the new
+                                        # StatBlock id (folded over npc_statblocks on reload).
 
 
 class StateOp(BaseModel):
@@ -211,6 +214,14 @@ def recruit_companion(payload: dict, repo: "Repository") -> None:
     repo.adopt_companion(Character.model_validate(payload["character"]))
 
 
+def evolve_companion(payload: dict, repo: "Repository") -> None:
+    """Apply a COMPANION_EVOLVED payload: the companion's rebuilt snapshot (its new
+    form's numbers on the same character) replaces them in the roster — the same
+    stored-whole contract as recruitment. The new StatBlock id in the payload is
+    session state, folded separately on open."""
+    recruit_companion(payload, repo)
+
+
 def dismiss_companion(payload: dict, repo: "Repository") -> None:
     """Apply a COMPANION_DISMISSED payload: clear the character's companion flag —
     they leave the party but remain a tracked NPC. Tolerant of a missing character
@@ -279,6 +290,9 @@ def apply_event(event: Event, repo: "Repository", canon: "CanonStore | None" = N
         return
     if event.kind == EventKind.COMPANION_RECRUITED.value:
         recruit_companion(event.payload, repo)
+        return
+    if event.kind == EventKind.COMPANION_EVOLVED.value:
+        evolve_companion(event.payload, repo)
         return
     if event.kind == EventKind.COMPANION_DISMISSED.value:
         dismiss_companion(event.payload, repo)

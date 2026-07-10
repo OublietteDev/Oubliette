@@ -772,7 +772,11 @@ function openEditor(kind, index) {
     editorCtx.sounds = ((original?.sounds) || []).map(c => ({ ...c }));
     editorCtx.battle = original?.battle ? JSON.parse(JSON.stringify(original.battle)) : null;
   }
-  if (kind === "statblocks") { editorCtx.loot = ((original?.loot) || []).filter(l => l.item).map(l => ({ item: l.item, qty: l.qty || 1 })); editorCtx.statblockId = original?.id || null; }
+  if (kind === "statblocks") {
+    editorCtx.loot = ((original?.loot) || []).filter(l => l.item).map(l => ({ item: l.item, qty: l.qty || 1 }));
+    editorCtx.growth = ((original?.growth) || []).map(g => ({ to: g.to, at_party_level: g.at_party_level || 1 }));
+    editorCtx.statblockId = original?.id || null;
+  }
   if (kind === "npcs") { editorCtx.inv = buildInvRows(original); editorCtx.original = original; editorCtx.statBlockSel = original?.stat_block || ""; }
   if (kind === "quests") {
     editorCtx.branches = ((original?.branches) || []).map(b => ({ ...b }));
@@ -1971,6 +1975,10 @@ function statblockForm(sb) {
       ${field("Special traits", `<input id="f_traits" value="${esc((v.traits || []).join(", "))}" placeholder="keen senses, pack tactics" />`, "Free-form notes, comma-separated. Real mechanical abilities (extra attacks, breath weapons) come from the attacks editor.")}
       ${field("Personality (how it fights)", `<select id="f_ai_profile">${aiProfileOptions(v.ai_profile)}</select>`,
               "Its battle behaviour. Built-in styles, or a personality you authored in “AI Personalities”. Competence (its attacks, spells, breath) is always automatic.")}
+      <div class="subform"><div class="sftitle">Growth — companion stages <span style="font-weight:400;opacity:.6">— optional</span></div>
+        <div class="help" style="margin-bottom:9px">If the party keeps this creature as a <b>companion</b>, it can grow into another creature of this world when the heroes reach a level — a pseudodragon becoming a drake. Author the next stage on <i>that</i> creature to continue the chain. A creature with no stages stays itself, loyally.</div>
+        <div id="growthList"></div>
+        <button class="btn mini" type="button" id="addGrowth">+ Add a growth stage</button></div>
       <div class="subform"><div class="sftitle">Combat moves</div>
         <div class="help" style="margin-bottom:9px">Attacks, multiattack, breath weapons & special abilities (and the raw-data editor for anything else) live in the combat editor.</div>
         <button class="btn" type="button" id="f_editcombat">⚔ Edit attacks &amp; special abilities…</button>
@@ -2007,10 +2015,28 @@ function renderLoot() {
   box.querySelectorAll("[data-loot-qty]").forEach(inp => inp.addEventListener("input", e => editorCtx.loot[+e.target.dataset.lootQty].qty = Number(e.target.value || 1)));
   box.querySelectorAll("[data-loot-del]").forEach(b => b.addEventListener("click", e => { editorCtx.loot.splice(+e.target.dataset.lootDel, 1); renderLoot(); }));
 }
+// Growth stages (companions S2): "grows into <creature> at party level <n>" rows.
+function renderGrowth() {
+  const box = document.getElementById("growthList");
+  const others = listOf("statblocks").filter(s => s.id !== editorCtx.statblockId);
+  const opts = sel => ['<option value="">(choose a creature)</option>',
+    ...others.map(s => `<option value="${esc(s.id)}"${s.id === sel ? " selected" : ""}>${esc(s.name)}</option>`)].join("");
+  box.innerHTML = editorCtx.growth.map((g, i) => `
+    <div class="loot-row">
+      <select data-gr-to="${i}">${opts(g.to)}</select>
+      <input data-gr-lvl="${i}" type="number" min="1" max="20" value="${g.at_party_level || 1}" title="at party level" />
+      <button class="btn mini danger" type="button" data-gr-del="${i}">✕</button>
+    </div>`).join("") || '<div class="nothing" style="margin:6px 0">No growth stages — it stays as it is.</div>';
+  box.querySelectorAll("[data-gr-to]").forEach(s => s.addEventListener("change", e => editorCtx.growth[+e.target.dataset.grTo].to = e.target.value));
+  box.querySelectorAll("[data-gr-lvl]").forEach(inp => inp.addEventListener("input", e => editorCtx.growth[+e.target.dataset.grLvl].at_party_level = Number(e.target.value || 1)));
+  box.querySelectorAll("[data-gr-del]").forEach(b => b.addEventListener("click", e => { editorCtx.growth.splice(+e.target.dataset.grDel, 1); renderGrowth(); }));
+}
 function wireStatblockForm(original) {
   document.querySelectorAll("#sbTabs .mtab").forEach(b =>
     b.addEventListener("click", () => showTab(b.dataset.tab)));
   renderLoot();
+  renderGrowth();
+  document.getElementById("addGrowth").addEventListener("click", () => { editorCtx.growth.push({ to: "", at_party_level: 1 }); renderGrowth(); });
   document.getElementById("addLoot").addEventListener("click", () => { editorCtx.loot.push({ item: "", qty: 1 }); renderLoot(); });
   document.getElementById("f_editcombat").addEventListener("click", () => editCombatFromForm(original));
   const fileInp = document.getElementById("f_portrait_file");
@@ -2100,6 +2126,10 @@ function confirmStatblock(original) {
   if (desc) base.description = desc; else delete base.description;
   const prof = document.getElementById("f_ai_profile").value;
   if (prof) base.ai_profile = prof; else delete base.ai_profile;
+  const growth = editorCtx.growth
+    .filter(g => g.to)
+    .map(g => ({ to: g.to, at_party_level: Math.max(1, Math.min(20, Number(g.at_party_level) || 1)) }));
+  if (growth.length) base.growth = growth; else delete base.growth;
   linkCreatedStatblock(base.id);                     // link back if authored from an NPC (Phase 4a)
   commitEntry("statblocks", original, base);
   return base.id;

@@ -37,5 +37,13 @@
       "waterskin": 4,
       "riding_gloves": 8
     }
+  },
+  {
+    "id": "stray_pup",
+    "name": "Scrap",
+    "stat_block": "wolf_pup",
+    "disposition": "hungry, hopeful, immediately underfoot",
+    "description": "A wolf pup that haunts the market scraps. (Testbed fixture for companion growth — droppable before a release.)",
+    "home_location": "brightvale_market"
   }
 ]

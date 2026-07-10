@@ -1321,6 +1321,16 @@ function addTrinketCard(t) {
   card.appendChild(b);
   row.appendChild(card); log.appendChild(row); scrollDown();
 }
+// A creature companion grew into its next authored form (companions S2) — a small
+// ceremony card beside the DM's narration of the moment.
+function addGrowthCard(g) {
+  const row = el("div", "row quest");
+  const card = el("div", "quest-card");
+  card.appendChild(el("span", "quest-kind", "🐉 Growth"));
+  card.appendChild(el("div", "quest-title", `${g.name} has grown!`));
+  card.appendChild(el("div", "quest-text", `${g.from} → ${g.to}`));
+  row.appendChild(card); log.appendChild(row); scrollDown();
+}
 // tiny markdown: **bold**, *italic* / _italic_, paragraph + line breaks
 function md(s) {
   let h = escapeHtml(s);
@@ -1691,6 +1701,7 @@ async function send(textOverride) {
     if (data.trade) openTrade(data.trade);
     (data.quest_beats || []).forEach(addQuestCard);
     (data.trinkets || []).forEach(addTrinketCard);
+    (data.growth || []).forEach(addGrowthCard);
     // One bar at a time (combat > wrap > rest > companion): a staged fight silences
     // proposals, and a wrap offer outranks the others if the DM somehow emits several.
     if (data.wrap_pending && !combatPending) showWrapBar();
@@ -1799,6 +1810,7 @@ async function enterArena() {
     if (data.soundscape) setSoundscape(data.soundscape);
     (data.quest_beats || []).forEach(addQuestCard);
     (data.trinkets || []).forEach(addTrinketCard);
+    (data.growth || []).forEach(addGrowthCard);
   } catch (e) {
     addMessage("System", "The Arena could not be reached: " + e, "system");
   } finally {

@@ -36,7 +36,11 @@ def test_load_pack_repository_equals_old_seed():
 
     assert pack_pc == seed_pc
     assert pack_items == seed_items                 # projected items == hand-coded items
-    assert pack_chars == seed_chars                 # PC + Thom, field-for-field
+    # Field-for-field parity for every seed character (PC + Thom). The pack may
+    # ALSO carry testbed fixtures the old seed never had (Scrap the stray pup) —
+    # extras don't weaken the projection-fidelity guarantee this test pins.
+    for cid, seeded in seed_chars.items():
+        assert pack_chars[cid] == seeded
 
 
 def test_load_pack_scene_and_metadata():
@@ -50,7 +54,11 @@ def test_default_session_matches_seed_and_pins_pack():
     """Session.open with no custom seed loads the pack and records pack id/version
     on the start marker, while producing the same baseline as the old seed."""
     session = Session.open(InMemoryEventStore())
-    assert _state(session.repo) == _state(seed_world())
+    sess_chars, sess_items, sess_pc = _state(session.repo)
+    seed_chars, seed_items, seed_pc = _state(seed_world())
+    assert (sess_pc, sess_items) == (seed_pc, seed_items)
+    for cid, seeded in seed_chars.items():          # extras (testbed fixtures) tolerated
+        assert sess_chars[cid] == seeded
     assert session.scene == DEFAULT_SCENE
 
     start = session.store.read_all()[0]

@@ -477,6 +477,7 @@ def _turn_payload(report) -> dict:
         "applied": [d for rt in report.applied if (d := _describe_applied(rt)) is not None],
         "quest_beats": _quest_beats(report),
         "trinkets": _trinket_beats(report),
+        "growth": list(getattr(report, "growth", []) or []),   # companions that grew this turn
         "combat": combat,
         "trade": report.trade_open.model_dump() if report.trade_open is not None else None,
         "meta_notice": report.meta_notice,

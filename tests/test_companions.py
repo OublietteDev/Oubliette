@@ -241,7 +241,72 @@ def test_context_lists_companions_and_unlists_them_as_locals():
     after = build_context(s.repo, s.scene, [], [], location=s.location,
                           places=s.places, time_of_day="day", weather="clear")
     assert "COMPANIONS" in after
-    assert "PRESENT" not in after                       # Thom was the only local
+    # He travels now: gone from the PRESENT locals (Scrap the pup remains one).
+    present = after[after.index("PRESENT"):] if "PRESENT" in after else ""
+    assert "merchant_thom" not in present
+
+
+# --- growth (S2): creatures climb authored tiers, people level ----------------
+# Brightvale ships the testbed chain: Scrap the stray pup (stat block wolf_pup,
+# CR 0) grows into a lean_wolf when the heroes reach level 2.
+
+def test_growth_waits_for_the_authored_threshold():
+    s = Session.open(InMemoryEventStore())
+    s.repo.set_level("pc", 1)                     # below the pup's level-2 threshold
+    s.emit_companion_recruited(s.repo.get_character("stray_pup"))
+    report = asyncio.run(_loop(s).take_turn("I scratch the pup behind the ears"))
+    assert report.growth == []
+    assert s.repo.get_character("stray_pup").damage == "1d3"      # still a pup
+
+
+def test_growth_fires_the_turn_the_heroes_cross_the_threshold():
+    s = Session.open(InMemoryEventStore())
+    s.repo.set_level("pc", 1)
+    s.emit_companion_recruited(s.repo.get_character("stray_pup"))
+    s.repo.set_level("pc", 2)
+    report = asyncio.run(_loop(s).take_turn("We set out for the gate"))
+    assert report.growth == [{"char_id": "stray_pup", "name": "Scrap",
+                              "from": "wolf pup", "to": "lean wolf"}]
+    scrap = s.repo.get_character("stray_pup")
+    assert (scrap.hp, scrap.max_hp, scrap.damage) == (9, 9, "2d4")  # the wolf's numbers
+    assert scrap.name == "Scrap"                                    # still THEIR pup
+    assert s.npc_statblocks["stray_pup"] == "lean_wolf"             # fights as the new form
+    kinds = [e.kind for e in s.store.read_all()]
+    assert EventKind.COMPANION_EVOLVED.value in kinds
+    # The moment is once: the next turn reports no growth (no further stages).
+    report2 = asyncio.run(_loop(s).take_turn("Onward"))
+    assert report2.growth == []
+
+
+def test_growth_survives_a_reload():
+    store = InMemoryEventStore()
+    s = Session.open(store)
+    s.emit_companion_recruited(s.repo.get_character("stray_pup"))
+    s.repo.set_level("pc", 2)                     # not event-sourced — but the evolve is
+    asyncio.run(_loop(s).take_turn("We set out"))
+    reloaded = Session.open(store)
+    scrap = reloaded.repo.get_character("stray_pup")
+    assert scrap.companion and scrap.max_hp == 9 and scrap.damage == "2d4"
+    assert reloaded.npc_statblocks["stray_pup"] == "lean_wolf"
+
+
+def test_growth_context_tells_the_dm_to_narrate_the_moment():
+    s = Session.open(InMemoryEventStore())
+    ctx = build_context(s.repo, s.scene, [], [],
+                        companion_growth=[{"char_id": "x", "name": "Scrap",
+                                           "from": "wolf pup", "to": "lean wolf"}])
+    assert "THIS TURN — GROWTH" in ctx and "Scrap" in ctx and "lean wolf" in ctx
+
+
+def test_creature_companions_never_dilute_the_xp_split():
+    """Person companions share combat XP at exact parity; a creature can't spend
+    XP, so it draws no share (keeping a pet must not tax the party's leveling)."""
+    s = Session.open(InMemoryEventStore())
+    s.emit_companion_recruited(s.repo.get_character("stray_pup"))
+    loop = _loop(s)
+    from oubliette.record.events import StateOp
+    ops = loop._split_combat_xp([StateOp.xp("pc", 100)], 100)
+    assert [(o.char, o.delta) for o in ops if o.op == "xp"] == [("pc", 100)]
 
 
 # --- the player's word: POST /api/companion -----------------------------------

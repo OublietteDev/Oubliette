@@ -48,6 +48,32 @@
     "description": "A desperate road-robber in patched leathers."
   },
   {
+    "id": "wolf_pup",
+    "name": "wolf pup",
+    "kind": "monster",
+    "cr": 0,
+    "abilities": {
+      "str": 6,
+      "dex": 14,
+      "con": 10,
+      "int": 3,
+      "wis": 10,
+      "cha": 7
+    },
+    "hp": 4,
+    "armor_class": 12,
+    "attack_bonus": 2,
+    "damage": "1d3",
+    "xp": 10,
+    "growth": [
+      {
+        "to": "lean_wolf",
+        "at_party_level": 2
+      }
+    ],
+    "description": "All paws and appetite; follows anyone who feeds it. (Testbed: grows into a lean wolf when the party reaches level 2.)"
+  },
+  {
     "id": "lean_wolf",
     "name": "lean wolf",
     "kind": "monster",

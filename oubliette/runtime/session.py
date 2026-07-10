@@ -18,7 +18,7 @@ from ..content.loader import DEFAULT_PACK, load_pack
 from ..quest.models import Quest, QuestStatus
 from ..quest.store import QuestStore
 from ..record.events import (Event, EventKind, StateOp, apply_ops,
-                             dismiss_companion, install_character,
+                             dismiss_companion, evolve_companion, install_character,
                              recruit_companion, relevel_character, replay)
 from ..record.store import EventStore
 from ..rules.chargen import build_character
@@ -155,9 +155,17 @@ class Session:
         difficulty = DEFAULT_DIFFICULTY
         force_ended = False
         campaign_ended = False
+        evolved_forms: dict[str, str] = {}   # {companion id -> current StatBlock id}
         for event in sorted(events, key=lambda e: e.seq):
             if event.kind == EventKind.LOCATION_CHANGED.value:
                 location = event.payload.get("to", location)
+            elif event.kind == EventKind.COMPANION_EVOLVED.value:
+                # A grown companion fights as its NEW form: fold the remap so the
+                # combat bridge resolves the current stat block after reload.
+                cid = event.payload.get("char_id")
+                sb = event.payload.get("to_statblock")
+                if cid and sb:
+                    evolved_forms[cid] = sb
             elif event.kind == EventKind.ENVIRONMENT_CHANGED.value:
                 time_of_day = event.payload.get("time_of_day", time_of_day)
                 weather = event.payload.get("weather", weather)
@@ -183,7 +191,7 @@ class Session:
         session.pack_name = pack_name
         session.statblocks = statblocks
         session.ai_profiles = ai_profiles
-        session.npc_statblocks = npc_statblocks
+        session.npc_statblocks = {**npc_statblocks, **evolved_forms}
         session.world_map = world_map
         session.bestiary_gate = bestiary_gate
         session.force_ended = force_ended
@@ -365,6 +373,20 @@ class Session:
         self.store.append(EventKind.COMPANION_RECRUITED, payload)
         recruit_companion(payload, self.repo)
         return self.repo.get_character(snap.id)
+
+    def emit_companion_evolved(self, snapshot: Character, to_statblock: str,
+                               from_name: str, to_name: str,
+                               reason: str = "grew into its next form") -> Character:
+        """Record-then-apply a COMPANION_EVOLVED event (companions S2): the rebuilt
+        snapshot (new form's numbers, same character) rides the event whole, and the
+        new StatBlock id remaps the combat bridge — live here, folded on reload."""
+        payload = {"character": snapshot.model_dump(mode="json"),
+                   "char_id": snapshot.id, "to_statblock": to_statblock,
+                   "from_name": from_name, "to_name": to_name, "reason": reason}
+        self.store.append(EventKind.COMPANION_EVOLVED, payload)
+        evolve_companion(payload, self.repo)
+        self.npc_statblocks = {**self.npc_statblocks, snapshot.id: to_statblock}
+        return self.repo.get_character(snapshot.id)
 
     def emit_companion_dismissed(self, char_id: str, reason: str = "parted ways") -> None:
         """Record-then-apply a COMPANION_DISMISSED event: the companion leaves the

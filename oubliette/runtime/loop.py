@@ -59,6 +59,8 @@ class TurnReport:
     rest_pending: str | None = None        # the DM proposed a rest: "short"|"long" (player confirms)
     companion_pending: dict | None = None  # the DM proposed a recruit/dismissal (player confirms):
                                            # {action, char_id, name, kind, origin, reason}
+    growth: list = field(default_factory=list)  # creature companions that grew THIS turn
+                                           # (S2 story moment): [{char_id, name, from, to}]
     session_force_ended: bool = False      # the DM terminally closed the game (force_end_session)
 
 
@@ -93,7 +95,7 @@ class TurnLoop:
         # not an empty head. Past sessions reach the DM as notes (W5), never as beats here.
         self.history: list[str] = recent_beats(session.store.read_all(), HISTORY_CAP)
 
-    def _build_context(self, player_text: str = "") -> str:
+    def _build_context(self, player_text: str = "", growth: list | None = None) -> str:
         """Assemble the per-turn DM context (state, scene, present NPCs, canon, quests,
         past-session notes, recent beats). Shared by `take_turn` and `wrap_session` so the
         DM writes its session notes with the same picture it plays from. Retrieves canon by
@@ -121,7 +123,8 @@ class TurnLoop:
             authored_quests=authored, offerable=eligible, offered_here=here,
             past_notes=past_notes, notebook=notebook_notes(events),
             difficulty=getattr(self.session, "difficulty", DEFAULT_DIFFICULTY),
-            rest_interrupted=rest_interrupted_recently(events))
+            rest_interrupted=rest_interrupted_recently(events),
+            companion_growth=growth)
 
     async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
         # A new in-character turn moves the fiction on: any standing rest grant
@@ -131,7 +134,11 @@ class TurnLoop:
             self.session.pending_rest = None
             self.session.pending_companion = None   # same contract: the proposal was
                                                     # for THAT moment, not a coupon
-        context = self._build_context(player_text)
+        # Companion growth (S2): an authored creature whose threshold the heroes just
+        # crossed grows NOW — the stats apply this instant (event recorded below the
+        # firewall), and the context tells the DM to narrate the transformation.
+        growth = [] if ooc else self._check_companion_growth()
+        context = self._build_context(player_text, growth=growth)
         # `ooc` is the player's explicit "out-of-character" signal (the composer
         # toggle). When set, the turn is table-talk — no model guessing, no combat
         # or trade — so in-character play is never mistaken for meta.
@@ -181,8 +188,44 @@ class TurnLoop:
         else:
             report = await self._resolve_turn(player_text, assessment, context, on_text=on_text)
 
+        report.growth = growth
         self._record_beat(report, caused_by=player_event.seq)
         return report
+
+    def _check_companion_growth(self) -> list[dict]:
+        """Creature companions whose authored growth threshold the heroes have
+        crossed grow into their next form NOW (companions S2): each hop emits a
+        COMPANION_EVOLVED event (snapshot + stat-block remap) and is reported so
+        the DM narrates the transformation this turn. Chains climb at most a few
+        hops per turn (a late recruit catching up); people never pass through
+        here — they level."""
+        from ..combat.arena_launch import _statblock_for
+        from ..rules.growth import eligible_stage, evolved_character
+        hero_level = max((c.level for c in self.repo.party() if not c.companion),
+                         default=1)
+        grown: list[dict] = []
+        for comp in list(self.repo.companions()):
+            if comp.sheet is not None:
+                continue
+            for _hop in range(3):
+                sb_id = self.session.npc_statblocks.get(comp.id)
+                sb = _statblock_for(self.session, sb_id) if sb_id else None
+                stage = eligible_stage(sb, hero_level) if sb is not None else None
+                if stage is None:
+                    break
+                new_sb = _statblock_for(self.session, stage.to)
+                if new_sb is None:
+                    self.debug.append("anomaly", stage="growth",
+                                      error=f"growth target {stage.to!r} is not a known "
+                                            f"stat block (authoring gap); {comp.name} stays "
+                                            f"a {sb.name}")
+                    break
+                snap = evolved_character(self.repo.get_character(comp.id), new_sb)
+                self.session.emit_companion_evolved(
+                    snap, to_statblock=new_sb.id, from_name=sb.name, to_name=new_sb.name)
+                grown.append({"char_id": comp.id, "name": comp.name,
+                              "from": sb.name, "to": new_sb.name})
+        return grown
 
     def _compute_offers(self) -> tuple[dict, set, set]:
         """(authored defs, chain-eligible ids, offered-here ids) for this turn. Eligible is
@@ -489,8 +532,14 @@ class TurnLoop:
         """RAW (5e DMG): combat XP is shared — total ÷ party size, with the remainder
         spread one-per-member so none is lost. `result_to_ops` credits the lead PC (the
         frozen Arena import is left untouched); here we replace that single XP op with a
-        per-member share. A solo party keeps the lead's op as-is."""
-        party = self.repo.party()
+        per-member share. A solo party keeps the lead's op as-is.
+
+        Person companions share at exact parity (companions S2 lock) — they level
+        like anyone. CREATURE companions don't draw a share: a wolf can't spend XP,
+        and letting it dilute the pool would tax the party for keeping a pet (its
+        growth is authored tiers, not XP)."""
+        party = [c for c in self.repo.party()
+                 if not (c.companion and c.sheet is None)]
         if not xp_award or len(party) <= 1:
             return ops
         ops = [op for op in ops if op.op != "xp"]      # drop the lead-only combat XP op

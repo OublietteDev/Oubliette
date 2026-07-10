@@ -189,7 +189,8 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   pending_rewards: list | None = None,
                   past_notes: list[str] | None = None,
                   notebook: list[str] | None = None,
-                  difficulty=None, rest_interrupted: bool = False) -> str:
+                  difficulty=None, rest_interrupted: bool = False,
+                  companion_growth: list | None = None) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -224,6 +225,13 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
         for c in companions:
             kind = "person" if c.sheet is not None else "creature"
             lines.append(f"  - {_party_line(c)} [{kind}, level {c.level}]")
+    for g in companion_growth or ():
+        # Companion growth (S2): the change is already real — code applied the new
+        # form's numbers this instant. The DM's job is the SCENE.
+        lines.append(f"THIS TURN — GROWTH: {g['name']} has just grown from "
+                     f"{g['from']} into {g['to']}, before the party's eyes. Weave the "
+                     "transformation into your narration NOW — make it a moment; the "
+                     "new form's numbers are already applied by code.")
     # The party's money is ONE shared purse (coin ops on any PC land here).
     lines.append(f"PARTY PURSE: {format_cp(repo.party_cp)} "
                  "(shared — any hero spends from it; 1 gp = 10 sp = 100 cp).")
