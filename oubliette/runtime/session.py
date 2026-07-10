@@ -71,6 +71,10 @@ class Session:
                                             # ({action: "recruit"|"dismiss", char_id, name, kind,
                                             # origin, reason}) — POST /api/companion confirms;
                                             # transient like pending_rest: a new turn invalidates it
+        self.pending_growth_note: list = []  # growth that happened OUTSIDE a turn (level-up /
+                                            # recruit endpoints) — the player already saw the 🐉
+                                            # card; the NEXT in-character turn hands these to the
+                                            # DM as a soft "acknowledge when it fits" note
         self.table: TableContract = DEFAULT_TABLE   # campaign's tone + content boundaries
         self.difficulty: DifficultySettings = DEFAULT_DIFFICULTY   # campaign's danger dials
         self.ruleset = None                  # the global SRD ruleset (chargen/sheet/derivation)

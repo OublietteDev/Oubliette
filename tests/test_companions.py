@@ -290,12 +290,37 @@ def test_growth_survives_a_reload():
     assert reloaded.npc_statblocks["stray_pup"] == "lean_wolf"
 
 
+def test_recruiting_past_the_threshold_grows_at_the_door():
+    """Growth that happens at an ENDPOINT (recruit/level-up) lands its card in the
+    endpoint's response — not welded onto the player's next unrelated message —
+    and leaves the DM a pending note for the next turn (playtest feedback)."""
+    assert client.post("/api/new", json={}).json()["ok"]        # default party: level 3
+    GAME.session.pending_companion = {
+        "action": "recruit", "char_id": "stray_pup", "name": "Scrap",
+        "kind": "creature", "origin": "recruited", "reason": "test"}
+    d = client.post("/api/companion", json={"accept": True}).json()
+    assert d["growth"] == [{"char_id": "stray_pup", "name": "Scrap",
+                            "from": "wolf pup", "to": "lean wolf"}]
+    assert GAME.session.repo.get_character("stray_pup").damage == "2d4"
+    assert GAME.session.pending_growth_note == d["growth"]      # the DM's soft note waits
+
+
+def test_the_next_turn_consumes_the_pending_note_without_recarding():
+    s = Session.open(InMemoryEventStore())
+    note = [{"char_id": "stray_pup", "name": "Scrap", "from": "wolf pup", "to": "lean wolf"}]
+    s.pending_growth_note = list(note)
+    report = asyncio.run(_loop(s).take_turn("I browse Thom's belts"))
+    assert s.pending_growth_note == []                          # handed to the DM once
+    assert report.growth == []                                  # no duplicate 🐉 card
+
+
 def test_growth_context_tells_the_dm_to_narrate_the_moment():
     s = Session.open(InMemoryEventStore())
     ctx = build_context(s.repo, s.scene, [], [],
                         companion_growth=[{"char_id": "x", "name": "Scrap",
                                            "from": "wolf pup", "to": "lean wolf"}])
-    assert "THIS TURN — GROWTH" in ctx and "Scrap" in ctx and "lean wolf" in ctx
+    assert "GROWTH: Scrap" in ctx and "lean wolf" in ctx
+    assert "Never derail" in ctx        # the fiction bends to the player, not vice versa
 
 
 def test_creature_companions_never_dilute_the_xp_split():

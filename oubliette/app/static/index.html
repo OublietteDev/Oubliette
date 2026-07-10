@@ -1913,6 +1913,7 @@ async function answerCompanion(accept) {
         ? `🎒 ${data.name} joins the party.`
         : `👋 ${data.name} parts ways with the party.`, "system");
     }
+    (data.growth || []).forEach(addGrowthCard);   // recruited past a threshold → grows on the spot
     if (data.state) renderState(data.state);
   } catch (e) { addMessage("System", "That didn't go through: " + e, "system"); }
 }
@@ -4557,6 +4558,7 @@ async function confirmLevelUp() {
   renderSheet({ party: data.party });
   if (data.state) renderState(data.state);
   addMessage("System", `You advance to level ${luPlan.next_level}.`, "system");
+  (data.growth || []).forEach(addGrowthCard);   // a threshold crossed = the card lands NOW
 }
 $("lu-cancel").addEventListener("click", closeLevelUp);
 $("lu-confirm").addEventListener("click", confirmLevelUp);

@@ -1821,15 +1821,22 @@ async def post_companion(body: CompanionIn) -> JSONResponse:
             GAME.session.emit_companion_recruited(
                 char, origin=pending.get("origin") or "recruited",
                 reason=pending.get("reason") or "joined the party")
+            # A creature recruited into a party already past its threshold grows
+            # on the spot — card now, DM note next turn (same contract as level-up).
+            grown = GAME.loop._check_companion_growth()
+            if grown:
+                GAME.session.pending_growth_note += grown
         else:
             if not char.companion:
                 return JSONResponse({"ok": False, "error": f"{char.name} isn't a "
                                      "companion"}, status_code=409)
+            grown = []
             GAME.session.emit_companion_dismissed(
                 char.id, reason=pending.get("reason") or "parted ways")
         return JSONResponse({"ok": True, "accepted": True,
                              "action": pending["action"],
-                             "name": char.name, "state": _snapshot()})
+                             "name": char.name, "state": _snapshot(),
+                             "growth": grown})
 
 
 class PrepareSpellsIn(BaseModel):
@@ -1904,8 +1911,15 @@ async def post_levelup(body: LevelUpIn) -> JSONResponse:
         except LevelUpError as e:
             return JSONResponse({"ok": False, "errors": e.errors}, status_code=400)
         GAME.session.emit_character_leveled(leveled)
+        # Companion growth (S2): a level-up can cross a creature's authored
+        # threshold — grow them NOW so the player sees the 🐉 card with the
+        # level-up, not welded onto their next unrelated message. The DM gets a
+        # pending note to acknowledge it in the fiction next turn.
+        grown = GAME.loop._check_companion_growth()
+        if grown:
+            GAME.session.pending_growth_note += grown
         return JSONResponse({"ok": True, "party": [_sheet_member(c, rs) for c in GAME.session.repo.party()],
-                             "state": _snapshot()})
+                             "state": _snapshot(), "growth": grown})
 
 
 @app.post("/api/chargen/preview")

@@ -227,11 +227,14 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
             lines.append(f"  - {_party_line(c)} [{kind}, level {c.level}]")
     for g in companion_growth or ():
         # Companion growth (S2): the change is already real — code applied the new
-        # form's numbers this instant. The DM's job is the SCENE.
-        lines.append(f"THIS TURN — GROWTH: {g['name']} has just grown from "
-                     f"{g['from']} into {g['to']}, before the party's eyes. Weave the "
-                     "transformation into your narration NOW — make it a moment; the "
-                     "new form's numbers are already applied by code.")
+        # form's numbers, and the player has already seen a Growth card. The DM's
+        # job is the SCENE — but never at the expense of what the player is doing.
+        lines.append(f"GROWTH: {g['name']} has just grown from {g['from']} into "
+                     f"{g['to']} — the change is real and the player has been told. "
+                     "Acknowledge it in the fiction when it fits this turn: if the "
+                     "player's action leaves room, make it a small moment; if they're "
+                     "busy with something else, a passing line is enough. Never derail "
+                     "their intent for it.")
     # The party's money is ONE shared purse (coin ops on any PC land here).
     lines.append(f"PARTY PURSE: {format_cp(repo.party_cp)} "
                  "(shared — any hero spends from it; 1 gp = 10 sp = 100 cp).")

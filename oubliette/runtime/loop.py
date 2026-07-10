@@ -138,9 +138,15 @@ class TurnLoop:
                                                     # for THAT moment, not a coupon
         # Companion growth (S2): an authored creature whose threshold the heroes just
         # crossed grows NOW — the stats apply this instant (event recorded below the
-        # firewall), and the context tells the DM to narrate the transformation.
+        # firewall), and the DM is handed a note to work the change into the story.
+        # Growth that already happened at an endpoint (level-up, recruit) waits here
+        # as a pending note: the player saw its card then; the DM learns of it now.
         growth = [] if ooc else self._check_companion_growth()
-        context = self._build_context(player_text, growth=growth)
+        notes = growth
+        if not ooc and self.session.pending_growth_note:
+            notes = self.session.pending_growth_note + growth
+            self.session.pending_growth_note = []
+        context = self._build_context(player_text, growth=notes)
         # `ooc` is the player's explicit "out-of-character" signal (the composer
         # toggle). When set, the turn is table-talk — no model guessing, no combat
         # or trade — so in-character play is never mistaken for meta.
