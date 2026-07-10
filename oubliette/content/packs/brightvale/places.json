@@ -13,7 +13,10 @@
         "label": "north toward the gate"
       }
     ],
-    "position": null
+    "position": {
+      "x": 50,
+      "y": 60
+    }
   },
   {
     "id": "brightvale_gate",
@@ -32,7 +35,10 @@
         "label": "west along the stream to the old mill"
       }
     ],
-    "position": null
+    "position": {
+      "x": 52,
+      "y": 40
+    }
   },
   {
     "id": "brightvale_old_mill",
@@ -48,7 +54,10 @@
         "label": "east along the stream to the gate"
       }
     ],
-    "position": null,
+    "position": {
+      "x": 15,
+      "y": 35
+    },
     "encounters": [
       {
         "id": "mill_wolves",

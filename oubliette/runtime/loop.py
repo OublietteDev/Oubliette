@@ -33,6 +33,7 @@ from ..table import render_table_prompt
 from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
 from ..trade.schemas import TradeState
 from ..trade.service import build_state, has_stock
+from ..world import clock as world_clock
 from ..world import factions as faction_standing
 from ..world import keyed as keyed_triggers
 from .session import Session
@@ -138,7 +139,8 @@ class TurnLoop:
             keyed_directive=({"names": self._keyed_names(keyed),
                               "briefing": keyed.briefing}
                              if keyed is not None else None),
-            factions=self._faction_context())
+            factions=self._faction_context(),
+            day=world_clock.current_day(events))
 
     async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
         # A new in-character turn moves the fiction on: any standing rest grant

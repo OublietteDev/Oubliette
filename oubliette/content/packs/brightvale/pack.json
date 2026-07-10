@@ -5,5 +5,10 @@
   "version": "1.0.0",
   "author": "OublietteDev",
   "description": "A starter market town — the Phase 0 seed, migrated to data.",
-  "entry_scenario": "brightvale_market"
+  "entry_scenario": "brightvale_market",
+  "travel_scale": {
+    "a": "brightvale_gate",
+    "b": "brightvale_old_mill",
+    "days": 1
+  }
 }

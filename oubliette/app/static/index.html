@@ -35,6 +35,13 @@
     white-space: nowrap;
   }
   header .world-name:empty { display: none; }
+  /* The campaign day (living-world W3) — sits in the header's open middle. */
+  header .day-badge {
+    font-family: var(--serif); font-size: 13px; color: var(--gold);
+    border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px;
+    background: var(--panel); letter-spacing: .4px; white-space: nowrap;
+  }
+  header .day-badge:empty { display: none; }
   header .spacer { flex: 1; }
   .badge {
     font-size: 11px; color: var(--muted); border: 1px solid var(--line);
@@ -808,6 +815,7 @@
       <div class="tag">Join the Phantom's Table</div>
     </div>
     <div class="world-name" id="world-name" title="The world you're playing"></div>
+    <div class="day-badge" id="day-badge" title="The campaign's day — nights slept and roads travelled move it"></div>
     <div class="spacer"></div>
     <div class="sound-wrap">
       <button class="act" id="sound-btn" title="Sound">🔈 Enable sound</button>
@@ -1573,6 +1581,7 @@ function renderState(s) {
   // Header: the world/pack you're playing. Location breadcrumb: parent > sublocation,
   // with the innermost spot highlighted — a quick "where am I" for the scene card.
   $("world-name").textContent = s.pack_name || "";
+  $("day-badge").textContent = s.day ? `Day ${s.day}` : "";   // the world clock (W3)
   const locEl = $("scene-loc"); locEl.innerHTML = "";
   const trail = s.location_trail || [];
   trail.forEach((name, i) => {

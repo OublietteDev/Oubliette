@@ -163,6 +163,12 @@ def _location_trail() -> list[str]:
     return chain
 
 
+def _current_day() -> int:
+    """The campaign's day number (living-world W3), a pure derivation."""
+    from ..world.clock import current_day
+    return current_day(GAME.session.store.read_all())
+
+
 def _snapshot() -> dict:
     repo = GAME.session.repo
     pc = repo.pc()
@@ -189,6 +195,9 @@ def _snapshot() -> dict:
         "combat_pending": GAME.session.pending_combat is not None,
         "time_of_day": GAME.session.time_of_day,
         "weather": GAME.session.weather,
+        # The world clock (living-world W3): 1-based campaign day, derived from
+        # the log (nights slept + journey time) — correct even for old saves.
+        "day": _current_day(),
         # Rest gating (S3): the UI's Long Rest button routes through the story
         # on a gated table; "free" keeps the direct one-click rest.
         "rest_strictness": GAME.session.difficulty.rest_strictness,
@@ -1808,6 +1817,12 @@ async def post_rest(body: RestIn) -> JSONResponse:
                 ops += short_rest_ops(char, rs, spend_hit_dice=hd, rng=GAME.rng)
         GAME.session.emit_state(EventKind.REST_TAKEN, ops + cost_ops, rest=effective,
                                 interrupted=interrupted, cost=cost_desc)
+        # The world clock (living-world W3): a night consumed — long, or long
+        # ATTEMPTED and interrupted — rolls the world to next morning. The day
+        # number derives from the REST_TAKEN record itself; here we only turn
+        # the sky, so the DM and the soundscape wake with the party.
+        if (effective == "long" or interrupted) and GAME.session.time_of_day != "day":
+            GAME.session.emit_environment("day", None, reason="morning comes")
         if gated:
             GAME.session.pending_rest = None            # the grant is spent
         return JSONResponse({"ok": True, "party": [_sheet_member(c, rs) for c in GAME.session.repo.party()],

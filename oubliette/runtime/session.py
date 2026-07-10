@@ -85,6 +85,8 @@ class Session:
                                              # not canon); deterministic baseline, re-seeded on open
         self.factions: dict = {}             # {id: Faction} the pack ships (living-world W2);
                                              # standing derives from the log, never stored here
+        self.travel_scale = None             # manifest two-pin journey-time calibration (W3);
+                                             # the day count derives from the log, never stored
 
     def _scene_for(self, location: str | None) -> str:
         """The prose for a location — the pack's opening text at the start spot
@@ -120,6 +122,7 @@ class Session:
             bestiary_gate = world.bestiary_gate
             authored_quests = {q.id: q for q in world.quests}
             factions = {f.id: f for f in world.factions}
+            travel_scale = world.travel_scale
             mechanics_catalog = world.mechanics_catalog
             marker = {"pack_id": world.pack_id, "pack_version": world.pack_version}
         else:
@@ -137,6 +140,7 @@ class Session:
             bestiary_gate = None
             authored_quests = {}
             factions = {}
+            travel_scale = None
             mechanics_catalog = {}
             marker = {}
         canon = CanonStore()
@@ -211,6 +215,7 @@ class Session:
         session.mechanics_catalog = mechanics_catalog
         session.authored_quests = authored_quests
         session.factions = factions
+        session.travel_scale = travel_scale
         if events:
             replay(events, repo, canon, quests)   # existing session: rebuild to current
         else:
@@ -219,8 +224,19 @@ class Session:
 
     def emit_travel(self, to: str, reason: str) -> None:
         """Move the party to another Place (the DM's `travel` tool). Records a
-        LOCATION_CHANGED event, then updates the current location + scene."""
-        self.store.append(EventKind.LOCATION_CHANGED, {"to": to, "reason": reason})
+        LOCATION_CHANGED event, then updates the current location + scene.
+
+        The journey's TIME (living-world W3) is computed here, at emit time,
+        and stored ON the event — so the world clock derives identically on
+        replay even if the map or its calibration changes later. Zero-cost
+        moves (sublocations, uncalibrated maps) carry no `days` field."""
+        from ..world import clock
+        payload: dict = {"to": to, "reason": reason}
+        days = clock.travel_days(self.places or {}, self.travel_scale,
+                                 self.location, to)
+        if days > 0:
+            payload["days"] = days
+        self.store.append(EventKind.LOCATION_CHANGED, payload)
         self.location = to
         self.scene = self._scene_for(to)
 

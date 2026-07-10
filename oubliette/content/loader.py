@@ -28,7 +28,8 @@ from ..state.models import Character, Item as StateItem, ItemStack
 from ..state.repository import InMemoryRepository
 from .ruleset import _VALID_SKILLS, Ruleset, load_ruleset
 from .schemas import (NPC, AiProfile, AuthoredQuest, BattleMap, BestiaryGate,
-                      Faction, Item, Lore, Place, PackManifest, Scenario, StatBlock)
+                      Faction, Item, Lore, Place, PackManifest, Scenario, StatBlock,
+                      TravelScale)
 from .srd_schemas import Background, PackSpell, SrdEquipment
 
 DEFAULT_PACK = "brightvale"
@@ -84,6 +85,8 @@ class LoadedWorld:
     pack_id: str
     pack_version: str
     world_map: str | None = None   # the top-level map background image filename (manifest)
+    travel_scale: "TravelScale | None" = None  # manifest two-pin journey-time
+                                   # calibration (living-world W3); None = travel is free
     ruleset: Ruleset | None = None  # the global SRD ruleset (chargen/sheet/derivation)
     pack_name: str = ""            # the pack's display name (manifest.name; bestiary source label)
     statblocks: tuple = ()         # the pack's authored StatBlocks (this-world bestiary section)
@@ -287,6 +290,33 @@ def _lint_keyed_encounters(places: list[Place], statblocks: list[StatBlock],
                 elif norm(e.ref) not in known:
                     errors.append(f"{where} enemy ref {e.ref!r} is neither a stat "
                                   f"block (pack or SRD) nor a pack NPC")
+
+
+def _lint_travel_scale(manifest: PackManifest | None, places: list[Place],
+                       errors: list[str]) -> None:
+    """The two-pin travel calibration (living-world W3): both places exist,
+    are distinct, carry pins, and sit as SIBLINGS on one map — the calibration
+    defines that map's scale, so a cross-map pair is meaningless."""
+    scale = getattr(manifest, "travel_scale", None) if manifest else None
+    if scale is None:
+        return
+    by_id = {p.id: p for p in places}
+    where = "pack.json: travel_scale"
+    if scale.a == scale.b:
+        errors.append(f"{where} needs two DIFFERENT places")
+        return
+    pa, pb = by_id.get(scale.a), by_id.get(scale.b)
+    for label, ref, node in (("a", scale.a, pa), ("b", scale.b, pb)):
+        if node is None:
+            errors.append(f"{where}.{label} references unknown place {ref!r}")
+        elif not (isinstance(node.position, dict)
+                  and isinstance(node.position.get("x"), (int, float))
+                  and isinstance(node.position.get("y"), (int, float))):
+            errors.append(f"{where}.{label} place {ref!r} has no map pin — "
+                          "place it on the map first")
+    if pa is not None and pb is not None and pa.parent != pb.parent:
+        errors.append(f"{where}: {scale.a!r} and {scale.b!r} sit on different "
+                      "maps — pick two pins on the SAME map")
 
 
 def _lint_factions(factions: list[Faction], npcs: list[NPC],
@@ -573,6 +603,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     _lint(manifest, items, statblocks, npcs, places, scenarios, quests, errors)
     _lint_keyed_encounters(places, statblocks, npcs, ruleset, errors)
     _lint_factions(factions, npcs, statblocks, quests, errors)
+    _lint_travel_scale(manifest, places, errors)
     _dup_ids(lore, "lore", errors)        # subjects are free-form, so only ids are checked
     _dup_ids(ai_profiles, "ai_profiles", errors)
     _lint_backgrounds(backgrounds, items, ruleset, errors)
@@ -623,6 +654,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
         repository=repo, canon=_authored_canon(npcs, places, lore), scene=scene,
         location=scenario.start_location, places=place_nodes,
         pack_id=manifest.id, pack_version=manifest.version, world_map=manifest.world_map,
+        travel_scale=manifest.travel_scale,
         ruleset=ruleset,
         pack_name=manifest.name, statblocks=tuple(statblocks),
         bestiary_gate=manifest.bestiary_gate, quests=tuple(quests),

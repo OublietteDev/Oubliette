@@ -33,6 +33,19 @@ class BestiaryGate(_Strict):
     max_known_cr: float = 0.0        # CR ≤ this is always known; above it is gated
 
 
+class TravelScale(_Strict):
+    """Two-pin travel calibration (living-world W3): the author picks two pinned
+    places on ONE map and states the days of travel between them — every other
+    distance on that same map derives from it. Journeys on the calibrated map
+    cost time (quantized to half-days); moves on uncalibrated maps (inside a
+    town, an unmeasured region) cost nothing. No calibration = travel is free
+    and the world clock still runs on rests."""
+
+    a: str                           # -> Place id (pinned)
+    b: str                           # -> Place id (pinned, sibling of a)
+    days: float = Field(gt=0, le=365)  # travel days between the two pins
+
+
 class PackManifest(_Strict):
     id: str
     schema_version: int              # this doc defines version 1
@@ -47,6 +60,8 @@ class PackManifest(_Strict):
     recommended_difficulty: str | None = None   # the author's suggested preset
                                      # ("story"/"adventure"/"challenge"/"hardcore");
                                      # pre-selected at New Game, never binding
+    travel_scale: TravelScale | None = None   # two-pin travel-time calibration (W3);
+                                     # None = journeys cost no time
 
 
 # --- items -------------------------------------------------------------------

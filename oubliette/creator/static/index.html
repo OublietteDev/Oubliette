@@ -4168,6 +4168,32 @@ function currentBg() {
   const p = placeById(a); return p ? (p.map_image || null) : null;
 }
 
+// Two-pin travel calibration (living-world W3): pick two PINNED places on the
+// map being viewed and state the days between them — every other journey on
+// that map derives its time from the pair. One scale per world (it lives in
+// the manifest); setting it from another level moves the calibration there.
+function tsLabel(ts) { return `${placeName(ts.a)} ↔ ${placeName(ts.b)} = ${ts.days} day(s)`; }
+function travelScaleRow(places) {
+  const pinned = places.filter(p => p.position && typeof p.position.x === "number");
+  const ts = (state.contents.pack || {}).travel_scale || null;
+  const onThisMap = ts && pinned.some(p => p.id === ts.a) && pinned.some(p => p.id === ts.b);
+  if (pinned.length < 2) {
+    return ts ? `<div class="map-hint" style="margin-bottom:8px">🕰 Travel scale: ${esc(tsLabel(ts))}
+      <button class="btn mini danger" id="tsClear" style="margin-left:8px">Remove</button></div>` : "";
+  }
+  const opts = key => pinned.map(p =>
+    `<option value="${esc(p.id)}"${onThisMap && ts[key] === p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("");
+  return `<div class="map-hint" style="margin-bottom:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+    <span>🕰 Travel scale:</span>
+    <select id="tsA">${opts("a")}</select> <span>↔</span> <select id="tsB">${opts("b")}</select>
+    <span>=</span> <input id="tsDays" type="number" min="0.5" max="365" step="0.5" value="${ts ? ts.days : 1}" style="width:76px" />
+    <span>day(s) of travel</span>
+    <button class="btn mini" id="tsSet">${onThisMap ? "Update" : "Set"}</button>
+    ${ts ? `<button class="btn mini danger" id="tsClear">Remove</button>` : ""}
+    <span style="opacity:.65">${ts && !onThisMap ? `currently: ${esc(tsLabel(ts))} (another map)` :
+      "pick two pins and say how far apart they are — every other journey here derives. No scale = travel takes no time."}</span>
+  </div>`;
+}
 function openMap() { if (!state.contents) return; mapPath = []; document.getElementById("mapScrim").classList.add("open"); renderMap(); }
 function closeMap() { document.getElementById("mapScrim").classList.remove("open"); }
 
@@ -4204,6 +4230,7 @@ function renderMap() {
         <input type="file" id="mapBgFile" accept="image/png,image/jpeg,image/webp" style="display:none" />
       </div>
     </div>
+    ${travelScaleRow(places)}
     <div class="map-hint" style="margin-bottom:8px">Drag pins to place them${inside ? "" : "; double-click a ★ area to arrange the places inside it"}. Hover a pin for its name &amp; description.</div>
     <div class="map-canvas" id="mapCanvas">
       <div class="map-stage" id="mapStage">${bgImg}<svg class="map-edges" id="mapEdges"></svg>${pins}</div>
@@ -4215,6 +4242,22 @@ function renderMap() {
   body.querySelectorAll("[data-node]").forEach(el => {
     el.addEventListener("pointerdown", e => startNodeDrag(e, el));
     el.addEventListener("dblclick", () => { const id = el.dataset.node; if (currentAreaId() == null && hasChildren(id)) { mapPath = [id]; renderMap(); } });
+  });
+  const tsSet = document.getElementById("tsSet");
+  if (tsSet) tsSet.addEventListener("click", () => {
+    const a = document.getElementById("tsA").value, b = document.getElementById("tsB").value;
+    const days = Number(document.getElementById("tsDays").value || 0);
+    if (a === b) { toast("Pick two different places."); return; }
+    if (!(days > 0)) { toast("How many days of travel sit between them?"); return; }
+    state.contents.pack.travel_scale = { a, b, days };
+    markDirty(); renderMap();
+    toast("Travel scale set — journeys on this map now take time.");
+  });
+  const tsClear = document.getElementById("tsClear");
+  if (tsClear) tsClear.addEventListener("click", () => {
+    delete state.contents.pack.travel_scale;
+    markDirty(); renderMap();
+    toast("Travel scale removed — journeys take no time again.");
   });
   document.getElementById("mapBgSet").addEventListener("click", () => document.getElementById("mapBgFile").click());
   document.getElementById("mapBgFile").addEventListener("change", e => { if (e.target.files[0]) onChooseMapBg(e.target.files[0]); });

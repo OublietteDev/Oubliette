@@ -202,7 +202,8 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   difficulty=None, rest_interrupted: bool = False,
                   companion_growth: list | None = None,
                   keyed_directive: dict | None = None,
-                  factions: list | None = None) -> str:
+                  factions: list | None = None,
+                  day: int | None = None) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -218,8 +219,14 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
     if scene:
         lines.append(f"SCENE: {scene}")
     if time_of_day or weather:
-        lines.append(f"ENVIRONMENT: it is {time_of_day or 'day'}, weather {weather or 'clear'} "
-                     f"(these carry forward on their own; emit set_environment only when the story turns them).")
+        # The day number (living-world W3) is CODE-OWNED: long rests and travel
+        # move it, set_environment does not — the DM colors the hours, the
+        # engine counts the days.
+        day_label = f"Day {day} — " if day else ""
+        lines.append(f"ENVIRONMENT: {day_label}it is {time_of_day or 'day'}, weather {weather or 'clear'} "
+                     f"(these carry forward on their own; emit set_environment only when the story turns them"
+                     + (", and the day number advances by itself when the party sleeps or travels)."
+                        if day else ")."))
     if keyed_directive is not None:
         # Keyed encounter (living-world W1): the ENGINE decided this fight fires —
         # already evaluated, already certain. The DM's whole job this turn is the
