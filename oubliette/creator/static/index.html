@@ -4181,12 +4181,15 @@ function travelScaleRow(places) {
     return ts ? `<div class="map-hint" style="margin-bottom:8px">🕰 Travel scale: ${esc(tsLabel(ts))}
       <button class="btn mini danger" id="tsClear" style="margin-left:8px">Remove</button></div>` : "";
   }
-  const opts = key => pinned.map(p =>
-    `<option value="${esc(p.id)}"${onThisMap && ts[key] === p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("");
+  // A calibration living on ANOTHER map must not masquerade as this map's:
+  // blank pickers + a fresh day count here; only the note names the real one.
+  const opts = key => (onThisMap ? "" : `<option value="">(choose a place)</option>`)
+    + pinned.map(p =>
+      `<option value="${esc(p.id)}"${onThisMap && ts[key] === p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("");
   return `<div class="map-hint" style="margin-bottom:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap">
     <span>🕰 Travel scale:</span>
     <select id="tsA">${opts("a")}</select> <span>↔</span> <select id="tsB">${opts("b")}</select>
-    <span>=</span> <input id="tsDays" type="number" min="0.5" max="365" step="0.5" value="${ts ? ts.days : 1}" style="width:76px" />
+    <span>=</span> <input id="tsDays" type="number" min="0.5" max="365" step="0.5" value="${onThisMap ? ts.days : 1}" style="width:76px" />
     <span>day(s) of travel</span>
     <button class="btn mini" id="tsSet">${onThisMap ? "Update" : "Set"}</button>
     ${ts ? `<button class="btn mini danger" id="tsClear">Remove</button>` : ""}
@@ -4247,6 +4250,7 @@ function renderMap() {
   if (tsSet) tsSet.addEventListener("click", () => {
     const a = document.getElementById("tsA").value, b = document.getElementById("tsB").value;
     const days = Number(document.getElementById("tsDays").value || 0);
+    if (!a || !b) { toast("Pick two places first."); return; }
     if (a === b) { toast("Pick two different places."); return; }
     if (!(days > 0)) { toast("How many days of travel sit between them?"); return; }
     state.contents.pack.travel_scale = { a, b, days };
