@@ -230,6 +230,136 @@ def test_companions_are_staged_player_side_with_writeback():
     assert "merchant_thom" in pending.plan.persistent_ids.values()
 
 
+# --- rich kits (rider): creatures fight with their stat-block kit -------------
+# Brightvale ships the testbed: lean_wolf carries an authored combat file
+# (monsters/lean_wolf.json — a Bite that knocks prone, Pack Tactics), so a grown
+# Scrap fights player-side with the real kit instead of the flat one-swing
+# mapping. People are told apart by their class sheet — the same line the
+# companion door draws.
+
+def _stage(s, allies=()):
+    from oubliette.combat.arena_launch import stage_combat
+    from oubliette.combat.schemas import EncounterRequest, EnemyRef, TerrainSpec
+
+    req = EncounterRequest(kind="ambush", enemies=[EnemyRef(ref="road bandit", count=1)],
+                           allies=list(allies), terrain=TerrainSpec(kind="open"))
+    return stage_combat(req, s.repo, s).pending
+
+
+def _staged(pending):
+    """{display name -> (entry, creature)} loaded back from the externalized
+    files exactly the way the Arena's manager routes them — by path segment,
+    subclass-aware — so a mis-routed file shows up as the wrong model here."""
+    import json
+    from pathlib import Path
+
+    from arena.models.character import PlayerCharacter
+    from arena.models.encounter import Encounter
+    from arena.models.monster import Monster
+
+    enc = Encounter.model_validate(json.loads(pending.encounter_path.read_text("utf-8")))
+    out = {}
+    for entry in enc.combatants:
+        data = json.loads(Path(entry.creature_id).read_text(encoding="utf-8"))
+        model = PlayerCharacter if "characters" in entry.creature_id else Monster
+        out[entry.name_override] = (entry, model.model_validate(data))
+    return out
+
+
+def test_a_grown_companion_fights_with_its_authored_kit():
+    from arena.models.monster import Monster
+
+    s = Session.open(InMemoryEventStore())
+    s.repo.set_level("pc", 1)
+    s.emit_companion_recruited(s.repo.get_character("stray_pup"))
+    s.repo.set_level("pc", 2)
+    asyncio.run(_loop(s).take_turn("We set out for the gate"))   # Scrap -> lean wolf
+    s.repo.set_hp("stray_pup", 5)                                # carries a wound in
+    pending = _stage(s)
+    entry, scrap = _staged(pending)["Scrap"]
+    assert entry.team == "player"
+    assert "monsters" in entry.creature_id           # routed by TYPE, not team
+    assert isinstance(scrap, Monster)
+    assert scrap.is_player_controlled                # the radial drives it, not the AI
+    bite = next(a for a in scrap.actions if a.name == "Bite")
+    assert bite.conditions_applied == ["prone"]      # the authored kit came through
+    assert any(getattr(ab, "attack_advantage_when_ally_adjacent", False)
+               for ab in scrap.special_abilities)    # Pack Tactics, engine-wired
+    # The CHARACTER owns the HP pool (wounds persist via the write-back)...
+    assert (scrap.current_hit_points, scrap.max_hit_points) == (5, 9)
+    assert scrap.experience_points == 0              # ...and a fallen friend pays no one
+    assert pending.plan.persistent_ids["Scrap"] == "stray_pup"
+
+
+def test_an_unauthored_creature_still_stages_as_a_player_driven_monster():
+    """No combat file for wolf_pup: the kit degrades to the flat stat-block swing,
+    but the creature is still a player-driven Monster with its real numbers."""
+    from arena.models.monster import Monster
+
+    s = Session.open(InMemoryEventStore())
+    s.repo.set_level("pc", 1)                        # below the threshold: still a pup
+    s.emit_companion_recruited(s.repo.get_character("stray_pup"))
+    entry, pup = _staged(_stage(s))["Scrap"]
+    assert entry.team == "player"
+    assert isinstance(pup, Monster) and pup.is_player_controlled
+    assert (pup.current_hit_points, pup.max_hit_points) == (4, 4)   # wolf_pup's numbers
+
+
+def test_a_person_companion_keeps_sheet_fidelity():
+    """A class sheet means a PERSON: they stage at full sheet fidelity even when
+    a stat block is mapped to their id (Thom ships with a commoner block)."""
+    from arena.models.character import PlayerCharacter
+
+    from oubliette.state.models import CharacterSheet
+
+    s = Session.open(InMemoryEventStore())
+    thom = s.repo.get_character("merchant_thom").model_copy(update={
+        "sheet": CharacterSheet(race="Human", char_class="Fighter",
+                                background="Merchant")})
+    s.emit_companion_recruited(thom)
+    entry, staged = _staged(_stage(s))["Thom"]
+    assert isinstance(staged, PlayerCharacter)
+    assert "characters" in entry.creature_id
+
+
+def test_a_sheetless_statblocked_person_swings_like_their_block():
+    """Thom as brightvale ships him — no sheet, a commoner block — fights with
+    that block's kit, the same data the enemy path would use, rather than as a
+    featureless blank."""
+    from arena.models.monster import Monster
+
+    s = Session.open(InMemoryEventStore())
+    s.emit_companion_recruited(s.repo.get_character("merchant_thom"))
+    _, thom = _staged(_stage(s))["Thom"]
+    assert isinstance(thom, Monster) and thom.is_player_controlled
+
+
+def test_a_statblocked_ally_gets_its_kit_for_the_fight():
+    """The Phase-4 per-encounter ally shares the seam: a creature named in
+    `allies` fights this one fight with its stat-block kit, no recruitment."""
+    from arena.models.monster import Monster
+
+    s = Session.open(InMemoryEventStore())
+    entry, pup = _staged(_stage(s, allies=["stray_pup"]))["Scrap"]
+    assert entry.team == "player"
+    assert isinstance(pup, Monster) and pup.is_player_controlled
+    assert "stray_pup" in _stage(s, allies=["stray_pup"]).plan.persistent_ids.values()
+
+
+def test_the_heroes_keep_their_player_characters():
+    """The rich-kit branch must never touch a PC: every hero still stages as a
+    PlayerCharacter under characters/."""
+    from arena.models.character import PlayerCharacter
+
+    s = Session.open(InMemoryEventStore())
+    s.emit_companion_recruited(s.repo.get_character("stray_pup"))
+    staged = _staged(_stage(s))
+    heroes = [(e, c) for e, c in staged.values()
+              if e.team == "player" and "Scrap" not in e.name_override]
+    assert heroes and all(isinstance(c, PlayerCharacter) for _, c in heroes)
+    assert all("characters" in e.creature_id for e, _ in heroes)
+
+
 # --- the DM's context: COMPANIONS block, no double-listing -------------------
 
 def test_context_lists_companions_and_unlists_them_as_locals():

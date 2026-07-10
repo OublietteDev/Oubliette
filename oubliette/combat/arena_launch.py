@@ -219,6 +219,31 @@ def _resolve_allies(
     return out
 
 
+def _companion_kits(party: list, session, portraits: PortraitDirs | None) -> dict:
+    """{party member id -> rich stat-block Monster} for the party's CREATURES
+    (rich-kits rider): a sheetless member whose id maps to a stat block — Scrap
+    the wolf, a statblocked NPC siding with the party for one fight — fights its
+    full authored/SRD kit player-side, exactly as it would across the field.
+    People (a class sheet — the same person/creature line the companion door
+    draws) keep sheet fidelity; an unmapped creature stays on the flat mapping."""
+    npc_statblocks = getattr(session, "npc_statblocks", None) or {}
+    ai_profiles = {p.id: p for p in getattr(session, "ai_profiles", ()) or ()}
+    pack_id = getattr(session, "pack_id", None)
+    pack_monster_dir = (_CONTENT_ROOT / "packs" / pack_id / "monsters") if pack_id else None
+    kits: dict = {}
+    for char in party:
+        if char.kind == "pc" or char.sheet is not None:
+            continue
+        sb_id = npc_statblocks.get(char.id)
+        sb = _statblock_for(session, sb_id) if sb_id else None
+        if sb is None:
+            continue
+        kits[char.id] = enemy_from_statblock(
+            sb, portraits, ai_profiles=ai_profiles,
+            pack_monster_dir=pack_monster_dir).creature
+    return kits
+
+
 def _battle_for(session) -> BattleSetting | None:
     """The current location's authored battlefield (location-battles arc), or
     None for the default field. Entirely session-side: the loader threads each
@@ -290,7 +315,8 @@ def stage_combat(
                            catalog=catalog,
                            ruleset=ruleset,
                            portraits=portraits,
-                           battle=_battle_for(session))
+                           battle=_battle_for(session),
+                           companion_kits=_companion_kits(party, session, portraits))
 
     scratch_dir = Path(tempfile.mkdtemp(prefix="oubliette-combat-", dir=scratch_root))
     encounter_path = scratch_dir / "encounter.json"
@@ -314,7 +340,13 @@ def _write_encounter_file(encounter, scratch_dir: Path, path: Path) -> None:
     id) routes it through the subclass-aware loader (`Monster.model_validate` /
     `PlayerCharacter.model_validate`), preserving every field. We externalize a
     DEEP COPY so the in-memory `plan.encounter` keeps its inline creatures.
+
+    Routing goes by the creature's TYPE, not its team: a creature companion is
+    a `Monster` on the PLAYER team (rich-kits rider), and writing it under
+    characters/ would strip its kit back to a base creature at load.
     """
+    from arena.models.character import PlayerCharacter
+
     enc = encounter.model_copy(deep=True)
     mon_dir = scratch_dir / "monsters"
     pc_dir = scratch_dir / "characters"
@@ -322,7 +354,7 @@ def _write_encounter_file(encounter, scratch_dir: Path, path: Path) -> None:
     pc_dir.mkdir(exist_ok=True)
     for i, entry in enumerate(enc.combatants):
         creature = entry.creature_data  # the concrete Monster/PlayerCharacter instance
-        target_dir = pc_dir if entry.team == "player" else mon_dir
+        target_dir = pc_dir if isinstance(creature, PlayerCharacter) else mon_dir
         cfile = target_dir / f"{i:02d}.json"
         cfile.write_text(
             json.dumps(creature.model_dump(mode="json"), indent=2), encoding="utf-8"

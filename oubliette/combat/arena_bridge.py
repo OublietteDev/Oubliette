@@ -1219,12 +1219,19 @@ def build_encounter(
     ruleset=None,
     portraits: PortraitDirs | None = None,
     battle: BattleSetting | None = None,
+    companion_kits: dict[str, Monster] | None = None,
 ) -> EncounterPlan:
     """Assemble an Arena `Encounter` from the live party + resolved enemies +
     terrain. Counts are pre-expanded (one `CombatantEntry` per individual, with
     a unique `name_override`) so the returned result is matchable by name.
     With `portraits`, each PC's uploaded portrait (A3) becomes its token art
     (enemies got theirs when their instances were resolved).
+
+    `companion_kits` (rich-kits rider) maps a party member's id to its resolved
+    stat-block `Monster` — a creature companion or beast ally fights with its
+    full kit (multiattack, riders, pack tactics) instead of the flat one-swing
+    `character_to_player` mapping. The character stays the source of truth for
+    the HP pool, so wounds carried in and written back line up.
 
     `battle` is the current location's authored battlefield (location-battles
     arc): its grid size wins over the defaults, its terrain REPLACES the
@@ -1250,7 +1257,22 @@ def build_encounter(
 
     for char in party:
         display = _unique(char.name, used)
-        creature = character_to_player(char, catalog, ruleset)
+        kit = companion_kits.get(char.id) if companion_kits else None
+        if kit is not None:
+            creature = kit.model_copy(deep=True)
+            # The player drives it (the Arena honors the creature's own flag on
+            # the player team — no encounter-level flip exists for allies), the
+            # HP pool is the persistent character's (wounds survive between
+            # fights via the write-back), a fallen friend rewards no one, and
+            # anything drinkable it carries rides along like any party member's.
+            creature.is_player_controlled = True
+            creature.max_hit_points = max(1, char.max_hp)
+            creature.current_hit_points = max(0, min(char.hp, char.max_hp))
+            creature.experience_points = 0
+            creature.actions = [*creature.actions,
+                                *consumable_actions(char, catalog)]
+        else:
+            creature = character_to_player(char, catalog, ruleset)
         pos = _spawn_anchor(creature.size, player_col, taken, grid_w, grid_h)
         if portraits is not None:
             art = _token_image([portraits.pc], [char.portrait])

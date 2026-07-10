@@ -576,12 +576,14 @@ def test_monster_combat_file_round_trips(tmp_path, monkeypatch):
 
 
 def test_monster_combat_file_invalid_is_rejected(tmp_path, monkeypatch):
+    # wolf_pup ships NO combat file (lean_wolf does — the rich-kits testbed),
+    # so a rejected save must leave nothing behind for it.
     packs = _temp_brightvale(tmp_path, monkeypatch)
     # armor_class as a string is not a valid Monster → 400, nothing written
-    r = client.put("/api/pack/brightvale/monster/lean_wolf",
+    r = client.put("/api/pack/brightvale/monster/wolf_pup",
                    json={"monster": {"name": "Bad", "armor_class": "lots"}})
     assert r.status_code == 400
-    assert not (packs / "brightvale" / "monsters" / "lean_wolf.json").exists()
+    assert not (packs / "brightvale" / "monsters" / "wolf_pup.json").exists()
 
 
 def test_monster_combat_file_delete_reverts(tmp_path, monkeypatch):
