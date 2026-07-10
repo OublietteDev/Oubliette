@@ -171,6 +171,13 @@
   .cue.inherited .cue-inh-file { flex: 1; font-size: 13px; color: var(--ink); }
   .cue.inherited .cue-inh-from { font-size: 11px; color: var(--faint); font-style: italic; }
   .cue.inherited .cue-inh-meta { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  /* keyed-encounter briefing: full-width, comfortably tall, styled like the
+     modal's own textareas (it lives in a .cue card, outside any .field) */
+  .cue textarea { display: block; width: 100%; box-sizing: border-box; font: inherit;
+    font-size: 13px; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px;
+    resize: vertical; min-height: 84px; }
+  .cue textarea:focus { outline: none; border-color: var(--accent); }
   .cue-row { display: flex; gap: 8px; align-items: center; margin-bottom: 7px; }
   .cue-row:last-child { margin-bottom: 0; }
   .cue-row select { flex: 1; min-width: 0; font-size: 13px; }
