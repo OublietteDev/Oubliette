@@ -64,6 +64,8 @@ class PlaceNode:
     battle: "BattleMap | None" = None  # authored battlefield (location-battles arc) —
                                  # the combat bridge reads it when a fight starts here
     safe_haven: bool = False     # a safe overnight spot (rest gating, difficulty S3)
+    encounters: tuple = ()       # authored KeyedEncounters bound here (living-world W1) —
+                                 # the trigger module reads them each in-character turn
 
 
 @dataclass
@@ -247,6 +249,43 @@ def _lint_quests(quests: list[AuthoredQuest], npcs: list[NPC], item_ids: set[str
         # Reachability: a quest nobody can reach (not a root, not unlocked by any branch) is dead.
         if not q.root and q.id not in branch_targets:
             errors.append(f"quests: {q.id} is unreachable — it is not a root and no branch unlocks it")
+
+
+def _lint_keyed_encounters(places: list[Place], statblocks: list[StatBlock],
+                           npcs: list[NPC], ruleset: Ruleset,
+                           errors: list[str]) -> None:
+    """Keyed encounters (living-world W1): ids unique within their place, every
+    enemy ref resolving NOW — a pack stat block, an SRD monster, or a pack NPC
+    entity. A fight that cannot stage must fail at authoring time, never at the
+    table. Matching mirrors the combat bridge's normalisation (id OR name,
+    case/space/hyphen tolerant) but not its fuzzy trailing-word fallback:
+    authored content is held to exact references."""
+    def norm(s: str) -> str:
+        return s.strip().lower().replace(" ", "_").replace("-", "_")
+
+    bestiary = (getattr(ruleset, "bestiary", None) or {}).values()
+    known: set[str] = set()
+    for sb in (*statblocks, *bestiary):
+        known.add(norm(sb.id))
+        known.add(norm(sb.name))
+    npc_ids = {n.id for n in npcs}
+    for p in places:
+        seen: set[str] = set()
+        for enc in p.encounters:
+            where = f"places: {p.id}.encounters[{enc.id}]"
+            if enc.id in seen:
+                errors.append(f"places: {p.id} has duplicate encounter id {enc.id!r}")
+            seen.add(enc.id)
+            for e in enc.enemies:
+                if e.ref in npc_ids:
+                    # A persistent NPC stages as ONE instance regardless of count
+                    # (recurring-foe policy) — a count would silently vanish.
+                    if e.count > 1:
+                        errors.append(f"{where} names NPC {e.ref!r} with count "
+                                      f"{e.count} — a persistent NPC is always one")
+                elif norm(e.ref) not in known:
+                    errors.append(f"{where} enemy ref {e.ref!r} is neither a stat "
+                                  f"block (pack or SRD) nor a pack NPC")
 
 
 def _lint_backgrounds(backgrounds: list[Background], items: list[Item],
@@ -502,6 +541,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     ruleset = load_ruleset()
 
     _lint(manifest, items, statblocks, npcs, places, scenarios, quests, errors)
+    _lint_keyed_encounters(places, statblocks, npcs, ruleset, errors)
     _dup_ids(lore, "lore", errors)        # subjects are free-form, so only ids are checked
     _dup_ids(ai_profiles, "ai_profiles", errors)
     _lint_backgrounds(backgrounds, items, ruleset, errors)
@@ -529,7 +569,8 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
                                    parent=p.parent, exits=tuple(e.to for e in p.exits),
                                    image=p.image, map_image=p.map_image, position=p.position,
                                    sounds=tuple(c.model_dump() for c in p.sounds),
-                                   battle=p.battle, safe_haven=p.safe_haven)
+                                   battle=p.battle, safe_haven=p.safe_haven,
+                                   encounters=tuple(p.encounters))
                    for p in places}
 
     # The session plays with a PACK-MERGED ruleset (module-kit S2/S3): the

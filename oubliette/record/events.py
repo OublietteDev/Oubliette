@@ -62,6 +62,10 @@ class EventKind(str, Enum):
     COMPANION_DIED = "companion_died"   # a companion truly fell (companions S3, companion_death
                                         # dial ON): leaves the roster, marked dead; revival is
                                         # whatever the SRD offers anyone.
+    KEYED_ENCOUNTER_TRIGGERED = "keyed_encounter_triggered"  # an authored place-bound fight
+                                        # fired (living-world W1): carries {place, encounter_id}.
+                                        # Inert on replay — the trigger module derives fired-state
+                                        # (and `once`) from these records, like quest offers.
 
 
 class StateOp(BaseModel):

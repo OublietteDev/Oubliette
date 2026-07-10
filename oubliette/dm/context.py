@@ -190,7 +190,8 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   past_notes: list[str] | None = None,
                   notebook: list[str] | None = None,
                   difficulty=None, rest_interrupted: bool = False,
-                  companion_growth: list | None = None) -> str:
+                  companion_growth: list | None = None,
+                  keyed_directive: dict | None = None) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -208,6 +209,20 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
     if time_of_day or weather:
         lines.append(f"ENVIRONMENT: it is {time_of_day or 'day'}, weather {weather or 'clear'} "
                      f"(these carry forward on their own; emit set_environment only when the story turns them).")
+    if keyed_directive is not None:
+        # Keyed encounter (living-world W1): the ENGINE decided this fight fires —
+        # already evaluated, already certain. The DM's whole job this turn is the
+        # approach prose; the fight is staged by code the moment the reply ends.
+        briefing = keyed_directive.get("briefing") or ""
+        lines.append(
+            "AUTHORED ENCOUNTER — IT FIRES NOW. The world's author bound this fight "
+            f"to this place, and its moment has come: {keyed_directive['names']}."
+            + (f" Author's staging notes (secret): {briefing}" if briefing else "")
+            + " Your reply NARRATES THE APPROACH ONLY — build to the instant violence "
+            "becomes unavoidable and stop at that brink. Do not resolve any fighting "
+            "in prose, do not fill `encounter` yourself, and do not move the party "
+            "elsewhere: the engine has already staged this fight, and it begins the "
+            "moment your narration ends.")
     party = repo.party()
     heroes = [p for p in party if not p.companion]
     companions = [p for p in party if p.companion]

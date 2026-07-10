@@ -505,6 +505,34 @@ class BattleMap(_Strict):
     terrain: list[BattleTerrain] = Field(default_factory=list)
 
 
+# --- keyed encounters (living-world W1: authored fights bound to a place) ----
+# The CODE decides a keyed encounter fires — the DM only narrates the approach —
+# and staging is budget-exempt: authored intent outranks the table's
+# improvisation caps (min_party_level is the author's own gate).
+class KeyedEnemy(_Strict):
+    ref: str                         # stat block id/name (pack or SRD) or a pack NPC id
+    count: int = Field(default=1, ge=1, le=20)
+
+
+class KeyedTrigger(_Strict):
+    """When a keyed encounter fires. `when` picks the visit rule; the other
+    fields are extra conditions ANDed on top. One predicate per field, so later
+    arcs (quest state, faction standing) add fields here — not surgery."""
+
+    when: Literal["first_visit", "every_visit"] = "every_visit"
+    time_of_day: Literal["any", "day", "night"] = "any"
+    min_party_level: int | None = Field(default=None, ge=1, le=20)
+
+
+class KeyedEncounter(_Strict):
+    id: str
+    enemies: list[KeyedEnemy] = Field(min_length=1)
+    trigger: KeyedTrigger = Field(default_factory=KeyedTrigger)
+    once: bool = True                # fire at most once per campaign; False re-arms
+                                     # each new visit (night wolves you dodged by day)
+    briefing: str = ""               # DM-secret staging text ("they drop from the rafters")
+
+
 class Place(_Strict):
     id: str
     name: str
@@ -520,6 +548,8 @@ class Place(_Strict):
     position: dict | None = None     # {x,y} percent — this place's PIN on its parent's map
     sounds: list[AudioCue] = Field(default_factory=list)      # the place's soundscape cues
     battle: BattleMap | None = None  # what a fight HERE looks/sounds like (Arena)
+    encounters: list[KeyedEncounter] = Field(default_factory=list)  # authored fights
+                                     # bound to this place (living-world W1)
     safe_haven: bool = False         # a truly safe overnight spot (an inn, a temple):
                                      # long rests here cost lodging coin and are never
                                      # interrupted; unflagged places follow wilderness

@@ -17,7 +17,7 @@ from ..combat.arena_launch import stage_combat
 from ..combat.boundary import CombatError, result_to_ops
 from ..combat.budget import BudgetError, budget_for
 from ..difficulty import DEFAULT_DIFFICULTY
-from ..combat.schemas import CombatResult
+from ..combat.schemas import CombatResult, EncounterRequest, EnemyRef
 from ..dm.brain import Brain
 from ..dm.context import build_context
 from ..enums import SKILL_ABILITY, Tier, Verb
@@ -33,6 +33,7 @@ from ..table import render_table_prompt
 from ..tools.dispatch import Dispatcher, ResolvedTool, ToolApplyError
 from ..trade.schemas import TradeState
 from ..trade.service import build_state, has_stock
+from ..world import keyed as keyed_triggers
 from .session import Session
 from .transcript import notebook_notes, recent_beats, session_notes, transcript_turns
 
@@ -96,8 +97,13 @@ class TurnLoop:
         # the stored beats, so it resumes with the same short-term context it had before —
         # not an empty head. Past sessions reach the DM as notes (W5), never as beats here.
         self.history: list[str] = recent_beats(session.store.read_all(), HISTORY_CAP)
+        # Keyed encounters whose staging failed at the table (authoring drift the
+        # lint didn't catch — e.g. a hand-edited pack): suppressed for THIS process
+        # so a broken fight logs one anomaly, not one per turn. {(place, enc id)}
+        self._keyed_broken: set = set()
 
-    def _build_context(self, player_text: str = "", growth: list | None = None) -> str:
+    def _build_context(self, player_text: str = "", growth: list | None = None,
+                       keyed=None) -> str:
         """Assemble the per-turn DM context (state, scene, present NPCs, canon, quests,
         past-session notes, recent beats). Shared by `take_turn` and `wrap_session` so the
         DM writes its session notes with the same picture it plays from. Retrieves canon by
@@ -126,7 +132,10 @@ class TurnLoop:
             past_notes=past_notes, notebook=notebook_notes(events),
             difficulty=getattr(self.session, "difficulty", DEFAULT_DIFFICULTY),
             rest_interrupted=rest_interrupted_recently(events),
-            companion_growth=growth)
+            companion_growth=growth,
+            keyed_directive=({"names": self._keyed_names(keyed),
+                              "briefing": keyed.briefing}
+                             if keyed is not None else None))
 
     async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
         # A new in-character turn moves the fiction on: any standing rest grant
@@ -146,7 +155,12 @@ class TurnLoop:
         if not ooc and self.session.pending_growth_note:
             notes = self.session.pending_growth_note + growth
             self.session.pending_growth_note = []
-        context = self._build_context(player_text, growth=notes)
+        # Keyed encounter (living-world W1): evaluated in CODE at the top of every
+        # in-character turn. If one is due, this turn's reply narrates the approach
+        # (hard directive in the context) and the engine stages the fight itself
+        # after the prose — the DM styles the moment, never decides it.
+        keyed = None if ooc else self._due_keyed_encounter()
+        context = self._build_context(player_text, growth=notes, keyed=keyed)
         # `ooc` is the player's explicit "out-of-character" signal (the composer
         # toggle). When set, the turn is table-talk — no model guessing, no combat
         # or trade — so in-character play is never mistaken for meta.
@@ -172,6 +186,14 @@ class TurnLoop:
             if assessment.intent.verb == Verb.META:
                 assessment.intent = assessment.intent.model_copy(update={"verb": Verb.SKILL_CHECK})
                 self.debug.append("note", stage="assess", coerced="meta->skill_check (in-character)")
+            if keyed is not None and (assessment.encounter is not None
+                                      or assessment.trade is not None):
+                # The authored fight outranks anything the model improvised this
+                # turn: the reply is approach prose only — the engine stages the
+                # real encounter below, whatever the assessment tried to summon.
+                assessment = assessment.model_copy(update={"encounter": None, "trade": None})
+                self.debug.append("note", stage="assess",
+                                  coerced="encounter/trade suppressed (keyed encounter armed)")
         # The PLAYER_MESSAGE event carries the raw text + the parsed intent (§4.1).
         player_event = self.session.emit_log(
             EventKind.PLAYER_MESSAGE, text=player_text,
@@ -196,6 +218,8 @@ class TurnLoop:
         else:
             report = await self._resolve_turn(player_text, assessment, context, on_text=on_text)
 
+        if keyed is not None:
+            report = self._stage_keyed(keyed, report, player_text, assessment)
         report.growth = growth
         self._record_beat(report, caused_by=player_event.seq)
         return report
@@ -234,6 +258,74 @@ class TurnLoop:
                 grown.append({"char_id": comp.id, "name": comp.name,
                               "from": sb.name, "to": new_sb.name})
         return grown
+
+    def _due_keyed_encounter(self):
+        """The keyed encounter that fires this turn at the party's location, or
+        None (living-world W1). Pure derivation over the log + the PlaceNode's
+        authored list; a fight already staged and awaiting the Arena defers any
+        new ambush, and a staging-broken encounter stays suppressed."""
+        if getattr(self.session, "pending_combat", None) is not None:
+            return None
+        loc = self.session.location
+        node = (self.session.places or {}).get(loc) if loc else None
+        if node is None:
+            return None
+        enc = keyed_triggers.due_encounter(
+            node, self.session.store.read_all(),
+            start_location=getattr(self.session, "start_location", None),
+            time_of_day=self.session.time_of_day,
+            party_level=max((c.level for c in self.repo.party()), default=1))
+        if enc is not None and (loc, enc.id) in self._keyed_broken:
+            return None
+        return enc
+
+    def _keyed_names(self, enc) -> str:
+        """Display names for a keyed encounter's enemies — resolved the same way
+        staging will resolve them, so the DM narrates the right creatures."""
+        parts: list[str] = []
+        for e in enc.enemies:
+            ent = arena_launch._try_entity(self.repo, e.ref)
+            if ent is not None:
+                parts.append(ent.name)
+                continue
+            sb = arena_launch._statblock_for(self.session, e.ref)
+            name = sb.name if sb is not None else e.ref
+            parts.append(f"{e.count} x {name}" if e.count > 1 else name)
+        return ", ".join(parts)
+
+    def _stage_keyed(self, enc, report: TurnReport, player_text: str,
+                     assessment: TurnAssessment) -> TurnReport:
+        """Stage an authored keyed encounter AFTER the approach narration. The
+        code owns the fact of the fight: the fired record is written and the
+        authored enemies staged budget-exempt (authored intent outranks the
+        table's improvisation caps — min_party_level is the author's own gate).
+        A staging failure logs one anomaly and suppresses the encounter for
+        this process; the narration stands and play continues."""
+        request = EncounterRequest(
+            kind="ambush",
+            enemies=[EnemyRef(ref=e.ref, count=e.count) for e in enc.enemies])
+        # The post-combat report (bestiary keys, result prose) reads the turn's
+        # assessment.encounter — hand the pending fight the AUTHORED request.
+        assessment = assessment.model_copy(update={"encounter": request})
+        try:
+            outcome = stage_combat(request, self.repo, self.session,
+                                   assessment=assessment, player_text=player_text,
+                                   budget=None)
+        except CombatError as e:
+            self._keyed_broken.add((self.session.location, enc.id))
+            self.debug.append("anomaly", stage="keyed_encounter",
+                              encounter=enc.id, error=str(e))
+            return report
+        self.session.emit_log(EventKind.KEYED_ENCOUNTER_TRIGGERED,
+                              place=self.session.location, encounter_id=enc.id)
+        self.session.pending_combat = outcome.pending
+        staged_crs = {c.name_override: float(getattr(c.creature_data, "challenge_rating", 0) or 0)
+                      for c in outcome.pending.plan.encounter.combatants if c.team == "enemy"}
+        self.debug.append("combat_budget", stage="staged", enemies=staged_crs,
+                          total_cr=round(sum(staged_crs.values()), 3),
+                          budget=f"bypassed (authored keyed encounter {enc.id!r})")
+        report.combat_pending = True
+        return report
 
     def _compute_offers(self) -> tuple[dict, set, set]:
         """(authored defs, chain-eligible ids, offered-here ids) for this turn. Eligible is

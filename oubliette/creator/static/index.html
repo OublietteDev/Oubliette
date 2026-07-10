@@ -771,6 +771,7 @@ function openEditor(kind, index) {
     editorCtx.image = original?.image || null;
     editorCtx.sounds = ((original?.sounds) || []).map(c => ({ ...c }));
     editorCtx.battle = original?.battle ? JSON.parse(JSON.stringify(original.battle)) : null;
+    editorCtx.encounters = ((original?.encounters) || []).map(e => JSON.parse(JSON.stringify(e)));
   }
   if (kind === "statblocks") {
     editorCtx.loot = ((original?.loot) || []).filter(l => l.item).map(l => ({ item: l.item, qty: l.qty || 1 }));
@@ -1453,6 +1454,15 @@ function placeForm(pl) {
         </details>
       </div>
       <div class="subform">
+        <details class="drawer" id="encDrawer">
+          <summary class="sftitle" style="margin-bottom:0">Keyed encounters<span class="drawer-note" id="encSummary"></span></summary>
+          <div id="encList" style="margin-top:10px"></div>
+          <button class="btn mini" id="addEnc" type="button">+ Add an encounter</button>
+          <datalist id="encRefOptions"></datalist>
+          <div class="help" style="margin-top:8px">Fights that <b>will</b> happen here — not left to the AI DM's whim. When its conditions are met, the DM narrates the approach and the battle begins, every campaign. Enemies can be this world's creatures, any SRD monster (type to search), or one of your NPCs by id. These skip the table's encounter budget — <b>Party level ≥</b> is your tool for holding a deadly fight back until the party can survive it.</div>
+        </details>
+      </div>
+      <div class="subform">
         <details class="drawer" id="btlDrawer">
           <summary class="sftitle" style="margin-bottom:0">Battlefield<span class="drawer-note" id="btlSummary"></span></summary>
           <div id="battleBox" style="margin-top:10px"></div>
@@ -1493,6 +1503,70 @@ function renderExits() {
     inp.addEventListener("input", e => { editorCtx.exits[+e.target.dataset.exitLabel].label = e.target.value; }));
   box.querySelectorAll("[data-exit-del]").forEach(b =>
     b.addEventListener("click", e => { editorCtx.exits.splice(+e.target.dataset.exitDel, 1); renderExits(); }));
+}
+// ---- keyed encounters (living-world W1: authored fights bound to this place) ----
+let srdRefCache = null;   // SRD monster list for the enemy-ref datalist, fetched once
+async function fillEncRefOptions() {
+  const dl = document.getElementById("encRefOptions");
+  if (!dl) return;
+  if (srdRefCache === null) {
+    try { srdRefCache = (await (await fetch("/api/srd/monsters")).json()).monsters || []; }
+    catch (e) { srdRefCache = []; }
+  }
+  const opts = [];
+  listOf("statblocks").forEach(s => opts.push(`<option value="${esc(s.name)}">this world — CR ${s.cr ?? "?"}</option>`));
+  listOf("npcs").forEach(n => opts.push(`<option value="${esc(n.id)}">NPC — ${esc(n.name)}</option>`));
+  srdRefCache.forEach(m => opts.push(`<option value="${esc(m.name)}">SRD — CR ${m.cr ?? "?"}</option>`));
+  dl.innerHTML = opts.join("");
+}
+function renderEncounters() {
+  const box = document.getElementById("encList");
+  if (!box) return;
+  const encs = editorCtx.encounters;
+  box.innerHTML = encs.map((en, i) => `
+    <div class="cue">
+      <div class="cue-row" style="justify-content:space-between">
+        <b>${esc(en.id || `Encounter ${i + 1}`)}</b>
+        <button class="btn mini danger" type="button" data-enc-del="${i}">✕ Remove</button>
+      </div>
+      <div style="margin:6px 0 2px; font-size:12px; opacity:.8">Enemies</div>
+      ${(en.enemies || []).map((e, j) => `
+        <div class="exit-row">
+          <input list="encRefOptions" data-enc-ref="${i}:${j}" value="${esc(e.ref || "")}" placeholder="creature (this world or SRD) or an NPC id" />
+          <input type="number" min="1" max="20" style="width:70px" data-enc-count="${i}:${j}" value="${e.count || 1}" title="how many" />
+          <button class="btn mini danger" type="button" data-enc-edel="${i}:${j}">✕</button>
+        </div>`).join("")}
+      <button class="btn mini" type="button" data-enc-eadd="${i}">+ Add an enemy</button>
+      <div class="cue-row" style="margin-top:8px; gap:8px; flex-wrap:wrap">
+        <label>Fires <select data-enc-when="${i}">
+          <option value="every_visit"${(en.trigger && en.trigger.when) === "first_visit" ? "" : " selected"}>any visit</option>
+          <option value="first_visit"${(en.trigger && en.trigger.when) === "first_visit" ? " selected" : ""}>first visit only</option>
+        </select></label>
+        <label>Time <select data-enc-time="${i}">
+          <option value="any">any</option>
+          <option value="day"${(en.trigger && en.trigger.time_of_day) === "day" ? " selected" : ""}>day</option>
+          <option value="night"${(en.trigger && en.trigger.time_of_day) === "night" ? " selected" : ""}>night</option>
+        </select></label>
+        <label>Party level ≥ <input type="number" min="1" max="20" style="width:60px" data-enc-lvl="${i}" value="${(en.trigger && en.trigger.min_party_level) || ""}" placeholder="any" /></label>
+        <label class="chk" style="display:inline-flex"><input type="checkbox" data-enc-once="${i}"${en.once !== false ? " checked" : ""}> once per campaign</label>
+      </div>
+      <textarea data-enc-brief="${i}" placeholder="Secret staging notes for the AI DM — how the fight begins (“they drop from the rafters as the doors slam shut”)." style="margin-top:8px">${esc(en.briefing || "")}</textarea>
+    </div>`).join("") || '<div class="nothing" style="margin-bottom:8px">No keyed encounters — fights here are up to the AI DM.</div>';
+  const on = (sel, ev, fn) => box.querySelectorAll(sel).forEach(el => el.addEventListener(ev, fn));
+  const at = (t, k) => t.dataset[k].split(":").map(Number);
+  const trig = i => { if (!encs[i].trigger) encs[i].trigger = { when: "every_visit", time_of_day: "any" }; return encs[i].trigger; };
+  on("[data-enc-del]", "click", e => { encs.splice(+e.target.dataset.encDel, 1); renderEncounters(); });
+  on("[data-enc-eadd]", "click", e => { const en = encs[+e.target.dataset.encEadd]; if (!en.enemies) en.enemies = []; en.enemies.push({ ref: "", count: 1 }); renderEncounters(); });
+  on("[data-enc-edel]", "click", e => { const [i, j] = at(e.target, "encEdel"); encs[i].enemies.splice(j, 1); renderEncounters(); });
+  on("[data-enc-ref]", "input", e => { const [i, j] = at(e.target, "encRef"); encs[i].enemies[j].ref = e.target.value; });
+  on("[data-enc-count]", "input", e => { const [i, j] = at(e.target, "encCount"); encs[i].enemies[j].count = Math.max(1, +e.target.value || 1); });
+  on("[data-enc-when]", "change", e => { trig(+e.target.dataset.encWhen).when = e.target.value; });
+  on("[data-enc-time]", "change", e => { trig(+e.target.dataset.encTime).time_of_day = e.target.value; });
+  on("[data-enc-lvl]", "input", e => { trig(+e.target.dataset.encLvl).min_party_level = e.target.value; });
+  on("[data-enc-once]", "change", e => { encs[+e.target.dataset.encOnce].once = e.target.checked; });
+  on("[data-enc-brief]", "input", e => { encs[+e.target.dataset.encBrief].briefing = e.target.value; });
+  const sum = document.getElementById("encSummary");
+  if (sum) sum.textContent = encs.length ? ` — ${encs.length}` : " — none";
 }
 function renderIllus() {
   const frame = document.getElementById("illusFrame");
@@ -1788,6 +1862,15 @@ function wirePlaceForm() {
   renderIllus();
   renderSounds();
   renderBattle();
+  renderEncounters();
+  fillEncRefOptions();
+  document.getElementById("addEnc").addEventListener("click", () => {
+    editorCtx.encounters.push({ id: "", enemies: [{ ref: "", count: 1 }],
+                                trigger: { when: "every_visit", time_of_day: "any" },
+                                once: true, briefing: "" });
+    document.getElementById("encDrawer").open = true;
+    renderEncounters();
+  });
   document.getElementById("btlImgFile").addEventListener("change", e => { if (e.target.files[0]) onChooseBattleImage(e.target.files[0]); e.target.value = ""; });
   document.getElementById("addExit").addEventListener("click", () => { editorCtx.exits.push({ to: "", label: "" }); renderExits(); });
   document.getElementById("addSound").addEventListener("click", () => { editorCtx.sounds.push({ file: "", kind: "bed", category: "sfx", scope: "local", gain: 1 }); renderSounds(); });
@@ -1828,6 +1911,34 @@ function confirmPlace(original) {
   else delete base.exits;
   if (sounds.length) base.sounds = sounds.map(cleanCue); else delete base.sounds;
   if (editorCtx.battle) base.battle = editorCtx.battle; else delete base.battle;
+  // Keyed encounters: drop empty enemy rows; every kept encounter needs at least
+  // one enemy. Ids are minted once (encounter-1, -2, …) and never regenerated —
+  // an id names the fired-record in existing campaigns.
+  const encs = editorCtx.encounters
+    .map(en => ({ ...en, enemies: (en.enemies || []).filter(e => (e.ref || "").trim()) }));
+  if (encs.some(en => !en.enemies.length)) {
+    document.getElementById("encDrawer").open = true;
+    err.textContent = "Each keyed encounter needs at least one enemy — pick a creature, or remove the encounter.";
+    return;
+  }
+  if (encs.length) {
+    const used = new Set(encs.map(e => e.id).filter(Boolean));
+    let n = 1;
+    base.encounters = encs.map(en => {
+      let id = en.id;
+      if (!id) { while (used.has(`encounter-${n}`)) n++; id = `encounter-${n}`; used.add(id); }
+      const trig = { when: (en.trigger && en.trigger.when) || "every_visit",
+                     time_of_day: (en.trigger && en.trigger.time_of_day) || "any" };
+      const lvl = parseInt(en.trigger && en.trigger.min_party_level, 10);
+      if (lvl >= 1) trig.min_party_level = lvl;
+      const out = { id,
+                    enemies: en.enemies.map(e => (+e.count > 1 ? { ref: e.ref.trim(), count: +e.count }
+                                                               : { ref: e.ref.trim() })),
+                    trigger: trig, once: en.once !== false };
+      if ((en.briefing || "").trim()) out.briefing = en.briefing.trim();
+      return out;
+    });
+  } else delete base.encounters;
   commitEntry("places", original, base);
 }
 

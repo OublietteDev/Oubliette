@@ -26,8 +26,45 @@
       {
         "to": "brightvale_market",
         "label": "south into the market"
+      },
+      {
+        "to": "brightvale_old_mill",
+        "label": "west along the stream to the old mill"
       }
     ],
     "position": null
+  },
+  {
+    "id": "brightvale_old_mill",
+    "name": "The Old Mill",
+    "description": "A ruined mill on the stream west of town, its wheel long seized. Locals say wolves den in the undercroft and come out hungry after dark.",
+    "tags": [
+      "ruin",
+      "wilds"
+    ],
+    "exits": [
+      {
+        "to": "brightvale_gate",
+        "label": "east along the stream to the gate"
+      }
+    ],
+    "position": null,
+    "encounters": [
+      {
+        "id": "mill_wolves",
+        "enemies": [
+          {
+            "ref": "lean_wolf",
+            "count": 2
+          }
+        ],
+        "trigger": {
+          "when": "every_visit",
+          "time_of_day": "night"
+        },
+        "once": false,
+        "briefing": "The pack pours out of the undercroft — low shapes cutting between the ruined beams, circling to block the path back east."
+      }
+    ]
   }
 ]
