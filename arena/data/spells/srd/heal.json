@@ -10,5 +10,6 @@
     "spell_slot_6": 1
   },
   "healing": "70",
-  "target_type": "one_ally"
+  "target_type": "one_ally",
+  "upcast_healing_dice": "10"
 }

@@ -21,5 +21,6 @@
       }
     ],
     "damage_on_success": "none"
-  }
+  },
+  "upcast_damage_dice": "1d10"
 }

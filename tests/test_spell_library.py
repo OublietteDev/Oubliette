@@ -108,6 +108,28 @@ def test_fireball_is_a_save_for_half_sphere_with_upcast():
     assert a.upcast_damage_dice == "1d6"
 
 
+def test_srd_scaling_reaches_the_truncated_and_flat_table_spells():
+    """The source dataset ships only the base slot row for some spells, and
+    steps others in FLAT numbers ('70'→'80') — both used to lose their printed
+    'At Higher Levels' scaling entirely. Pin the six recovered ones, through
+    the engine's own upcast math."""
+    from arena.combat.upcast import (calculate_upcast_bonus_damage,
+                                     calculate_upcast_bonus_healing, can_upcast)
+    expect = {"disintegrate": ("3d6", None), "freezing_sphere": ("1d6", None),
+              "phantasmal_killer": ("1d10", None),
+              "aid": (None, "5"), "heal": (None, "10"), "false_life": (None, "5")}
+    for sid, (dmg_step, heal_step) in expect.items():
+        a = arena_spell_action(sid)
+        assert can_upcast(a), sid
+        one_up = (a.spell_level or 0) + 1
+        got_dmg = calculate_upcast_bonus_damage(a, one_up)
+        got_heal = calculate_upcast_bonus_healing(a, one_up)
+        if dmg_step is not None:
+            assert got_dmg and got_dmg[0].dice == dmg_step, sid
+        if heal_step is not None:
+            assert got_heal == heal_step, sid
+
+
 def test_cure_wounds_carries_the_mod_token_and_upcast():
     a = arena_spell_action("cure_wounds")
     assert a.healing == "1d8+MOD"                 # bridge substitutes

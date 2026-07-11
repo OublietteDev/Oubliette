@@ -22,5 +22,6 @@
       }
     ],
     "damage_on_success": "half"
-  }
+  },
+  "upcast_damage_dice": "1d6"
 }

@@ -24,6 +24,13 @@ spells carry no structured mechanics in the source; rituals/long casts have no
 combat shape; auto-hit and zone/duration spells need primitives the engine
 doesn't route from data yet — Magic Missile is the famous one).
 
+!! REGENERATION WARNING: the COMMITTED files under arena/data/spells/srd carry
+post-generation enrichment from the Arena SRD-audit arc (wall panels, forced
+movement, chaining, zone riders, …) that this generator does not yet produce.
+A blind re-run ERASES it. Until the enrichment is back-ported into the curated
+overlays here, treat the committed files as the source of truth and apply any
+data fix by hand to both the file and this generator.
+
 BRIDGE-BAKED FIELDS (the library is consumed by oubliette's arena_bridge, which
 knows the caster's sheet — same philosophy as the +X gear bake in B3):
   - `Attack.ability` is emitted as a placeholder; the bridge rewrites it to the
@@ -815,24 +822,43 @@ def _range_feet(text: str) -> int:
     return int(m.group(1)) if m else 30
 
 
+def _parse_row(expr: str) -> tuple[int, int, int] | None:
+    """A slot-table row → (dice count, die size, flat bonus). Handles pure dice
+    ("8d6"), dice+flat ("1d4 + 9"), and FLAT-ONLY rows ("70" — Heal, Aid), which
+    come back as (0, 0, n). MOD rows aren't comparable — None."""
+    parsed = _parse_dice(expr)
+    if parsed is not None:
+        if parsed[2] == "MOD":
+            return None
+        return parsed[0], parsed[1], int(parsed[2] or 0)
+    flat = (expr or "").strip()
+    return (0, 0, int(flat)) if flat.isdigit() else None
+
+
 def _upcast_delta(rows: dict[str, str], base_level: int) -> str | None:
-    """Per-slot-step bonus dice from the slot-level table ("8d6"→"9d6" = "1d6").
-    None when rows are missing, unparseable, or don't step uniformly."""
-    base = _parse_dice(rows.get(str(base_level), ""))
-    nxt = _parse_dice(rows.get(str(base_level + 1), ""))
+    """Per-slot-step bonus from the slot-level table: dice steps ("8d6"→"9d6" =
+    "1d6"), FLAT steps ("70"→"80" = "10" — Heal, Aid, False Life's +5s), or
+    both. None when rows are missing, unparseable, or don't step uniformly."""
+    base = _parse_row(rows.get(str(base_level), ""))
+    nxt = _parse_row(rows.get(str(base_level + 1), ""))
     if base is None or nxt is None or base[1] != nxt[1]:
         return None
-    step = nxt[0] - base[0]
-    if step <= 0:
+    step, bstep = nxt[0] - base[0], nxt[2] - base[2]
+    if step < 0 or bstep < 0 or (step == 0 and bstep == 0):
         return None
     # verify uniformity across the table (non-uniform scalers get no upcast)
     for lvl in range(base_level, 10):
-        row = _parse_dice(rows.get(str(lvl), ""))
+        row = _parse_row(rows.get(str(lvl), ""))
         if row is None:
             continue
-        if row[0] != base[0] + step * (lvl - base_level) or row[1] != base[1]:
+        if (row[0] != base[0] + step * (lvl - base_level) or row[1] != base[1]
+                or row[2] != base[2] + bstep * (lvl - base_level)):
             return None
-    return f"{step}d{base[1]}"
+    if step and bstep:
+        return f"{step}d{base[1]}+{bstep}"
+    if step:
+        return f"{step}d{base[1]}"
+    return str(bstep)
 
 
 def map_spell(s: dict) -> tuple[dict | None, str | None]:
@@ -962,6 +988,16 @@ def map_spell(s: dict) -> tuple[dict | None, str | None]:
     return None, "no structured combat mechanics in the source (control/buff/utility)"
 
 
+# The source dataset ships only the BASE slot row for these (no table to derive
+# a delta from), but the SRD's printed "At Higher Levels" text states the step —
+# curated here so the deterministic parse stays the source of everything else.
+_TRUNCATED_TABLE_UPCASTS: dict[str, dict] = {
+    "disintegrate": {"upcast_damage_dice": "3d6"},
+    "freezing_sphere": {"upcast_damage_dice": "1d6"},
+    "phantasmal_killer": {"upcast_damage_dice": "1d10"},
+}
+
+
 def main(src: str, out_dir: str) -> int:
     spells = json.loads(Path(src).read_text(encoding="utf-8"))
     out = Path(out_dir)
@@ -975,6 +1011,7 @@ def main(src: str, out_dir: str) -> int:
         if mapped is None:
             skipped[spell_id] = reason or "unknown"
             continue
+        mapped.update(_TRUNCATED_TABLE_UPCASTS.get(spell_id, {}))
         # Validation gate — every emitted file loads through the Arena's model.
         # (The literal MOD token in healing is bridge-substituted before play but
         # must already validate as a plain string here.)
