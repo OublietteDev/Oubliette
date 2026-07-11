@@ -187,7 +187,11 @@ def test_stream_announces_audio_clips_then_done(monkeypatch):
 
     audio = [e for e in events if e["t"] == "audio"]
     assert audio, "narration requested and available — clips must be announced"
-    assert events[-1]["t"] == "done" and "tts_off" not in events[-1]
+    # done lands as soon as the turn is ready; tail clips may ride AFTER it, and
+    # the stream closes with the "end" sentinel once the voice has caught up.
+    assert events[-1]["t"] == "end"
+    done = next(e for e in events if e["t"] == "done")
+    assert "tts_off" not in done
 
     # every clip landed inside the stream, offsets cover the full narration
     streamed = "".join(e["v"] for e in events if e["t"] == "delta")
@@ -200,6 +204,30 @@ def test_stream_announces_audio_clips_then_done(monkeypatch):
         assert r.status_code == 200
         assert r.headers["content-type"].startswith("audio/wav")
         assert r.content.startswith(b"RIFF")
+
+
+def test_slow_clips_ride_after_done_and_never_block_it(monkeypatch):
+    """A slow tier (qwen, RTF ~0.6) can still be synthesizing when the turn text
+    is finished. The turn payload must land IMMEDIATELY — chips, state, composer —
+    while the tail clips ride after it and the stream closes with 'end' once the
+    voice has caught up. (The old design waited up to 15s holding the game lock,
+    then dropped whatever hadn't finished.)"""
+    import time
+    fake = _fake_engine(monkeypatch)
+    quick = fake.synthesize
+
+    def slow(text, voice, speed=1.0):
+        time.sleep(0.3)
+        return quick(text, voice, speed)
+
+    monkeypatch.setattr(fake, "synthesize", slow)
+    client.post("/api/new")
+    events = _stream_events({"text": "I look around the market.", "narrate": True})
+    types = [e["t"] for e in events]
+    assert types[-1] == "end"
+    done_i = types.index("done")
+    tail_audio = [t for t in types[done_i:] if t == "audio"]
+    assert tail_audio, "slow clips must arrive AFTER done, inside the open stream"
 
 
 def test_stream_without_narrate_has_no_audio_events(monkeypatch):
@@ -215,8 +243,8 @@ def test_stream_narrate_unavailable_is_honest_and_harmless(monkeypatch):
                         lambda: (None, "no narrator is configured (tts_model is unset)"))
     client.post("/api/new")
     events = _stream_events({"text": "I look around the market.", "narrate": True})
-    done = events[-1]
-    assert done["t"] == "done" and done["narration"]      # the turn itself is untouched
+    done = next(e for e in events if e["t"] == "done")
+    assert done["narration"]                              # the turn itself is untouched
     assert "tts_model" in done["tts_off"]
     assert not [e for e in events if e["t"] == "audio"]
 

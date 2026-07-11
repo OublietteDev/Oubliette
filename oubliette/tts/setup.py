@@ -369,7 +369,7 @@ def run(input_fn=input, print_fn=print,
             # raw bytes, depending on the console codepage. Scrub both, or "1"
             # reads as gibberish and every piped answer is rejected.
             raw = input_fn(f"   Your pick [{default.number}]: ")
-            raw = raw.lstrip("ï»¿").strip().lower()
+            raw = raw.lstrip("﻿ï»¿").strip().lower()
         except EOFError:                       # non-interactive run: keep things as they are
             p("   (no input available - leaving narration as it is)")
             return 0

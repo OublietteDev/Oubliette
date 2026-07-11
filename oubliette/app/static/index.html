@@ -4880,7 +4880,11 @@ async function narrKick() {
   if (gen !== NARR.gen) return;                    // the table moved on while we fetched
   NARR.fetching = false;
   NARR.upto = Math.max(NARR.upto, ev.upto || 0);   // movie mode may now reveal through this clip
-  if (!buf) { narrKick(); return; }                // skip the clip, keep the story moving
+  if (!buf) {                                      // skip the clip, keep the story moving —
+    if (NARR.queue.length) narrKick();             // and if it was the LAST one, restore the
+    else duckTo(1, 0.9);                           // ambience (nothing else will unduck it)
+    return;
+  }
   const src = audioCtx.createBufferSource();
   src.buffer = buf;
   src.connect(voiceGain);

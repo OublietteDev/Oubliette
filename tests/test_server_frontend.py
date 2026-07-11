@@ -209,8 +209,10 @@ def test_stream_endpoint_yields_deltas_then_done():
             if line.startswith("data:"):
                 events.append(json.loads(line[5:].strip()))
     types = [e["t"] for e in events]
-    assert "delta" in types and types[-1] == "done"
-    done = events[-1]
+    # The stream closes with an "end" sentinel; "done" (the turn payload) comes
+    # before it, so tail narration clips can ride after the chips land.
+    assert "delta" in types and types[-1] == "end"
+    done = next(e for e in events if e["t"] == "done")
     assert done["narration"] and done["state"]["purse_cp"] == 15_00
     # the streamed deltas reconstruct the final narration
     streamed = "".join(e["v"] for e in events if e["t"] == "delta")

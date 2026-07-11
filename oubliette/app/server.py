@@ -824,6 +824,9 @@ async def audio_file(filename: str) -> FileResponse | JSONResponse:
 _TTS_CLIPS: dict[str, bytes] = {}
 _TTS_CLIPS_MAX = 128
 _TTS_POOL = None           # lazy single worker: sentences synthesize in order
+_TTS_TURN_JOBS: list = []  # the LAST narrated turn's clip futures — cancelled when
+                           # a new narrated turn starts, so a slow tier's unfinished
+                           # tail never queues ahead of the next turn's clips
 
 
 def _tts_pool():
@@ -845,8 +848,12 @@ def _store_clip(wav: bytes) -> str:
 
 @app.get("/api/tts/status")
 async def tts_status() -> JSONResponse:
-    """Can narration run, with which voices — and if not, an honest why."""
-    return JSONResponse(tts_engine.status())
+    """Can narration run, with which voices — and if not, an honest why.
+    The first ask LOADS the model (seconds on Kokoro, tens on the Qwen tier),
+    so it runs on a worker thread — the page boots this endpoint, and the app
+    must never sit frozen behind a model load."""
+    status = await asyncio.get_running_loop().run_in_executor(None, tts_engine.status)
+    return JSONResponse(status)
 
 
 class TtsIn(BaseModel):
@@ -856,7 +863,8 @@ class TtsIn(BaseModel):
 @app.put("/api/tts")
 async def put_tts(body: TtsIn) -> JSONResponse:
     """Save the narrator voice (per model — the host's storyteller)."""
-    engine, reason = tts_engine.get_engine()
+    engine, reason = await asyncio.get_running_loop().run_in_executor(
+        None, tts_engine.get_engine)
     if engine is None:
         return JSONResponse({"error": reason}, status_code=409)
     if body.voice not in engine.voices():
@@ -889,7 +897,8 @@ async def tts_benchmark(body: TtsBenchIn) -> JSONResponse:
     and hand back the synthesized clip so the test doubles as a voice preview.
     Speed is reported as real-time factor: synthesis seconds per second of audio
     — under 1.0 means the voice outruns its own reading."""
-    engine, reason = tts_engine.get_engine()
+    engine, reason = await asyncio.get_running_loop().run_in_executor(
+        None, tts_engine.get_engine)
     if engine is None:
         return JSONResponse({"error": reason}, status_code=409)
     voice = body.voice if body.voice in engine.voices() else tts_engine.active_voice()
@@ -953,15 +962,34 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
 
     # Voiced narration (opt-in per request): finished sentences go to the TTS as
     # the text streams, and each clip is announced on this same stream as
-    # {"t":"audio", url, upto} — `upto` being how many raw narration chars the
-    # clip covers (movie mode reveals text up to it). Unavailable/failed
-    # narration NEVER blocks the turn: the text flows exactly as today.
-    engine, tts_reason = tts_engine.get_engine() if body.narrate else (None, None)
+    # {"t":"audio", url, upto} — `upto` being how many narration chars (in the
+    # client's UTF-16 units) the clip covers (movie mode reveals text up to it).
+    # Unavailable/failed narration NEVER blocks the turn: the text flows exactly
+    # as today. The engine's FIRST load is a real model load (tens of seconds on
+    # the Qwen tier) — it happens on a worker thread, never on the event loop.
+    engine, tts_reason = (
+        await asyncio.get_running_loop().run_in_executor(None, tts_engine.get_engine)
+        if body.narrate else (None, None))
     chunker = SentenceChunker() if engine is not None else None
     voice = tts_engine.active_voice() if engine is not None else None
     clip_jobs: list = []
+    streamed = {"text": ""}   # exactly what the chunker was fed (attempt 0's stream)
+    if engine is not None:
+        # A slow tier's unfinished tail from the LAST turn must not queue ahead
+        # of this one — the player already moved on (the client killed its audio
+        # on send). Cancel whatever hasn't started; the running clip finishes.
+        global _TTS_TURN_JOBS
+        for j in _TTS_TURN_JOBS:
+            j.cancel()
+        _TTS_TURN_JOBS = clip_jobs
 
-    def _synth(raw: str, upto: int) -> None:      # runs on the TTS worker thread
+    def _u16(n: int) -> int:
+        # The chunker counts Python code points; the client indexes UTF-16 units
+        # (an astral emoji is 1 vs 2) — convert so movie mode never lands short
+        # or splits a surrogate pair.
+        return len(streamed["text"][:n].encode("utf-16-le")) // 2
+
+    def _synth(raw: str, upto16: int) -> None:    # runs on the TTS worker thread
         speakable = clean_for_speech(raw)
         if not speakable:
             return
@@ -970,16 +998,17 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
         except Exception as e:                    # a bad sentence loses its clip, nothing more
             GAME.loop.debug.append("anomaly", stage="tts", error=repr(e))
             return
-        _emit({"t": "audio", "url": f"/api/tts/clip/{_store_clip(wav)}", "upto": upto})
+        _emit({"t": "audio", "url": f"/api/tts/clip/{_store_clip(wav)}", "upto": upto16})
 
     def _speak(sentences: list) -> None:
         for raw, upto in sentences:
-            clip_jobs.append(_tts_pool().submit(_synth, raw, upto))
+            clip_jobs.append(_tts_pool().submit(_synth, raw, _u16(upto)))
 
     def on_text(delta: str) -> None:
         # Called from the model's worker thread → hop back onto the loop safely.
         loop.call_soon_threadsafe(queue.put_nowait, {"t": "delta", "v": delta})
         if chunker is not None:
+            streamed["text"] += delta
             _speak(chunker.feed(delta))
 
     def _emit(item: dict) -> None:
@@ -988,32 +1017,53 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
         loop.call_soon_threadsafe(queue.put_nowait, item)
 
     async def run_turn() -> None:
-        async with GAME.lock:
-            try:
+        try:
+            async with GAME.lock:
                 report = await GAME.loop.take_turn(text, on_text=on_text, ooc=body.ooc)
-                if chunker is not None:
-                    if chunker.fed == 0 and report.narration:
-                        # Nothing streamed (a non-streaming path) — voice the final text.
-                        _speak(chunker.feed(report.narration))
-                    _speak(chunker.flush())
-                    if clip_jobs:
-                        # Let the tail clips land before 'done' so the client sees
-                        # every audio event inside the stream. Kokoro runs ~5× faster
-                        # than real-time, so this wait is normally near-zero; the
-                        # timeout is the never-block-a-turn promise.
-                        from concurrent.futures import wait as _fwait
-                        await loop.run_in_executor(None, lambda: _fwait(clip_jobs, timeout=15))
                 payload = _turn_payload(report)
-                payload["t"] = "done"
-                if body.narrate and engine is None:
-                    payload["tts_off"] = tts_reason   # asked for a voice we can't give — say why
-                _emit(payload)
-            except Exception as e:  # surface failures to the client, don't hang
-                # …but never silently: keep the full traceback (console + debug log)
-                # so a one-off failure is diagnosable after the fact.
-                traceback.print_exc()
-                GAME.loop.debug.append("anomaly", stage="turn_stream", error=repr(e))
-                _emit({"t": "error", "error": str(e)})
+            # The game lock is RELEASED here: everything below is audio-only.
+            # Holding it through a slow tier's tail synthesis froze every other
+            # endpoint for the duration.
+            payload["t"] = "done"
+            if body.narrate and engine is None:
+                payload["tts_off"] = tts_reason   # asked for a voice we can't give — say why
+            if chunker is not None:
+                final = report.narration or ""
+                if chunker.fed and not final.startswith(streamed["text"]):
+                    # A retry rewrote the turn (the loop streams only attempt 0).
+                    # The remaining draft clips would read a paragraph the player
+                    # never sees — drop them; what already played is water under
+                    # the bridge. The client snaps to the final text regardless.
+                    for j in clip_jobs:
+                        j.cancel()
+                    GAME.loop.debug.append(
+                        "anomaly", stage="tts",
+                        error="a retry rewrote the turn — the draft's remaining clips were dropped")
+                else:
+                    if chunker.fed == 0 and final:
+                        # Nothing streamed (a non-streaming path) — voice the final text.
+                        streamed["text"] = final
+                        _speak(chunker.feed(final))
+                    _speak(chunker.flush())
+            # 'done' goes out NOW — chips and state land instantly. The client
+            # reads until the stream closes, so tail clips ride AFTER it; the
+            # stream ends with an 'end' sentinel once the voice catches up.
+            _emit(payload)
+            if clip_jobs:
+                from concurrent.futures import wait as _fwait
+                await loop.run_in_executor(None, lambda: _fwait(clip_jobs, timeout=90))
+                dropped = sum(1 for j in clip_jobs if j.cancel())
+                if dropped:
+                    GAME.loop.debug.append(
+                        "anomaly", stage="tts",
+                        error=f"{dropped} tail clip(s) unfinished after 90s — dropped")
+            _emit({"t": "end"})
+        except Exception as e:  # surface failures to the client, don't hang
+            # …but never silently: keep the full traceback (console + debug log)
+            # so a one-off failure is diagnosable after the fact.
+            traceback.print_exc()
+            GAME.loop.debug.append("anomaly", stage="turn_stream", error=repr(e))
+            _emit({"t": "error", "error": str(e)})
 
     async def events():
         task = asyncio.create_task(run_turn())
@@ -1021,7 +1071,7 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
             while True:
                 item = await queue.get()
                 yield f"data: {json.dumps(item)}\n\n"
-                if item.get("t") in ("done", "error"):
+                if item.get("t") in ("end", "error"):
                     break
         finally:
             await task
