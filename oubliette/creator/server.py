@@ -309,12 +309,43 @@ class SaveIn(BaseModel):
     contents: dict          # {pack, items, statblocks, npcs, places, scenarios}
 
 
+def _prune_orphan_files(pack_dir: Path) -> list[str]:
+    """Sweep side-files whose owner is gone from the SAVED world: a combat file
+    with no matching stat block (the clone flow writes its combat copy to disk
+    immediately, so a clone begun and abandoned before a save leaves one
+    behind), or a person snapshot with no matching NPC. Runs AFTER the pack
+    files are written (disk is the truth) and AFTER the backup (a pruned file
+    is still recoverable from it). A combat file whose stem matches an SRD
+    monster id is left alone — a bare file is a legitimate hand-authored
+    override of the SRD kit for this world. Returns pruned relative names."""
+    pruned: list[str] = []
+    sb_ids = {e.get("id") for e in (_read_json(pack_dir / "statblocks.json") or [])
+              if isinstance(e, dict)}
+    keep = sb_ids | set(_srd_bestiary())
+    mon_dir = pack_dir / "monsters"
+    if mon_dir.is_dir():
+        for p in sorted(mon_dir.glob("*.json")):
+            if p.stem not in keep:
+                p.unlink()
+                pruned.append(f"monsters/{p.name}")
+    npc_ids = {e.get("id") for e in (_read_json(pack_dir / "npcs.json") or [])
+               if isinstance(e, dict)}
+    chars_dir = pack_dir / "characters"
+    if chars_dir.is_dir():
+        for p in sorted(chars_dir.glob("*.json")):
+            if p.stem not in npc_ids:
+                p.unlink()
+                pruned.append(f"characters/{p.name}")
+    return pruned
+
+
 @app.post("/api/pack/{pack_id}/save")
 async def save_pack(pack_id: str, body: SaveIn) -> JSONResponse:
     """Write the edited world back to disk, after backing up the previous version.
     Saving is allowed even while a world still has issues (you never lose work-in-
     progress) — the response carries the fresh ✓/⚠ report so the page can show
-    whether it's playable yet."""
+    whether it's playable yet. Side-files orphaned by the save (a combat file
+    whose creature is gone) are swept and reported."""
     d = _pack_dir(pack_id)
     if d is None:
         return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
@@ -324,8 +355,10 @@ async def save_pack(pack_id: str, body: SaveIn) -> JSONResponse:
         data = body.contents.get(name)
         if data is not None:                # only rewrite files we were given
             _write_json(d / f"{name}.json", data)
+    pruned = _prune_orphan_files(d)
 
-    return JSONResponse({"ok": True, "backed_up": backup, "validation": _validate(pack_id)})
+    return JSONResponse({"ok": True, "backed_up": backup, "pruned": pruned,
+                         "validation": _validate(pack_id)})
 
 
 # --- world portability (v0.9): share a pack as one zip -------------------------

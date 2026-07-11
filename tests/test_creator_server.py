@@ -269,6 +269,45 @@ def test_saved_files_are_pretty_and_newline_terminated(tmp_path, monkeypatch):
     assert "\n  " in text                                # indented (pretty-printed)
 
 
+def test_save_prunes_orphaned_side_files(tmp_path, monkeypatch):
+    """The clone flow writes a creature's combat copy to disk immediately; if the
+    creature is never saved into the world, the next save sweeps the leftover.
+    Files owned by a live stat block (lean_wolf) or named for an SRD monster
+    (a deliberate hand-authored override) survive the sweep."""
+    packs = _temp_brightvale(tmp_path, monkeypatch)
+    mon = packs / "brightvale" / "monsters"
+    mon.mkdir(exist_ok=True)
+    kit = (mon / "lean_wolf.json").read_text(encoding="utf-8")
+    (mon / "abandoned_clone.json").write_text(kit, encoding="utf-8")
+    (mon / "wolf.json").write_text(kit, encoding="utf-8")      # SRD-named override
+    chars = packs / "brightvale" / "characters"
+    chars.mkdir(exist_ok=True)
+    (chars / "nobody.json").write_text("{}", encoding="utf-8")  # NPC long gone
+
+    contents = client.get("/api/pack/brightvale").json()["contents"]
+    body = client.post("/api/pack/brightvale/save", json={"contents": contents}).json()
+    assert body["ok"] is True
+    assert sorted(body["pruned"]) == ["characters/nobody.json",
+                                      "monsters/abandoned_clone.json"]
+    assert not (mon / "abandoned_clone.json").exists()
+    assert not (chars / "nobody.json").exists()
+    assert (mon / "lean_wolf.json").is_file()       # owned by a live stat block
+    assert (mon / "wolf.json").is_file()            # SRD-named: left alone
+
+    # the sweep is never destructive: the backup still holds the pruned file
+    backups = list((tmp_path / "pack-backups" / "brightvale").iterdir())
+    assert (backups[0] / "monsters" / "abandoned_clone.json").is_file()
+
+
+def test_partial_save_never_mass_prunes(tmp_path, monkeypatch):
+    """A save that carries no statblocks reads the DISK truth — it must never
+    treat 'not provided' as 'all creatures deleted' and sweep the world's kits."""
+    packs = _temp_brightvale(tmp_path, monkeypatch)
+    body = client.post("/api/pack/brightvale/save", json={"contents": {}}).json()
+    assert body["ok"] is True and body["pruned"] == []
+    assert (packs / "brightvale" / "monsters" / "lean_wolf.json").is_file()
+
+
 def test_save_unknown_pack_is_404(tmp_path, monkeypatch):
     _temp_brightvale(tmp_path, monkeypatch)
     r = client.post("/api/pack/ghost/save", json={"contents": {}})

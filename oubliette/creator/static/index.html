@@ -1958,7 +1958,12 @@ function confirmPlace(original) {
     return;
   }
   if (encs.length) {
-    const used = new Set(encs.map(e => e.id).filter(Boolean));
+    // Never re-mint an id the place had when this editor opened, even if its
+    // encounter was deleted this session — a live campaign's fired-record for
+    // the old "encounter-1" must not attach to a brand-new fight.
+    const used = new Set([...encs.map(e => e.id),
+                          ...((original && original.encounters) || []).map(e => e.id)]
+                         .filter(Boolean));
     let n = 1;
     base.encounters = encs.map(en => {
       let id = en.id;
@@ -4542,9 +4547,17 @@ async function saveWorld() {
   })).json();
   if (res.error) { toast(res.error); btn.disabled = false; return; }
   state.validation = res.validation; state.dirty = false;
+  // The save swept side-files whose owner is gone (an abandoned clone's combat
+  // copy, a deleted person's snapshot) — keep the editor's badges honest.
+  for (const f of res.pruned || []) {
+    const stem = f.replace(/^(monsters|characters)\//, "").replace(/\.json$/, "");
+    if (f.startsWith("monsters/")) state.monsterFiles = (state.monsterFiles || []).filter(id => id !== stem);
+    else state.characterFiles = (state.characterFiles || []).filter(id => id !== stem);
+  }
   document.getElementById("dirty").style.display = "none";
   render(); loadWorlds();
-  toast(res.validation.ok ? "Saved ✓ — previous version backed up" : "Saved — previous version backed up (still has issues to fix)");
+  const tidied = (res.pruned || []).length ? ` (tidied ${res.pruned.length} leftover combat file${res.pruned.length > 1 ? "s" : ""})` : "";
+  toast(res.validation.ok ? `Saved ✓ — previous version backed up${tidied}` : `Saved — previous version backed up (still has issues to fix)${tidied}`);
 }
 
 async function newWorld() {
