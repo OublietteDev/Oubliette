@@ -45,8 +45,4 @@ Unordered, and gated on demand. The big themes:
 ## Someday — the big maybes
 
 - **Multiplayer.** No fleshed out design yet, but it feels possible. Early designs include one player functioning as the server, allowing others to connect.
-- **A mobile app.** Only if players overwhelmingly ask for it. For the amount of development required for this, I would charge for access to the app. Not something I want to do, but am willing if the demand is there.
-
----
-
-*Curious about the design thinking behind all of this? The specs live in [`docs/design/`](docs/design/).*
+- ~~A mobile app. Only if players overwhelmingly ask for it. For the amount of development required for this, I would charge for access to the app. Not something I want to do, but am willing if the demand is there.~~ **Scrapped permanently.**
