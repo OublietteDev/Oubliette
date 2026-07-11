@@ -22,8 +22,8 @@ from ..content.ruleset import Ruleset
 from ..content.srd_schemas import CharClass, SrdEquipment
 from ..enums import Ability, Skill
 from ..record.rng import Rng
-from ..state.models import (Character, CharacterSheet, FeatureRef, Item,
-                            ItemStack)
+from ..state.models import (AncestryChoice, Character, CharacterSheet,
+                            FeatureRef, Item, ItemStack)
 from . import derive
 
 # Level-1 ability generation (design §1). The standard array and the point-buy
@@ -58,6 +58,7 @@ class CharacterBuild(BaseModel):
     subrace: str | None = None
     subclass: str | None = None
     ability_method: str = "standard_array"
+    race_ancestry: str | None = None   # dragonborn: the Draconic Ancestry pick ("red")
     base_abilities: dict[Ability, int] = Field(default_factory=dict)   # pre-racial picks
     skills: list[Skill] = Field(default_factory=list)                  # class skill picks
     expertise: list[Skill] = Field(default_factory=list)
@@ -358,6 +359,22 @@ def build_character(build: CharacterBuild, ruleset: Ruleset, char_id: str = "pc"
             opts = ", ".join(s.id for s in available)
             errors.append(f"race {race.id!r} requires a subrace (choose one of: {opts})")
 
+    # draconic ancestry (dragonborn): required iff the race carries the table —
+    # the breath weapon and damage resistance have no shape without it.
+    ancestry = None
+    if race is not None:
+        table = {a.id: a for a in race.ancestries}
+        if build.race_ancestry is not None:
+            ancestry = table.get(build.race_ancestry)
+            if not table:
+                errors.append(f"race {race.id!r} has no draconic ancestry to choose")
+            elif ancestry is None:
+                errors.append(f"unknown draconic ancestry {build.race_ancestry!r} "
+                              f"(choose one of: {', '.join(table)})")
+        elif table:
+            errors.append(f"race {race.id!r} requires a draconic ancestry "
+                          f"(choose one of: {', '.join(table)})")
+
     # subclass: only when the class grants it by this level; must match the class.
     subclass = None
     if cc is not None and build.subclass is not None:
@@ -421,7 +438,8 @@ def build_character(build: CharacterBuild, ruleset: Ruleset, char_id: str = "pc"
 
     # --- build it (validation passed; every reference is safe) ----------------
     assert cc is not None and race is not None and bg is not None
-    return _assemble(build, cc, race, subrace, subclass, bg, ruleset, grants, char_id)
+    return _assemble(build, cc, race, subrace, subclass, bg, ruleset, grants,
+                     char_id, ancestry=ancestry)
 
 
 def _abilities_fatal(build: CharacterBuild) -> bool:
@@ -431,8 +449,8 @@ def _abilities_fatal(build: CharacterBuild) -> bool:
 
 
 def _assemble(build: CharacterBuild, cc: CharClass, race, subrace, subclass, bg,
-              ruleset: Ruleset, grants: list[tuple[str, int]], char_id: str
-              ) -> tuple[Character, list[Item]]:
+              ruleset: Ruleset, grants: list[tuple[str, int]], char_id: str,
+              ancestry=None) -> tuple[Character, list[Item]]:
     abilities = _final_abilities(build, race, subrace)
     spell_ability = Ability(cc.spellcasting.ability) if cc.spellcasting else None
 
@@ -456,6 +474,13 @@ def _assemble(build: CharacterBuild, cc: CharClass, race, subrace, subclass, bg,
         race=race.id, subrace=(subrace.id if subrace else None),
         char_class=cc.id, subclass=(subclass.id if subclass else None),
         background=bg.id,
+        # The chosen ancestry is RESOLVED onto the sheet (the combat bridge
+        # reads the shape/save/type here, never the ruleset).
+        ancestry=(AncestryChoice(id=ancestry.id, name=ancestry.name,
+                                 damage_type=ancestry.damage_type,
+                                 breath_shape=ancestry.breath_shape,
+                                 breath_save=Ability(ancestry.breath_save))
+                  if ancestry is not None else None),
         base_abilities=dict(build.base_abilities), ability_method=build.ability_method,
         saving_throw_proficiencies={Ability(a) for a in cc.saving_throws},
         expertise=set(build.expertise),

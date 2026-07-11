@@ -67,6 +67,18 @@ class FeatureRef(BaseModel):
     level: int = 1
 
 
+class AncestryChoice(BaseModel):
+    """A dragonborn's chosen draconic ancestry, RESOLVED at chargen (the sheet
+    carries what combat needs — same no-ruleset-lookup contract as FeatureRef):
+    the breath weapon's shape/save and the damage resistance type."""
+
+    id: str                          # "red", "silver", ...
+    name: str = ""                   # display label
+    damage_type: str = ""            # "fire", "cold", ...
+    breath_shape: str = "cone"       # "line" (5x30 ft) | "cone" (15 ft)
+    breath_save: Ability = Ability.DEX
+
+
 class CharacterSheet(BaseModel):
     """The D&D build behind a PC (design doc §4). Set at chargen, changed only by
     level-up. Derived numbers (AC, saves, slots…) are NOT stored here — they're
@@ -79,6 +91,7 @@ class CharacterSheet(BaseModel):
     background: str
     subrace: str | None = None
     subclass: str | None = None
+    ancestry: AncestryChoice | None = None   # dragonborn only; None elsewhere
     base_abilities: dict[Ability, int] = Field(default_factory=dict)  # chosen, pre-racial
     ability_method: str = "standard_array"   # standard_array | point_buy | roll
     saving_throw_proficiencies: set[Ability] = Field(default_factory=set)

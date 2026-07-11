@@ -261,6 +261,17 @@ class AbilityScoreChoice(_Strict):
     amount: int = 1                  # the bonus applied to each picked ability
 
 
+class DraconicAncestry(_Strict):
+    """One row of the dragonborn's Draconic Ancestry table: the dragon type
+    that decides the breath weapon's shape/save and the damage resistance."""
+
+    id: str                          # "red", "silver", ...
+    name: str                        # display label ("Red")
+    damage_type: str                 # "fire", "cold", ...
+    breath_shape: Literal["line", "cone"]   # 5x30 ft line / 15 ft cone
+    breath_save: AbilityKey          # "dex" or "con"
+
+
 class Race(_Strict):
     id: str
     name: str
@@ -273,6 +284,13 @@ class Race(_Strict):
     language_choices: int = 0        # extra languages of the player's choice (Human, Half-Elf)
     skill_choices: SkillChoice = Field(default_factory=SkillChoice)  # e.g. Half-Elf Skill Versatility
     traits: list[Feature] = Field(default_factory=list)
+    # Limited-use racial abilities (Relentless Endurance, Breath Weapon) ride the
+    # same resource plumbing as class pools — staged into fights, spent uses
+    # persisting between them, restored by the matching rest.
+    resources: list[ClassResource] = Field(default_factory=list)
+    # Dragonborn only: the Draconic Ancestry table the player picks from at
+    # chargen (empty for every other race — the picker hides itself).
+    ancestries: list[DraconicAncestry] = Field(default_factory=list)
 
 
 class BonusCantrips(_Strict):
@@ -293,6 +311,7 @@ class Subrace(_Strict):
     language_choices: int = 0        # extra languages of the player's choice (High Elf)
     bonus_cantrips: BonusCantrips | None = None   # High Elf: a wizard cantrip of choice
     traits: list[Feature] = Field(default_factory=list)
+    resources: list[ClassResource] = Field(default_factory=list)  # same contract as Race.resources
 
 
 # --- backgrounds --------------------------------------------------------------

@@ -93,6 +93,24 @@ def test_fighter_build_is_fully_derived():
     assert ("background", "Shelter of the Faithful") in names
 
 
+def test_dragonborn_requires_and_resolves_a_draconic_ancestry():
+    # Without the pick the build refuses — the breath weapon has no shape.
+    err = _why(_fighter(race="dragonborn", race_languages=[]))
+    assert "draconic ancestry" in err
+    # With it, the sheet carries the RESOLVED trio (no ruleset lookup in combat).
+    char, _ = build_character(
+        _fighter(race="dragonborn", race_ancestry="silver", race_languages=[]), RS)
+    anc = char.sheet.ancestry
+    assert (anc.id, anc.damage_type, anc.breath_shape) == ("silver", "cold", "cone")
+    assert anc.breath_save == Ability.CON
+    # The racial pool derives: one breath, back on a SHORT rest.
+    from oubliette.rules import derive
+    pools = derive.class_resources(char, RS)
+    assert pools["Breath Weapon"] == {"max": 1, "recharge": "short", "unlimited": False}
+    # An ancestry on a race without the table is refused, not ignored.
+    assert "no draconic ancestry" in _why(_fighter(race_ancestry="red"))
+
+
 def test_subrace_traits_and_abilities_fold_in():
     # base _fighter supplies 1 race_language ("Orc") — High Elf grants exactly 1.
     char, _ = build_character(

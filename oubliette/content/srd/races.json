@@ -65,6 +65,22 @@
       {"name": "Draconic Ancestry", "text": "You have draconic ancestry. Choose one type of dragon from the Draconic Ancestry table. Your breath weapon and damage resistance are determined by the dragon type, as shown in the table.\n\nDragon | Damage Type | Breath Weapon\nBlack | Acid | 5 by 30 ft. line (Dex. save)\nBlue | Lightning | 5 by 30 ft. line (Dex. save)\nBrass | Fire | 5 by 30 ft. line (Dex. save)\nBronze | Lightning | 5 by 30 ft. line (Dex. save)\nCopper | Acid | 5 by 30 ft. line (Dex. save)\nGold | Fire | 15 ft. cone (Dex. save)\nGreen | Poison | 15 ft. cone (Con. save)\nRed | Fire | 15 ft. cone (Dex. save)\nSilver | Cold | 15 ft. cone (Con. save)\nWhite | Cold | 15 ft. cone (Con. save)"},
       {"name": "Breath Weapon", "text": "You can use your action to exhale destructive energy. Your draconic ancestry determines the size, shape, and damage type of the exhalation. When you use your breath weapon, each creature in the area of the exhalation must make a saving throw, the type of which is determined by your draconic ancestry. The DC for this saving throw equals 8 + your Constitution modifier + your proficiency bonus. A creature takes 2d6 damage on a failed save, and half as much damage on a successful one. The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level. After you use your breath weapon, you can't use it again until you complete a short or long rest."},
       {"name": "Damage Resistance", "text": "You have resistance to the damage type associated with your draconic ancestry."}
+    ],
+    "resources": [
+      {"name": "Breath Weapon", "recharge": "short", "by_level": {"1": 1},
+       "text": "Exhale destructive energy in your ancestry's shape (once per short or long rest)."}
+    ],
+    "ancestries": [
+      {"id": "black", "name": "Black", "damage_type": "acid", "breath_shape": "line", "breath_save": "dex"},
+      {"id": "blue", "name": "Blue", "damage_type": "lightning", "breath_shape": "line", "breath_save": "dex"},
+      {"id": "brass", "name": "Brass", "damage_type": "fire", "breath_shape": "line", "breath_save": "dex"},
+      {"id": "bronze", "name": "Bronze", "damage_type": "lightning", "breath_shape": "line", "breath_save": "dex"},
+      {"id": "copper", "name": "Copper", "damage_type": "acid", "breath_shape": "line", "breath_save": "dex"},
+      {"id": "gold", "name": "Gold", "damage_type": "fire", "breath_shape": "cone", "breath_save": "dex"},
+      {"id": "green", "name": "Green", "damage_type": "poison", "breath_shape": "cone", "breath_save": "con"},
+      {"id": "red", "name": "Red", "damage_type": "fire", "breath_shape": "cone", "breath_save": "dex"},
+      {"id": "silver", "name": "Silver", "damage_type": "cold", "breath_shape": "cone", "breath_save": "con"},
+      {"id": "white", "name": "White", "damage_type": "cold", "breath_shape": "cone", "breath_save": "con"}
     ]
   },
   {
@@ -107,6 +123,10 @@
       {"name": "Menacing", "text": "You gain proficiency in the Intimidation skill."},
       {"name": "Relentless Endurance", "text": "When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead. You can't use this feature again until you finish a long rest."},
       {"name": "Savage Attacks", "text": "When you score a critical hit with a melee weapon attack, you can roll one of the weapon's damage dice one additional time and add it to the extra damage of the critical hit."}
+    ],
+    "resources": [
+      {"name": "Relentless Endurance", "recharge": "long", "by_level": {"1": 1},
+       "text": "When you are reduced to 0 hit points but not killed outright, you drop to 1 hit point instead (once per long rest)."}
     ]
   },
   {

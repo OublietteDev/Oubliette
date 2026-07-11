@@ -109,6 +109,11 @@ def chargen_options(rs: Ruleset) -> dict:
                                           "spell_list": s.bonus_cantrips.spell_list}
                                          if s.bonus_cantrips else None)}
                      for s in rs.subraces_for(r.id)],
+        # Dragonborn: the Draconic Ancestry table (empty elsewhere — the
+        # wizard's picker hides itself).
+        "ancestries": [{"id": a.id, "name": a.name, "damage_type": a.damage_type,
+                        "breath_shape": a.breath_shape, "breath_save": a.breath_save}
+                       for a in r.ancestries],
     } for r in rs.races.values()]
     backgrounds = [{
         "id": b.id, "name": b.name, "skills": list(b.skill_proficiencies),

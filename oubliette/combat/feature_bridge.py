@@ -233,6 +233,42 @@ def features_for(char: Character) -> list[Feature]:
             # the subclass gate is automatic.
             f = Feature(name=ref.name, description=desc, cutting_words=True)
 
+        # --- racial traits (they ride sheet.features like class features) ----
+        elif name == "relentless endurance":
+            # Half-Orc: drop to 1 HP instead of 0, no save, once per LONG rest —
+            # the engine resolves it automatically; the racial resource pool
+            # (derive.class_resources) makes the once-per-rest stick BETWEEN
+            # fights, restored only by a long rest.
+            f = Feature(name=ref.name, description=desc,
+                        death_prevention=True,
+                        death_prevention_resource="relentless_endurance")
+        elif name == "fey ancestry":
+            # Elf/Half-Elf: advantage on saves vs being charmed. (The magical-
+            # sleep immunity has no engine condition to hang on — story-side.)
+            f = Feature(name=ref.name, description=desc,
+                        save_advantage_vs_conditions=["charmed"])
+        elif name == "dwarven resilience":
+            f = Feature(name=ref.name, description=desc,
+                        grants_damage_resistances=["poison"],
+                        save_advantage_vs_conditions=["poisoned"])
+        elif name == "brave":
+            f = Feature(name=ref.name, description=desc,
+                        save_advantage_vs_conditions=["frightened"])
+        elif name == "hellish resistance":
+            f = Feature(name=ref.name, description=desc,
+                        grants_damage_resistances=["fire"])
+        elif name == "savage attacks":
+            # Approximation: one extra damage die on ANY crit (the engine's
+            # Brutal Critical primitive; no melee-only gate exists). Stacks with
+            # Brutal Critical for the half-orc barbarian, as the rules intend.
+            f = Feature(name=ref.name, description=desc, bonus_crit_dice=1)
+        elif name == "damage resistance" and sheet.ancestry is not None:
+            # Dragonborn: resistance to the chosen ancestry's damage type. The
+            # trait name is generic, so the ancestry on the sheet is the gate —
+            # a pre-ancestry save simply stages without it, as before.
+            f = Feature(name=ref.name, description=desc,
+                        grants_damage_resistances=[sheet.ancestry.damage_type])
+
         if f is not None:
             out.append(f)
     return out
@@ -559,6 +595,37 @@ def feature_actions(
             healing=str(5 * level),
             resource_cost={"channel_divinity": 1},
             ai_priority=5,
+        ))
+
+    if "breath weapon" in names and sheet.ancestry is not None:
+        # Dragonborn: the ancestry on the sheet decides shape/save/type; the
+        # dice climb the SRD ladder with character level; DC = 8 + CON + prof.
+        # The racial pool (1/short rest) persists between fights like any other.
+        anc = sheet.ancestry
+        dice = ("5d6" if level >= 16 else "4d6" if level >= 11
+                else "3d6" if level >= 6 else "2d6")
+        dc = 8 + char.proficiency_bonus + char.ability_mod(Ability.CON)
+        line = anc.breath_shape == "line"
+        save_long = {"dex": "dexterity", "con": "constitution"}[anc.breath_save.value]
+        actions.append(Action(
+            name="Breath Weapon",
+            description=(f"Exhale {anc.damage_type} in a "
+                         f"{'5-by-30-foot line' if line else '15-foot cone'}: "
+                         f"{dice} {anc.damage_type} damage, DC {dc} "
+                         f"{save_long.title()} save for half (1/short rest)."),
+            action_type=ActionType.ACTION,
+            target_type=TargetType.AREA_LINE if line else TargetType.AREA_CONE,
+            range=0,
+            area_size=30 if line else 15,
+            saving_throw=SavingThrowEffect(
+                ability=save_long, dc=dc,
+                damage_on_fail=[DamageRoll(dice=dice,
+                                           damage_type=DamageType(anc.damage_type),
+                                           bonus=0)],
+                damage_on_success="half",
+            ),
+            resource_cost={"breath_weapon": 1},
+            ai_priority=6,
         ))
 
     return actions, bonus

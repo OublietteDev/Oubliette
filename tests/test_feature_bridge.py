@@ -408,3 +408,131 @@ def test_second_wind_heals_spends_pool_and_rounds_trip():
     combat_result = result_to_combat_result(build_result(cm), plan)
     assert combat_result.resources_used_final["brom"]["Second Wind"] == 1
     assert combat_result.resources_used_final["brom"]["Action Surge"] == 0
+
+
+# --- racial traits: the race's features stage exactly like class features ----
+
+def _half_orc(level=3) -> Character:
+    return Character(
+        id="grum", name="Grum", kind="pc", level=level, hp=30, max_hp=30,
+        abilities={Ability.STR: 16, Ability.CON: 14},
+        armor_class=16, attack_bonus=5, damage="1d12+3",
+        sheet=CharacterSheet(
+            race="half_orc", char_class="fighter", background="acolyte",
+            features=_refs(("Menacing", 1), ("Relentless Endurance", 1),
+                           ("Savage Attacks", 1))))
+
+
+def test_relentless_endurance_stages_with_its_long_rest_pool():
+    grum = _half_orc()
+    feats = {f.name: f for f in features_for(grum)}
+    re = feats["Relentless Endurance"]
+    assert re.death_prevention and re.death_prevention_save_ability is None
+    assert re.death_prevention_resource == "relentless_endurance"
+    assert feats["Savage Attacks"].bonus_crit_dice == 1
+    # The racial pool derives beside the class pools under its STORY name (the
+    # sheet shows it like "Second Wind"); engine_resource_key maps it to the
+    # arena's snake_case: 1 use, back on a LONG rest.
+    pools = derive.class_resources(grum, RS)
+    assert pools["Relentless Endurance"] == {"max": 1, "recharge": "long",
+                                             "unlimited": False}
+    assert engine_resource_key("Relentless Endurance") == "relentless_endurance"
+    assert pools["Second Wind"]["max"] == 1        # class pools untouched
+
+
+def test_racial_passives_stage_as_engine_features():
+    cases = {
+        "Fey Ancestry": ("save_advantage_vs_conditions", ["charmed"]),
+        "Dwarven Resilience": ("grants_damage_resistances", ["poison"]),
+        "Brave": ("save_advantage_vs_conditions", ["frightened"]),
+        "Hellish Resistance": ("grants_damage_resistances", ["fire"]),
+    }
+    char = _half_orc()
+    char.sheet.features = _refs(*[(n, 1) for n in cases])
+    feats = {f.name: f for f in features_for(char)}
+    for name, (field, want) in cases.items():
+        assert getattr(feats[name], field) == want, name
+    # Dwarven Resilience carries BOTH halves.
+    assert feats["Dwarven Resilience"].save_advantage_vs_conditions == ["poisoned"]
+
+
+def test_relentless_endurance_survives_the_blow_and_the_fight_gap():
+    """Full slice through the Arena's own damage pipeline: the killing blow
+    leaves Grum at 1 HP and spends the racial pool; the spend rides the v2
+    result back under the story name; a SECOND fight stages him with 0 uses
+    (once per long rest means once — fights don't refresh it)."""
+    from arena.combat.damage import apply_damage
+    from arena.handoff import build_result
+
+    plan, cm, pc_cid, grum, _, _ = _manager_for(_half_orc())
+    assert grum.class_resources["relentless_endurance"] == 1
+    event, dp_events = apply_damage(grum, 99, "slashing", creature_id=pc_cid)
+    assert grum.current_hit_points == 1            # not killed outright
+    assert event.details["death_prevented"] is True
+    assert grum.class_resources["relentless_endurance"] == 0
+
+    combat_result = result_to_combat_result(build_result(cm), plan)
+    assert combat_result.resources_used_final["grum"]["Relentless Endurance"] == 1
+
+    # Between fights the CHARACTER carries the spend — the next staging must
+    # arrive with the pool empty, so a second 0-HP blow truly drops him.
+    wounded = _half_orc()
+    wounded.resources_used = {"Relentless Endurance": 1}
+    restaged = character_to_player(wounded, None, RS)
+    assert restaged.class_resources["relentless_endurance"] == 0
+    event2, _ = apply_damage(restaged, 99, "slashing", creature_id="grum2")
+    assert restaged.current_hit_points == 0        # the pool is spent: he falls
+
+
+def test_dragonborn_breath_and_resistance_ride_the_sheets_ancestry():
+    from oubliette.state.models import AncestryChoice
+
+    drak = Character(
+        id="drak", name="Drak", kind="pc", level=6, hp=50, max_hp=50,
+        abilities={Ability.STR: 16, Ability.CON: 16},
+        armor_class=17, attack_bonus=6, damage="1d8+3",
+        sheet=CharacterSheet(
+            race="dragonborn", char_class="fighter", background="acolyte",
+            ancestry=AncestryChoice(id="silver", name="Silver", damage_type="cold",
+                                    breath_shape="cone", breath_save=Ability.CON),
+            features=_refs(("Breath Weapon", 1), ("Damage Resistance", 1))))
+    feats = {f.name: f for f in features_for(drak)}
+    assert feats["Damage Resistance"].grants_damage_resistances == ["cold"]
+
+    actions, _ = feature_actions(drak, "strength")
+    breath = next(a for a in actions if a.name == "Breath Weapon")
+    assert breath.target_type.value == "area_cone" and breath.area_size == 15
+    st = breath.saving_throw
+    assert st.ability == "constitution"
+    assert st.dc == 8 + drak.proficiency_bonus + 3        # 8 + prof + CON mod
+    assert st.damage_on_fail[0].dice == "3d6"             # the level-6 step
+    assert st.damage_on_fail[0].damage_type.value == "cold"
+    assert st.damage_on_success == "half"
+    assert breath.resource_cost == {"breath_weapon": 1}
+
+    # A line ancestry breathes a line; a pre-ancestry save (None) stays inert.
+    drak.sheet.ancestry = AncestryChoice(id="blue", name="Blue",
+                                         damage_type="lightning",
+                                         breath_shape="line",
+                                         breath_save=Ability.DEX)
+    actions, _ = feature_actions(drak, "strength")
+    line = next(a for a in actions if a.name == "Breath Weapon")
+    assert line.target_type.value == "area_line" and line.area_size == 30
+    drak.sheet.ancestry = None
+    actions, _ = feature_actions(drak, "strength")
+    assert not any(a.name == "Breath Weapon" for a in actions)
+    assert "Damage Resistance" not in {f.name for f in features_for(drak)}
+
+
+def test_a_long_rest_restores_the_racial_pool():
+    from oubliette.rules.rest import long_rest_ops, short_rest_ops
+
+    grum = _half_orc()
+    grum.resources_used = {"Relentless Endurance": 1}
+    long_op = next(o for o in long_rest_ops(grum, RS) if o.op == "resources_used")
+    assert long_op.mapping["Relentless Endurance"] == 0    # the night gives it back
+    # A SHORT rest leaves it spent (recharge: long) — either no resources op at
+    # all, or one that doesn't touch the racial pool.
+    short_maps = [o.mapping for o in short_rest_ops(grum, RS)
+                  if o.op == "resources_used"]
+    assert all(m.get("Relentless Endurance", 1) == 1 for m in short_maps)

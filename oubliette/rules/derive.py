@@ -258,13 +258,20 @@ def _resource_at(by_level: dict[int, int], level: int) -> int:
 
 
 def class_resources(char: Character, ruleset: Ruleset) -> dict[str, dict]:
-    """Leveled class-resource maxima at the character's level — sorcery points, ki,
-    rage, channel divinity: {name: {max, recharge, unlimited}}."""
+    """Leveled resource maxima at the character's level — sorcery points, ki,
+    rage, channel divinity, PLUS the race's limited-use abilities (Relentless
+    Endurance, Breath Weapon): {name: {max, recharge, unlimited}}. Racial pools
+    ride the same staging/write-back/rest plumbing as class pools by being
+    derived here — one channel, no special cases downstream."""
     cc = _class(char, ruleset)
-    if cc is None:
-        return {}
+    sheet = char.sheet
+    race = ruleset.races.get(sheet.race) if sheet else None
+    subrace = ruleset.subraces.get(sheet.subrace) if sheet and sheet.subrace else None
     out: dict[str, dict] = {}
-    for res in cc.resources:
+    pools = [*(cc.resources if cc else ()),
+             *(race.resources if race else ()),
+             *(subrace.resources if subrace else ())]
+    for res in pools:
         amt = _resource_at(res.by_level, char.level)
         if amt != 0:
             out[res.name] = {"max": amt, "recharge": res.recharge, "unlimited": amt == -1}

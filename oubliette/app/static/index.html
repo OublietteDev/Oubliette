@@ -2210,7 +2210,7 @@ const raceLangCount = () => (cgRace().language_choices || 0) + (cgSubrace()?.lan
 // selectRace/Class/Background/resetAbilities all mutate the global `cg`, so we point
 // `cg` at the new object first, then return it for the party array.
 function cgNewSlot() {
-  cg = { name: "", race: "", subrace: null, char_class: "", subclass: null, background: "",
+  cg = { name: "", race: "", subrace: null, race_ancestry: null, char_class: "", subclass: null, background: "",
          ability_method: "standard_array", base_abilities: {}, skills: [], expertise: [],
          languages: [], race_ability_choices: [], race_skills: [], race_languages: [], race_cantrips: [],
          cantrips: [], spells: [], equipment_choices: [], alignment: "",
@@ -2303,6 +2303,7 @@ function selectRace(id) {
   cg.race = id;
   const r = cgRace();
   cg.subrace = r.subraces.length ? r.subraces[0].id : null;
+  cg.race_ancestry = (r.ancestries || []).length ? r.ancestries[0].id : null;
   cg.race_ability_choices = [];
   cg.race_skills = [];
   cg.race_cantrips = [];
@@ -2394,6 +2395,14 @@ function renderCgForm() {
     orow.appendChild(selectField("Subrace", cg.subrace || "",
       subs.map(s => ({ value: s.id, label: s.name })),
       v => { selectSubrace(v); renderCgForm(); cgPreview(); }));
+  }
+  // Dragonborn: the Draconic Ancestry pick — breath weapon shape and resistance.
+  const ancs = cgRace().ancestries || [];
+  if (ancs.length) {
+    orow.appendChild(selectField("Draconic ancestry", cg.race_ancestry || "",
+      ancs.map(a => ({ value: a.id,
+                       label: `${a.name} — ${a.damage_type} (${a.breath_shape})` })),
+      v => { cg.race_ancestry = v; renderCgForm(); cgPreview(); }));
   }
   orow.appendChild(selectField("Class", cg.char_class,
     cgOpt.classes.map(c => ({ value: c.id, label: c.name })),
