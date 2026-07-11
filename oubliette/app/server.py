@@ -1866,6 +1866,10 @@ async def post_companion(body: CompanionIn) -> JSONResponse:
             if char.companion or char.kind == "pc":
                 return JSONResponse({"ok": False, "error": f"{char.name} is already "
                                      "with the party"}, status_code=409)
+            if "dead" in (char.conditions or []):
+                return JSONResponse({"ok": False, "error": f"{char.name} is dead — "
+                                     "the fallen do not rejoin the party"},
+                                    status_code=409)
             if len(GAME.session.repo.party()) >= PARTY_CAP:
                 return JSONResponse({"ok": False, "error": f"the party is full "
                                      f"({PARTY_CAP} members)"}, status_code=409)

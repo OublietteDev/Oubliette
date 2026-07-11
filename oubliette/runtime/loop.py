@@ -255,18 +255,29 @@ class TurnLoop:
         for comp in list(self.repo.companions()):
             if comp.sheet is not None:
                 continue
+            worn: set[str] = set()          # forms this companion wore THIS turn
             for _hop in range(3):
                 sb_id = self.session.npc_statblocks.get(comp.id)
                 sb = _statblock_for(self.session, sb_id) if sb_id else None
                 stage = eligible_stage(sb, hero_level) if sb is not None else None
                 if stage is None:
                     break
+                worn.add(sb.id)
                 new_sb = _statblock_for(self.session, stage.to)
                 if new_sb is None:
                     self.debug.append("anomaly", stage="growth",
                                       error=f"growth target {stage.to!r} is not a known "
                                             f"stat block (authoring gap); {comp.name} stays "
                                             f"a {sb.name}")
+                    break
+                if new_sb.id in worn:
+                    # A growth CYCLE (the lint rejects these at load; this guards a
+                    # pack loaded before the lint existed): never re-wear a form —
+                    # each re-evolution would wake the companion whole, every turn.
+                    self.debug.append("anomaly", stage="growth",
+                                      error=f"growth cycle: {comp.name} would grow back "
+                                            f"into {new_sb.name} — stopping (fix the "
+                                            "pack's growth stages)")
                     break
                 snap = evolved_character(self.repo.get_character(comp.id), new_sb)
                 self.session.emit_companion_evolved(

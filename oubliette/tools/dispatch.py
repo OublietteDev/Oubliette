@@ -205,6 +205,11 @@ class Dispatcher:
             raise ToolApplyError(f"{char.name} is already one of the heroes")
         if char.companion:
             raise ToolApplyError(f"{char.name} already travels with the party")
+        if "dead" in (char.conditions or []):
+            # Mortality (S3) is a promise: the fallen stay fallen. Without this
+            # guard a table's dead companion could be re-recruited whole.
+            raise ToolApplyError(f"{char.name} is dead — the fallen do not rejoin "
+                                 "the party (no revival has restored them)")
         if len(self.repo.party()) >= PARTY_CAP:
             raise ToolApplyError(
                 f"the party is full ({PARTY_CAP} members including companions) — "

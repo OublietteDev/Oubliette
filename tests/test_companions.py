@@ -158,6 +158,15 @@ def test_propose_recruit_enforces_the_party_cap():
         Dispatcher(repo).resolve(ProposeRecruit(char=f"n{PARTY_CAP - 1}", reason="x"))
 
 
+def test_the_fallen_do_not_rejoin():
+    """Mortality (S3) is a promise: a dead NPC can be named (the corpse remains a
+    tracked character for SRD revival), but never re-recruited whole."""
+    repo = _repo(_npc())
+    repo.set_conditions("roric", ["dead"])
+    with pytest.raises(ToolApplyError, match="dead"):
+        Dispatcher(repo).resolve(ProposeRecruit(char="roric", reason="he was brave"))
+
+
 def test_propose_dismiss_only_parts_with_actual_companions():
     repo = _repo(_npc())
     disp = Dispatcher(repo)
@@ -444,6 +453,31 @@ def test_the_next_turn_consumes_the_pending_note_without_recarding():
     assert report.growth == []                                  # no duplicate 🐉 card
 
 
+def test_growth_lint_rejects_dangling_targets_and_cycles():
+    """Growth is the one cross-referencing field the pack linter used to skip.
+    A dangling target degrades at runtime, but a CYCLE (freely authorable —
+    the Forge only blocks self-reference) would re-evolve a companion, waking
+    it whole, every single turn — it must fail at authoring time."""
+    from oubliette.content.loader import _lint_growth
+    from oubliette.content.schemas import GrowthStage, StatBlock
+
+    def sb(sid, *tos):
+        return StatBlock(id=sid, name=sid, hp=5, armor_class=10,
+                         growth=[GrowthStage(to=t, at_party_level=2) for t in tos])
+
+    errors: list[str] = []
+    _lint_growth([sb("pup", "ghost_form")], None, errors)
+    assert errors and "ghost_form" in errors[0]
+
+    errors = []
+    _lint_growth([sb("a", "b"), sb("b", "a")], None, errors)
+    assert any("CYCLE" in e for e in errors)
+
+    errors = []                       # a healthy chain, incl. an SRD terminus
+    _lint_growth([sb("pup", "grown"), sb("grown")], None, errors)
+    assert errors == []
+
+
 def test_growth_context_tells_the_dm_to_narrate_the_moment():
     s = Session.open(InMemoryEventStore())
     ctx = build_context(s.repo, s.scene, [], [],
@@ -583,6 +617,16 @@ def test_confirming_without_a_standing_proposal_is_refused():
     assert client.post("/api/new", json={}).json()["ok"]
     r = client.post("/api/companion", json={"accept": True})
     assert r.status_code == 409
+
+
+def test_the_door_refuses_a_dead_recruit():
+    """The /api/companion door re-validates like the tool: a proposal that was
+    standing when the companion died must not resurrect them on accept."""
+    assert client.post("/api/new", json={}).json()["ok"]
+    GAME.session.repo.set_conditions("stray_pup", ["dead"])
+    _propose(char_id="stray_pup", name="Scrap")
+    r = client.post("/api/companion", json={"accept": True})
+    assert r.status_code == 409 and "dead" in r.json()["error"]
 
 
 def test_accepting_a_dismissal_returns_the_companion_to_the_world():

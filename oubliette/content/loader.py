@@ -293,6 +293,47 @@ def _lint_keyed_encounters(places: list[Place], statblocks: list[StatBlock],
                                   f"block (pack or SRD) nor a pack NPC")
 
 
+def _lint_growth(statblocks: list[StatBlock], ruleset: Ruleset,
+                 errors: list[str]) -> None:
+    """Creature growth (companions S2): every stage's `to` must resolve to a
+    stat block (pack or SRD, the same tolerant matching the runtime uses), and
+    no chain may revisit a form — a growth cycle would re-evolve a companion
+    (waking it whole each time) every single turn, forever. Like the keyed
+    lint: a chain that cannot climb must fail at authoring time."""
+    def norm(s: str) -> str:
+        return s.strip().lower().replace(" ", "_").replace("-", "_")
+
+    bestiary = (getattr(ruleset, "bestiary", None) or {}).values()
+    by_key: dict[str, str] = {}
+    for sb in (*bestiary, *statblocks):      # pack wins a collision, like the runtime
+        by_key[norm(sb.id)] = sb.id
+        by_key[norm(sb.name)] = sb.id
+    growth_of = {sb.id: sb.growth for sb in statblocks}
+
+    def targets(bid: str) -> list[str]:
+        return [t for t in (by_key.get(norm(st.to)) for st in growth_of.get(bid, ()))
+                if t is not None]
+
+    for sb in statblocks:
+        for st in sb.growth:
+            if norm(st.to) not in by_key:
+                errors.append(f"statblocks: {sb.id} grows into {st.to!r}, which is "
+                              "neither a pack stat block nor an SRD monster")
+        # Walk every growth path from this form; any revisit is a cycle.
+        stack: list[tuple[str, frozenset]] = [(sb.id, frozenset({sb.id}))]
+        cycled = False
+        while stack and not cycled:
+            bid, path = stack.pop()
+            for t in targets(bid):
+                if t in path:
+                    errors.append(f"statblocks: {sb.id} has a growth CYCLE — the "
+                                  f"chain grows back into {t!r}; a companion would "
+                                  "re-evolve every turn")
+                    cycled = True
+                    break
+                stack.append((t, path | {t}))
+
+
 def _lint_world_events(world_events: list[WorldEvent], places: list[Place],
                        quests: list[AuthoredQuest], factions: list[Faction],
                        errors: list[str]) -> None:
@@ -650,6 +691,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
 
     _lint(manifest, items, statblocks, npcs, places, scenarios, quests, errors)
     _lint_keyed_encounters(places, statblocks, npcs, ruleset, errors)
+    _lint_growth(statblocks, ruleset, errors)
     _lint_factions(factions, npcs, statblocks, quests, errors)
     _lint_world_events(world_events, places, quests, factions, errors)
     _lint_travel_scale(manifest, places, errors)
