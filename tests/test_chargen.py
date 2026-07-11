@@ -77,13 +77,16 @@ def test_fighter_build_is_fully_derived():
     assert char.skill_proficiencies == {Skill.PERCEPTION, Skill.SURVIVAL,
                                          Skill.INSIGHT, Skill.RELIGION}
     assert char.sheet.saving_throw_proficiencies == {Ability.STR, Ability.CON}
-    # gear: explorer's pack granted twice (class fixed + background) → qty 2
+    # gear: explorer's pack granted twice (class fixed + background) → qty 2,
+    # and each pack carries its printed 10 days of rations (real supplies —
+    # the rest gate spends them when the party camps in the wild)
     assert char.item_qty("explorers_pack") == 2
+    assert char.item_qty("rations_1_day") == 20
     assert set(char.equipped) == {"chain_mail", "shield", "longsword"}
     assert char.coin == 15_00      # acolyte's 15 gp grant, in copper
     # the granted SRD gear is handed back for catalog registration
     assert {it.id for it in items} == {"explorers_pack", "chain_mail", "longsword",
-                                       "shield", "light_crossbow"}
+                                       "shield", "light_crossbow", "rations_1_day"}
     # features carry their source + text (no ruleset lookup needed to render them)
     names = {(f.source, f.name) for f in char.sheet.features}
     assert ("class", "Second Wind") in names

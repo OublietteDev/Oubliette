@@ -224,11 +224,30 @@ def _project_srd_item(it: SrdEquipment) -> Item:
     )
 
 
+# The SRD equipment packs are opaque single items (their contents are flavor) —
+# EXCEPT the rations inside, which the rest gate spends as real supplies when the
+# party camps in the wild (rules/rest_gate). Choosing a pack therefore also
+# grants its SRD ration count, so a fresh party can actually afford a night out.
+# Counts are the packs' printed contents; packs without rations grant none.
+_PACK_RATIONS = {
+    "explorers_pack": 10, "dungeoneers_pack": 10,
+    "burglars_pack": 5, "entertainers_pack": 5, "priests_pack": 2,
+}
+
+
+def _pack_rations(grants: list[tuple[str, int]]) -> list[tuple[str, int]]:
+    """The ration grants implied by any equipment packs among `grants`."""
+    from .rest_gate import RATION_ID
+    return [(RATION_ID, _PACK_RATIONS[item_id] * qty)
+            for item_id, qty in grants if _PACK_RATIONS.get(item_id)]
+
+
 def _resolve_equipment(build: CharacterBuild, cc: CharClass, ruleset: Ruleset,
                        errors: list[str]) -> list[tuple[str, int]]:
     """Validate the class starting-equipment choices and return the granted gear as
     (item_id, qty) grants in a stable order: class fixed, the chosen class options,
-    then background gear. (Item ids are already linted to exist at ruleset load.)"""
+    then background gear, then the rations any granted pack carries. (Item ids are
+    already linted to exist at ruleset load.)"""
     grants: list[tuple[str, int]] = [(g.item, g.qty) for g in cc.starting_equipment.fixed]
     choices = cc.starting_equipment.choices
     picks = build.equipment_choices
@@ -248,7 +267,7 @@ def _resolve_equipment(build: CharacterBuild, cc: CharClass, ruleset: Ruleset,
     bg = ruleset.backgrounds.get(build.background)
     if bg is not None:
         grants += [(g.item, g.qty) for g in bg.equipment]
-    return grants
+    return grants + _pack_rations(grants)
 
 
 def _auto_loadout(grants: list[tuple[str, int]], ruleset: Ruleset) -> list[str]:
