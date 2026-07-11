@@ -165,8 +165,11 @@ class TurnLoop:
         # Keyed encounter (living-world W1): evaluated in CODE at the top of every
         # in-character turn. If one is due, this turn's reply narrates the approach
         # (hard directive in the context) and the engine stages the fight itself
-        # after the prose — the DM styles the moment, never decides it.
-        keyed = None if ooc else self._due_keyed_encounter()
+        # after the prose — the DM styles the moment, never decides it. The PLACE
+        # is captured here, at evaluation: the DM may disobey the directive and
+        # travel mid-turn, and the fired record must name the place that armed.
+        keyed_due = None if ooc else self._due_keyed_encounter()
+        keyed = keyed_due[1] if keyed_due else None
         # Timed world event (living-world W4): fired AFTER keyed evaluation (an
         # encounter it arms waits for the next turn's check) and BEFORE the
         # context builds — the DM narrates a world that has ALREADY changed.
@@ -230,8 +233,9 @@ class TurnLoop:
         else:
             report = await self._resolve_turn(player_text, assessment, context, on_text=on_text)
 
-        if keyed is not None:
-            report = self._stage_keyed(keyed, report, player_text, assessment)
+        if keyed_due is not None:
+            report = self._stage_keyed(keyed_due[0], keyed_due[1], report,
+                                       player_text, assessment)
         report.growth = growth
         self._record_beat(report, caused_by=player_event.seq)
         return report
@@ -272,10 +276,12 @@ class TurnLoop:
         return grown
 
     def _due_keyed_encounter(self):
-        """The keyed encounter that fires this turn at the party's location, or
-        None (living-world W1). Pure derivation over the log + the PlaceNode's
-        authored list; a fight already staged and awaiting the Arena defers any
-        new ambush, and a staging-broken encounter stays suppressed."""
+        """`(place id, encounter)` for the keyed encounter that fires this turn at
+        the party's location, or None (living-world W1). Pure derivation over the
+        log + the PlaceNode's authored list; a fight already staged and awaiting
+        the Arena defers any new ambush, and a staging-broken encounter stays
+        suppressed. The place rides along so the fired record and the broken-set
+        key name the place that ARMED, whatever the DM does mid-turn."""
         if getattr(self.session, "pending_combat", None) is not None:
             return None
         loc = self.session.location
@@ -289,11 +295,12 @@ class TurnLoop:
             node, self.session.store.read_all(),
             start_location=getattr(self.session, "start_location", None),
             time_of_day=self.session.time_of_day,
-            party_level=max((c.level for c in self.repo.party()), default=1),
+            party_level=max((c.level for c in self.repo.party() if not c.companion),
+                            default=1),
             armed=armed)
-        if enc is not None and (loc, enc.id) in self._keyed_broken:
+        if enc is None or (loc, enc.id) in self._keyed_broken:
             return None
-        return enc
+        return (loc, enc)
 
     def _keyed_names(self, enc) -> str:
         """Display names for a keyed encounter's enemies — resolved the same way
@@ -309,14 +316,19 @@ class TurnLoop:
             parts.append(f"{e.count} x {name}" if e.count > 1 else name)
         return ", ".join(parts)
 
-    def _stage_keyed(self, enc, report: TurnReport, player_text: str,
+    def _stage_keyed(self, place: str, enc, report: TurnReport, player_text: str,
                      assessment: TurnAssessment) -> TurnReport:
         """Stage an authored keyed encounter AFTER the approach narration. The
-        code owns the fact of the fight: the fired record is written and the
-        authored enemies staged budget-exempt (authored intent outranks the
-        table's improvisation caps — min_party_level is the author's own gate).
-        A staging failure logs one anomaly and suppresses the encounter for
-        this process; the narration stands and play continues."""
+        code owns the fact of the fight: the authored enemies are staged
+        budget-exempt (authored intent outranks the table's improvisation caps —
+        min_party_level is the author's own gate). `place` is where the trigger
+        ARMED, captured at evaluation — never the post-turn location, which a
+        disobedient mid-turn travel can move. The fired record is NOT written
+        here: it rides the pending fight and lands when the player actually
+        enters the Arena, so a quit or crash at the ⚔ prompt re-stages the
+        authored fight instead of silently spending it. A staging failure logs
+        one anomaly and suppresses the encounter for this process; the
+        narration stands and play continues."""
         request = EncounterRequest(
             kind="ambush",
             enemies=[EnemyRef(ref=e.ref, count=e.count) for e in enc.enemies])
@@ -328,12 +340,11 @@ class TurnLoop:
                                    assessment=assessment, player_text=player_text,
                                    budget=None)
         except CombatError as e:
-            self._keyed_broken.add((self.session.location, enc.id))
+            self._keyed_broken.add((place, enc.id))
             self.debug.append("anomaly", stage="keyed_encounter",
                               encounter=enc.id, error=str(e))
             return report
-        self.session.emit_log(EventKind.KEYED_ENCOUNTER_TRIGGERED,
-                              place=self.session.location, encounter_id=enc.id)
+        outcome.pending.keyed = (place, enc.id)
         self.session.pending_combat = outcome.pending
         staged_crs = {c.name_override: float(getattr(c.creature_data, "challenge_rating", 0) or 0)
                       for c in outcome.pending.plan.encounter.combatants if c.team == "enemy"}
@@ -405,9 +416,13 @@ class TurnLoop:
         authored = self.session.authored_quests
         if not authored:
             return authored, set(), set()
-        # Level-gate (difficulty S2): the strongest hero's level opens a quest's
+        # Level-gate (difficulty S2): the strongest HERO's level opens a quest's
         # min_party_level door — gated quests stay invisible to the DM until then.
-        party_level = max((c.level for c in self.repo.party()), default=1)
+        # Companions are excluded: a creature's level tracks its form's CR (a
+        # grown drake must not open doors the heroes haven't earned), and person
+        # companions level at exact parity anyway.
+        party_level = max((c.level for c in self.repo.party() if not c.companion),
+                          default=1)
         eligible = offers.offerable_ids(authored, self.session.store.read_all(),
                                         self.session.quests, party_level=party_level)
         # Standing-gate (living-world W2): min_standing quests stay invisible until
@@ -838,6 +853,14 @@ class TurnLoop:
         pending = self.session.pending_combat
         if pending is None:
             raise CombatError("no combat is staged")
+        # A keyed encounter is SPENT the moment the player commits to it
+        # (living-world W1): the fired record lands here, not at staging, so a
+        # quit or crash at the ⚔ prompt re-stages the authored fight on reload
+        # instead of silently marking it fought.
+        if getattr(pending, "keyed", None):
+            place, enc_id = pending.keyed
+            self.session.emit_log(EventKind.KEYED_ENCOUNTER_TRIGGERED,
+                                  place=place, encounter_id=enc_id)
         loop = asyncio.get_running_loop()
         try:
             handoff = await loop.run_in_executor(None, arena_launch.run_arena, pending)

@@ -1418,13 +1418,19 @@ async def get_factions() -> JSONResponse:
     browser until the party learns of it (the ??? row keeps the promise that
     there is more world to meet without saying what). Standing ships as the
     TIER WORD only; the raw score never leaves the engine."""
+    from ..world.events import standing_deltas
     from ..world.factions import known_ids, standing_map, tier_for
     s = GAME.session
     factions = getattr(s, "factions", None) or {}
     if not factions:
         return JSONResponse({"factions": []})
     events = s.store.read_all()
-    scores = standing_map(factions, s.authored_quests, events, s.quests)
+    # The SAME derivation the loop feeds the DM (loop._faction_scores) — the
+    # world-event overlay included, or a silent event shift would leave this
+    # page permanently disagreeing with how the world actually treats the party.
+    wev = getattr(s, "world_events", None) or {}
+    extra = standing_deltas(wev, factions, events) if wev else None
+    scores = standing_map(factions, s.authored_quests, events, s.quests, extra=extra)
     known = known_ids(factions, s.authored_quests, events, s.quests)
     out = []
     for fid, f in factions.items():

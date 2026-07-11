@@ -81,6 +81,11 @@ class PendingCombat:
     scratch_dir: Path
     assessment: TurnAssessment | None = None
     player_text: str = ""
+    # A keyed encounter's (place id, encounter id), set by the loop when this
+    # fight was authored (living-world W1). The KEYED_ENCOUNTER_TRIGGERED record
+    # is written only when the player ENTERS — a staged-but-never-fought fight
+    # must not count as fired (the promise survives a quit at the ⚔ prompt).
+    keyed: tuple[str, str] | None = None
 
 
 @dataclass

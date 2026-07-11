@@ -222,6 +222,30 @@ def test_api_factions_redacts_unknowns_and_ships_tier_words():
     assert all("score" not in r and "agenda" not in r for r in rows)
 
 
+def test_api_factions_folds_in_world_event_shifts():
+    """The page must read the SAME derivation the DM does: a world event's
+    silent standing shift (W4) moves the tier shown to the player, or the two
+    surfaces disagree forever."""
+    from oubliette.app.server import GAME
+    from oubliette.content.schemas import EventStanding, WorldEvent
+    s = GAME.session
+    before = {r["name"]: r["tier"] for r in client.get("/api/factions").json()["factions"]
+              if r["known"]}
+    assert before.get("The Brightvale Watch") == "neutral"
+    # A fired event that turns the Watch against the party (−21 crosses a tier).
+    watch_id = next(fid for fid, f in s.factions.items()
+                    if f.name == "The Brightvale Watch")
+    s.world_events = {**(getattr(s, "world_events", None) or {}),
+                      "watch_turns": WorldEvent(
+                          id="watch_turns", title="The Watch turns", on_day=1,
+                          announce="The Watch sours on the party.",
+                          standing=[EventStanding(faction=watch_id, delta=-21)])}
+    s.emit_log(EventKind.WORLD_EVENT, event_id="watch_turns", day=1)
+    after = {r["name"]: r["tier"] for r in client.get("/api/factions").json()["factions"]
+             if r["known"]}
+    assert after.get("The Brightvale Watch") == "unfriendly"
+
+
 # --- the pack linter ------------------------------------------------------------------
 
 def test_lint_catches_unknown_faction_refs():

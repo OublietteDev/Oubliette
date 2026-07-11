@@ -133,7 +133,26 @@ def test_one_fires_per_turn_in_authored_order():
 
 # --- the loop: directive, staging, suppression ---------------------------------
 
-def test_keyed_encounter_stages_after_the_narration():
+def _canned_victory(pending) -> dict:
+    """A handoff result shaped from the staged plan (enemies fallen, party up),
+    so `enter_combat` can run headlessly."""
+    combatants = []
+    for c in pending.plan.encounter.combatants:
+        cd = c.creature_data
+        enemy = c.team == "enemy"
+        combatants.append({
+            "id": c.name_override, "name": c.name_override, "team": c.team,
+            "is_pc": c.team == "player",
+            "hp": 0 if enemy else max(1, cd.max_hit_points - 1),
+            "max_hp": cd.max_hit_points, "temp_hp": 0, "conditions": [],
+            "is_conscious": not enemy,
+            "xp": int(getattr(cd, "experience_points", 0) or 0),
+        })
+    return {"schema": 1, "winner": "player", "outcome": "victory",
+            "rounds": 2, "combatants": combatants}
+
+
+def test_keyed_encounter_stages_after_the_narration(monkeypatch):
     s = _session()
     s.places = {"mill": _node(_enc("mill_wolves", ref="wolf", count=2, once=False))}
     loop = _loop(s)
@@ -142,19 +161,65 @@ def test_keyed_encounter_stages_after_the_narration():
     names = [c.name_override for c in s.pending_combat.plan.encounter.combatants
              if c.team == "enemy"]
     assert len(names) == 2 and all("wolf" in n.lower() for n in names)
-    fired = [e for e in s.store.read_all()
-             if e.kind == EventKind.KEYED_ENCOUNTER_TRIGGERED.value]
-    assert [ (e.payload["place"], e.payload["encounter_id"]) for e in fired ] \
-        == [("mill", "mill_wolves")]
+    # Staged is not SPENT: the fired record waits for the player to enter the
+    # Arena (the promise survives a quit at the ⚔ prompt). It carries the place
+    # captured at evaluation.
+    assert not s.store.of_kind(EventKind.KEYED_ENCOUNTER_TRIGGERED)
+    assert s.pending_combat.keyed == ("mill", "mill_wolves")
     # The fight is budget-exempt and visible in the dev log as such.
     staged = [e for e in loop.debug.of_kind("combat_budget")
               if e.data.get("stage") == "staged"]
     assert staged and "authored keyed encounter" in staged[-1].data["budget"]
-    arena_launch.cleanup(s.pending_combat)
-    s.pending_combat = None
+    # Entering spends it: the record lands, keyed to the arming place.
+    monkeypatch.setattr(arena_launch, "run_arena", _canned_victory)
+    asyncio.run(loop.enter_combat())
+    fired = s.store.of_kind(EventKind.KEYED_ENCOUNTER_TRIGGERED)
+    assert [(e.payload["place"], e.payload["encounter_id"]) for e in fired] \
+        == [("mill", "mill_wolves")]
     # Same visit, next turn: spent — an ordinary quiet turn.
     r2 = asyncio.run(loop.take_turn("We catch our breath."))
     assert r2.combat_pending is False
+
+
+def test_a_fight_abandoned_at_the_prompt_is_not_spent():
+    """Quit (or crash) at the ⚔ prompt: no fired record was written, pending
+    combat is transient, and a fresh session re-stages the authored fight —
+    the fights the author promised are KEPT."""
+    store = InMemoryEventStore()
+    s = Session.open(store)
+    s.start_location = "mill"
+    s.location = "mill"
+    places = {"mill": _node(_enc("mill_wolves", ref="wolf", once=True))}
+    s.places = places
+    loop = _loop(s)
+    r = asyncio.run(loop.take_turn("We poke around the ruined mill."))
+    assert r.combat_pending is True
+    arena_launch.cleanup(s.pending_combat)          # ...and the player quits here
+
+    reloaded = Session.open(store)
+    reloaded.start_location = "mill"
+    reloaded.location = "mill"
+    reloaded.places = places
+    r2 = asyncio.run(_loop(reloaded).take_turn("We look around once more."))
+    assert r2.combat_pending is True                # the `once` ambush still owed
+    arena_launch.cleanup(reloaded.pending_combat)
+
+
+def test_fired_record_names_the_arming_place_even_if_the_dm_travels(monkeypatch):
+    """The directive says 'do not move the party', but the model can disobey and
+    call travel mid-turn. The fired record (and `once` bookkeeping) must key on
+    the place that ARMED the fight — not wherever the turn ended up."""
+    s = _session()
+    s.places = {"mill": _node(_enc("mill_wolves", ref="wolf", once=True))}
+    loop = _loop(s)
+    r = asyncio.run(loop.take_turn("We poke around the ruined mill."))
+    assert r.combat_pending is True
+    s.emit_travel("gate", "the DM moved the party mid-turn")   # disobedient travel
+    monkeypatch.setattr(arena_launch, "run_arena", _canned_victory)
+    asyncio.run(loop.enter_combat())
+    fired = s.store.of_kind(EventKind.KEYED_ENCOUNTER_TRIGGERED)
+    assert [(e.payload["place"], e.payload["encounter_id"]) for e in fired] \
+        == [("mill", "mill_wolves")]                # the ARMING place, not "gate"
 
 
 def test_keyed_outranks_the_dms_improvised_encounter():
