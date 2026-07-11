@@ -12,7 +12,7 @@ It ships as three programs that share one engine:
 | 🔨 **The Forge** | Build your own worlds — no coding, ever. | `forge.bat` |
 | ⚔️ **The Arena** | A full D&D 5e tactical combat engine. | launches from the game |
 
-> **Status: v0.9.2.** Feature-complete and very playable; a handful of known rough edges (see [Known issues](#known-issues)) are why this isn't 1.0 yet.
+> **Status: v1.0.** The full game — with voiced narration, persistent companions, and a living world of factions, clocks, and scheduled events. A handful of honest rough edges remain (see [Known issues](#known-issues)).
 
 ---
 
@@ -55,6 +55,8 @@ oubliette-play                 # opens the browser game
 ### 🎭 Oubliette — the game
 A structured turn loop runs under every message: the DM *assesses* what you're attempting and sets a difficulty, the **code** rolls the dice with your real sheet bonus, and the DM narrates the result it's given. Around that core: full SRD character creation and a party of up to six heroes, XP-gated leveling, short/long rests, a shared coin purse with real cp/sp/gp/pp and haggling merchants, an inventory with equip toggles, emergent and authored quests, a visit-gated world map, a location-driven ambient soundtrack, a searchable bestiary, and a session-zero **table contract** (a tone dial plus Lines & Veils the DM always honors). It remembers: a session wrap writes a spoiler-free "previously…" for you and private continuity notes for the DM, so next session picks up where you left off.
 
+New in v1.0, the world got a pulse: a **voiced narrator** reads the DM aloud entirely on your machine (two local voice tiers, no cloud, no keys), **companions** you recruit or buy stay on the party card, grow, and fight at your side with their real monster kits, and the **living world** keeps its own time — authored encounters fire where the author bound them, factions track your standing (and can sour on you in the dark), a campaign clock counts nights slept and roads travelled, and scheduled world events happen whether you attend or not, reaching you as rumor if you're elsewhere.
+
 ### 🔨 The Forge — build your own worlds
 A visual studio — no code, ever. Author places and a drag-arrange world map (with visit-gated redaction), NPCs and shops, branching quests with player hooks and DM-only briefings, and full monster stat blocks (clone any of the 334 SRD creatures and tweak). The module kit adds **magic items**, **custom backgrounds**, and a **spell builder**, all of which merge straight into character creation and the Arena. You can even paint a battlefield — terrain, hazards, cover — for fights that start in a given location. Its promise: the Forge validates your world with *the game's own loader*, so a green "✓ Ready to play" badge means it really will. Share a world as a single `.zip`.
 
@@ -83,16 +85,16 @@ pytest                          # the full acceptance + engine suite
 
 ## Roadmap & known issues
 
-- 🗺️ **[ROADMAP.md](ROADMAP.md)** — what's planned beyond v0.9.2.
+- 🗺️ **[ROADMAP.md](ROADMAP.md)** — what's planned beyond v1.0.
 - 🐞 **[Known issues](#known-issues)** — see below.
 
 ## Known issues
 
-*v0.9.2 is stable and fun, but honest about its rough edges. Full list to be tracked in GitHub Issues.*
+*v1.0 is stable and fun, but honest about its rough edges. Full list to be tracked in GitHub Issues.*
 
 - **Bestiary art is ~20% complete.** Every creature works fully in the Arena — all abilities, actions, spells, and legendary actions — they just show a generic token until art is added. This grows slowly over time. Art added via a pack is unaffected and displays fine in the bestiary.
 - **API calls occasionally drop.** A dropped connection mid-call surfaces an error (no effect on gameplay or the DM's memory) — but it's annoying if it takes ~300 seconds to time out.
-- **The 12 SRD classes need another accuracy pass.** For example: Half-Orcs are missing Relentless Endurance (the engine supports it, it just needs wiring), and character-creation languages look static — every character seems to get 2 languages + 1 racial language.
+- **A few racial traits are still story-only.** v1.0 wired most of them into combat (Relentless Endurance, the dragonborn breath weapon and ancestry resistance, dwarven poison resistance, and more), but Halfling Lucky (the reroll-on-1), the tiefling's Infernal Legacy spells, and Gnome Cunning still await engine support.
 - **Walls are indestructible.** You can cheese melee enemies by dropping a Wall of Force or Wall of Stone and then plinking them with cantrips.
 - **Charge attacks don't animate.** Pounce, Trample, and Charge resolve correctly in code but have no visual yet — needs investigation and a fix.
 - **Encounter balance is still being tuned.** v0.9.2 added a party-CR budget — improvised fights are now sized to the party's real levels and size and to your chosen difficulty (Story → Hardcore) — but the CR bands themselves will take several more balancing passes before every fight feels fair at every level.
