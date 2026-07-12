@@ -190,6 +190,25 @@ _TIER_PLAY = {
 }
 
 
+def story_so_far(past_notes: list[str] | None) -> str:
+    """The DM's private notes from PAST wrapped sessions (W5), cumulative and
+    oldest-first, as a STANDALONE block — deliberately not part of build_context.
+    This is the one piece of the DM's picture that grows with a campaign yet never
+    changes mid-session, so it rides to the model as `stable_context` (see
+    LLMClient) where providers with prompt caching bill it at cache rates —
+    long campaigns stay affordable. Empty string when there are no notes yet."""
+    if not any(past_notes or []):
+        return ""
+    lines = ["STORY SO FAR (your PRIVATE notes from past sessions — cumulative memory, "
+             "oldest first; the players do NOT see these — carry threads forward):"]
+    # Numbered by session, empties skipped but never renumbered — "Session 3"
+    # must keep meaning the third session even if the second wrote no note.
+    for i, note in enumerate(past_notes, 1):
+        if note:
+            lines.append(f"  - Session {i}: {note}")
+    return "\n".join(lines)
+
+
 def build_context(repo: Repository, scene: str = "", recent: list[str] | None = None,
                   canon: list[CanonRecord] | None = None, location: str | None = None,
                   places: dict | None = None, quests: list | None = None,
@@ -197,7 +216,6 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   ruleset=None, authored_quests: dict | None = None,
                   offerable: set | None = None, offered_here: set | None = None,
                   pending_rewards: list | None = None,
-                  past_notes: list[str] | None = None,
                   notebook: list[str] | None = None,
                   difficulty=None, rest_interrupted: bool = False,
                   companion_growth: list | None = None,
@@ -501,16 +519,9 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                 latest = (q.notes[-1] if q.notes else q.text) or "(recall what you offered them)"
                 hint = (latest[:160] + "…") if len(latest) > 160 else latest
             lines.append(f"  - [{q.id}] {q.title} — {hint}")
-    # Long-term memory: the DM's private notes from PAST wrapped sessions (W5), cumulative
-    # and oldest-first — the semantic layer above the current session's beats. The players
-    # never see these (they get a spoiler-free chronicle instead); they are the DM's own
-    # continuity across sessions. Prose only, never a source of protected-state numbers.
-    if past_notes:
-        lines.append("STORY SO FAR (your PRIVATE notes from past sessions — cumulative memory, "
-                     "oldest first; the players do NOT see these — carry threads forward):")
-        for i, note in enumerate(past_notes, 1):
-            if note:
-                lines.append(f"  - Session {i}: {note}")
+    # NOTE: the STORY SO FAR block (past-session notes, W5) is deliberately NOT
+    # built here anymore — it's session-stable, so it rides separately as the
+    # cacheable `stable_context` (see story_so_far above and TurnLoop._story_so_far).
     # The DM's own working notebook for THIS session (the dm_note tool, W4): plans,
     # foreshadowing, an NPC's true intent, a lie left standing. The DM's private memory —
     # players never see it — oldest first. Prose only, never a source of protected-state

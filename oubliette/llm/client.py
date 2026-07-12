@@ -38,16 +38,20 @@ class ActResult:
 class LLMClient(Protocol):
     async def complete(
         self, *, system: str, messages: list[Msg], schema: type[T],
-        on_text: TextSink | None = None,
+        on_text: TextSink | None = None, stable_context: str = "",
     ) -> T:
         """Return an instance of `schema`, validated. Provider-native structured
         output behind the scenes (D4). Used for the classification (assess) and
-        session-notes (wrap) calls, which want one validated object, not a stream."""
+        session-notes (wrap) calls, which want one validated object, not a stream.
+        `stable_context` is prompt text that does not change within a session (the
+        DM's past-session notes) — separated so providers with prompt caching bill
+        it at cache rates; providers without simply fold it into the prompt."""
         ...
 
     async def act(
         self, *, system: str, messages: list[Msg], tools: list[type[BaseModel]],
         on_text: TextSink | None = None, effort: str | None = None,
+        stable_context: str = "",
     ) -> ActResult:
         """The resolve turn (W6): the model narrates as streaming assistant text and
         emits 0+ tool calls for state changes. `tools` are the candidate tool models
@@ -56,5 +60,5 @@ class LLMClient(Protocol):
         generate — genuine token-by-token, since narration is no longer trapped in a
         forced tool's JSON. `effort` is the per-turn thinking depth (W4): None disables
         thinking for this turn, otherwise low|medium|high|xhigh|max — the caller sets it
-        from the turn's stakes (see Brain.resolve)."""
+        from the turn's stakes (see Brain.resolve). `stable_context` as on `complete`."""
         ...

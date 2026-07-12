@@ -56,7 +56,9 @@ class ScriptedLLMClient:
     """Implements the `LLMClient` protocol with canned, deterministic output."""
 
     async def complete(self, *, system: str, messages: list[Msg], schema: type[BaseModel],
-                       on_text=None) -> BaseModel:
+                       on_text=None, stable_context: str = "") -> BaseModel:
+        # stable_context (past-session notes) is accepted for protocol conformance;
+        # the scripted double's parsers read the messages only.
         text = _joined(messages)
         if schema is TurnAssessment:
             return self._assess(text)
@@ -80,7 +82,7 @@ class ScriptedLLMClient:
 
     async def act(self, *, system: str, messages: list[Msg],
                   tools: list[type[BaseModel]] | None = None, on_text=None,
-                  effort: str | None = None) -> ActResult:
+                  effort: str | None = None, stable_context: str = "") -> ActResult:
         """The restructured resolve turn (W6). The scripted double still builds a whole
         TurnResolution internally (its `_resolve` is unchanged); `act` just unpacks it into
         narration TEXT + tool calls, and simulates the token-by-token stream word-by-word."""

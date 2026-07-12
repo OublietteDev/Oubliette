@@ -92,11 +92,11 @@ class OpenAICompatClient:
     # --- LLMClient protocol ---------------------------------------------------
 
     async def complete(self, *, system: str, messages: list[Msg], schema: type[T],
-                       on_text: TextSink | None = None) -> T:
+                       on_text: TextSink | None = None, stable_context: str = "") -> T:
         payload = {
             "model": self._model,
             "max_tokens": self._max_tokens,
-            "messages": self._messages(system, messages),
+            "messages": self._messages(system, messages, stable_context),
             "tools": [{"type": "function", "function": {
                 "name": "emit",
                 "description": f"Return the {schema.__name__} for this turn.",
@@ -121,12 +121,12 @@ class OpenAICompatClient:
 
     async def act(self, *, system: str, messages: list[Msg],
                   tools: list[type[BaseModel]], on_text: TextSink | None = None,
-                  effort=_INHERIT) -> ActResult:
+                  effort=_INHERIT, stable_context: str = "") -> ActResult:
         by_name = {_tool_name(m): m for m in tools}
         payload = {
             "model": self._model,
             "max_tokens": self._max_tokens,
-            "messages": self._messages(system, messages),
+            "messages": self._messages(system, messages, stable_context),
             "tools": [_fn_def(m) for m in tools],
             "tool_choice": "auto",
         }
@@ -145,9 +145,13 @@ class OpenAICompatClient:
     # --- wire helpers -----------------------------------------------------------
 
     @staticmethod
-    def _messages(system: str, messages: list[Msg]) -> list[dict]:
-        """OpenAI shape: the system prompt is messages[0], not a top-level field."""
-        return [{"role": "system", "content": system},
+    def _messages(system: str, messages: list[Msg], stable_context: str = "") -> list[dict]:
+        """OpenAI shape: the system prompt is messages[0], not a top-level field.
+        `stable_context` (the DM's past-session notes — see LLMClient) simply folds
+        into the system message here: no cache to feed until we wire these providers'
+        own caching someday, but the DM must still see its campaign memory."""
+        head = f"{system}\n\n{stable_context}" if stable_context else system
+        return [{"role": "system", "content": head},
                 *({"role": m.role, "content": m.content} for m in messages)]
 
     @staticmethod

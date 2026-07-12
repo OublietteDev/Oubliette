@@ -275,11 +275,12 @@ class Brain:
     def __init__(self, client: LLMClient) -> None:
         self.client = client
 
-    async def assess(self, player_text: str, context: str = "") -> TurnAssessment:
+    async def assess(self, player_text: str, context: str = "",
+                     stable_context: str = "") -> TurnAssessment:
         content = f"{context}\n\nPLAYER: {player_text}" if context else f"PLAYER: {player_text}"
         return await self.client.complete(
             system=ASSESS_SYSTEM, messages=[Msg(role="user", content=content)],
-            schema=TurnAssessment,
+            schema=TurnAssessment, stable_context=stable_context,
         )
 
     async def resolve(
@@ -291,11 +292,14 @@ class Brain:
         retry_feedback: str | None = None,
         on_text=None,
         table_prompt: str = "",
+        stable_context: str = "",
     ) -> ActResult:
         """Resolve the turn (W6 restructure): the model narrates as streaming TEXT and
         emits 0+ tool calls for state changes (`tool_choice: auto`, no forced `emit`).
         Returns an ActResult. A wholly empty turn (no narration AND no tools) is treated
-        as malformed and raised, so the loop retries then degrades gracefully."""
+        as malformed and raised, so the loop retries then degrades gracefully.
+        `stable_context` is the session-stable memory block (past-session notes) —
+        kept apart from the per-turn context so providers can cache it."""
         intent = assessment.intent
         parts = []
         if context:
@@ -313,6 +317,7 @@ class Brain:
         result = await self.client.act(
             system=system, messages=[Msg(role="user", content="\n".join(parts))],
             tools=list(TOOL_MODELS), on_text=on_text, effort=_effort_for(assessment),
+            stable_context=stable_context,
         )
         if not result.narration.strip() and not result.tool_calls:
             raise RuntimeError("model returned an empty resolution (no narration, no tools)")
@@ -320,6 +325,7 @@ class Brain:
 
     async def narrate_campaign_end(
         self, transcript_text: str, context: str = "", table_prompt: str = "",
+        stable_context: str = "",
     ) -> CampaignEnding:
         """The campaign-over ritual (hardcore TPK, difficulty S4): one call that
         writes the ending the players hear, the chronicle's final entry, and the
@@ -336,11 +342,12 @@ class Brain:
         system = CAMPAIGN_END_SYSTEM + table_prompt if table_prompt else CAMPAIGN_END_SYSTEM
         return await self.client.complete(
             system=system, messages=[Msg(role="user", content="\n".join(parts))],
-            schema=CampaignEnding,
+            schema=CampaignEnding, stable_context=stable_context,
         )
 
     async def write_session_notes(
         self, transcript_text: str, context: str = "", table_prompt: str = "",
+        stable_context: str = "",
     ) -> SessionNotes:
         """Summarize a just-concluded session into two-faced notes (W5). This is the ONE
         place the DM is handed the FULL session transcript (per-turn it sees only compact
@@ -355,5 +362,5 @@ class Brain:
         system = WRAP_SYSTEM + table_prompt if table_prompt else WRAP_SYSTEM
         return await self.client.complete(
             system=system, messages=[Msg(role="user", content="\n".join(parts))],
-            schema=SessionNotes,
+            schema=SessionNotes, stable_context=stable_context,
         )

@@ -740,6 +740,16 @@
   .fac-row.unknown .fac-name { color: var(--faint); }
   .fac-row.unknown .fac-desc { font-style: italic; }
   .fac-empty { color: var(--muted); font-style: italic; padding: 8px 2px; }
+
+  /* token usage (Anthropic session cost meter) */
+  .usage-modal { width: min(420px, 94vw); }
+  .usage-body { overflow-y: auto; padding: 16px 20px; }
+  .usage-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 2px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .usage-row .k { color: var(--muted); }
+  .usage-row .v { font-variant-numeric: tabular-nums; }
+  .usage-row.total { border-bottom: none; }
+  .usage-row.total .k, .usage-row.total .v { color: var(--gold); font-weight: 600; }
+  .usage-note { margin-top: 12px; font-size: 12px; color: var(--faint); line-height: 1.5; }
   /* --- help (how to play) --- */
   .help-modal { width: min(680px, 94vw); }
   .help-body { gap: 0; }
@@ -1010,6 +1020,14 @@
       <label for="ai-url-input">Server address</label>
       <input type="text" id="ai-url-input" autocomplete="off" spellcheck="false" placeholder="http://localhost:11434/v1" />
     </div>
+    <div class="ai-key hidden" id="ai-price-wrap">
+      <label>Token prices for the cost meter (optional)</label>
+      <div style="display:flex; gap:10px;">
+        <input type="number" id="ai-price-in" min="0" step="any" autocomplete="off" placeholder="$ in / MTok" style="flex:1;" />
+        <input type="number" id="ai-price-out" min="0" step="any" autocomplete="off" placeholder="$ out / MTok" style="flex:1;" />
+      </div>
+      <div class="ai-model-help">The meter already knows the standard Claude prices. Using another model, or rates that changed? Enter your model's <b>dollars per million tokens</b> (input, then output — from Anthropic's pricing page) and the meter prices with those instead. Leave blank for the built-in prices.</div>
+    </div>
     <div class="ai-priv">Your key is stored only on this computer (never shared, never sent anywhere but the provider you choose). <button class="linklike" id="ai-disconnect" style="display:none">Disconnect &amp; go offline</button></div>
     <div class="cg-status" id="ai-status" style="margin-top:10px; text-align:center;"></div>
     <div class="start-actions" style="flex-direction: row; gap: 10px; margin-top: 16px;">
@@ -1149,6 +1167,17 @@
       <button class="act" id="fac-close">Close</button>
     </div>
     <div class="fac-body" id="fac-body"></div>
+  </div>
+</div>
+
+<div id="usage-overlay" class="overlay hidden">
+  <div class="inv-modal usage-modal">
+    <div class="inv-head">
+      <h2>Token Usage</h2>
+      <div class="spacer"></div>
+      <button class="act" id="usage-close">Close</button>
+    </div>
+    <div class="usage-body" id="usage-body"></div>
   </div>
 </div>
 
@@ -2860,6 +2889,7 @@ function applyConnection(status) {
   const live = !!status.online;
   $("model-badge").textContent = live ? `● ${status.model || "live DM"}` : "○ Offline Mode";
   $("offline-banner").classList.toggle("hidden", live);
+  usageAvailable = live && status.client === "anthropic";   // the cost meter is Anthropic-only
 }
 async function refreshConnection() {
   try {
@@ -2903,15 +2933,29 @@ function syncKeyField(data) {
   // the server-address field only matters for the local provider
   $("ai-url-wrap").classList.toggle("hidden", !p.needs_base_url);
   if (p.needs_base_url) $("ai-url-input").value = p.base_url || "";
+  // custom meter pricing: Anthropic only (the one provider with the cost meter)
+  const priced = p.id === "anthropic";
+  $("ai-price-wrap").classList.toggle("hidden", !priced);
+  if (priced) {
+    $("ai-price-in").value = p.pricing ? p.pricing.input : "";
+    $("ai-price-out").value = p.pricing ? p.pricing.output : "";
+  }
   $("ai-disconnect").style.display = p.has_key ? "inline" : "none";
 }
 // The settings as currently typed — what Test and Save both send.
 function aiForm() {
+  const price = (id) => {
+    if ($("ai-price-wrap").classList.contains("hidden")) return null;
+    const v = parseFloat($(id).value);
+    return Number.isFinite(v) && v > 0 ? v : null;
+  };
   return {
     provider: aiSelected,
     api_key: $("ai-key-input").value || null,
     model: $("ai-model-input").value.trim() || null,
     base_url: $("ai-url-wrap").classList.contains("hidden") ? null : ($("ai-url-input").value.trim() || null),
+    price_in: price("ai-price-in"),
+    price_out: price("ai-price-out"),
   };
 }
 async function testAI() {
@@ -3221,6 +3265,56 @@ function closeFactions() { $("factions-overlay").classList.add("hidden"); }
 $("fac-close").addEventListener("click", closeFactions);
 $("factions-overlay").addEventListener("click", (e) => { if (e.target.id === "factions-overlay") closeFactions(); });
 
+// --- token usage (Anthropic session cost meter) -----------------------------
+// Anthropic's API reports exact token counts in every reply's tail; the server
+// adds the dollar arithmetic from the published prices. Other providers don't
+// report usage the same way, so the menu item only appears on Anthropic.
+let usageAvailable = false;   // set by applyConnection
+let usageTimer = null;
+const fmtTok = (n) => (n == null ? "—" : n.toLocaleString());
+const fmtUsd = (n) => "$" + n.toFixed(n >= 1 ? 2 : 4);
+async function renderUsage() {
+  let d = null;
+  try { d = await (await fetch("/api/usage")).json(); } catch (e) {}
+  const body = $("usage-body"); body.innerHTML = "";
+  const row = (k, v, cls) => {
+    const r = el("div", "usage-row" + (cls ? " " + cls : ""));
+    r.appendChild(el("span", "k", k)); r.appendChild(el("span", "v", v));
+    body.appendChild(r);
+  };
+  if (!d || !d.available) {
+    body.appendChild(el("div", "usage-note",
+      "The cost meter only works with the Anthropic API — other providers don't report usage the same way."));
+    return;
+  }
+  const u = d.usage || {};
+  row("Model", d.model || "—");
+  row("DM calls", fmtTok(u.calls));
+  row("Input tokens", fmtTok(u.input_tokens));
+  row("Output tokens", fmtTok(u.output_tokens));
+  if (u.cache_read_input_tokens) row("Cache read tokens", fmtTok(u.cache_read_input_tokens));
+  if (u.cache_creation_input_tokens) row("Cache write tokens", fmtTok(u.cache_creation_input_tokens));
+  row("Estimated cost", d.cost ? fmtUsd(d.cost.total) : "unknown model — set its prices in Connect your AI", "total");
+  body.appendChild(el("div", "usage-note",
+    "Token counts come straight from the API's own per-reply reports, tallied since this app " +
+    "was launched (a relaunch, provider change, or New Game restarts the count). The dollar " +
+    (d.custom_pricing
+      ? "figure uses the prices you entered in Connect your AI — your Console bill is the truth."
+      : "figure is an estimate from Anthropic's published prices — your Console bill is the truth. " +
+        "Using a model the meter doesn't know? Enter its prices in Connect your AI.")));
+}
+async function openUsage() {
+  $("usage-overlay").classList.remove("hidden");
+  await renderUsage();
+  usageTimer = setInterval(renderUsage, 5000);   // stays live while a turn streams
+}
+function closeUsage() {
+  $("usage-overlay").classList.add("hidden");
+  if (usageTimer) { clearInterval(usageTimer); usageTimer = null; }
+}
+$("usage-close").addEventListener("click", closeUsage);
+$("usage-overlay").addEventListener("click", (e) => { if (e.target.id === "usage-overlay") closeUsage(); });
+
 // --- help (how to play; static prose) --------------------------------------
 function openHelp() { $("help-overlay").classList.remove("hidden"); }
 function closeHelp() { $("help-overlay").classList.add("hidden"); }
@@ -3234,6 +3328,7 @@ const MENU_ITEMS = [
   { key: "factions",  label: "Factions",         icon: "⚜️", enabled: true,  open: () => openFactions() },
   { key: "bestiary",  label: "Bestiary",         icon: "📚", enabled: true,  open: () => openBestiary() },
   { key: "map",       label: "Map",              icon: "🗺️", enabled: true,  open: () => openWorldMap() },
+  { key: "usage",     label: "Token Usage",      icon: "🪙", enabled: true,  open: () => openUsage() },
   { key: "help",      label: "Help",             icon: "❓", enabled: true,  open: () => openHelp() },
   { key: "settings",  label: "Settings",         icon: "⚙️", enabled: true,  open: () => openSettings() },
   { key: "wrap",      label: "Wrap up session",  icon: "🌙", enabled: true,  open: () => wrapSession(false) },
@@ -3242,7 +3337,8 @@ const menuPop = $("menu-pop");
 let hasFactions = false;   // from state snapshots — worlds without factions hide the page
 function renderMenu() {
   menuPop.innerHTML = "";
-  MENU_ITEMS.filter(it => it.key !== "factions" || hasFactions).forEach(it => {
+  MENU_ITEMS.filter(it => (it.key !== "factions" || hasFactions)
+                       && (it.key !== "usage" || usageAvailable)).forEach(it => {
     const row = el("div", "menu-item" + (it.enabled ? "" : " disabled"));
     row.appendChild(el("span", "ico", it.icon));
     row.appendChild(el("span", null, it.label));

@@ -351,7 +351,7 @@ def test_brain_resolve_passes_per_turn_effort():
     captured = {}
 
     class _Cap:
-        async def act(self, *, system, messages, tools, on_text=None, effort=None):
+        async def act(self, *, system, messages, tools, on_text=None, effort=None, stable_context=""):
             captured["effort"] = effort
             return ActResult(narration="ok")
 

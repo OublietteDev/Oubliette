@@ -57,6 +57,7 @@ from ..trade.service import (build_state, buy_transact, checkout_ops,
 from ..tts import engine as tts_engine
 from ..tts.chunker import SentenceChunker, clean_for_speech
 from ..llm import providers
+from ..llm.anthropic_client import estimate_cost_usd
 from .repl import _load_dotenv, _pick_client
 
 STATIC = Path(__file__).parent / "static"
@@ -583,6 +584,25 @@ async def put_table(body: TableContract) -> JSONResponse:
     async with GAME.lock:
         stored = GAME.session.emit_contract(body, reason="settings edit")
         return JSONResponse({"ok": True, "table": stored.model_dump()})
+
+
+@app.get("/api/usage")
+async def get_usage() -> JSONResponse:
+    """Session token/cost meter. Anthropic only: its API reports exact token counts
+    in every response's `usage` tail; dollars are OUR estimate from the published
+    prices (see llm.anthropic_client). Counts live on the client object, so they
+    cover this app run and reset with it (relaunch, provider change, New Game)."""
+    client = GAME.loop.brain.client
+    usage = getattr(client, "usage", None)
+    if GAME.client_name != "anthropic" or not isinstance(usage, dict):
+        return JSONResponse({"available": False, "provider": GAME.client_name})
+    model = getattr(client, "model", "")
+    # The player's own prices (front door's optional fields) beat the built-in
+    # table — the honest meter for a model we don't know, or a rate that changed.
+    custom = providers.stored_pricing("anthropic")
+    return JSONResponse({"available": True, "model": model, "usage": dict(usage),
+                         "cost": estimate_cost_usd(model, usage, custom=custom),
+                         "custom_pricing": bool(custom)})
 
 
 @app.get("/api/debug/log")
@@ -2126,6 +2146,18 @@ class ProviderSetBody(BaseModel):
     model: str | None = None        # free-text model id (v0.9 provider opening)
     base_url: str | None = None     # local-server address (local provider only)
     disconnect: bool = False        # explicit "clear my key, go offline"
+    # Optional custom token prices for the cost meter ($ per MILLION tokens).
+    # Both set -> the meter prices with these instead of the built-in table;
+    # blank -> back to the table. Anthropic-only for now (the only metered provider).
+    price_in: float | None = None
+    price_out: float | None = None
+
+
+def _body_pricing(body: ProviderSetBody) -> dict | None:
+    """The request's custom-pricing entry, or None when the fields are blank."""
+    if body.price_in is None or body.price_out is None:
+        return None
+    return {"input": body.price_in, "output": body.price_out}
 
 
 def _pretty_model(mid: str) -> str:
@@ -2198,7 +2230,8 @@ async def post_providers(body: ProviderSetBody) -> JSONResponse:
     if body.disconnect:
         async with GAME.lock:
             providers.set_provider_key(body.provider, None,
-                                       model=body.model, base_url=body.base_url)
+                                       model=body.model, base_url=body.base_url,
+                                       pricing=_body_pricing(body))
             GAME.refresh_client()
         return JSONResponse({"ok": True, "providers": providers.registry_view(),
                              **_provider_status()})
@@ -2224,7 +2257,8 @@ async def post_providers(body: ProviderSetBody) -> JSONResponse:
             status_code=400)
     async with GAME.lock:
         providers.set_provider_key(body.provider, key,
-                                   model=body.model, base_url=body.base_url)
+                                   model=body.model, base_url=body.base_url,
+                                   pricing=_body_pricing(body))
         GAME.refresh_client()
     return JSONResponse({"ok": True, "providers": providers.registry_view(),
                          **_provider_status()})

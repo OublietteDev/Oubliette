@@ -49,7 +49,7 @@ def test_in_character_meta_from_the_model_is_coerced(monkeypatch):
 
     s, loop = _loop()
 
-    async def fake_assess(text, context=""):
+    async def fake_assess(text, context="", stable_context=""):
         return TurnAssessment(
             intent=Intent(raw_text=text, verb=Verb.META, ooc=False),
             tier=Tier.FREESTYLE, resolution_hint="")

@@ -19,7 +19,7 @@ from ..combat.budget import BudgetError, budget_for
 from ..difficulty import DEFAULT_DIFFICULTY
 from ..combat.schemas import CombatResult, EncounterRequest, EnemyRef
 from ..dm.brain import Brain
-from ..dm.context import build_context
+from ..dm.context import build_context, story_so_far
 from ..enums import SKILL_ABILITY, Tier, Verb
 from ..record.events import EventKind, StateOp
 from ..quest import offers
@@ -120,11 +120,12 @@ class TurnLoop:
         # accept_quest on `offered_here`; the context surfaces both tiers to the DM.
         authored, eligible, here = self._compute_offers()
         self.dispatcher.offered_here = here
-        # Long-term memory: the DM's private notes from every PAST wrapped session (W5),
-        # cumulative. The current session isn't wrapped yet, so it reaches the DM as beats.
-        # The DM's own working notebook (W4) is current-session only (dm_note entries).
+        # Long-term memory note: the DM's private notes from PAST wrapped sessions (W5)
+        # are NOT in this per-turn context — they're session-stable, so they ride
+        # separately as `stable_context` (see _story_so_far) where providers with
+        # prompt caching bill them at cache rates. The DM's own working notebook
+        # (W4) IS here: it changes mid-session (dm_note entries).
         events = self.session.store.read_all()
-        past_notes = [n["dm_private"] for n in session_notes(events)]
         return build_context(
             self.repo, scene, self.history[-HISTORY_IN_CONTEXT:], canon_hits,
             location=self.session.location, places=self.session.places,
@@ -133,7 +134,7 @@ class TurnLoop:
             time_of_day=self.session.time_of_day, weather=self.session.weather,
             ruleset=self.session.ruleset,
             authored_quests=authored, offerable=eligible, offered_here=here,
-            past_notes=past_notes, notebook=notebook_notes(events),
+            notebook=notebook_notes(events),
             difficulty=getattr(self.session, "difficulty", DEFAULT_DIFFICULTY),
             rest_interrupted=rest_interrupted_recently(events),
             companion_growth=growth,
@@ -143,6 +144,15 @@ class TurnLoop:
             factions=self._faction_context(),
             day=world_clock.current_day(events),
             world_event=world_event)
+
+    def _story_so_far(self) -> str:
+        """The DM's cumulative past-session notes (W5) as the SESSION-STABLE context
+        block. Passed to every brain call as `stable_context`, apart from the per-turn
+        context, because it never changes while a session runs — providers with prompt
+        caching (Anthropic today) bill it at cache rates, so a long campaign's growing
+        memory doesn't grow the per-turn cost with it."""
+        events = self.session.store.read_all()
+        return story_so_far([n["dm_private"] for n in session_notes(events)])
 
     async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
         # A new in-character turn moves the fiction on: any standing rest grant
@@ -188,10 +198,12 @@ class TurnLoop:
             # single malformed model reply (or transient provider hiccup) must
             # not kill the player's turn outright.
             try:
-                assessment = await self.brain.assess(player_text, context)
+                assessment = await self.brain.assess(player_text, context,
+                                                     stable_context=self._story_so_far())
             except (ValidationError, RuntimeError) as e:
                 self.debug.append("anomaly", stage="assess", attempt=0, error=repr(e))
-                assessment = await self.brain.assess(player_text, context)
+                assessment = await self.brain.assess(player_text, context,
+                                                     stable_context=self._story_so_far())
             # The OOC toggle is the SOLE signal for table-talk (the assess prompt
             # says so, but the model can disobey — e.g. a reflective in-character
             # remark after a fight, "What a happenstance!", gets mislabeled meta and
@@ -549,7 +561,8 @@ class TurnLoop:
             try:
                 resolution = await self.brain.resolve(
                     player_text, assessment, roll_result, context, feedback,
-                    on_text=(on_text if attempt == 0 else None), table_prompt=table_prompt)
+                    on_text=(on_text if attempt == 0 else None), table_prompt=table_prompt,
+                    stable_context=self._story_so_far())
             except (ValidationError, RuntimeError) as e:
                 # The model returned an empty/malformed resolution (e.g. an empty tool
                 # call). Treat it like a failed attempt: feed it back and retry, rather
@@ -726,7 +739,8 @@ class TurnLoop:
                     "Do not narrate the rejected creatures.")
                 try:
                     reassessed = await self.brain.assess(
-                        player_text, self._build_context(player_text) + correction)
+                        player_text, self._build_context(player_text) + correction,
+                        stable_context=self._story_so_far())
                 except (ValidationError, RuntimeError) as err:
                     self.debug.append("anomaly", stage="combat_budget",
                                       attempt=attempt, error=repr(err))
@@ -915,7 +929,8 @@ class TurnLoop:
             try:
                 ending = await self.brain.narrate_campaign_end(
                     transcript_text, self._build_context(),
-                    table_prompt=render_table_prompt(self.session.table))
+                    table_prompt=render_table_prompt(self.session.table),
+                    stable_context=self._story_so_far())
                 break
             except Exception as e:
                 self.debug.append("anomaly", stage="campaign_end", attempt=attempt,
@@ -962,7 +977,8 @@ class TurnLoop:
             for attempt in range(2):
                 try:
                     notes = await self.brain.write_session_notes(
-                        transcript_text, self._build_context(), table_prompt=table_prompt)
+                        transcript_text, self._build_context(), table_prompt=table_prompt,
+                        stable_context=self._story_so_far())
                     break
                 except Exception as e:
                     last_err = e
@@ -1057,7 +1073,8 @@ class TurnLoop:
         try:
             resolution = await self.brain.resolve(
                 player_text, assessment, roll_result, self._build_context(player_text),
-                feedback, on_text=on_text, table_prompt=table_prompt)
+                feedback, on_text=on_text, table_prompt=table_prompt,
+                stable_context=self._story_so_far())
         except Exception as e:      # enforcement must never cost the player the turn
             self.debug.append("anomaly", stage="narrate_followup", error=str(e))
             return first_pass

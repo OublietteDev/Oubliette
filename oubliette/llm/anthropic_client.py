@@ -17,6 +17,7 @@ Used for real play when ANTHROPIC_API_KEY is set; kept thin so it stays swappabl
 from __future__ import annotations
 
 import asyncio
+import datetime
 import json
 import os
 import time
@@ -47,6 +48,82 @@ DEFAULT_EFFORT = "low"
 # explicitly (including None) → use that value for this one turn. Lets Brain.resolve set
 # per-turn effort by stakes while direct callers keep the instance default.
 _INHERIT = object()
+
+# --- session cost meter -------------------------------------------------------
+# Every Anthropic response carries exact token counts in its `usage` tail — but no
+# dollars; cost is OUR arithmetic from the published per-MTok prices below.
+# ($ per MILLION tokens: input, output, cache write, cache read — write is 1.25x
+# input, read 0.1x.) Matched by substring, FIRST hit wins, so dated/legacy ids sit
+# above their generic family. An unmatched model shows tokens with no dollar figure.
+_PRICES_PER_MTOK: tuple[tuple[str, tuple[float, float, float, float]], ...] = (
+    ("fable",    (10.0, 50.0, 12.5, 1.0)),
+    ("mythos",   (10.0, 50.0, 12.5, 1.0)),
+    ("opus-4-1", (15.0, 75.0, 18.75, 1.5)),      # pre-4.5 Opus pricing
+    ("opus-4-0", (15.0, 75.0, 18.75, 1.5)),
+    ("3-opus",   (15.0, 75.0, 18.75, 1.5)),
+    ("opus",     (5.0, 25.0, 6.25, 0.5)),
+    ("sonnet",   (3.0, 15.0, 3.75, 0.3)),
+    ("haiku",    (1.0, 5.0, 1.25, 0.1)),
+)
+# claude-sonnet-5 launch pricing: $2/$10 per MTok through 2026-08-31, then $3/$15.
+_SONNET5_INTRO_UNTIL = datetime.date(2026, 8, 31)
+_SONNET5_INTRO = (2.0, 10.0, 2.5, 0.2)
+
+_USAGE_KEYS = ("input_tokens", "output_tokens",
+               "cache_creation_input_tokens", "cache_read_input_tokens")
+
+
+def estimate_cost_usd(model: str, usage: dict, on: datetime.date | None = None,
+                      custom: dict | None = None) -> dict | None:
+    """Dollars for a usage tally, or None when the model isn't in the price table
+    (tokens still display; only the price is unknown). `custom` is the player's
+    own {"input": $, "output": $} per MTok (the front door's optional pricing
+    fields) — it beats the table outright, and prices models the table has never
+    heard of. Cache rates derive from it at Anthropic's standard ratios (write =
+    1.25x input, read = 0.1x). `on` exists for tests — live callers let it default
+    to today so the sonnet-5 intro window self-expires."""
+    if custom and isinstance(custom.get("input"), (int, float)) \
+            and isinstance(custom.get("output"), (int, float)):
+        inp, out = float(custom["input"]), float(custom["output"])
+        prices = (inp, out, inp * 1.25, inp * 0.1)
+        low = ""
+    else:
+        low = (model or "").lower()
+        prices = next((p for frag, p in _PRICES_PER_MTOK if frag in low), None)
+    if prices is None:
+        return None
+    if "sonnet-5" in low and (on or datetime.date.today()) <= _SONNET5_INTRO_UNTIL:
+        prices = _SONNET5_INTRO
+    per_tok = [rate / 1_000_000 for rate in prices]
+    parts = {label: usage.get(key, 0) * rate for label, key, rate in zip(
+        ("input", "output", "cache_write", "cache_read"),
+        ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"),
+        per_tok)}
+    parts["total"] = sum(parts.values())
+    return parts
+
+
+# --- prompt caching -----------------------------------------------------------
+# The Anthropic cache is a PREFIX match over tools -> system -> messages, so a
+# marker on a system block caches the tool schemas with it. Every turn re-sends
+# the same ~10K-token rulebook+tools prefix (resolve) and ~2K (assess) — cached,
+# those bill at 0.1x instead of 1x. 1-HOUR TTL by design (Chris, 2026-07-12):
+# players step away into Arena fights for well over the default 5 minutes, and a
+# cold cache after every battle would eat the savings. The hour costs 2x to
+# WRITE that block (once per session-hour) — revisit if playtest feedback says
+# otherwise. Caching changes billing only, never the model's reply.
+_CACHE_MARK = {"type": "ephemeral", "ttl": "1h"}
+
+
+def _system_blocks(system: str, stable_context: str) -> list[dict]:
+    """The system param as cache-marked blocks: the standing prompt, then (when
+    given) the session-stable context block — the DM's past-session notes, which
+    grow with a campaign but never change mid-session, so they cache too."""
+    blocks = [{"type": "text", "text": system, "cache_control": dict(_CACHE_MARK)}]
+    if stable_context:
+        blocks.append({"type": "text", "text": stable_context,
+                       "cache_control": dict(_CACHE_MARK)})
+    return blocks
 
 
 def _tool_name(model: type[BaseModel]) -> str:
@@ -100,16 +177,36 @@ class AnthropicLLMClient:
         # Effort level for the resolve turn's adaptive thinking (`act`). None disables
         # thinking entirely; otherwise one of low|medium|high|xhigh|max.
         self._effort = effort
+        # Session cost meter: every real API call's `usage` tail lands here (assess +
+        # resolve + wrap + retries — anything billed). Lives with the client, so it
+        # resets alongside it: app relaunch, provider change, or New Game.
+        self.usage: dict[str, int] = {k: 0 for k in _USAGE_KEYS}
+        self.usage["calls"] = 0
+
+    @property
+    def model(self) -> str:
+        return self._model
+
+    def _record_usage(self, u: object) -> None:
+        """Fold one response's `usage` tail into the session meter (missing/odd
+        shapes are ignored — the meter must never be able to break a turn)."""
+        if not isinstance(u, dict):
+            return
+        for k in _USAGE_KEYS:
+            v = u.get(k)
+            if isinstance(v, int):
+                self.usage[k] += v
+        self.usage["calls"] += 1
 
     async def complete(self, *, system: str, messages: list[Msg], schema: type[T],
-                       on_text: TextSink | None = None) -> T:
+                       on_text: TextSink | None = None, stable_context: str = "") -> T:
         """Forced structured output for the classification (assess) and session-notes
         (wrap) calls — one validated object, no streaming (`on_text` is accepted for
         protocol conformance but unused; the streaming resolve turn is `act`)."""
         payload = {
             "model": self._model,
             "max_tokens": self._max_tokens,
-            "system": system,
+            "system": _system_blocks(system, stable_context),
             "messages": [{"role": m.role, "content": m.content} for m in messages],
             "tools": [{
                 "name": "emit",
@@ -142,12 +239,13 @@ class AnthropicLLMClient:
 
     async def act(self, *, system: str, messages: list[Msg],
                   tools: list[type[BaseModel]], on_text: TextSink | None = None,
-                  effort=_INHERIT) -> ActResult:
+                  effort=_INHERIT, stable_context: str = "") -> ActResult:
         """Resolve turn (W6): narration streams as assistant TEXT; state changes come
         back as `tool_choice: auto` tool calls. No forced `emit` — narration is prose,
         so it leaves the validated schema and streams token-by-token for real. `effort`
         is the per-turn thinking depth (W4); omitted → the client default, None → no
-        thinking this turn, else low|medium|high|xhigh|max."""
+        thinking this turn, else low|medium|high|xhigh|max. Per-turn effort changes
+        never invalidate the tools/system cache (that tier ignores thinking config)."""
         eff = self._effort if effort is _INHERIT else effort
         by_name = {_tool_name(m): m for m in tools}
         payload = {
@@ -158,7 +256,7 @@ class AnthropicLLMClient:
             # player-facing prose never gets generated (v0.9 playtest: a quest-reveal
             # faction was created with 0 chars of story text). Keep the ceiling high.
             "max_tokens": max(self._max_tokens, 8192),
-            "system": system,
+            "system": _system_blocks(system, stable_context),
             "messages": [{"role": m.role, "content": m.content} for m in messages],
             "tools": [_tool_def(m) for m in tools],
             "tool_choice": {"type": "auto"},
@@ -217,6 +315,10 @@ class AnthropicLLMClient:
         blocks: dict[int, dict] = {}     # index -> {"type", "name", "acc"}
         narration: list[str] = []
         thinking: list[str] = []
+        # Usage arrives in two pieces on a stream: message_start carries the input +
+        # cache counts, message_delta the CUMULATIVE output count — update() keeps
+        # the last (final) value of each.
+        usage_tail: dict = {}
         try:
             with urllib.request.urlopen(req, timeout=120) as resp:
                 for raw in resp:
@@ -231,7 +333,15 @@ class AnthropicLLMClient:
                     except json.JSONDecodeError:
                         continue
                     kind = evt.get("type")
-                    if kind == "content_block_start":
+                    if kind == "message_start":
+                        u = evt.get("message", {}).get("usage")
+                        if isinstance(u, dict):
+                            usage_tail.update(u)
+                    elif kind == "message_delta":
+                        u = evt.get("usage")
+                        if isinstance(u, dict):
+                            usage_tail.update(u)
+                    elif kind == "content_block_start":
                         cb = evt.get("content_block", {})
                         blocks[evt.get("index")] = {
                             "type": cb.get("type"), "name": cb.get("name"), "acc": ""}
@@ -254,6 +364,7 @@ class AnthropicLLMClient:
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:300]
             raise RuntimeError(f"Anthropic API HTTP {e.code}: {detail}") from e
+        self._record_usage(usage_tail)
         tool_blocks: list[dict] = []
         for idx in sorted(blocks):
             blk = blocks[idx]
@@ -282,7 +393,9 @@ class AnthropicLLMClient:
                 # transcript of a long session — at 60s it can time out, and the swallowed
                 # failure sealed a session with EMPTY notes (v0.9 playtest, finding #6).
                 with urllib.request.urlopen(req, timeout=300) as resp:
-                    return json.loads(resp.read())
+                    data = json.loads(resp.read())
+                self._record_usage(data.get("usage"))
+                return data
             except urllib.error.HTTPError as e:
                 detail = e.read().decode("utf-8", "replace")[:300]
                 if e.code in _RETRYABLE and attempt < self._max_retries - 1:

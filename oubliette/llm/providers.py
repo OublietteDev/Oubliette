@@ -151,13 +151,40 @@ def stored_base_url(provider: str, cfg: dict | None = None) -> str:
     return p.default_base_url if p else ""
 
 
+def _valid_pricing(pricing: object) -> dict | None:
+    """Normalize a user-supplied pricing entry to {"input": $, "output": $} per
+    MILLION tokens, or None if it isn't two positive numbers. Tolerant on
+    purpose — a corrupt config entry must read as 'no custom pricing', never
+    break the meter."""
+    if not isinstance(pricing, dict):
+        return None
+    try:
+        inp, out = float(pricing.get("input")), float(pricing.get("output"))
+    except (TypeError, ValueError):
+        return None
+    if inp <= 0 or out <= 0:
+        return None
+    return {"input": inp, "output": out}
+
+
+def stored_pricing(provider: str, cfg: dict | None = None) -> dict | None:
+    """The player's own token prices for a provider ($ per million tokens in /
+    out), or None to use the built-in price table. Entered in the front door's
+    optional pricing fields so the cost meter stays honest on models we don't
+    know (or whose price changed)."""
+    cfg = load_config() if cfg is None else cfg
+    return _valid_pricing((cfg.get("pricing") or {}).get(provider))
+
+
 def set_provider_key(provider: str, api_key: str | None,
                      model: str | None = None,
-                     base_url: str | None = None) -> dict:
-    """Persist the selected provider and (optionally) its key, model name and
-    server address. An empty key clears the stored one (revert to offline);
-    empty model/base_url clear back to the provider defaults. Returns the
-    saved config."""
+                     base_url: str | None = None,
+                     pricing: dict | None = None) -> dict:
+    """Persist the selected provider and (optionally) its key, model name,
+    server address and custom token pricing. An empty key clears the stored one
+    (revert to offline); empty model/base_url clear back to the provider
+    defaults; invalid/empty pricing clears back to the built-in price table.
+    Returns the saved config."""
     cfg = load_config()
     cfg["provider"] = provider
 
@@ -172,6 +199,13 @@ def set_provider_key(provider: str, api_key: str | None,
     _bucket("keys", api_key)
     _bucket("models", model)
     _bucket("base_urls", base_url)
+    prices = dict(cfg.get("pricing") or {})
+    valid = _valid_pricing(pricing)
+    if valid:
+        prices[provider] = valid
+    else:
+        prices.pop(provider, None)
+    cfg["pricing"] = prices
     save_config(cfg)
     return cfg
 
@@ -192,6 +226,7 @@ def registry_view() -> list[dict]:
             "key_optional": p.key_optional,
             "model_hint": p.model_hint,
             "model": stored_model(p.id, cfg),
+            "pricing": stored_pricing(p.id, cfg),
             "needs_base_url": p.needs_base_url,
             "base_url": stored_base_url(p.id, cfg),
             "has_key": bool(stored_key(p.id, cfg)) if p.implemented else False,

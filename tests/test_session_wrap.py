@@ -81,16 +81,18 @@ def test_wrap_refused_when_nothing_happened():
     assert session_notes(s.store.read_all()) == []
 
 
-def test_past_notes_reach_the_dm_context_but_not_the_player():
+def test_past_notes_reach_the_dm_but_not_the_player():
     s = Session.open(InMemoryEventStore())
     loop = _loop(s)
     asyncio.run(loop.take_turn("I look around the market"))
     asyncio.run(loop.wrap_session(write_notes=True))
     dm = session_notes(s.store.read_all())[0]["dm_private"]
 
-    # DM context carries the private note under STORY SO FAR...
-    ctx = loop._build_context()
-    assert "STORY SO FAR" in ctx and dm in ctx
+    # The private note reaches the DM as the session-stable STORY SO FAR block
+    # (rides apart from the per-turn context so providers can cache it)...
+    stable = loop._story_so_far()
+    assert "STORY SO FAR" in stable and dm in stable
+    assert "STORY SO FAR" not in loop._build_context()      # moved OUT of the per-turn context
     # ...but the player's chronicle only ever shows the spoiler-free face.
     turns_after = transcript_turns(s.store.read_all())      # new session: empty transcript
     assert turns_after == []
@@ -111,14 +113,16 @@ def test_notes_survive_reload(tmp_path):
     assert reopened.repo.party_cp == s.repo.party_cp            # state still byte-identical
 
 
-def test_build_context_renders_story_so_far():
-    from oubliette.state.repository import Repository
-    # A minimal repo is enough — we only assert the notes block renders.
-    repo = Session.open(InMemoryEventStore()).repo
-    ctx = build_context(repo, past_notes=["The cult still hunts the amulet.", ""])
-    assert "STORY SO FAR" in ctx
-    assert "Session 1: The cult still hunts the amulet." in ctx
-    assert "Session 2" not in ctx          # empty notes are skipped, not numbered blank
+def test_story_so_far_renders_the_stable_notes_block():
+    from oubliette.dm.context import story_so_far
+    block = story_so_far(["The cult still hunts the amulet.", ""])
+    assert "STORY SO FAR" in block
+    assert "Session 1: The cult still hunts the amulet." in block
+    assert "Session 2" not in block        # empty notes are skipped, not numbered blank
+    # Numbering follows the SESSION, not the surviving notes — a quiet session 2
+    # must not steal session 3's number.
+    assert "Session 3: The heist." in story_so_far(["A start.", "", "The heist."])
+    assert story_so_far([]) == "" and story_so_far(["", ""]) == ""   # nothing yet -> no block
 
 
 def test_wrap_refused_when_note_writing_fails():

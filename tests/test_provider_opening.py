@@ -174,7 +174,7 @@ class _StubClient:
     def __init__(self, result=None, error: Exception | None = None) -> None:
         self._result, self._error = result, error
 
-    async def complete(self, *, system, messages, schema, on_text=None):
+    async def complete(self, *, system, messages, schema, on_text=None, stable_context=""):
         if self._error:
             raise self._error
         return schema(ok=True) if self._result is None else self._result

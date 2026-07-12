@@ -10,6 +10,8 @@ import json
 import os
 import tempfile
 
+import pytest
+
 # Must be set BEFORE importing the server (it builds the game at import time).
 os.environ["OUBLIETTE_DB"] = os.path.join(tempfile.mkdtemp(), "test.sqlite")
 os.environ["OUBLIETTE_CONFIG"] = os.path.join(tempfile.mkdtemp(), "cfg.json")  # isolate provider config
@@ -77,6 +79,31 @@ def test_turn_sale_updates_surfaced_state():
     assert any("transact" in a for a in d["applied"])
     assert d["state"]["purse_cp"] == 265_00
     assert all(i["id"] != "boots" for i in d["state"]["pc"]["inventory"])
+
+
+def test_usage_meter_unavailable_offline():
+    # The cost meter is Anthropic-only — the scripted DM reports no tokens.
+    _new()
+    d = client.get("/api/usage").json()
+    assert d["available"] is False and d["provider"] == "scripted"
+
+
+def test_usage_meter_reports_tokens_and_cost_on_anthropic():
+    from oubliette.dm.brain import Brain
+    from oubliette.llm.anthropic_client import AnthropicLLMClient
+
+    _new()
+    old_brain, old_name = GAME.loop.brain, GAME.client_name
+    try:
+        ac = AnthropicLLMClient(model="claude-sonnet-5", api_key="test-key")
+        ac._record_usage({"input_tokens": 10_000, "output_tokens": 2_000})
+        GAME.loop.brain, GAME.client_name = Brain(ac), "anthropic"
+        d = client.get("/api/usage").json()
+        assert d["available"] is True and d["model"] == "claude-sonnet-5"
+        assert d["usage"]["input_tokens"] == 10_000 and d["usage"]["calls"] == 1
+        assert d["cost"]["total"] > 0                # priced, whatever today's rate is
+    finally:
+        GAME.loop.brain, GAME.client_name = old_brain, old_name
 
 
 def test_turn_emits_roll_chip_data():
@@ -148,8 +175,10 @@ def test_packs_listing_and_new_game_switches_world():
     _new()                                            # current world = brightvale
     listing = client.get("/api/packs").json()
     ids = [p["id"] for p in listing["packs"]]
-    assert "brightvale" in ids and "atria" in ids
+    assert "brightvale" in ids
     assert listing["current"] == "brightvale"
+    if "atria" not in ids:                            # local-only until finished
+        pytest.skip("atria pack is local-only until finished")
 
     # start a new game in Atria → the world (and its opening scene) actually change
     d = client.post("/api/new", json={"pack_id": "atria"}).json()

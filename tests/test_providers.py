@@ -73,6 +73,34 @@ def test_corrupt_config_is_tolerated(tmp_path, monkeypatch):
     assert providers.load_config() == {}                     # never raises
 
 
+# --- custom meter pricing ---------------------------------------------------
+
+def test_pricing_roundtrips_and_surfaces_in_the_registry():
+    providers.set_provider_key("anthropic", "sk-ant-abc",
+                               pricing={"input": 2.5, "output": 12.0})
+    assert providers.stored_pricing("anthropic") == {"input": 2.5, "output": 12.0}
+    view = {p["id"]: p for p in providers.registry_view()}
+    assert view["anthropic"]["pricing"] == {"input": 2.5, "output": 12.0}
+    assert view["openai"]["pricing"] is None
+
+
+def test_blank_pricing_clears_back_to_the_table():
+    providers.set_provider_key("anthropic", "sk-ant-abc",
+                               pricing={"input": 2.5, "output": 12.0})
+    providers.set_provider_key("anthropic", "sk-ant-abc")   # saved with fields blank
+    assert providers.stored_pricing("anthropic") is None
+
+
+def test_junk_pricing_reads_as_no_custom_pricing():
+    # A hand-edited/corrupt entry must never break the meter — it just means
+    # "use the built-in table". Zero/negative prices are junk too.
+    for junk in ("cheap", {"input": "x", "output": 5},
+                 {"input": 0, "output": 5}, {"input": -1, "output": 5},
+                 {"output": 5}):
+        providers.save_config({"pricing": {"anthropic": junk}})
+        assert providers.stored_pricing("anthropic") is None
+
+
 # --- the client picker ----------------------------------------------------
 
 def test_pick_client_goes_live_with_a_saved_anthropic_key():

@@ -169,7 +169,8 @@ def test_starved_narration_gets_a_followup_pass():
 
     class _StarvingBrain(Brain):
         async def resolve(self, player_text, assessment, roll_result, context="",
-                          retry_feedback=None, on_text=None, table_prompt=""):
+                          retry_feedback=None, on_text=None, table_prompt="",
+                          stable_context=""):
             calls["n"] += 1
             calls["contexts"].append(context)
             if calls["n"] == 1:      # the starved pass: a travel tool, no prose
