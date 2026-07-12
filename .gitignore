@@ -61,3 +61,9 @@ preview-test-config.json
 /docs/media/
 /docs/README.md
 /spike/
+
+# The Atria showcase world — local-only while unfinished, so half-built content
+# never clutters players' world lists. When the campaign is finished and
+# playtested it ships as an installable world zip in its own repo folder,
+# not inside the auto-installed packs.
+oubliette/content/packs/atria/

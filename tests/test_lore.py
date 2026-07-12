@@ -14,7 +14,12 @@ import json
 import pytest
 
 from oubliette.canon.store import CanonStore
-from oubliette.content.loader import PackValidationError, PlaceNode, load_pack
+from oubliette.content.loader import (_PACKS_ROOT, PackValidationError, PlaceNode,
+                                      load_pack)
+
+# The Atria pack is local-only until the campaign is finished (untracked, so it
+# never ships half-built) — its end-to-end tests run where the folder exists.
+_HAS_ATRIA = (_PACKS_ROOT / "atria" / "pack.json").exists()
 from oubliette.dm.brain import Brain
 from oubliette.dm.context import LORE_CHARS, build_context
 from oubliette.llm.scripted import ScriptedLLMClient
@@ -72,7 +77,7 @@ def test_pack_without_lore_still_loads(tmp_path):
 
 
 def test_existing_packs_still_load():
-    for pid in ("brightvale", "atria"):
+    for pid in ("brightvale",) + (("atria",) if _HAS_ATRIA else ()):
         load_pack(pid)                            # must not raise
 
 
@@ -129,6 +134,7 @@ def test_situational_query_includes_parent_areas():
     assert "Brightvale" in q                 # the enclosing city — its lore now surfaces
 
 
+@pytest.mark.skipif(not _HAS_ATRIA, reason="atria pack is local-only until finished")
 def test_atria_city_lore_surfaces_inside_a_district():
     """End-to-end against the real Atria pack: standing in the Coin Quarter (a
     district of Brightvale), the founding lore is retrievable via the parent name."""
