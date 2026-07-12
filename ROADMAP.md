@@ -8,6 +8,8 @@ The current release. The full game, the Forge, and the Arena are all here and pl
 
 **New in v1.0:** **voiced narration** (a local narrator reads the DM aloud — no cloud, no keys), **persistent companions** (the wolf pup you bought stays, grows, and fights at your side with its real kit), the **living world** (keyed encounters, factions with standing, a campaign clock, and scheduled world events — the world moves whether you attend or not), **trinkets** for the journal, and a **racial-traits pass** (Relentless Endurance actually catches the half-orc now, dragonborn choose a draconic ancestry and get their breath weapon, dwarves resist poison, and more). All described below.
 
+**Fresh on main since v1.0:** a **session cost meter** for Anthropic tables (exact token counts and a dollar estimate in the ☰ menu, with optional enter-your-own prices so any model reads true), **prompt caching** (the DM's unchanging rulebook, tools, and campaign memory bill at cache rates while you play — a long campaign's growing memory no longer grows the per-turn cost), and Forge coin that names itself (authored money accepts "5 sp" or "1 gp 5 sp" anywhere a bare number used to mean gold).
+
 ## Next
 
 - **Polishing the remaining known issues** — the list in the README is honest and current.

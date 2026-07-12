@@ -48,6 +48,8 @@ oubliette-play                 # opens the browser game
 
 **Bring your own model.** The **Connect your AI** panel supports **Anthropic**, **OpenAI**, **Google Gemini**, and **local models** (any OpenAI-compatible server — Ollama, LM Studio, llama.cpp — no key needed). The model id is free text, so new models work the day they ship, and a **Test** button makes one tiny real call so a typo shows up as a sentence, never mid-game. Your key is stored locally in a gitignored file, never committed. No key? The game runs a scripted **Offline Mode** demo so you can look around.
 
+**See what a session costs — and pay less.** With Anthropic connected, a **Token Usage** panel (☰ menu) tallies the session's exact token counts from the API's own reports and prices them in dollars. The standard Claude rates are built in, and an optional pricing field in Connect your AI takes any model's own $-per-million-token rates, so the meter reads true even on models it's never heard of. Behind the scenes, **prompt caching** re-bills the unchanging part of every turn — the DM's standing instructions, its tool kit, and your campaign's past-session memory — at roughly a tenth of full price while you play, so long sessions and long campaigns stay affordable.
+
 ---
 
 ## The three apps, a little deeper
