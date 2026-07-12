@@ -342,7 +342,8 @@ class TurnLoop:
         narration stands and play continues."""
         request = EncounterRequest(
             kind="ambush",
-            enemies=[EnemyRef(ref=e.ref, count=e.count) for e in enc.enemies])
+            enemies=[EnemyRef(ref=e.ref, count=e.count) for e in enc.enemies],
+            allies=list(getattr(enc, "allies", None) or ()))
         # The post-combat report (bestiary keys, result prose) reads the turn's
         # assessment.encounter — hand the pending fight the AUTHORED request.
         assessment = assessment.model_copy(update={"encounter": request})

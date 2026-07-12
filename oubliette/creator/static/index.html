@@ -501,6 +501,28 @@ function optionList(kind, selected, noneLabel) {
   return none + listOf(kind).map(e =>
     `<option value="${esc(e.id)}"${e.id === selected ? " selected" : ""}>${esc(e.name || e.id)}</option>`).join("");
 }
+// Coin amounts. A plain number means GOLD (historical pack meaning); a string
+// names its coins — "5 sp", "1 gp 5 sp", "2 platinum". Keep this grammar in
+// step with oubliette/coin.py parse_coin (the engine-side parser).
+const COIN_PART = /(\d[\d,]*)\s*(pp|gp|ep|sp|cp|platinum|gold|electrum|silver|copper)\b/gi;
+function coinValid(raw) {
+  const s = String(raw).trim();
+  if (!s) return false;
+  if (/^\d[\d,]*$/.test(s)) return true;                    // bare number = gold
+  let matched = 0;
+  const leftovers = s.replace(COIN_PART, () => { matched++; return ""; })
+    .replace(/pieces?/gi, "").replace(/\band\b/gi, "").replace(/[ ,;]/g, "");
+  return matched > 0 && !leftovers;
+}
+// Field text -> the authored value: "" stays empty, a bare number becomes an int
+// (so packs keep plain gold ints), anything else rides as its denominated string.
+function coinFromField(raw) {
+  const s = String(raw).trim();
+  if (!s) return "";
+  return /^\d[\d,]*$/.test(s) ? Number(s.replace(/,/g, "")) : s;
+}
+function coinLabel(v) { return typeof v === "number" ? `${v} gp` : v; }
+const COIN_HINT = "a number means gold; write “5 sp” or “1 gp 5 sp” for smaller coin";
 // Merchant rows fold inventory + price_list together: one row per held item, with
 // an optional price (set = for sale). This makes "you can't price what you don't
 // stock" impossible to violate.
@@ -514,7 +536,7 @@ function describe(kind, e) {
     const bits = [e.category];
     if (e.item_type && e.item_type !== "mundane")
       bits.unshift("✦ " + [e.rarity, e.item_type].filter(Boolean).join(" "));
-    if (e.base_value != null) bits.push(`worth ~${e.base_value}g`);
+    if (e.base_value != null) bits.push(`worth ~${coinLabel(e.base_value)}`);
     if (e.armor) bits.push(`armor ${e.armor.base_ac}`);
     if (e.weapon) bits.push(`weapon ${e.weapon.damage}`);
     return bits.filter(Boolean).join(" · ") + (e.description ? ` — ${e.description}` : "");
@@ -895,8 +917,8 @@ function itemForm(it) {
         ${field("Kind", `<select id="f_cat">${CATEGORIES.map(c =>
             `<option value="${c}"${c === cat ? " selected" : ""}>${c}</option>`).join("")}</select>`,
             `<span id="catLock" style="display:none">Potions &amp; scrolls are always “consumable” — they get used up.</span>`)}
-        ${field("Worth (gold)", `<input id="f_value" type="number" min="0" value="${v.base_value ?? ""}" placeholder="(optional)" />`,
-                "A rough price hint. Leave blank if you like.")}
+        ${field("Worth", `<input id="f_value" value="${esc(String(v.base_value ?? ""))}" placeholder="3 · or “5 sp”" />`,
+                `A rough price hint — ${COIN_HINT}. Leave blank if you like.`)}
       </div>
       ${field("Description", `<textarea id="f_desc" placeholder="A short, flavourful line.">${esc(v.description || "")}</textarea>`)}
       <div class="row2">
@@ -1025,7 +1047,9 @@ function confirmItem(original) {
 
   const setOrDel = (key, val) => { if (val === "" || val == null || (Array.isArray(val) && !val.length)) delete base[key]; else base[key] = val; };
   const worth = document.getElementById("f_value").value;
-  setOrDel("base_value", worth === "" ? "" : Number(worth));
+  if (worth.trim() && !coinValid(worth)) {
+    fieldInvalid("f_value", "Write a number of gold (3) or name the coins (“5 sp”, “1 gp 5 sp”)."); return; }
+  setOrDel("base_value", coinFromField(worth));
   setOrDel("description", document.getElementById("f_desc").value.trim());
   setOrDel("slot", document.getElementById("f_slot").value);
   setOrDel("tags", csv(document.getElementById("f_tags").value));
@@ -2867,7 +2891,7 @@ function npcForm(npc) {
       ${field(req("Name"), `<input id="f_name" value="${esc(v.name || "")}" placeholder="Thom" />`)}
       <div class="row2">
         ${field("Role", `<input id="f_role" value="${esc(v.role || "")}" placeholder="merchant, guard, ..." />`, "Optional, advisory.")}
-        ${field("Coin (gold)", `<input id="f_gold" type="number" min="0" value="${v.gold ?? 0}" />`, "Caps what they can pay.")}
+        ${field("Coin", `<input id="f_gold" value="${esc(String(v.gold ?? 0))}" placeholder="0 · or “8 sp”" />`, `Caps what they can pay — ${COIN_HINT}.`)}
       </div>
       ${field("Temperament", `<textarea id="f_disp" placeholder="cautious and shrewd; greedy when flattered">${esc(v.disposition || "")}</textarea>`,
               "How they act — the DM uses this to judge how hard they are to sway.")}
@@ -2898,12 +2922,12 @@ function renderInv() {
     <div class="shop-row">
       <select data-inv-item="${i}">${optionList("items", r.item, "(choose an item)")}</select>
       <input data-inv-qty="${i}" type="number" min="1" value="${r.qty || 1}" title="how many they have" />
-      <input data-inv-price="${i}" type="number" min="0" value="${r.price ?? ""}" placeholder="price" title="sale price (blank = not for sale)" />
+      <input data-inv-price="${i}" value="${esc(String(r.price ?? ""))}" placeholder="price" title="sale price — a number means gold, “5 sp” works too (blank = not for sale)" />
       <button class="btn mini danger" type="button" data-inv-del="${i}">✕</button>
     </div>`).join("") || '<div class="nothing" style="margin:6px 0">Nothing yet.</div>';
   box.querySelectorAll("[data-inv-item]").forEach(s => s.addEventListener("change", e => editorCtx.inv[+e.target.dataset.invItem].item = e.target.value));
   box.querySelectorAll("[data-inv-qty]").forEach(inp => inp.addEventListener("input", e => editorCtx.inv[+e.target.dataset.invQty].qty = Number(e.target.value || 1)));
-  box.querySelectorAll("[data-inv-price]").forEach(inp => inp.addEventListener("input", e => { const val = e.target.value; editorCtx.inv[+e.target.dataset.invPrice].price = val === "" ? "" : Number(val); }));
+  box.querySelectorAll("[data-inv-price]").forEach(inp => inp.addEventListener("input", e => { editorCtx.inv[+e.target.dataset.invPrice].price = e.target.value; }));
   box.querySelectorAll("[data-inv-del]").forEach(b => b.addEventListener("click", e => { editorCtx.inv.splice(+e.target.dataset.invDel, 1); renderInv(); }));
 }
 function wireNpcForm() {
@@ -2975,12 +2999,20 @@ function npcEntryFromForm(original, forceKind) {
   const sbSel = kind === "person" ? "" : (sbEl ? sbEl.value : (editorCtx.statBlockSel || ""));
   setOrDel("stat_block", sbSel);
   if (kind && kind !== "none") base.combat_kind = kind; else delete base.combat_kind;   // omit default to keep packs clean
-  const goldNum = Number(document.getElementById("f_gold").value || 0);
-  if (goldNum) base.gold = goldNum; else delete base.gold;
+  const goldRaw = document.getElementById("f_gold").value;
+  if (goldRaw.trim() && !coinValid(goldRaw)) {
+    fieldInvalid("f_gold", "Write a number of gold (3) or name the coins (“8 sp”)."); return null; }
+  const goldVal = coinFromField(goldRaw);
+  if (goldVal) base.gold = goldVal; else delete base.gold;
+  const badPrice = rows.find(r => String(r.price ?? "").trim() && !coinValid(r.price));
+  if (badPrice) {
+    err.textContent = `The price on “${(listOf("items").find(x => x.id === badPrice.item) || {}).name || badPrice.item}” isn't a coin amount — a number means gold, or name the coins (“5 sp”).`;
+    return null; }
   const inv = [], prices = {};
   rows.forEach(r => {
     inv.push(r.qty && r.qty !== 1 ? { item: r.item, qty: r.qty } : { item: r.item });
-    if (r.price !== "" && r.price != null) prices[r.item] = Number(r.price);
+    const p = coinFromField(r.price ?? "");
+    if (p !== "") prices[r.item] = p;
   });
   if (inv.length) base.inventory = inv; else delete base.inventory;
   if (Object.keys(prices).length) base.price_list = prices; else delete base.price_list;

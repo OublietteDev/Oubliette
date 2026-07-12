@@ -11,7 +11,9 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from ..coin import parse_coin
 
 # Bump when a breaking change to these shapes ships; packs carry their own
 # `schema_version` so the loader can refuse / migrate incompatible packs later.
@@ -20,6 +22,22 @@ SCHEMA_VERSION = 1
 
 class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+def _check_coin(value: "int | str") -> "int | str":
+    """Validate an authored money value AT PARSE TIME. Plain ints mean gold; a
+    string must be a denominated amount `parse_coin` accepts ("5 sp", "1 gp 5 sp").
+    Without this, a bad string sails through schema validation and explodes in
+    `authored_to_cp` during the baseline build — a crash instead of the aggregated
+    authoring error the Forge can show."""
+    if isinstance(value, str):
+        try:
+            parse_coin(value)
+        except ValueError:
+            raise ValueError(
+                f'{value!r} is not a coin amount — write a number of gold (3) '
+                'or name the coins ("5 sp", "1 gp 5 sp")')
+    return value
 
 
 # --- pack manifest -----------------------------------------------------------
@@ -276,6 +294,11 @@ class Item(_Strict):
     grants_resistances: list[str] = Field(default_factory=list)
     grants_immunities: list[str] = Field(default_factory=list)
 
+    @field_validator("base_value")
+    @classmethod
+    def _coin_value(cls, v):
+        return None if v is None else _check_coin(v)
+
     @model_validator(mode="after")
     def _magic_shape(self) -> "Item":
         """Authoring traps the Forge should catch at save time, not mid-session:
@@ -471,6 +494,21 @@ class NPC(_Strict):
     # Asking prices by Item id. int = GOLD pieces; a string names its unit ("5 sp").
     price_list: dict[str, int | str] = Field(default_factory=dict)
 
+    @field_validator("gold")
+    @classmethod
+    def _coin_gold(cls, v):
+        return _check_coin(v)
+
+    @field_validator("price_list")
+    @classmethod
+    def _coin_prices(cls, v):
+        for item_id, price in v.items():
+            try:
+                _check_coin(price)
+            except ValueError as e:
+                raise ValueError(f"price for {item_id!r}: {e}")
+        return v
+
 
 # --- places (a graph; map-ready) ---------------------------------------------
 class Exit(_Strict):
@@ -574,6 +612,11 @@ class KeyedEncounter(_Strict):
     once: bool = True                # fire at most once per campaign; False re-arms
                                      # each new visit (night wolves you dodged by day)
     briefing: str = ""               # DM-secret staging text ("they drop from the rafters")
+    # Authored friendlies: pack NPC entity ids who fight PLAYER-SIDE in this
+    # fight (Seraphel rising beside the party). Rides the EncounterRequest.allies
+    # seam the DM already uses — additive, player-controlled, full kit when the
+    # NPC carries a stat block (rich-kits). An ally is never also an enemy.
+    allies: list[str] = Field(default_factory=list)
 
 
 class Place(_Strict):

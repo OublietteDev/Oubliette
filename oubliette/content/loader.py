@@ -161,7 +161,8 @@ def _dup_ids(entities: list, type_name: str, errors: list[str]) -> None:
 
 def _lint(manifest: PackManifest | None, items: list[Item], statblocks: list[StatBlock],
           npcs: list[NPC], places: list[Place], scenarios: list[Scenario],
-          quests: list[AuthoredQuest], errors: list[str]) -> None:
+          quests: list[AuthoredQuest], errors: list[str],
+          world_events: list[WorldEvent] = ()) -> None:
     """Validate the parsed pack as a graph. Appends every problem to `errors`."""
     for entities, name in [(items, "items"), (statblocks, "statblocks"),
                            (npcs, "npcs"), (places, "places"), (scenarios, "scenarios"),
@@ -221,17 +222,20 @@ def _lint(manifest: PackManifest | None, items: list[Item], statblocks: list[Sta
     if manifest is not None and manifest.entry_scenario not in scenario_ids:
         errors.append(f"pack.json: entry_scenario references unknown scenario {manifest.entry_scenario!r}")
 
-    _lint_quests(quests, npcs, item_ids, need_item, need_place, errors)
+    _lint_quests(quests, npcs, item_ids, need_item, need_place, errors,
+                 event_unlocked={ev.unlock_quest for ev in world_events
+                                 if ev.unlock_quest is not None})
 
 
 def _lint_quests(quests: list[AuthoredQuest], npcs: list[NPC], item_ids: set[str],
-                 need_item, need_place, errors: list[str]) -> None:
+                 need_item, need_place, errors: list[str],
+                 event_unlocked: set[str] | None = None) -> None:
     """Validate authored quests as a graph: sources resolve and are reachable, reward items
     exist, and the branch edges form a sound chain (targets exist, no self-loops, every quest
-    reachable as a root or some branch's target)."""
+    reachable as a root, some branch's target, or a world event's unlock)."""
     quest_ids = {q.id for q in quests}
     npc_by_id = {n.id: n for n in npcs}
-    branch_targets = {b.to for q in quests for b in q.branches}
+    branch_targets = {b.to for q in quests for b in q.branches} | (event_unlocked or set())
     for q in quests:
         # Source resolves AND is reachable. A giver NPC with no home_location can never be
         # present in a scene, so the quest could never be offered — an authoring error.
@@ -253,7 +257,8 @@ def _lint_quests(quests: list[AuthoredQuest], npcs: list[NPC], item_ids: set[str
                 errors.append(f"quests: {q.id}.branches references unknown quest {b.to!r}")
         # Reachability: a quest nobody can reach (not a root, not unlocked by any branch) is dead.
         if not q.root and q.id not in branch_targets:
-            errors.append(f"quests: {q.id} is unreachable — it is not a root and no branch unlocks it")
+            errors.append(f"quests: {q.id} is unreachable — it is not a root and no "
+                          "branch or world event unlocks it")
 
 
 def _lint_keyed_encounters(places: list[Place], statblocks: list[StatBlock],
@@ -291,6 +296,15 @@ def _lint_keyed_encounters(places: list[Place], statblocks: list[StatBlock],
                 elif norm(e.ref) not in known:
                     errors.append(f"{where} enemy ref {e.ref!r} is neither a stat "
                                   f"block (pack or SRD) nor a pack NPC")
+            # Authored allies: each must be a pack NPC entity (the runtime skips
+            # an unresolvable ally, so a typo here would silently cost the party
+            # its dragon — fail at authoring time instead), and never an enemy.
+            enemy_refs = {e.ref for e in enc.enemies}
+            for ally in enc.allies:
+                if ally not in npc_ids:
+                    errors.append(f"{where} ally {ally!r} is not a pack NPC")
+                elif ally in enemy_refs:
+                    errors.append(f"{where} lists {ally!r} as both ally and enemy")
 
 
 def _lint_growth(statblocks: list[StatBlock], ruleset: Ruleset,
@@ -689,7 +703,8 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     # against its sets (S2/S3), and the merged ruleset is built below.
     ruleset = load_ruleset()
 
-    _lint(manifest, items, statblocks, npcs, places, scenarios, quests, errors)
+    _lint(manifest, items, statblocks, npcs, places, scenarios, quests, errors,
+          world_events=world_events)
     _lint_keyed_encounters(places, statblocks, npcs, ruleset, errors)
     _lint_growth(statblocks, ruleset, errors)
     _lint_factions(factions, npcs, statblocks, quests, errors)
