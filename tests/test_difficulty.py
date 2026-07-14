@@ -64,6 +64,19 @@ def test_custom_keeps_its_dials_and_unknown_labels_become_custom():
     assert weird.preset == "custom" and weird.hardcore
 
 
+def test_hidden_rolls_rides_through_normalize_untouched():
+    """`hidden_rolls` is presentation, not danger: a preset label snaps the
+    danger dials but never touches it, and no preset bundle carries it."""
+    kept = normalize_difficulty(DifficultySettings(preset="hardcore", hidden_rolls=True))
+    assert kept.preset == "hardcore" and kept.hardcore and kept.hidden_rolls
+
+    off = normalize_difficulty(DifficultySettings(preset="story"))
+    assert not off.hidden_rolls                      # default stays off
+
+    custom = normalize_difficulty(DifficultySettings(preset="nightmare", hidden_rolls=True))
+    assert custom.preset == "custom" and custom.hidden_rolls
+
+
 def test_every_preset_resolves_to_a_valid_settings_object():
     for name in PRESET_DIALS:
         s = preset_settings(name)
@@ -129,3 +142,24 @@ def test_settings_change_mid_campaign_including_out_of_hardcore():
     got = res["difficulty"]
     assert got["preset"] == "custom" and got["encounter_challenge"] == "gentle"
     assert got["rest_strictness"] == "dangerous" and got["pc_death"] is True
+
+
+def test_hidden_rolls_redacts_dc_and_result_from_the_turn_payload():
+    """With hidden rolls on, the outcome truly isn't in the payload — the chip
+    can show the dice landing, but the DC and success/failure stay behind the
+    DM's screen. Turning it off restores the full chip."""
+    assert client.post("/api/new", json={
+        "difficulty": {"preset": "adventure", "hidden_rolls": True}}).json()["ok"]
+    d = client.post("/api/turn", json={
+        "text": "I tell the merchant these boots are priceless dwarven heirlooms."}).json()
+    assert d["roll"] is not None
+    assert d["roll"]["spec"] and d["roll"]["total"]          # the dice still land on screen
+    assert d["roll"]["dc"] is None and d["roll"]["result"] is None
+
+    # A fresh table without the toggle serves the full chip (the scripted DM's
+    # deception beat only fires on an untouched save, hence the new game).
+    assert client.post("/api/new", json={"difficulty": {"preset": "adventure"}}).json()["ok"]
+    d = client.post("/api/turn", json={
+        "text": "I tell the merchant these boots are priceless dwarven heirlooms."}).json()
+    assert d["roll"] is not None
+    assert d["roll"]["dc"] is not None and d["roll"]["result"] in {"success", "failure"}

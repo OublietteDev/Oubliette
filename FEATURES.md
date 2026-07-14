@@ -114,6 +114,8 @@ Hand-written code only — excludes JSON data/content, art, audio, `.venv`, and 
 
 ### Table contract (session-zero safety)
 - On New Game you **set the table:** a tone dial (whimsical → grim) and **Lines & Veils** (content never depicted, or faded tactfully past). Injected into every resolve prompt — the DM honors it and can never set it.
+- **Difficulty presets** (Story / Adventure / Challenge / Hardcore, or hand-set custom dials): encounter challenge, long-rest gating, and whether heroes and companions can truly die — enforced by code, changeable mid-campaign in Settings.
+- **Hidden rolls** (any difficulty): the dice still land on screen, but each roll's DC and success/failure stay behind the DM's screen — the story tells you how it went. Redacted server-side, so the outcome truly never reaches the page.
 
 ### Provider / model configuration
 - **"Connect your AI" front door:** pick **Anthropic**, **OpenAI**, **Google Gemini**, or **local models** (any OpenAI-compatible server — Ollama, LM Studio, llama.cpp — no key needed), paste a key, and type the model's **exact API id as free text** (new models work the day they ship).

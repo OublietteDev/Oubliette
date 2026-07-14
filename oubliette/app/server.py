@@ -478,6 +478,11 @@ def _turn_payload(report) -> dict:
             "dc": report.assessment.roll.dc, "result": report.roll_result,
             "purpose": report.roll_outcome.purpose,
         }
+        if GAME.session.difficulty.hidden_rolls:
+            # Redacted server-side, so the outcome truly isn't in the payload:
+            # the player sees the dice land and learns how it went from the story.
+            roll["dc"] = None
+            roll["result"] = None
     combat = None
     if report.combat_result is not None:
         combat = {"outcome": report.combat_result.outcome,

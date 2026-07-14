@@ -272,6 +272,7 @@
   .contract-form label.df-check { display: flex; align-items: center; gap: 8px;
     color: var(--ink); font-size: 12px; margin-top: 8px; cursor: pointer; }
   .contract-form label.df-check input { accent-color: var(--accent); }
+  .df-hidden-rolls-row { margin-top: 12px; }   /* rides below the preset/dials, its own thing */
   .df-recommended { color: var(--gold); font-size: 11px; font-style: italic; margin-top: 2px; }
   .ng-foot { display: flex; align-items: center; gap: 10px; padding: 16px 20px 20px; }
   .ng-foot .spacer { flex: 1; }
@@ -1418,7 +1419,11 @@ function addChips(msg, data) {
   const chips = el("div", "chips");
   if (data.roll) {
     const c = el("div", "chip roll " + (data.roll.result || ""));
-    c.innerHTML = `<span class="k">🎲 ${data.roll.purpose}</span> ${data.roll.spec} = <b>${data.roll.total}</b> vs DC ${data.roll.dc} → ${data.roll.result}`;
+    // Hidden rolls (difficulty setting): the server redacts dc/result, so the
+    // chip shows the dice landing and the story carries the outcome.
+    c.innerHTML = data.roll.result
+      ? `<span class="k">🎲 ${data.roll.purpose}</span> ${data.roll.spec} = <b>${data.roll.total}</b> vs DC ${data.roll.dc} → ${data.roll.result}`
+      : `<span class="k">🎲 ${data.roll.purpose}</span> ${data.roll.spec} = <b>${data.roll.total}</b>`;
     chips.appendChild(c);
   }
   (data.applied || []).forEach(a => {
@@ -2087,7 +2092,9 @@ function buildDifficultyForm(root, presets) {
       <label class="df-check"><input type="checkbox" class="df-pc-death"> Heroes can truly die</label>
       <label class="df-check"><input type="checkbox" class="df-comp-death"> Companions can truly die</label>
       <label class="df-check"><input type="checkbox" class="df-hardcore"> Hardcore — if the whole party falls, the campaign ends</label>
-    </div>`;
+    </div>
+    <label class="df-check df-hidden-rolls-row" title="The dice still land on screen, but the target number and success/failure stay behind the DM's screen — the story tells you how it went. Works with any difficulty.">
+      <input type="checkbox" class="df-hidden-rolls"> Hidden rolls — never show a roll's DC or whether it succeeded</label>`;
   const sel = root.querySelector(".df-preset");
   DIFFICULTY_ORDER.filter(n => n in presets).forEach(name => {
     const o = el("option"); o.value = name; o.textContent = dfCap(name); sel.appendChild(o);
@@ -2119,6 +2126,8 @@ function fillDifficultyForm(root, difficulty, recommended) {
     root.querySelector(".df-comp-death").checked = !!difficulty.companion_death;
     root.querySelector(".df-hardcore").checked = !!difficulty.hardcore;
   }
+  // independent of the preset — switching difficulty never touches it
+  root.querySelector(".df-hidden-rolls").checked = !!(difficulty && difficulty.hidden_rolls);
   const rec = root.querySelector(".df-recommended");
   rec.classList.toggle("hidden", !recommended);
   if (recommended) rec.textContent = `The world's author recommends ${dfCap(recommended)}.`;
@@ -2132,6 +2141,7 @@ function readDifficultyForm(root) {
     pc_death: root.querySelector(".df-pc-death").checked,
     companion_death: root.querySelector(".df-comp-death").checked,
     hardcore: root.querySelector(".df-hardcore").checked,
+    hidden_rolls: root.querySelector(".df-hidden-rolls").checked,
   };
 }
 

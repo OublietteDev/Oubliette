@@ -9,6 +9,10 @@ The dials are what the engine reads:
   * death rules           — `pc_death` / `companion_death` toggles, and `hardcore`
                             (total party defeat truly ends the campaign)
 
+One more field rides alongside the danger dials without belonging to any preset:
+`hidden_rolls` hides each roll's DC and outcome from the player (immersion — you
+learn how it went from the story). The server redacts, so it's real, not cosmetic.
+
 Like the table contract, this is configuration, NOT state the DM owns: code
 stores it (event-sourced, see `record/events.DIFFICULTY_SET`, last-write-wins)
 and code enforces it — the DM is *informed* of the dials, never in charge of
@@ -36,6 +40,10 @@ class DifficultySettings(BaseModel):
     pc_death: bool = False          # a downed PC can truly die
     companion_death: bool = False   # recruited companions can truly die
     hardcore: bool = False          # total party defeat ends the campaign
+    # Presentation, not danger: hide each roll's DC and success/failure from the
+    # player (the chip shows the dice and total; the story carries the outcome).
+    # Orthogonal to the presets — normalize preserves it, no bundle carries it.
+    hidden_rolls: bool = False
 
 
 # Preset -> the dial bundle it stands for. A stored preset label always means
@@ -77,11 +85,14 @@ def preset_settings(name: str) -> DifficultySettings:
 
 
 def normalize_difficulty(d: DifficultySettings) -> DifficultySettings:
-    """Tidy settings for storage: a known preset label snaps the dials to its
-    bundle (the label IS the promise); anything else stores as 'custom' with
-    the dials exactly as sent — so what's on the save is always coherent."""
+    """Tidy settings for storage: a known preset label snaps the danger dials to
+    its bundle (the label IS the promise); anything else stores as 'custom' with
+    the dials exactly as sent — so what's on the save is always coherent.
+    `hidden_rolls` is presentation, not danger: it rides through untouched
+    either way."""
     if d.preset in PRESET_DIALS:
-        return DifficultySettings(preset=d.preset, **PRESET_DIALS[d.preset])
+        return DifficultySettings(preset=d.preset, **PRESET_DIALS[d.preset],
+                                  hidden_rolls=d.hidden_rolls)
     return DifficultySettings(
         preset="custom",
         encounter_challenge=d.encounter_challenge,
@@ -89,4 +100,5 @@ def normalize_difficulty(d: DifficultySettings) -> DifficultySettings:
         pc_death=d.pc_death,
         companion_death=d.companion_death,
         hardcore=d.hardcore,
+        hidden_rolls=d.hidden_rolls,
     )
