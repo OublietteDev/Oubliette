@@ -21,8 +21,9 @@ dist/
 # net, not shared history.
 pack-backups/
 
-# Personal/local Claude Code settings — not shared history
-.claude/settings.local.json
+# Personal/local Claude Code workspace (settings, dev-server launch config) —
+# development tooling, not shared history.
+.claude/
 
 # Combat handoff: the transient Arena→Oubliette result JSON (runtime output).
 result.json
