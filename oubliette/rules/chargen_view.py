@@ -127,9 +127,13 @@ def chargen_options(rs: Ruleset) -> dict:
     spells_by_class: dict = {}
     for cc in rs.classes.values():
         spells = rs.spells_for(cc.id)
+        # `desc` feeds the picker's hover tooltip — so choosing Acid Splash over
+        # Poison Spray doesn't require already knowing the SRD by heart.
         spells_by_class[cc.id] = {
-            "cantrips": [{"id": s.id, "name": s.name} for s in spells if s.level == 0],
-            "leveled": [{"id": s.id, "name": s.name, "level": s.level} for s in spells if s.level >= 1],
+            "cantrips": [{"id": s.id, "name": s.name, "desc": s.description}
+                         for s in spells if s.level == 0],
+            "leveled": [{"id": s.id, "name": s.name, "level": s.level, "desc": s.description}
+                        for s in spells if s.level >= 1],
         }
     return {
         "classes": classes, "races": races, "backgrounds": backgrounds,

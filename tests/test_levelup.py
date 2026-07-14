@@ -185,7 +185,9 @@ def test_paladin_gains_prepared_spells_at_level_two():
     assert sc["cantrips_needed"] == 0            # paladins have no cantrips
     assert sc["max_spell_level"] == 1
     assert sc["is_prepared_caster"] is True
-    assert {"id": "bless", "name": "Bless", "level": 1} in sc["spell_options"]
+    bless = next(o for o in sc["spell_options"] if o["id"] == "bless")
+    assert bless["name"] == "Bless" and bless["level"] == 1
+    assert bless["desc"]                         # the picker's hover tooltip rides along
 
     picks = ["bless", "cure_wounds", "shield_of_faith", "command"]
     leveled = level_up(_paladin(1), RS, LevelUpChoice(new_spells=picks))

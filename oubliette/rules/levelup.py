@@ -128,8 +128,10 @@ def level_up_plan(char: Character, ruleset: Ruleset) -> dict:
         "is_asi": nxt in cc.asi_levels,
         "needs_subclass": needs_subclass, "subclass_label": cc.subclass_label,
         "subclass_options": [{"id": s.id, "name": s.name} for s in sub_opts] if needs_subclass else [],
-        "new_features": [f.name for f in cc.features if f.level == nxt],
-        "feats": [{"id": f.id, "name": f.name} for f in ruleset.feats.values()],
+        # `text`/`desc` throughout feed the UI's hover tooltips — what a feature,
+        # feat, or spell actually does, at the moment of choosing it.
+        "new_features": [{"name": f.name, "text": f.text} for f in cc.features if f.level == nxt],
+        "feats": [{"id": f.id, "name": f.name, "text": f.text} for f in ruleset.feats.values()],
     }
     if cc.spellcasting is not None:
         # Counts are computed with CURRENT abilities; a prepared caster who
@@ -149,10 +151,10 @@ def level_up_plan(char: Character, ruleset: Ruleset) -> dict:
             "is_prepared_caster": cc.spellcasting.preparation == "prepared",
             "casting_ability": cc.spellcasting.ability,
             "casting_score": casting_score,
-            "cantrip_options": [{"id": s.id, "name": s.name}
+            "cantrip_options": [{"id": s.id, "name": s.name, "desc": s.description}
                                 for s in class_spells
                                 if s.level == 0 and s.id not in already],
-            "spell_options": [{"id": s.id, "name": s.name, "level": s.level}
+            "spell_options": [{"id": s.id, "name": s.name, "level": s.level, "desc": s.description}
                               for s in class_spells
                               if 1 <= s.level <= max_lvl and s.id not in already],
         }

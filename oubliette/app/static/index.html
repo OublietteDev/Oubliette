@@ -206,6 +206,12 @@
   .scene { font-style: italic; color: var(--muted); font-size: 13px; line-height: 1.5; }
   ::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: #2e2722; border-radius: 8px; }
 
+  /* shared hover tooltip — what a spell/feature does, at the moment of choosing it */
+  #hovertip { position: fixed; z-index: 90; display: none; max-width: 380px; padding: 10px 12px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);
+    font-size: 12px; line-height: 1.5; color: var(--ink); white-space: pre-line; pointer-events: none; }
+  #hovertip b { display: block; color: var(--gold); font-family: var(--serif); font-size: 13px; margin-bottom: 4px; }
+
   /* trade window (modal) */
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.62); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 50; }
   /* portrait lightbox — click any view-only portrait to enlarge */
@@ -1279,6 +1285,29 @@ function el(tag, cls, text) {
   if (cls) e.className = cls;
   if (text != null) e.textContent = text;
   return e;
+}
+
+// --- shared hover tooltip (spell/feature descriptions in the pickers) -------
+// One floating card for the whole app. tipify(node, title, text) arms a node;
+// `text` may be a function so selects can describe whatever is chosen NOW.
+const hovertip = el("div"); hovertip.id = "hovertip";
+document.body.appendChild(hovertip);
+function tipify(node, title, text) {
+  node.addEventListener("mouseenter", () => {
+    const body = typeof text === "function" ? text() : text;
+    if (!body) return;
+    hovertip.innerHTML = "";
+    if (title) hovertip.appendChild(el("b", null, typeof title === "function" ? title() : title));
+    hovertip.appendChild(el("div", null, body));
+    hovertip.style.display = "block";
+    // beside the element, clamped to the viewport (flip left if it won't fit)
+    const r = node.getBoundingClientRect(), w = hovertip.offsetWidth, h = hovertip.offsetHeight;
+    let x = r.right + 10, y = r.top - 4;
+    if (x + w > window.innerWidth - 8) x = Math.max(8, r.left - w - 10);
+    if (y + h > window.innerHeight - 8) y = Math.max(8, window.innerHeight - h - 8);
+    hovertip.style.left = x + "px"; hovertip.style.top = y + "px";
+  });
+  node.addEventListener("mouseleave", () => { hovertip.style.display = "none"; });
 }
 // Copper -> "2 gp 3 sp 5 cp" (mirrors coin.format_cp). Hoard-sized amounts
 // (>= 100 gp) promote into platinum: 30999 -> "30 pp 9 gp 9 sp 9 cp".
@@ -2562,6 +2591,7 @@ function renderRaceCantrips() {
       cgPreview();
     });
     lab.appendChild(cb); lab.appendChild(el("span", null, sp.name));
+    tipify(lab, sp.name, sp.desc);
     checks.appendChild(lab);
   });
   sec.appendChild(checks);
@@ -2707,6 +2737,7 @@ function spellCheck(sp, arr) {
     cgPreview();
   });
   lab.appendChild(cb); lab.appendChild(el("span", null, sp.name));
+  tipify(lab, sp.name, sp.desc);        // hover: what the spell actually does
   return lab;
 }
 
@@ -2816,7 +2847,11 @@ function renderPreview(data) {
   if (p.features.length) {
     root.appendChild(el("div", "cg-hint", "Features"));
     const ul = el("ul", "cg-plist");
-    p.features.forEach(f => ul.appendChild(el("li", null, f.name)));
+    p.features.forEach(f => {
+      const li = el("li", null, f.name);
+      tipify(li, f.name, f.text);       // hover: what the trait/feature actually does
+      ul.appendChild(li);
+    });
     root.appendChild(ul);
   }
   root.appendChild(el("div", "cg-hint", `Gear (${p.coin_text || "0 gp"})`));
@@ -4620,9 +4655,17 @@ async function openLevelUp(charId) {
          new_cantrips: [], new_spells: [] };
   if (luPlan.needs_subclass && luPlan.subclass_options.length) lu.subclass = luPlan.subclass_options[0].id;
   $("lu-title").textContent = `Advance to Level ${luPlan.next_level}`;
-  $("lu-note").textContent = luPlan.new_features && luPlan.new_features.length
-    ? "You gain: " + luPlan.new_features.join(", ") + "."
-    : "Choose how your hero grows.";
+  const note = $("lu-note"); note.innerHTML = "";
+  if (luPlan.new_features && luPlan.new_features.length) {
+    note.appendChild(document.createTextNode("You gain: "));
+    luPlan.new_features.forEach((f, i) => {
+      if (i) note.appendChild(document.createTextNode(", "));
+      const s = el("span", "lu-gain", f.name);
+      tipify(s, f.name, f.text);        // hover: what the new feature actually does
+      note.appendChild(s);
+    });
+    note.appendChild(document.createTextNode("."));
+  } else note.textContent = "Choose how your hero grows.";
   $("lu-status").textContent = "";
   renderLuForm();
   $("levelup-overlay").classList.remove("hidden");
@@ -4665,6 +4708,8 @@ function renderLuForm() {
       lu.feat = lu.feat || (luPlan.feats[0] && luPlan.feats[0].id);
       sel.value = lu.feat || "";
       sel.addEventListener("change", () => { lu.feat = sel.value; });
+      const feat = () => (luPlan.feats || []).find(ft => ft.id === sel.value);
+      tipify(f, () => (feat() || {}).name, () => (feat() || {}).text);   // describes the chosen feat
       f.appendChild(sel); root.appendChild(f);
     }
   }
@@ -4694,10 +4739,13 @@ function renderLuForm() {
     fill(lu.new_spells, sc.spell_options, needS);
     const pickRow = (label, picks, options, i) => {
       const taken = picks.filter((_, j) => j !== i);
-      return selectField(label, picks[i],
+      const field = selectField(label, picks[i],
         options.filter(o => o.id === picks[i] || !taken.includes(o.id))
           .map(o => ({ value: o.id, label: o.level ? `${o.name} (L${o.level})` : o.name })),
         v => { picks[i] = v; renderLuForm(); });
+      const chosen = () => options.find(o => o.id === picks[i]);
+      tipify(field, () => (chosen() || {}).name, () => (chosen() || {}).desc);  // describes the chosen spell
+      return field;
     };
     if (needC > 0) {
       root.appendChild(el("label", null, `New cantrip${needC > 1 ? "s" : ""}`));

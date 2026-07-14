@@ -3601,7 +3601,7 @@ function renderLevelChoice(level, plan) {
   const sec = secEl(`Level ${level}`);
   const stored = lc(level);
   if (plan.new_features && plan.new_features.length)
-    sec.appendChild(el("div", "cg-hint", "Gains: " + plan.new_features.join(", ")));
+    sec.appendChild(el("div", "cg-hint", "Gains: " + plan.new_features.map(f => f.name).join(", ")));
   // HP
   const hpRow = el("div", "cg-row");
   hpRow.appendChild(selectField("Hit points", stored.hp_method || "average",

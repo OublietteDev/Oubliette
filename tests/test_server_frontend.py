@@ -370,6 +370,11 @@ def test_chargen_options_serialize_the_ruleset():
     elf = next(r for r in opt["races"] if r["id"] == "elf")
     assert any(s["id"] == "high_elf" for s in elf["subraces"])
     assert opt["standard_array"] == [15, 14, 13, 12, 10, 8]
+    # every spell in the pickers carries its SRD text — the hover tooltip's fuel
+    wiz_spells = opt["spells_by_class"]["wizard"]
+    acid = next(s for s in wiz_spells["cantrips"] if s["id"] == "acid_splash")
+    assert "1d6 acid damage" in acid["desc"]
+    assert all(s["desc"] for s in wiz_spells["leveled"])
 
 
 def test_bestiary_endpoint_serializes_the_srd_monsters():
