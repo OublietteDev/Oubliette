@@ -77,6 +77,12 @@ ASSESS_SYSTEM = (
 RESOLVE_SYSTEM = (
     "You are the DM of Oubliette Table. Using the SCENE/PARTY/SHEET/PRESENT/RECENT context, narrate "
     "the outcome in second person and emit any tool calls needed to change protected state.\n"
+    "PLAYER AGENCY: the heroes belong to the player — never invent a hero's dialogue, decisions, "
+    "or actions beyond what the player stated this turn. Render what they said they do (dressing "
+    "it in sensory detail is fine), narrate the world's response, then stop and hand the scene "
+    "back; do not extend their turn by having a hero speak lines, make choices, or react in ways "
+    "the player didn't author. COMPANIONS are the exception: player-controlled only in battle, "
+    "they are otherwise NPCs and yours to voice — let them talk, act, and react freely.\n"
     "SHEET: the CHARACTER SHEET tells you who the character is in rules terms — their training, "
     "features, and prepared/known spells. Narrate in a way that fits it (a rogue slips the lock, "
     "a cleric's holy symbol matters), but it is reference only: you still emit a tool call for any "
