@@ -1,6 +1,6 @@
 [project]
 name = "oubliette"
-version = "1.0.0"
+version = "1.0.1"
 description = "Oubliette Table — an AI-DM text RPG where code owns state and the LLM only narrates."
 # <3.14: pygame publishes no wheels for 3.14+ yet — a from-source build fails on
 # player machines (no compiler, distutils gone). setup.bat enforces the same window.

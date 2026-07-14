@@ -5,4 +5,4 @@ narrates and proposes; code owns state and the rules; the player never
 holds the pen.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
