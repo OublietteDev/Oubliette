@@ -436,6 +436,12 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
             names = ", ".join(n.name for n in by_home.get(d.id, [])[:6])
             who = f" — found here: {names}" if names else ""
             lines.append(f"  - {d.name} (id: {d.id}){who}")
+        lines.append(
+            "  (These are the ways on from HERE — the wider world holds more. If the "
+            "player names a place that is not listed, call the travel tool with that "
+            "name anyway: it knows every place that truly exists and refuses unknown "
+            "ones. NEVER create_entity a place the player claims exists — creation is "
+            "only for genuinely NEW places born in this campaign's play.)")
     # Long-term memory: world canon relevant to this turn, retrieved by keyword
     # (gap G4). Stay consistent with these; provisional canon is soft.
     if canon:

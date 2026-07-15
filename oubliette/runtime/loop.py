@@ -43,7 +43,10 @@ from .transcript import notebook_notes, recent_beats, session_notes, transcript_
 MAX_TOOL_RETRIES = 2    # D6: after this, force a narration-only turn.
 MIN_TURN_PROSE = 60     # under this many chars with tools applied → the story starved;
                         # run the narration-only follow-up pass (finding #1).
-HISTORY_IN_CONTEXT = 4  # recent turns fed back to the DM for continuity (gap G5).
+HISTORY_IN_CONTEXT = 8  # recent turns fed back to the DM for continuity (gap G5).
+                        # Beats are compact (~60-80 tokens), so 8 costs a few hundred
+                        # uncached tokens a turn and buys the conversational thread —
+                        # the callback to what someone said five turns ago.
 HISTORY_CAP = 8         # how many beats to retain in memory.
 
 
@@ -1005,6 +1008,14 @@ class TurnLoop:
         This is the single choke point both turn paths (`take_turn`, `enter_combat`) pass
         through, so every narrated turn is captured exactly once. `caused_by` links the
         durable record to the PLAYER_MESSAGE that prompted it (None for Arena entry)."""
+        if report.combat_pending:
+            # A staged-but-unresolved fight: the transcript keeps the staging
+            # line, but the continuity beat waits for the RESOLUTION report
+            # that follows the Arena — otherwise every fight wrote TWO beats
+            # for one player turn (the same player text twice), flooding the
+            # DM's small recent-turns window with duplicates.
+            self.session.emit_narration(report.narration, "", caused_by=caused_by)
+            return
         parts = [f'Player: "{report.player_text.strip()}"']
         if report.roll_outcome is not None and report.assessment.roll is not None:
             parts.append(

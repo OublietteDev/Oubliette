@@ -101,6 +101,21 @@ class Dispatcher:
             self._assert_char(call.to)         # XP goes to a tracked character (the party)
             return ResolvedTool(call.tool, call.reason, ops=[StateOp.xp(call.to, call.amount)])
         if isinstance(call, CreateEntity):
+            if call.entity_type == "place":
+                # Guard: never mint a duplicate of a place that already exists —
+                # the world's authored places outrank an improvised copy (the
+                # Hammerdeep incident: the DM re-created an authored hold and
+                # narrated a move that never happened). The retry loop turns
+                # this into the travel call it should have been.
+                try:
+                    existing = self._resolve_place_id(call.name)
+                except ToolApplyError:
+                    existing = None
+                if existing is not None:
+                    raise ToolApplyError(
+                        f"a place named {call.name!r} already exists (id: "
+                        f"{existing!r}) — use the travel tool to go there "
+                        "instead of creating it")
             draft = CanonDraft(entity_type=call.entity_type, name=call.name,
                                text=call.text, origin=call.origin)
             return ResolvedTool(call.tool, call.reason, canon_create=draft)
