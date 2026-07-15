@@ -15,6 +15,7 @@ import asyncio
 import io
 import json
 import os
+import secrets
 import traceback
 from pathlib import Path
 from urllib.parse import quote
@@ -170,6 +171,135 @@ HUB = _Hub()
 _TURN_TASKS: set = set()   # in-flight turn tasks, anchored against GC
 
 
+class _Table:
+    """Hosting mode: the join-code gate + who sits at the table (multiplayer S1).
+
+    OFF by default — solo play binds loopback, no gate, no seats; nothing here
+    runs. `oubliette-play --host` (host.bat) turns it on: the server binds the
+    LAN, prints a short join code, and every browser — the host's own included —
+    trades that code for a seat cookie on the join screen. The code is mild
+    politeness on a LAN and the only lock on the door once the port is
+    tunnelled; it exists from day one because retrofitting auth is miserable.
+
+    Seats live in memory: a server restart empties the table and everyone
+    re-enters the code (seat memory in the save is later S1 work)."""
+
+    ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"   # no 0/O/1/I/L lookalikes
+
+    def __init__(self) -> None:
+        self.hosting = False
+        self.code: str | None = None
+        self.players: dict[str, dict] = {}    # seat token -> {"name": ...}
+        self.sockets: dict[str, int] = {}     # seat token -> live socket count
+
+    def start_hosting(self) -> str:
+        self.hosting = True
+        self.code = "".join(secrets.choice(self.ALPHABET) for _ in range(5))
+        return self.code
+
+    def join(self, name: str) -> str:
+        token = secrets.token_urlsafe(16)
+        self.players[token] = {"name": name}
+        return token
+
+    def seated(self, token: str | None) -> bool:
+        return bool(token) and token in self.players
+
+    def name_of(self, token: str | None) -> str | None:
+        p = self.players.get(token or "")
+        return p["name"] if p else None
+
+    def seats_event(self) -> dict:
+        return {"t": "seats", "players": [
+            {"name": p["name"], "connected": self.sockets.get(tok, 0) > 0}
+            for tok, p in self.players.items()]}
+
+
+TABLE = _Table()
+_SEAT_COOKIE = "oubliette_seat"
+_UNGATED = {"/api/join", "/api/hosting"}   # what the join screen itself needs
+
+
+@app.middleware("http")
+async def _seat_gate(request: Request, call_next):
+    # The join-code gate (hosting mode only): every API call needs a seat
+    # cookie except the two the join screen uses. The page itself and its
+    # assets stay open — the join screen has to render from somewhere.
+    if (TABLE.hosting and request.url.path.startswith("/api/")
+            and request.url.path not in _UNGATED
+            and not TABLE.seated(request.cookies.get(_SEAT_COOKIE))):
+        return JSONResponse({"error": "join the table first", "join_required": True},
+                            status_code=401)
+    return await call_next(request)
+
+
+def _is_local(client_host: str | None) -> bool:
+    return client_host in ("127.0.0.1", "::1", "localhost")
+
+
+def _lan_addresses() -> list[str]:
+    """Best-effort LAN IPs to show the host ('friends visit http://<this>:8000')."""
+    import socket
+    addrs: list[str] = []
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("203.0.113.1", 9))   # nothing is sent — just picks the outbound interface
+            addrs.append(s.getsockname()[0])
+        finally:
+            s.close()
+    except OSError:
+        pass
+    try:
+        for ip in socket.gethostbyname_ex(socket.gethostname())[2]:
+            if not ip.startswith("127.") and ip not in addrs:
+                addrs.append(ip)
+    except OSError:
+        pass
+    return addrs
+
+
+class JoinIn(BaseModel):
+    code: str = ""
+    name: str = ""
+
+
+@app.get("/api/hosting")
+async def get_hosting(request: Request) -> JSONResponse:
+    """Everything the join screen (and the host's header chip) needs. Ungated —
+    a not-yet-seated browser calls this to learn it must ask for a name+code."""
+    if not TABLE.hosting:
+        return JSONResponse({"hosting": False, "joined": True})
+    token = request.cookies.get(_SEAT_COOKIE)
+    out: dict = {"hosting": True, "joined": TABLE.seated(token),
+                 "you": TABLE.name_of(token),
+                 "players": [p["name"] for p in TABLE.players.values()]}
+    if request.client is not None and _is_local(request.client.host):
+        # The host's own browser: show the code and where friends should point
+        # theirs. Never sent to a remote client — they had to know it already.
+        out["code"] = TABLE.code
+        out["addresses"] = _lan_addresses()
+    return JSONResponse(out)
+
+
+@app.post("/api/join")
+async def post_join(body: JoinIn) -> JSONResponse:
+    """Trade the join code for a seat at the table (a session cookie)."""
+    if not TABLE.hosting:
+        return JSONResponse({"error": "this table isn't hosting"}, status_code=409)
+    if (body.code or "").strip().upper() != TABLE.code:
+        return JSONResponse({"error": "that join code isn't right"}, status_code=403)
+    name = " ".join((body.name or "").split())[:24]
+    if not name:
+        return JSONResponse({"error": "pick a display name first"}, status_code=400)
+    token = TABLE.join(name)
+    HUB.broadcast(TABLE.seats_event())          # the table sees the new chair pull up
+    resp = JSONResponse({"ok": True, "name": name})
+    resp.set_cookie(_SEAT_COOKIE, token, httponly=True, samesite="lax",
+                    max_age=7 * 24 * 3600)      # a week of campaign nights
+    return resp
+
+
 def _turn_lock(busy: bool) -> None:
     """Flip the one-turn-at-a-time flag and tell every client, together —
     the flag gates /api/turn/submit; the event drives every send button."""
@@ -182,6 +312,10 @@ async def ws_events(ws: WebSocket) -> None:
     """The persistent event channel each browser holds for its whole visit.
     Outbound only for now (turns are submitted over plain HTTP and rendered
     from this channel); the read loop exists to notice the disconnect."""
+    token = ws.cookies.get(_SEAT_COOKIE, "")
+    if TABLE.hosting and not TABLE.seated(token):
+        await ws.close(code=4401)     # no seat — the client shows the join screen
+        return
     await ws.accept()
     q = HUB.attach()
 
@@ -194,6 +328,9 @@ async def ws_events(ws: WebSocket) -> None:
         # A late arrival must know whether the table is mid-turn — the hello
         # is what disables their send button on connect.
         await ws.send_text(json.dumps({"t": "hello", "busy": GAME.turn_busy}))
+        if TABLE.hosting:
+            TABLE.sockets[token] = TABLE.sockets.get(token, 0) + 1
+            HUB.broadcast(TABLE.seats_event())   # …and everyone sees who's here
         while True:
             await ws.receive_text()   # nothing meaningful arrives yet
     except WebSocketDisconnect:
@@ -201,6 +338,11 @@ async def ws_events(ws: WebSocket) -> None:
     finally:
         pump.cancel()
         HUB.detach(q)
+        if TABLE.hosting and token in TABLE.sockets:
+            TABLE.sockets[token] -= 1
+            if TABLE.sockets[token] <= 0:
+                del TABLE.sockets[token]
+            HUB.broadcast(TABLE.seats_event())
 
 
 # --- serialization ----------------------------------------------------------
@@ -1087,7 +1229,7 @@ async def post_turn(body: TurnIn) -> JSONResponse:
 
 
 @app.post("/api/turn/submit")
-async def post_turn_submit(body: TurnIn) -> JSONResponse:
+async def post_turn_submit(body: TurnIn, request: Request) -> JSONResponse:
     """Submit a turn; the turn itself renders on the broadcast channel.
 
     The reply is only an acceptance receipt. The player's text, narration
@@ -1116,9 +1258,14 @@ async def post_turn_submit(body: TurnIn) -> JSONResponse:
 
     loop = asyncio.get_running_loop()
 
+    # Who's speaking (hosting mode): every client renders the speaker's name;
+    # solo keeps the null and the plain "You". (The DM prompt itself learns
+    # about seats in the attribution slice — this is the transport.)
+    who = TABLE.name_of(request.cookies.get(_SEAT_COOKIE)) if TABLE.hosting else None
+
     # No await between the busy check above and this flip — atomic on the
     # event loop, so two racing submits can't both start a turn.
-    HUB.broadcast({"t": "turn_start", "text": text, "ooc": body.ooc})
+    HUB.broadcast({"t": "turn_start", "text": text, "ooc": body.ooc, "who": who})
     _turn_lock(True)
 
     def _emit(item: dict) -> None:
@@ -2451,16 +2598,31 @@ async def post_providers(body: ProviderSetBody) -> JSONResponse:
 def main() -> None:
     _load_dotenv()
     GAME.refresh_client()  # now that .env is loaded, prefer the live DM if keyed
+    import sys
     import threading
     import webbrowser
 
     import uvicorn
 
-    host, port = "127.0.0.1", 8000
-    url = f"http://{host}:{port}"
-    print(f"\n  Oubliette Table — open your browser to {url}\n  (Ctrl+C to stop)\n")
+    # Hosting a table (multiplayer S1) is strictly opt-in: `--host` / host.bat /
+    # OUBLIETTE_HOST=1 binds the LAN behind the join-code gate. Solo play binds
+    # loopback, exactly as it always has.
+    hosting = "--host" in sys.argv or os.environ.get("OUBLIETTE_HOST", "") == "1"
+    bind, port = "127.0.0.1", 8000
+    url = f"http://127.0.0.1:{port}"
+    if hosting:
+        code = TABLE.start_hosting()
+        bind = "0.0.0.0"
+        print(f"\n  Oubliette Table — HOSTING a table")
+        print(f"  Join code: {code}")
+        for a in _lan_addresses():
+            print(f"  Friends on your network visit: http://{a}:{port}")
+        print("  (If Windows asks about the firewall, allow Python on private networks.)")
+        print(f"\n  Your own chair: {url}\n  (Ctrl+C to stop)\n")
+    else:
+        print(f"\n  Oubliette Table — open your browser to {url}\n  (Ctrl+C to stop)\n")
     threading.Timer(1.2, lambda: webbrowser.open(url)).start()
-    uvicorn.run(app, host=host, port=port, log_level="warning")
+    uvicorn.run(app, host=bind, port=port, log_level="warning")
 
 
 if __name__ == "__main__":

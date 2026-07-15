@@ -237,6 +237,13 @@
   .start-modal .sub { color: var(--muted); font-style: italic; font-size: 13px; margin-bottom: 24px; }
   .start-actions { display: flex; flex-direction: column; gap: 10px; }
   .start-btn { padding: 12px 14px; font-size: 15px; font-family: var(--serif); cursor: pointer; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; color: var(--ink); transition: border-color .15s, background .15s; }
+  /* Join-the-table screen (hosting mode): name + code for a seat cookie */
+  .join-form { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .join-form input { font: inherit; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); padding: 10px 12px; text-align: center; }
+  .join-form input:focus { outline: none; border-color: var(--accent); }
+  #join-code { text-transform: uppercase; letter-spacing: .25em; font-family: var(--serif); }
+  .join-error { color: var(--accent-2); font-size: 13px; min-height: 16px; }
+  .join-error.hidden { display: none; }
   .start-btn:hover:not(:disabled) { border-color: var(--gold); background: #2a231d; }
   .start-btn.primary { border-color: var(--accent-2); color: var(--gold); }
   .start-btn:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
@@ -857,6 +864,7 @@
       <button class="act" id="menu-btn">☰ Menu</button>
       <div class="menu-pop hidden" id="menu-pop"></div>
     </div>
+    <span class="badge hidden" id="table-badge" title=""></span>
     <span class="badge" id="model-badge">…</span>
     <button class="act" id="reload-btn" title="Re-read the world from The Forge — keeps your current game">↻ Reload world</button>
     <button class="act" id="new-btn">New Game</button>
@@ -944,6 +952,19 @@
       <button class="start-btn" id="start-new">New Game</button>
       <button class="start-btn" id="start-ai">🔌 Connect your AI</button>
       <button class="start-btn" id="start-settings">Settings</button>
+    </div>
+  </div>
+</div>
+
+<div id="join-overlay" class="overlay hidden">
+  <div class="start-modal">
+    <h2>Oubliette Table</h2>
+    <div class="sub">A table is being hosted — take a seat</div>
+    <div class="join-form">
+      <input id="join-name" maxlength="24" placeholder="Your name at the table" autocomplete="off" />
+      <input id="join-code" maxlength="5" placeholder="Join code" autocomplete="off" autocapitalize="characters" />
+      <button class="start-btn primary" id="join-btn">Join the table</button>
+      <div id="join-error" class="join-error hidden"></div>
     </div>
   </div>
 </div>
@@ -1771,6 +1792,8 @@ function setBusy(b) {
 // render path — so every solo session exercises the multiplayer plumbing.
 let turnR = null;            // the in-flight turn's renderer, built on turn_start
 let sockWasOpen = false;     // distinguishes a reconnect from the first connect
+let tableInfo = { hosting: false, joined: true };   // /api/hosting snapshot
+let tableSeats = [];                                // live 'seats' presence events
 
 function routeEvent(ev) {
   if (ev.t === "hello" || ev.t === "lock") setBusy(!!ev.busy);
@@ -1778,10 +1801,14 @@ function routeEvent(ev) {
     if (turnR) turnR.abandon();  // a new turn supersedes a still-draining tail
     hideWrapBar();               // a fresh action supersedes any pending wrap proposal
     hideRestBar();               // ...and any pending rest proposal
-    addMessage("You", ev.text, "player");
+    // Hosting mode: another player's words carry their name; your own (and all
+    // of solo play) stay the plain "You".
+    const speaker = (ev.who && ev.who !== tableInfo.you) ? ev.who : "You";
+    addMessage(speaker, ev.text, "player");
     narrReset();                 // a new message is the player barging in: hush leftovers
     turnR = makeTurnRenderer();
   }
+  else if (ev.t === "seats") { tableSeats = ev.players || []; renderTableBadge(); }
   else if (ev.t === "audio") narrEnqueue(ev);   // a narration clip is ready — queue it
   else if (ev.t === "delta" || ev.t === "done" || ev.t === "error") {
     if (turnR) turnR.handle(ev);
@@ -1806,9 +1833,63 @@ function connectSocket() {
     let ev; try { ev = JSON.parse(m.data); } catch (e) { return; }
     routeEvent(ev);
   });
-  sock.addEventListener("close", () => setTimeout(connectSocket, 1500));
+  sock.addEventListener("close", (e) => {
+    // 4401 = no seat at a hosted table (fresh visit, or the host restarted and
+    // the seats emptied): ask for the code instead of hammering the door.
+    if (e.code === 4401) showJoinOverlay();
+    else setTimeout(connectSocket, 1500);
+  });
 }
 connectSocket();
+
+// --- hosting mode: the join screen + the table badge -------------------------
+function renderTableBadge() {
+  const b = $("table-badge");
+  if (!tableInfo.hosting) { b.classList.add("hidden"); return; }
+  const here = tableSeats.filter(p => p.connected).length;
+  let text;
+  if (tableInfo.code) {        // the host's browser: code + where friends point theirs
+    const addr = (tableInfo.addresses || [])[0];
+    text = `⌂ code ${tableInfo.code}` + (addr ? ` · ${addr}:${location.port || 80}` : "");
+  } else {
+    text = `⌂ seated as ${tableInfo.you || "…"}`;
+  }
+  if (here > 1) text += ` · ${here} at the table`;
+  b.textContent = text;
+  b.title = tableSeats.map(p => p.name + (p.connected ? "" : " (away)")).join(", ");
+  b.classList.remove("hidden");
+}
+
+function showJoinOverlay() {
+  $("start-overlay").classList.add("hidden");        // the table's door comes first
+  $("join-overlay").classList.remove("hidden");
+  if (tableInfo.code) $("join-code").value = tableInfo.code;   // the host's own seat: code pre-filled
+  $("join-name").focus();
+}
+
+async function doJoin() {
+  const err = $("join-error");
+  err.classList.add("hidden");
+  try {
+    const res = await fetch("/api/join", {
+      method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({ name: $("join-name").value, code: $("join-code").value })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      err.textContent = data.error || "could not join the table";
+      err.classList.remove("hidden");
+      return;
+    }
+    location.reload();     // seated — boot fresh with the cookie in hand
+  } catch (e) {
+    err.textContent = "the host could not be reached";
+    err.classList.remove("hidden");
+  }
+}
+$("join-btn").addEventListener("click", doJoin);
+["join-name", "join-code"].forEach(id =>
+  $(id).addEventListener("keydown", e => { if (e.key === "Enter") doJoin(); }));
 
 function makeTurnRenderer() {
   const thinkRow = el("div", "row dm");
@@ -5322,6 +5403,14 @@ async function saveNarrationForm(root) {
 updateSoundBtn();
 
 async function boot() {
+  // Hosting mode gate: at a hosted table every browser needs a seat before the
+  // game will talk to it. The host's own browser walks the same door (code
+  // pre-filled) — one path, so solo-hosting exercises the joiner's flow.
+  try { tableInfo = await (await fetch("/api/hosting")).json(); } catch (e) {}
+  if (tableInfo.hosting) {
+    renderTableBadge();
+    if (!tableInfo.joined) { showJoinOverlay(); return; }  // boot resumes via reload after joining
+  }
   refreshTtsStatus();                        // narration availability (fire-and-forget)
   const [stateRes, txRes] = await Promise.all([fetch("/api/state"), fetch("/api/transcript")]);
   const data = await stateRes.json();
