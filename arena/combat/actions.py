@@ -474,6 +474,23 @@ def _pack_tactics_advantage(
     return False
 
 
+def _lucky_reroll(creature, natural_roll: int) -> tuple[int, str]:
+    """Halfling Lucky: when the d20 lands on a natural 1 (attack roll or
+    saving throw), reroll once and USE THE NEW ROLL (RAW — even if it's
+    another 1... which stands, Lucky rerolls once). With advantage or
+    disadvantage the reroll applies to the kept die — a close, documented
+    approximation of the RAW corner case. Returns (roll, log_detail)."""
+    if natural_roll != 1:
+        return natural_roll, ""
+    feats = (getattr(creature, "features", []) or []) + (
+        getattr(creature, "feats", []) or []) + (
+        getattr(creature, "special_abilities", []) or [])
+    if not any(getattr(f, "reroll_natural_ones", False) for f in feats):
+        return natural_roll, ""
+    new_roll = roll_die(20)
+    return new_roll, f" [Lucky: rerolled the 1 → {new_roll}]"
+
+
 def _flanking_advantage(
     attacker, attacker_id, target, target_id,
     attacker_pos, target_pos, combatants, grid, is_melee,
@@ -777,6 +794,9 @@ def resolve_attack_hit(
     else:
         natural_roll = roll_die(20)
         roll_detail = " [normal]"
+    # Halfling Lucky: a natural 1 is rerolled once, the new roll stands.
+    natural_roll, lucky_detail = _lucky_reroll(attacker, natural_roll)
+    roll_detail += lucky_detail
     if ranged_dis and ranged_reason:
         roll_detail += f" [{ranged_reason}]"
 
@@ -1369,6 +1389,7 @@ def resolve_saving_throw(
     condition_adv = get_save_advantage(creature, ability)
     trait_adv, trait_label = get_trait_save_advantage(
         creature, is_spell_save=is_spell_save, imposes_conditions=imposes_conditions,
+        ability=ability,
     )
     total_adv = max(advantage, 0) + max(condition_adv, 0) + max(trait_adv, 0)
     total_dis = abs(min(advantage, 0)) + abs(min(condition_adv, 0))
@@ -1390,6 +1411,10 @@ def resolve_saving_throw(
     else:
         natural_roll = roll_die(20)
         roll_detail = " [normal]"
+
+    # Halfling Lucky: a natural 1 is rerolled once, the new roll stands.
+    natural_roll, lucky_detail = _lucky_reroll(creature, natural_roll)
+    roll_detail += lucky_detail
 
     total = natural_roll + modifier
     success = total >= dc

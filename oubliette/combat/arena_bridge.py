@@ -371,6 +371,47 @@ def _bake_spell_action(
             be.value = dc
 
 
+# Racial once-per-day spells (Infernal Legacy): feature name -> the grants,
+# each (spell_id, min_level, resource_key, fixed_cast_level). The resource_key
+# matches the race's data-declared pool (races.json `resources`, restored on a
+# long rest); the SRD casts Hellish Rebuke at 2nd level.
+_RACIAL_SPELLS: dict[str, list[tuple[str, int, str, int | None]]] = {
+    "infernal legacy": [("hellish_rebuke", 3, "hellish_rebuke", 2),
+                        ("darkness", 5, "darkness", None)],
+}
+
+
+def racial_spell_actions(char: Character, ruleset=None) -> list[Action]:
+    """Arena actions for a race's innate once-per-day spells (Infernal Legacy).
+    Staged from the same spell library as the caster kit, but costing the
+    RACIAL pool instead of a spell slot — and CHA-cast per the SRD, so they
+    work on a tiefling fighter with no spellcasting of their own. Level gates
+    ride `char.level` directly (racial features are chargen-frozen; the pool's
+    own by_level makes the resource appear at the same moment)."""
+    sheet = char.sheet
+    if sheet is None:
+        return []
+    names = {f.name.strip().lower() for f in sheet.features}
+    out: list[Action] = []
+    for feat_name, grants in _RACIAL_SPELLS.items():
+        if feat_name not in names:
+            continue
+        cha = char.ability_mod(Ability.CHA)
+        dc = 8 + char.proficiency_bonus + cha
+        for spell_id, min_level, resource_key, cast_level in grants:
+            if char.level < min_level:
+                continue
+            action = _spell_action_for(spell_id, ruleset)
+            if action is None:
+                continue
+            _bake_spell_action(action, "charisma", dc, cha)
+            action.resource_cost = {resource_key: 1}
+            if cast_level is not None:
+                action.fixed_cast_level = cast_level
+            out.append(action)
+    return out
+
+
 def equipped_magic(
     char: Character, catalog: dict[str, SrdEquipment] | None
 ) -> tuple[int, int]:
@@ -854,7 +895,9 @@ def character_to_player(
     extra_actions, bonus_actions = feature_actions(char, carrier)
     # C4: reaction spells (Shield) go to `reactions`, NOT `actions` — they
     # are cast via the engine's hit-reaction popup, never from the radial.
-    all_spells = spell_actions(char, ruleset)
+    # Racial innate casts (Infernal Legacy) join the same split: Hellish
+    # Rebuke is a reaction, Darkness a normal cast.
+    all_spells = spell_actions(char, ruleset) + racial_spell_actions(char, ruleset)
     reaction_spells = [a for a in all_spells
                        if a.action_type == ActionType.REACTION]
     turn_spells = [a for a in all_spells

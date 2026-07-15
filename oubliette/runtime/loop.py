@@ -26,6 +26,7 @@ from ..quest import offers
 from ..record.log import DebugLog
 from ..record.rng import Rng, RollOutcome
 from ..rules.checks import resolve_check
+from ..rules.lucky import lucky_reroll
 from ..rules.rest import rest_interrupted_recently
 from ..schemas import Intent, RollRequest, TurnAssessment
 from ..state.repository import StateError
@@ -549,8 +550,11 @@ class TurnLoop:
         roll_outcome: RollOutcome | None = None
         roll_result: str | None = None
         if assessment.requires_roll and assessment.roll is not None:
+            roller, _ = self._best_roller(assessment.roll)
             spec = self._build_spec(assessment.roll)
             roll_outcome = self.rng.roll(spec, assessment.roll.purpose)  # emits a ROLL event
+            roll_outcome = lucky_reroll(self.rng, roller, spec,
+                                        assessment.roll.purpose, roll_outcome)
             roll_result = resolve_check(roll_outcome.total, assessment.roll.dc)
 
         # --- resolve + apply, bounded by D6. Validate ALL tools before applying any.

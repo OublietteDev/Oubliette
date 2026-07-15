@@ -284,6 +284,9 @@ class Race(_Strict):
     language_choices: int = 0        # extra languages of the player's choice (Human, Half-Elf)
     skill_choices: SkillChoice = Field(default_factory=SkillChoice)  # e.g. Half-Elf Skill Versatility
     traits: list[Feature] = Field(default_factory=list)
+    # Fixed racial cantrips every member simply KNOWS (tiefling thaumaturgy) —
+    # granted at chargen, no choice involved (choices are BonusCantrips).
+    cantrips: list[str] = Field(default_factory=list)
     # Limited-use racial abilities (Relentless Endurance, Breath Weapon) ride the
     # same resource plumbing as class pools — staged into fights, spent uses
     # persisting between them, restored by the matching rest.

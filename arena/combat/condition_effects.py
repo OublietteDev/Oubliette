@@ -256,6 +256,7 @@ def get_trait_save_advantage(
     creature: Creature,
     is_spell_save: bool = False,
     imposes_conditions: list[str] | None = None,
+    ability: str | None = None,
 ) -> tuple[int, str | None]:
     """Advantage on a saving throw from a monster trait (D-MON-4a).
 
@@ -264,6 +265,9 @@ def get_trait_save_advantage(
     - Brave / Dark Devotion (``save_advantage_vs_conditions=['frightened']``)
       and Fey Ancestry (``['charmed']``): advantage on a save that would
       impose one of those conditions.
+    - Gnome Cunning (``save_advantage_abilities_vs_magic=['intelligence',
+      'wisdom', 'charisma']``): advantage on the named ability's save, but
+      only against magic (spell-sourced saves).
 
     These traits only ever grant advantage (never disadvantage). Returns
     ``(advantage, trait_label)`` where advantage is 0 or 1 and trait_label
@@ -278,6 +282,10 @@ def get_trait_save_advantage(
         vs = getattr(feat, "save_advantage_vs_conditions", None) or []
         if imposed and {c.lower() for c in vs} & imposed:
             return 1, getattr(feat, "name", None)
+        vs_magic = getattr(feat, "save_advantage_abilities_vs_magic", None) or []
+        if (is_spell_save and ability
+                and ability.lower() in {a.lower() for a in vs_magic}):
+            return 1, getattr(feat, "name", None) or "Gnome Cunning"
     return 0, None
 
 

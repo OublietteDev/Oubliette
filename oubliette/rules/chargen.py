@@ -494,7 +494,11 @@ def _assemble(build: CharacterBuild, cc: CharClass, race, subrace, subclass, bg,
         personality_traits=list(build.personality_traits), ideals=list(build.ideals),
         bonds=list(build.bonds), flaws=list(build.flaws),
         spellcasting_ability=spell_ability,
-        cantrips_known=list(build.cantrips) + list(build.race_cantrips),
+        # Fixed racial cantrips (tiefling thaumaturgy) join the player's picks;
+        # dedupe keeps a cleric who also chose thaumaturgy at one copy.
+        cantrips_known=list(dict.fromkeys(
+            list(build.cantrips) + list(build.race_cantrips)
+            + list(getattr(race, "cantrips", None) or ()))),
         spells_known=list(build.spells),
         spells_prepared=(list(build.spells) if cc.spellcasting
                          and cc.spellcasting.preparation == "prepared" else []),

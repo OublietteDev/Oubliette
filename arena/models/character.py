@@ -161,6 +161,12 @@ class Feature(BaseModel):
     # by the combat hooks wired in D-MON-4). Inert until those hooks land.
     save_advantage_vs_spells: bool = False  # Magic Resistance: advantage on saves vs spells
     save_advantage_vs_conditions: list[str] = Field(default_factory=list)  # Brave/Dark Devotion (frightened), Fey Ancestry (charmed)
+    # Gnome Cunning: advantage on the named ability saves, but only vs MAGIC
+    # (spell-sourced saves) — ability-gated where vs_spells is blanket.
+    save_advantage_abilities_vs_magic: list[str] = Field(default_factory=list)
+    # Halfling Lucky: a natural 1 on an attack roll or saving throw is rerolled
+    # once and the new roll stands (checked right where the d20 lands).
+    reroll_natural_ones: bool = False
     attack_advantage_when_ally_adjacent: bool = False  # Pack Tactics
     attacks_are_magical: bool = False  # Magic Weapons: weapon attacks count as magical (beat nonmagical resistance)
 

@@ -266,6 +266,18 @@ def features_for(char: Character) -> list[Feature]:
         elif name == "brave":
             f = Feature(name=ref.name, description=desc,
                         save_advantage_vs_conditions=["frightened"])
+        elif name == "lucky" and ref.source in ("race", "subrace"):
+            # Halfling: reroll a natural 1 on attack rolls and saving throws
+            # (the engine rerolls right where the d20 lands). Gated to the
+            # racial source so the Lucky FEAT keeps its own future mapping.
+            f = Feature(name=ref.name, description=desc,
+                        reroll_natural_ones=True)
+        elif name == "gnome cunning":
+            # Gnome: advantage on INT/WIS/CHA saves — against magic only
+            # (the save resolver knows when its source is a spell).
+            f = Feature(name=ref.name, description=desc,
+                        save_advantage_abilities_vs_magic=[
+                            "intelligence", "wisdom", "charisma"])
         elif name == "hellish resistance":
             f = Feature(name=ref.name, description=desc,
                         grants_damage_resistances=["fire"])
