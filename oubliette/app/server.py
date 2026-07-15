@@ -210,8 +210,10 @@ class _Table:
         return p["name"] if p else None
 
     def seats_event(self) -> dict:
+        owned = getattr(GAME.session, "seats", {})   # {name -> hero ids} (save-remembered)
         return {"t": "seats", "players": [
-            {"name": p["name"], "connected": self.sockets.get(tok, 0) > 0}
+            {"name": p["name"], "connected": self.sockets.get(tok, 0) > 0,
+             "pcs": owned.get(p["name"], [])}
             for tok, p in self.players.items()]}
 
 
@@ -273,7 +275,8 @@ async def get_hosting(request: Request) -> JSONResponse:
     token = request.cookies.get(_SEAT_COOKIE)
     out: dict = {"hosting": True, "joined": TABLE.seated(token),
                  "you": TABLE.name_of(token),
-                 "players": [p["name"] for p in TABLE.players.values()]}
+                 "players": [p["name"] for p in TABLE.players.values()],
+                 "seats": getattr(GAME.session, "seats", {})}
     if request.client is not None and _is_local(request.client.host):
         # The host's own browser: show the code and where friends should point
         # theirs. Never sent to a remote client — they had to know it already.
@@ -298,6 +301,41 @@ async def post_join(body: JoinIn) -> JSONResponse:
     resp.set_cookie(_SEAT_COOKIE, token, httponly=True, samesite="lax",
                     max_age=7 * 24 * 3600)      # a week of campaign nights
     return resp
+
+
+class SeatIn(BaseModel):
+    char_ids: list[str] = []
+    name: str | None = None    # defaults to the caller; anyone may reassign anyone
+
+
+@app.post("/api/seat")
+async def post_seat(body: SeatIn, request: Request) -> JSONResponse:
+    """Claim heroes for a player name — seat memory, remembered by the save.
+    Whole assignment per call (empty = release the seat); claiming a hero
+    steals it from whoever held it, because a hero sits in one chair. Anyone
+    at the table may assign or reassign any seat: the same social contract as
+    acting for any PC — no permission layer, deliberately."""
+    if not TABLE.hosting:
+        return JSONResponse({"error": "no table is being hosted"}, status_code=409)
+    name = " ".join((body.name or "").split())[:24] or \
+        TABLE.name_of(request.cookies.get(_SEAT_COOKIE)) or ""
+    if not name:
+        return JSONResponse({"error": "no player name to seat"}, status_code=400)
+    heroes = {c.id for c in GAME.session.repo.party()
+              if not getattr(c, "companion", False)}
+    bad = [cid for cid in body.char_ids if cid not in heroes]
+    if bad:
+        return JSONResponse({"error": f"not a hero at this table: {', '.join(bad)}"},
+                            status_code=400)
+    async with GAME.lock:
+        for other, ids in list(GAME.session.seats.items()):
+            if other != name:
+                kept = [i for i in ids if i not in body.char_ids]
+                if kept != ids:
+                    GAME.session.emit_seat(other, kept)
+        GAME.session.emit_seat(name, body.char_ids)
+    HUB.broadcast(TABLE.seats_event())
+    return JSONResponse({"ok": True, "seats": GAME.session.seats})
 
 
 def _turn_lock(busy: bool) -> None:

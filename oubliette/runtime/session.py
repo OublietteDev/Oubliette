@@ -57,6 +57,8 @@ class Session:
         self.bestiary_gate = None           # per-world bestiary knowledge cutoff (manifest)
         self.house_rules = None             # the author's table variants (manifest HouseRules);
                                             # None = play by the book (custom seeds / tests)
+        self.seats: dict = {}               # seat memory (multiplayer S1): {display name ->
+                                            # owned hero ids}; folded from SEAT_CLAIMED events
         self.force_ended: bool = False      # the DM terminally closed the game (force_end_session tool);
                                             # distinct from an ordinary session wrap-up, which continues play
         self.campaign_ended: bool = False   # the campaign truly ENDED (hardcore TPK, S4) — permanent;
@@ -177,6 +179,7 @@ class Session:
         force_ended = False
         campaign_ended = False
         evolved_forms: dict[str, str] = {}   # {companion id -> current StatBlock id}
+        seats: dict[str, list[str]] = {}     # {display name -> owned hero ids} (multiplayer S1)
         for event in sorted(events, key=lambda e: e.seq):
             if event.kind == EventKind.LOCATION_CHANGED.value:
                 location = event.payload.get("to", location)
@@ -199,6 +202,16 @@ class Session:
             elif event.kind == EventKind.CAMPAIGN_ENDED.value:
                 campaign_ended = True
                 force_ended = True          # a finished campaign inherits every lock
+            elif event.kind == EventKind.SEAT_CLAIMED.value:
+                # Seat memory: week two of a campaign, a returning player finds
+                # their hero already theirs. Whole assignment, empty = released.
+                nm = event.payload.get("name")
+                ids = event.payload.get("char_ids") or []
+                if nm:
+                    if ids:
+                        seats[nm] = list(ids)
+                    else:
+                        seats.pop(nm, None)
 
         session = cls(store, repo, canon, quests)
         session.places = places
@@ -226,6 +239,7 @@ class Session:
         session.factions = factions
         session.travel_scale = travel_scale
         session.world_events = world_events
+        session.seats = seats
         if events:
             replay(events, repo, canon, quests)   # existing session: rebuild to current
         else:
@@ -249,6 +263,18 @@ class Session:
         self.store.append(EventKind.LOCATION_CHANGED, payload)
         self.location = to
         self.scene = self._scene_for(to)
+
+    def emit_seat(self, name: str, char_ids: list[str]) -> None:
+        """Seat memory (multiplayer S1): record which heroes a display name owns
+        at the table. Whole assignment, last-write-wins per name; an empty list
+        releases the seat. Inert on state replay — folded in open() like the
+        environment — so old saves and exports are untouched by it."""
+        if char_ids:
+            self.seats[name] = list(char_ids)
+        else:
+            self.seats.pop(name, None)
+        self.store.append(EventKind.SEAT_CLAIMED,
+                          {"name": name, "char_ids": list(char_ids)})
 
     def emit_environment(self, time_of_day: str | None = None,
                          weather: str | None = None, reason: str = "") -> None:

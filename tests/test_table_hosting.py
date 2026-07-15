@@ -20,7 +20,7 @@ os.environ.pop("ANTHROPIC_API_KEY", None)  # force the scripted client
 from fastapi.testclient import TestClient  # noqa: E402
 from starlette.websockets import WebSocketDisconnect  # noqa: E402
 
-from oubliette.app.server import _SEAT_COOKIE, TABLE, app  # noqa: E402
+from oubliette.app.server import _SEAT_COOKIE, GAME, TABLE, app  # noqa: E402
 
 client = TestClient(app)
 
@@ -125,6 +125,37 @@ def test_seats_presence_and_attribution(hosting):
                 assert ev["who"] == "Dana"
             if ev["t"] in ("end", "error"):
                 break
+
+
+def test_seat_endpoint_needs_a_hosted_table():
+    assert client.post("/api/seat", json={"char_ids": []}).status_code == 409
+
+
+def test_seat_memory_claim_steal_release_and_replay(hosting):
+    dana = _join(hosting, "Dana")
+    brett = _join(hosting, "Brett")
+    client.post("/api/new", headers=_seat(dana))
+    heroes = [c.id for c in GAME.session.repo.party()
+              if not getattr(c, "companion", False)]
+    pc = heroes[0]
+    # Dana claims a hero; the seat map is whole-assignment per name
+    r = client.post("/api/seat", json={"char_ids": [pc]}, headers=_seat(dana))
+    assert r.status_code == 200 and r.json()["seats"] == {"Dana": [pc]}
+    # a hero sits in ONE chair: Brett claiming it empties Dana's seat
+    r = client.post("/api/seat", json={"char_ids": [pc]}, headers=_seat(brett))
+    assert r.json()["seats"] == {"Brett": [pc]}
+    # only real heroes can be claimed
+    assert client.post("/api/seat", json={"char_ids": ["nobody"]},
+                       headers=_seat(dana)).status_code == 400
+    # the save remembers the chairs: a full replay rebuilds the map
+    GAME.reload_world()
+    assert GAME.session.seats == {"Brett": [pc]}
+    # /api/hosting hands the map to the seats UI
+    d = client.get("/api/hosting", headers=_seat(brett)).json()
+    assert d["seats"] == {"Brett": [pc]}
+    # an empty claim releases the seat
+    r = client.post("/api/seat", json={"char_ids": []}, headers=_seat(brett))
+    assert r.json()["seats"] == {}
 
 
 def test_solo_turns_carry_no_speaker():

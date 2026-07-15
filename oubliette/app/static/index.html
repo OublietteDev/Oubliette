@@ -244,6 +244,14 @@
   #join-code { text-transform: uppercase; letter-spacing: .25em; font-family: var(--serif); }
   .join-error { color: var(--accent-2); font-size: 13px; min-height: 16px; }
   .join-error.hidden { display: none; }
+  /* Seats popup (hosting mode): per-hero owner picker */
+  .seats-list { text-align: left; }
+  .seat-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 4px; border-bottom: 1px solid var(--line); }
+  .seat-row:last-child { border-bottom: none; }
+  .seat-hero { font-family: var(--serif); }
+  .seat-row select { font: inherit; font-size: 13px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); padding: 6px 8px; }
+  .pc-row-owner { margin-left: auto; color: var(--muted); font-size: 11px; }
+  #table-badge { cursor: pointer; }
   .start-btn:hover:not(:disabled) { border-color: var(--gold); background: #2a231d; }
   .start-btn.primary { border-color: var(--accent-2); color: var(--gold); }
   .start-btn:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
@@ -965,6 +973,17 @@
       <input id="join-code" maxlength="5" placeholder="Join code" autocomplete="off" autocapitalize="characters" />
       <button class="start-btn primary" id="join-btn">Join the table</button>
       <div id="join-error" class="join-error hidden"></div>
+    </div>
+  </div>
+</div>
+
+<div id="seats-overlay" class="overlay hidden">
+  <div class="start-modal">
+    <h2>Seats</h2>
+    <div class="sub">Who plays whom — spares belong to whoever grabs them; anyone can reassign</div>
+    <div class="seats-list" id="seats-list"></div>
+    <div class="start-actions" style="margin-top:16px">
+      <button class="start-btn" id="seats-close">Close</button>
     </div>
   </div>
 </div>
@@ -1757,12 +1776,16 @@ function renderPartyRoster(party) {
   const root = $("party-roster"); root.innerHTML = "";
   party.forEach(pc => {
     const row = el("div", "pc-row");
+    row.dataset.pcId = pc.id;
     const head = el("div", "pc-row-head");
     head.appendChild(el("span", "pc-row-name", pc.name));
     if (pc.companion)                       // a recruited companion, not a hero
       head.appendChild(el("span", "pc-row-companion", "companion"));
     if (pc.xp_progress && pc.xp_progress.ready)
       head.appendChild(el("span", "xp-ready", "✦"));
+    if (!pc.companion)                      // seat memory: whose chair this hero is
+      head.appendChild(el("span", "pc-row-owner",
+        seatOwners[pc.id] ? "🎲 " + seatOwners[pc.id] : ""));
     row.appendChild(head);
     const bar = el("div", "hpbar"); const fill = el("div", "hpfill");
     fill.style.width = Math.max(0, Math.min(100, 100 * pc.hp / pc.max_hp)) + "%";
@@ -1808,7 +1831,10 @@ function routeEvent(ev) {
     narrReset();                 // a new message is the player barging in: hush leftovers
     turnR = makeTurnRenderer();
   }
-  else if (ev.t === "seats") { tableSeats = ev.players || []; renderTableBadge(); }
+  else if (ev.t === "seats") {
+    tableSeats = ev.players || [];
+    rebuildSeatOwners(); renderTableBadge(); refreshRosterOwners();
+  }
   else if (ev.t === "audio") narrEnqueue(ev);   // a narration clip is ready — queue it
   else if (ev.t === "delta" || ev.t === "done" || ev.t === "error") {
     if (turnR) turnR.handle(ev);
@@ -1890,6 +1916,73 @@ async function doJoin() {
 $("join-btn").addEventListener("click", doJoin);
 ["join-name", "join-code"].forEach(id =>
   $(id).addEventListener("keydown", e => { if (e.key === "Enter") doJoin(); }));
+
+// --- seats: who plays whom (seat memory, remembered by the save) -------------
+let seatOwners = {};   // pc id -> player display name
+
+function rebuildSeatOwners() {
+  seatOwners = {};
+  const source = tableSeats.length
+    ? Object.fromEntries(tableSeats.map(p => [p.name, p.pcs || []]))
+    : (tableInfo.seats || {});
+  for (const [name, ids] of Object.entries(source)) ids.forEach(id => seatOwners[id] = name);
+}
+
+function refreshRosterOwners() {
+  document.querySelectorAll("#party-roster .pc-row").forEach(row => {
+    const ow = row.querySelector(".pc-row-owner");
+    if (ow) ow.textContent = seatOwners[row.dataset.pcId] ? "🎲 " + seatOwners[row.dataset.pcId] : "";
+  });
+}
+
+async function openSeats() {
+  if (!tableInfo.hosting) return;
+  let heroes = [];
+  try {
+    const d = await (await fetch("/api/state")).json();
+    heroes = ((d.state && d.state.party) || []).filter(p => !p.companion);
+    tableInfo.seats = (await (await fetch("/api/hosting")).json()).seats || {};
+  } catch (e) { return; }
+  rebuildSeatOwners();
+  const names = tableSeats.length ? tableSeats.map(p => p.name) : (tableInfo.players || []);
+  const list = $("seats-list"); list.innerHTML = "";
+  if (!heroes.length) list.appendChild(el("div", "empty", "no heroes yet — start a game first"));
+  heroes.forEach(h => {
+    const row = el("div", "seat-row");
+    row.appendChild(el("span", "seat-hero", h.name));
+    const sel = document.createElement("select");
+    const open = document.createElement("option");
+    open.value = ""; open.textContent = "— open seat —";
+    sel.appendChild(open);
+    names.forEach(n => {
+      const o = document.createElement("option");
+      o.value = n; o.textContent = n;
+      if (seatOwners[h.id] === n) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener("change", () => assignSeat(h.id, sel.value));
+    row.appendChild(sel);
+    list.appendChild(row);
+  });
+  $("seats-overlay").classList.remove("hidden");
+}
+
+async function assignSeat(pcId, playerName) {
+  // The API takes a whole assignment per NAME; the server steals the hero
+  // from its old chair on claim, so only one call is ever needed.
+  const post = (name, char_ids) => fetch("/api/seat", {
+    method: "POST", headers: {"content-type": "application/json"},
+    body: JSON.stringify({ name, char_ids }) });
+  const owned = (name) =>
+    Object.entries(seatOwners).filter(([, n]) => n === name).map(([id]) => id);
+  try {
+    if (playerName) await post(playerName, [...new Set([...owned(playerName), pcId])]);
+    else if (seatOwners[pcId])
+      await post(seatOwners[pcId], owned(seatOwners[pcId]).filter(id => id !== pcId));
+  } catch (e) {}
+}
+$("seats-close").addEventListener("click", () => $("seats-overlay").classList.add("hidden"));
+$("table-badge").addEventListener("click", openSeats);
 
 function makeTurnRenderer() {
   const thinkRow = el("div", "row dm");
@@ -5409,6 +5502,7 @@ async function boot() {
   try { tableInfo = await (await fetch("/api/hosting")).json(); } catch (e) {}
   if (tableInfo.hosting) {
     renderTableBadge();
+    rebuildSeatOwners();   // seat memory: roster chips are right from first paint
     if (!tableInfo.joined) { showJoinOverlay(); return; }  // boot resumes via reload after joining
   }
   refreshTtsStatus();                        // narration availability (fire-and-forget)

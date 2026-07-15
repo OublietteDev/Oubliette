@@ -30,6 +30,10 @@ class EventKind(str, Enum):
     CREATE_ENTITY = "create_entity"     # canon content born provisional (§7)
     CANON_PROMOTED = "canon_promoted"   # provisional -> confirmed (§11)
     EQUIP_CHANGED = "equip_changed"     # player loadout change (bounded player action)
+    SEAT_CLAIMED = "seat_claimed"       # seat memory (multiplayer S1): which heroes a display
+                                        # name owns at the table. Whole assignment per event,
+                                        # last-write-wins per name; inert on replay (folded in
+                                        # Session.open like environment/contract events).
     ATTUNEMENT_CHANGED = "attunement_changed"  # a hero's attuned-item bonds changed outside a rest
                                         # (an attuned item left their hands); rest-time attunement
                                         # choices ride REST_TAKEN itself
