@@ -357,6 +357,30 @@ def test_confirmations_broadcast_to_the_table():
         assert _drain_until(ws, "wrapped")["wrapped"] is True
 
 
+def test_hello_hands_a_late_arrival_the_turn_so_far():
+    from oubliette.app.server import _LIVE_TURN
+    _LIVE_TURN.update(active=True, who="Dana", text="I sneak in.",
+                      sofar="The door creaks…")
+    try:
+        with client.websocket_connect("/ws") as ws:
+            hello = ws.receive_json()
+            assert hello["turn"] == {"who": "Dana", "text": "I sneak in.",
+                                     "sofar": "The door creaks…"}
+    finally:
+        _LIVE_TURN.update(active=False, who=None, text="", sofar="")
+    with client.websocket_connect("/ws") as ws:
+        assert "turn" not in ws.receive_json()   # no turn in flight → no catch-up
+
+
+def test_live_turn_mirror_tracks_and_clears():
+    _new()
+    events = _ws_turn({"text": "I look around the market."})
+    from oubliette.app.server import _LIVE_TURN
+    assert _LIVE_TURN["active"] is False         # cleared the moment the text finished
+    streamed = "".join(e["v"] for e in events if e["t"] == "delta")
+    assert _LIVE_TURN["sofar"] == streamed       # the mirror carried the whole draft
+
+
 def test_journal_roundtrips_and_is_invisible_to_the_dm():
     _new()
     # a never-written journal opens seeded (the blank-page fix), with default binding

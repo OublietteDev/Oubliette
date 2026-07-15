@@ -212,6 +212,35 @@ def test_courtesy_cooldown_only_bites_the_repeat_actor(hosting):
             pass
 
 
+def test_journal_locks_guard_anothers_ink(hosting):
+    dana = _join(hosting, "Dana")
+    brett = _join(hosting, "Brett")
+    client.post("/api/new", headers=_seat(dana))
+    doc = {"style": {}, "sections": [{"id": "s1", "name": "Quests", "entries": [
+        {"id": "e1", "title": "Dana's lead", "body": "mine alone", "locked": True}]}]}
+    assert client.put("/api/journal", json=doc, headers=_seat(dana)).status_code == 200
+    # the server stamped the writer's name on her new entry
+    saved = client.get("/api/journal", headers=_seat(brett)).json()
+    entry = saved["sections"][0]["entries"][0]
+    assert entry["author"] == "Dana" and entry["locked"] is True
+    # Brett may not rewrite it...
+    tampered = {"style": {}, "sections": [{"id": "s1", "name": "Quests", "entries": [
+        {**entry, "body": "brett was here"}]}]}
+    r = client.put("/api/journal", json=tampered, headers=_seat(brett))
+    assert r.status_code == 409 and "Dana" in r.json()["error"]
+    # ...nor tear it out...
+    torn = {"style": {}, "sections": [{"id": "s1", "name": "Quests", "entries": []}]}
+    assert client.put("/api/journal", json=torn, headers=_seat(brett)).status_code == 409
+    # ...but may write his own page beside it
+    both = {"style": {}, "sections": [{"id": "s1", "name": "Quests", "entries": [
+        entry, {"id": "e2", "title": "Brett's note", "body": "hello"}]}]}
+    assert client.put("/api/journal", json=both, headers=_seat(brett)).status_code == 200
+    # and Dana's lock never bars Dana
+    hers = {"style": {}, "sections": [{"id": "s1", "name": "Quests", "entries": [
+        {**entry, "body": "updated by its author"}]}]}
+    assert client.put("/api/journal", json=hers, headers=_seat(dana)).status_code == 200
+
+
 def test_solo_turns_carry_no_speaker():
     client.post("/api/new")
     with client.websocket_connect("/ws") as ws:

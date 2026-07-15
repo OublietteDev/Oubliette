@@ -248,6 +248,27 @@ def test_slow_clips_ride_after_done_and_never_block_it(monkeypatch):
     assert tail_audio, "slow clips must arrive AFTER done, inside the open stream"
 
 
+def test_listener_preference_summons_the_voice(monkeypatch):
+    """The host synthesizes when ANY connected browser wants narration — the
+    sender's own toggle no longer decides for the whole table."""
+    _fake_engine(monkeypatch)
+    client.post("/api/new")
+    events = []
+    with client.websocket_connect("/ws") as ws:
+        assert ws.receive_json()["t"] == "hello"
+        ws.send_text(json.dumps({"t": "narrate", "on": True}))   # this listener asks
+        # ...and the sender does NOT (no narrate flag on the submit)
+        assert client.post("/api/turn/submit",
+                           json={"text": "I look around the market."}).status_code == 200
+        while True:
+            ev = ws.receive_json()
+            events.append(ev)
+            if ev["t"] in ("end", "error"):
+                break
+    assert [e for e in events if e["t"] == "audio"], \
+        "a listening browser must get clips even when the sender is silent"
+
+
 def test_stream_without_narrate_has_no_audio_events(monkeypatch):
     _fake_engine(monkeypatch)
     client.post("/api/new")

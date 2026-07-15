@@ -220,6 +220,14 @@ class _Table:
 
 TABLE = _Table()
 _SEAT_COOKIE = "oubliette_seat"
+# Which connected browsers want voiced narration (their queue objects). The host
+# synthesizes once when ANYONE listens — the sender's own toggle no longer
+# decides for the whole table. Clients declare over the websocket.
+_NARRATING: set = set()
+# The in-flight turn, mirrored for late arrivals: a browser that connects
+# mid-stream is handed who/text/so-far in its hello and picks up the live
+# deltas from there. Mutated ONLY on the event loop (see _deliver).
+_LIVE_TURN = {"active": False, "who": None, "text": "", "sofar": ""}
 _UNGATED = {"/api/join", "/api/hosting"}   # what the join screen itself needs
 
 
@@ -379,27 +387,47 @@ async def ws_events(ws: WebSocket) -> None:
         await ws.close(code=4401)     # no seat — the client shows the join screen
         return
     await ws.accept()
+    # Attach + snapshot in ONE synchronous stretch (no await between): every
+    # turn event is queued through the loop, so nothing can land between the
+    # queue starting to buffer and the snapshot — the catch-up has no gap and
+    # no overlap with the live deltas that follow.
     q = HUB.attach()
+    hello: dict = {"t": "hello", "busy": GAME.turn_busy}
+    if _LIVE_TURN["active"]:
+        # A mid-stream arrival: hand them the turn so far; the rest streams.
+        hello["turn"] = {"who": _LIVE_TURN["who"], "text": _LIVE_TURN["text"],
+                         "sofar": _LIVE_TURN["sofar"]}
 
     async def _pump() -> None:
         while True:
             await ws.send_text(json.dumps(await q.get()))
 
-    pump = asyncio.create_task(_pump())
+    pump = None
     try:
         # A late arrival must know whether the table is mid-turn — the hello
         # is what disables their send button on connect.
-        await ws.send_text(json.dumps({"t": "hello", "busy": GAME.turn_busy}))
+        await ws.send_text(json.dumps(hello))
+        pump = asyncio.create_task(_pump())   # buffered events ride AFTER hello
         if TABLE.hosting:
             TABLE.sockets[token] = TABLE.sockets.get(token, 0) + 1
             HUB.broadcast(TABLE.seats_event())   # …and everyone sees who's here
         while True:
-            await ws.receive_text()   # nothing meaningful arrives yet
+            raw = await ws.receive_text()
+            try:
+                msg = json.loads(raw)
+            except ValueError:
+                continue
+            # The one inbound message so far: this listener's narration wish.
+            # The host synthesizes when anyone at the table wants the voice.
+            if msg.get("t") == "narrate":
+                (_NARRATING.add if msg.get("on") else _NARRATING.discard)(q)
     except WebSocketDisconnect:
         pass
     finally:
-        pump.cancel()
+        if pump is not None:
+            pump.cancel()
         HUB.detach(q)
+        _NARRATING.discard(q)
         if TABLE.hosting and token in TABLE.sockets:
             TABLE.sockets[token] -= 1
             if TABLE.sockets[token] <= 0:
@@ -1350,12 +1378,23 @@ async def post_turn_submit(body: TurnIn, request: Request) -> JSONResponse:
     # event loop, so two racing submits can't both start a turn.
     HUB.broadcast({"t": "turn_start", "text": text, "ooc": body.ooc, "who": who})
     _turn_lock(True, who)
+    _LIVE_TURN.update(active=True, who=who, text=text, sofar="")
+
+    def _deliver(item: dict) -> None:
+        # Runs ON the loop: mirror the in-flight turn for late arrivals (the
+        # hello catch-up), then fan out — one place, so mirror and broadcast
+        # can never disagree about order.
+        if item.get("t") == "delta":
+            _LIVE_TURN["sofar"] += item.get("v", "")
+        elif item.get("t") in ("done", "error"):
+            _LIVE_TURN["active"] = False
+        HUB.broadcast(item)
 
     def _emit(item: dict) -> None:
         # Every turn event — from worker threads and from the task alike —
         # goes through call_soon_threadsafe, so all clients see one total
         # order (a final 'done' always lands AFTER all delta callbacks).
-        loop.call_soon_threadsafe(HUB.broadcast, item)
+        loop.call_soon_threadsafe(_deliver, item)
 
     async def run_turn() -> None:
         try:
@@ -1370,7 +1409,7 @@ async def post_turn_submit(body: TurnIn, request: Request) -> JSONResponse:
             # not held behind it and the event loop never freezes.
             engine, tts_reason = (
                 await loop.run_in_executor(None, tts_engine.get_engine)
-                if body.narrate else (None, None))
+                if (body.narrate or _NARRATING) else (None, None))
             chunker = SentenceChunker() if engine is not None else None
             voice = tts_engine.active_voice() if engine is not None else None
             clip_jobs: list = []
@@ -1421,8 +1460,9 @@ async def post_turn_submit(body: TurnIn, request: Request) -> JSONResponse:
             # Holding it through a slow tier's tail synthesis froze every other
             # endpoint for the duration.
             payload["t"] = "done"
-            if body.narrate and engine is None:
+            if (body.narrate or _NARRATING) and engine is None:
                 payload["tts_off"] = tts_reason   # asked for a voice we can't give — say why
+                                                  # (each client shows it only if IT asked)
             if chunker is not None:
                 final = report.narration or ""
                 if chunker.fed and not final.startswith(streamed["text"]):
@@ -1633,9 +1673,34 @@ async def get_journal() -> JSONResponse:
 
 
 @app.put("/api/journal")
-async def put_journal(body: Journal) -> JSONResponse:
+async def put_journal(body: Journal, request: Request) -> JSONResponse:
     async with GAME.lock:
+        if TABLE.hosting:
+            # The party's one chronicle, with per-entry locks: an entry locked
+            # by its author may not be changed or removed by anyone else. New
+            # entries are stamped with their writer's name so the lock has an
+            # owner to honor. Solo play never enters this branch.
+            me = TABLE.name_of(request.cookies.get(_SEAT_COOKIE)) or ""
+            stored = GAME.journal.get()
+            stored_ids = {e.id for s in stored.sections for e in s.entries}
+            incoming = {e.id: e for s in body.sections for e in s.entries}
+            for s in stored.sections:
+                for old in s.entries:
+                    if not (old.locked and old.author and old.author != me):
+                        continue
+                    new = incoming.get(old.id)
+                    if new is None or new.model_dump() != old.model_dump():
+                        return JSONResponse(
+                            {"ok": False,
+                             "error": f"“{old.title or 'that entry'}” is locked "
+                                      f"by {old.author}"},
+                            status_code=409)
+            for s in body.sections:
+                for e in s.entries:
+                    if e.id not in stored_ids and not e.author:
+                        e.author = me
         GAME.journal.put(body)
+        _announce({"t": "journal"}, with_state=False)   # other open books re-read
         return JSONResponse({"ok": True})
 
 

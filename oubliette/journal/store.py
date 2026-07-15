@@ -36,6 +36,12 @@ class JournalEntry(BaseModel):
     kind: str = "note"
     image: str = ""
     caption: str = ""
+    # Multiplayer S1: the journal is party-owned — one shared chronicle — but a
+    # player may LOCK an entry they wrote so others can't edit it. The server
+    # enforces the lock on save (by author display name); solo saves never set
+    # these, and old journals load with the defaults untouched.
+    author: str = ""
+    locked: bool = False
 
 
 class JournalSection(BaseModel):

@@ -509,6 +509,7 @@
   .j-ebody font[size="5"], .j-ebody font[size="6"], .j-ebody font[size="7"] { font-size: 1.42em; }
   .j-del { opacity: 0; border: none; background: none; color: rgba(96,72,36,.55); cursor: pointer; font-size: 12px; padding: 0 2px; }
   .j-entry:hover .j-del { opacity: .7; }
+  .j-lockchip { font-size: 11px; color: rgba(96,72,36,.75); white-space: nowrap; align-self: center; }
   .j-del:hover { color: #6e2f22; }
   .j-entry [contenteditable] { outline: none; caret-color: var(--jink, #2c2418); }
   .j-entry.editing { background: rgba(255,252,240,.35); outline: 1px dashed rgba(110,84,40,.45); outline-offset: 4px; border-radius: 4px; }
@@ -1819,6 +1820,28 @@ function setBusy(b, who) {
 // render path — so every solo session exercises the multiplayer plumbing.
 let turnR = null;            // the in-flight turn's renderer, built on turn_start
 let sockWasOpen = false;     // distinguishes a reconnect from the first connect
+let liveSock = null;         // the open channel, for the few things we SEND on it
+let bootDone = false;        // transcript replay finished (catch-up waits for it)
+let pendingCatchup = null;   // a mid-stream hello's turn, stashed until boot ends
+
+function sendNarratePref() {
+  // Tell the host whether THIS browser wants voiced narration — it
+  // synthesizes once when anyone at the table is listening.
+  try {
+    if (liveSock && liveSock.readyState === WebSocket.OPEN)
+      liveSock.send(JSON.stringify({ t: "narrate", on: !!(narrOn && TTS.enabled) }));
+  } catch (e) {}
+}
+
+function applyCatchup(turn) {
+  // A mid-stream arrival: render the in-flight turn as if we saw it start —
+  // the echo, the renderer, the text so far — then the live deltas continue.
+  if (turnR) turnR.abandon();
+  const speaker = (turn.who && turn.who !== tableInfo.you) ? turn.who : "You";
+  addMessage(speaker, turn.text, "player");
+  turnR = makeTurnRenderer();
+  if (turn.sofar) turnR.handle({ t: "delta", v: turn.sofar });
+}
 let tableInfo = { hosting: false, joined: true };   // /api/hosting snapshot
 let tableSeats = [];                                // live 'seats' presence events
 let expectNewGame = false;   // set by the browser that clicks New Game: its own
@@ -1826,7 +1849,15 @@ let expectNewGame = false;   // set by the browser that clicks New Game: its own
                              // reload is for everyone ELSE at the table
 
 function routeEvent(ev) {
-  if (ev.t === "hello" || ev.t === "lock") setBusy(!!ev.busy, ev.who);
+  if (ev.t === "hello" || ev.t === "lock") {
+    setBusy(!!ev.busy, ev.who);
+    if (ev.t === "hello" && ev.turn) {
+      // The table is mid-turn: catch up — after the transcript replay if the
+      // page is still booting, so the story stays in order.
+      if (bootDone) applyCatchup(ev.turn);
+      else pendingCatchup = ev.turn;
+    }
+  }
   else if (ev.t === "turn_start") {
     if (turnR) turnR.abandon();  // a new turn supersedes a still-draining tail
     hideWrapBar();               // a fresh action supersedes any pending wrap proposal
@@ -1900,6 +1931,7 @@ function routeEvent(ev) {
     enterArenaBtn.disabled = false;
     enterArenaBtn.textContent = "⚔ Enter the Arena";
   }
+  else if (ev.t === "journal") refreshJournalDoc();   // someone wrote in the chronicle
   else if (ev.t === "new_game") {
     // The table started over. The starter's own flow renders the fresh world
     // in place; everyone else reloads into it.
@@ -1913,6 +1945,8 @@ function connectSocket() {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   const sock = new WebSocket(`${proto}//${location.host}/ws`);
   sock.addEventListener("open", () => {
+    liveSock = sock;
+    sendNarratePref();
     if (sockWasOpen) {
       // A RE-connect: a turn may have finished while we were gone — resync the
       // panels (the hello event restores the lock state). The chat text of a
@@ -3889,13 +3923,38 @@ function cleanJournal() {
       id: s.id, name: s.name, color: s.color || "",
       entries: s.entries.map(e => ({ id: e.id, title: e.title || "", status: e.status || "", body: e.body || "",
                                      format: e.format || "md", kind: e.kind || "note",
-                                     image: e.image || "", caption: e.caption || "" })),
+                                     image: e.image || "", caption: e.caption || "",
+                                     author: e.author || "", locked: !!e.locked })),
     })),
   };
 }
 async function saveJournal() {
-  try { await fetch("/api/journal", { method: "PUT", headers: {"content-type": "application/json"}, body: JSON.stringify(cleanJournal()) }); }
+  try {
+    const res = await fetch("/api/journal", { method: "PUT", headers: {"content-type": "application/json"}, body: JSON.stringify(cleanJournal()) });
+    if (res.status === 409) {
+      // A locked entry (someone else's ink) — the save was refused whole.
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "an entry in the book is locked by another player");
+      const fresh = await (await fetch("/api/journal")).json();   // back to the shared truth
+      if (fresh && fresh.sections) { journal.sections = fresh.sections; renderTabs(); renderSpread(); }
+    }
+  }
   catch (e) { /* keep editing even if a save blips */ }
+}
+
+async function refreshJournalDoc() {
+  // Another player wrote in the shared chronicle — re-read it, unless this
+  // browser is mid-sentence (its own save will reconcile on finish).
+  if ($("journal-overlay").classList.contains("hidden") || jEditing) return;
+  try {
+    const data = await (await fetch("/api/journal")).json();
+    if (data && data.sections) {
+      journal.sections = data.sections;
+      if (jSection && !journal.sections.find(s => s.id === jSection))
+        jSection = journal.sections.length ? journal.sections[0].id : null;
+      renderTabs(); renderSpread();
+    }
+  } catch (e) {}
 }
 
 async function openJournal() {
@@ -4060,9 +4119,25 @@ function readEntryNode(sec, e, forMeasure) {
     if (e.caption || e.title) t.appendChild(el("div", "j-tcap", e.caption || e.title));
     card.appendChild(t);
   } else {
+    // Party chronicle locks (hosting): an entry locked by another player is
+    // theirs alone — no edit, no tear-out; a 🔒/🔓 toggle guards your own ink.
+    const lockedByOther = tableInfo.hosting && e.locked && e.author && e.author !== tableInfo.you;
+    const mayLock = tableInfo.hosting && (!e.author || e.author === tableInfo.you);
     const row = el("div", "j-etr");
     row.appendChild(el("div", "j-etitle", e.title || ""));
-    if (!forMeasure) {
+    if (!forMeasure && lockedByOther)
+      row.appendChild(el("span", "j-lockchip", `🔒 ${e.author}`));
+    if (!forMeasure && mayLock) {
+      const lk = el("button", "j-del", e.locked ? "🔒" : "🔓");
+      lk.title = e.locked ? "unlock — let others edit this entry"
+                          : "lock — only you can edit this entry";
+      lk.onclick = (ev) => { ev.stopPropagation();
+        e.locked = !e.locked;
+        if (e.locked && !e.author) e.author = tableInfo.you || "";
+        saveJournal(); renderSpread(); };
+      row.appendChild(lk);
+    }
+    if (!forMeasure && !lockedByOther) {
       const x = el("button", "j-del", "✕"); x.title = "tear out this entry";
       x.onclick = (ev) => { ev.stopPropagation(); if (confirm("Tear out this entry?")) {
         sec.entries = sec.entries.filter(q => q !== e); saveJournal(); renderSpread(); } };
@@ -4072,7 +4147,8 @@ function readEntryNode(sec, e, forMeasure) {
     const b = el("div", "j-ebody");
     b.innerHTML = e.format === "html" ? sanitizeInk(e.body || "") : md(e.body || "");
     card.appendChild(b);
-    if (!forMeasure) card.onclick = () => { if (jEditing) finishEdit(true); startEdit(sec, e); };
+    if (!forMeasure && !lockedByOther)
+      card.onclick = () => { if (jEditing) finishEdit(true); startEdit(sec, e); };
   }
   const stamp = stampNode(sec, e, forMeasure);
   if (stamp) card.appendChild(stamp);
@@ -5506,6 +5582,7 @@ async function saveNarrationForm(root) {
     localStorage.setItem("ob-narr", narrOn ? "1" : "0");
     localStorage.setItem("ob-narr-mode", narrMode);
   } catch (e) {}
+  sendNarratePref();   // the host synthesizes when ANY listener wants the voice
   if (narrOn && !soundOn) enableSound();      // the Save click doubles as the autoplay gesture
   const voice = root.querySelector(".nr-voice").value;
   if (voice && voice !== TTS.voice) {
@@ -5578,6 +5655,8 @@ async function boot() {
   const cont = $("start-continue");
   cont.disabled = !data.has_progress;
   cont.title = data.has_progress ? "Resume your game" : "No game in progress yet — start a New Game";
+  bootDone = true;
+  if (pendingCatchup) { applyCatchup(pendingCatchup); pendingCatchup = null; }
 }
 boot();
 </script>
