@@ -1821,6 +1821,9 @@ let turnR = null;            // the in-flight turn's renderer, built on turn_sta
 let sockWasOpen = false;     // distinguishes a reconnect from the first connect
 let tableInfo = { hosting: false, joined: true };   // /api/hosting snapshot
 let tableSeats = [];                                // live 'seats' presence events
+let expectNewGame = false;   // set by the browser that clicks New Game: its own
+                             // flow renders the fresh world; the broadcast
+                             // reload is for everyone ELSE at the table
 
 function routeEvent(ev) {
   if (ev.t === "hello" || ev.t === "lock") setBusy(!!ev.busy, ev.who);
@@ -1842,6 +1845,66 @@ function routeEvent(ev) {
   else if (ev.t === "audio") narrEnqueue(ev);   // a narration clip is ready — queue it
   else if (ev.t === "delta" || ev.t === "done" || ev.t === "error") {
     if (turnR) turnR.handle(ev);
+  }
+  // --- table moments: someone confirmed something; EVERY browser renders it ---
+  else if (ev.t === "state") { if (ev.state) renderState(ev.state); }
+  else if (ev.t === "rest_taken") {
+    hideRestBar();
+    const who = (ev.party_size || 1) > 1 ? "The party" : "You";
+    const cost = ev.cost ? ` (The night cost ${ev.cost}.)` : "";
+    addMessage("System",
+      ev.kind === "long"
+        ? (ev.interrupted
+            ? `The night breaks — something disturbs the camp. ${who} wake with only a fitful doze's worth of recovery.${cost} Tell the DM what you do.`
+            : `${who} take a long rest and wake restored.${cost}`)
+        : `${who} take a short rest.`, "system");
+    if (ev.state) renderState(ev.state);
+  }
+  else if (ev.t === "companion_answered") {
+    hideCompanionBar();
+    if (ev.accepted) addMessage("System", ev.action === "recruit"
+      ? `🎒 ${ev.name} joins the party.`
+      : `👋 ${ev.name} parts ways with the party.`, "system");
+    (ev.growth || []).forEach(addGrowthCard);
+    if (ev.state) renderState(ev.state);
+  }
+  else if (ev.t === "wrapping") {
+    hideWrapBar();
+    addMessage("System", "✍️ The Phantom is recording the tale — a moment…", "system");
+  }
+  else if (ev.t === "wrapped") {
+    if (!ev.wrapped) addMessage("System", ev.notice || "there's nothing to wrap yet.", "system");
+    else {
+      addMessage("System", "— session wrapped —", "system");
+      if (ev.player_facing) addMessage("The tale so far", ev.player_facing, "system");
+      else addMessage("System", "The Phantom sets down the pen. (Offline Mode keeps no notes.)", "system");
+    }
+    if (ev.state) renderState(ev.state);
+  }
+  else if (ev.t === "combat_started") {
+    narrReset();                               // the Arena takes the stage — hush the storyteller
+    enterArenaBtn.disabled = true;
+    enterArenaBtn.textContent = "⚔ Fighting…";
+    addMessage("System", "⚔ The Arena opens on the host's screen — play out the fight there, then the tale returns here.", "system");
+  }
+  else if (ev.t === "combat_done") {
+    const bubble = addMessage("The Phantom", "", "dm");
+    bubble.querySelector(".body").innerHTML = md(ev.narration || "");
+    addChips(bubble, ev);
+    if (ev.state) renderState(ev.state);       // combat_pending now false → unlocks
+    if (ev.soundscape) setSoundscape(ev.soundscape);
+    (ev.quest_beats || []).forEach(addQuestCard);
+    (ev.trinkets || []).forEach(addTrinketCard);
+    (ev.growth || []).forEach(addGrowthCard);
+    (ev.companion_deaths || []).forEach(addCompanionDeathCard);
+    enterArenaBtn.disabled = false;
+    enterArenaBtn.textContent = "⚔ Enter the Arena";
+  }
+  else if (ev.t === "new_game") {
+    // The table started over. The starter's own flow renders the fresh world
+    // in place; everyone else reloads into it.
+    if (expectNewGame) expectNewGame = false;
+    else location.reload();
   }
   // "end" (the voice caught up with the text) needs no client action
 }
@@ -2134,29 +2197,19 @@ async function send(textOverride) {
 // server, blocks until you exit it, then renders the DM's post-combat beat.
 async function enterArena() {
   if (!combatPending) return;
-  narrReset();                               // the Arena takes the stage — hush the storyteller
-  enterArenaBtn.disabled = true;
-  enterArenaBtn.textContent = "⚔ Fighting…";
-  addMessage("System", "⚔ The Arena opens in a separate window — play out the fight, then return here.", "system");
+  // The staging note, the "Fighting…" button state, the post-fight beat, the
+  // chips and cards — all of it renders from the broadcast channel on every
+  // browser at the table (combat_started / combat_done). Errors are ours.
   try {
     const res = await fetch("/api/combat/enter", { method: "POST" });
-    const data = await res.json();
     if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
       addMessage("System", data.error || "the Arena could not be entered", "system");
-      return;
+      enterArenaBtn.disabled = false;
+      enterArenaBtn.textContent = "⚔ Enter the Arena";
     }
-    const bubble = addMessage("The Phantom", "", "dm");
-    bubble.querySelector(".body").innerHTML = md(data.narration || "");
-    addChips(bubble, data);
-    if (data.state) renderState(data.state);            // combat_pending now false → unlocks
-    if (data.soundscape) setSoundscape(data.soundscape);
-    (data.quest_beats || []).forEach(addQuestCard);
-    (data.trinkets || []).forEach(addTrinketCard);
-    (data.growth || []).forEach(addGrowthCard);
-    (data.companion_deaths || []).forEach(addCompanionDeathCard);
   } catch (e) {
     addMessage("System", "The Arena could not be reached: " + e, "system");
-  } finally {
     enterArenaBtn.disabled = false;
     enterArenaBtn.textContent = "⚔ Enter the Arena";
   }
@@ -2172,21 +2225,18 @@ async function wrapSession(fromProposal) {
   if (busy || gameEnded || combatPending) return;
   if (!fromProposal && !confirm(
       "Wrap up this session? The Phantom records the tale, and you pick up fresh next time.")) return;
-  setBusy(true);
-  const rec = addMessage("System", "✍️ The Phantom is recording the tale — a moment…", "system");
-  const body = rec.querySelector(".body");
+  // The whole ceremony — "recording the tale…", the recap, the state — renders
+  // from the broadcast channel on every browser; the lock broadcast holds every
+  // composer while the Phantom writes. Only errors are ours to show.
   try {
     const res = await fetch("/api/wrap", { method: "POST" });
-    const data = await res.json();
-    if (!res.ok) { body.textContent = data.error || "the session could not be wrapped."; return; }
-    if (!data.wrapped) { body.textContent = data.notice || "there's nothing to wrap yet."; return; }
-    body.textContent = "— session wrapped —";
-    if (data.player_facing) addMessage("The tale so far", data.player_facing, "system");
-    else addMessage("System", "The Phantom sets down the pen. (Offline Mode keeps no notes.)", "system");
-    if (data.state) renderState(data.state);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      addMessage("System", data.error || "the session could not be wrapped.", "system");
+    }
   } catch (e) {
-    body.textContent = "Wrap failed: " + e;
-  } finally { setBusy(false); }
+    addMessage("System", "Wrap failed: " + e, "system");
+  }
 }
 $("wrap-confirm").addEventListener("click", () => wrapSession(true));
 $("wrap-dismiss").addEventListener("click", hideWrapBar);
@@ -2237,13 +2287,8 @@ async function answerCompanion(accept) {
     });
     const data = await res.json();
     if (!res.ok) { addMessage("System", data.error || "that moment has passed.", "system"); return; }
-    if (data.accepted) {
-      addMessage("System", data.action === "recruit"
-        ? `🎒 ${data.name} joins the party.`
-        : `👋 ${data.name} parts ways with the party.`, "system");
-    }
-    (data.growth || []).forEach(addGrowthCard);   // recruited past a threshold → grows on the spot
-    if (data.state) renderState(data.state);
+    // Accepted or declined, the outcome — message, growth cards, sidebars —
+    // renders from the broadcast channel on every browser, this one included.
   } catch (e) { addMessage("System", "That didn't go through: " + e, "system"); }
 }
 $("companion-accept").addEventListener("click", () => answerCompanion(true));
@@ -2465,6 +2510,7 @@ async function beginNewGame(builds) {
   if (!confirm(`Begin in “${ngPack.name}” as ${who}? This erases the current save.`)) return;
   const table = readContractForm($("ng-contract"));
   const difficulty = readDifficultyForm($("ng-difficulty"));
+  expectNewGame = true;        // our own flow renders the fresh world in place
   const res = await fetch("/api/new", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ pack_id: ngPack.id, table, difficulty,
@@ -4812,16 +4858,9 @@ async function doRestParty(kind, hitDiceBy, attuneBy) {
     });
     const data = await res.json();
     if (!data.ok) { addMessage("System", data.message || ("Rest failed: " + (data.error || "unknown")), "system"); return; }
-    renderSheet({ party: data.party });
-    if (data.state) renderState(data.state);
-    const who = (data.party || []).length > 1 ? "The party" : "You";
-    const cost = data.cost ? ` (The night cost ${data.cost}.)` : "";
-    addMessage("System",
-      kind === "long"
-        ? (data.interrupted
-            ? `The night breaks — something disturbs the camp. ${who} wake with only a fitful doze's worth of recovery.${cost} Tell the DM what you do.`
-            : `${who} take a long rest and wake restored.${cost}`)
-        : `${who} take a short rest.`, "system");
+    renderSheet({ party: data.party });   // this popup's own refresh; the rest —
+    // system message, sidebars, bar-clearing — arrives on the broadcast channel
+    // for every browser at the table, this one included.
   } catch (e) { /* transient */ }
 }
 function featRow(it) {

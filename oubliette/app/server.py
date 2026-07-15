@@ -16,6 +16,7 @@ import io
 import json
 import os
 import secrets
+import time
 import traceback
 from pathlib import Path
 from urllib.parse import quote
@@ -336,6 +337,24 @@ async def post_seat(body: SeatIn, request: Request) -> JSONResponse:
         GAME.session.emit_seat(name, body.char_ids)
     HUB.broadcast(TABLE.seats_event())
     return JSONResponse({"ok": True, "seats": GAME.session.seats})
+
+
+def _announce(event: dict, with_state: bool = True) -> None:
+    """Broadcast a table moment — the RESULT of a confirm (a rest taken, a
+    companion answered, a wrap, a fight resolved) — so it renders on EVERY
+    browser, not just the clicker's (multiplayer S1: anyone may confirm, and
+    everyone watches it resolve). `with_state` staples on a fresh snapshot so
+    every sidebar follows the change."""
+    if with_state:
+        event = {**event, "state": _snapshot()}
+    HUB.broadcast(event)
+
+
+# The courtesy gap (locked in the plan): 5 seconds, applied ONLY to the player
+# who just acted, and ONLY while other players are connected — solo play and a
+# lone host never see it. A few lines, deliberately: not a queue, not a lock.
+_COOLDOWN_S = 5.0
+_LAST_ACTOR = {"who": None, "at": 0.0}
 
 
 def _turn_lock(busy: bool, who: str | None = None) -> None:
@@ -857,7 +876,7 @@ async def get_transcript() -> JSONResponse:
 
 
 @app.post("/api/wrap")
-async def post_wrap() -> JSONResponse:
+async def post_wrap(request: Request) -> JSONResponse:
     """Wrap up the session in progress (the player's Wrap button, or their confirmation of
     the DM's `end_session` proposal). The DM authors two-faced notes from the full transcript
     — UNLESS Offline Mode (scripted), which writes none — the session seals, and play resumes
@@ -867,9 +886,19 @@ async def post_wrap() -> JSONResponse:
     if GAME.session.pending_combat is not None:
         return JSONResponse({"error": "finish the fight before wrapping", "combat_pending": True},
                             status_code=409)
-    async with GAME.lock:
-        write_notes = GAME.client_name != "scripted"   # Offline Mode writes no notes
-        report = await GAME.loop.wrap_session(write_notes=write_notes)
+    # The whole table sees the pen come out (and every composer locks while the
+    # Phantom writes) — then the recap lands on every screen, not one.
+    who = TABLE.name_of(request.cookies.get(_SEAT_COOKIE)) if TABLE.hosting else None
+    HUB.broadcast({"t": "wrapping"})
+    _turn_lock(True, who)
+    try:
+        async with GAME.lock:
+            write_notes = GAME.client_name != "scripted"   # Offline Mode writes no notes
+            report = await GAME.loop.wrap_session(write_notes=write_notes)
+    finally:
+        _turn_lock(False)
+    _announce({"t": "wrapped", "wrapped": report.wrapped,
+               "player_facing": report.player_facing, "notice": report.notice})
     return JSONResponse({
         "wrapped": report.wrapped,
         "player_facing": report.player_facing,
@@ -1305,6 +1334,17 @@ async def post_turn_submit(body: TurnIn, request: Request) -> JSONResponse:
     # solo keeps the null and the plain "You". (The DM prompt itself learns
     # about seats in the attribution slice — this is the transport.)
     who = TABLE.name_of(request.cookies.get(_SEAT_COOKIE)) if TABLE.hosting else None
+    if who and len(TABLE.sockets) > 1:
+        # The courtesy gap: the player who JUST acted waits a beat while others
+        # are at the table, so nobody can machine-gun the DM.
+        since = time.monotonic() - _LAST_ACTOR["at"]
+        if _LAST_ACTOR["who"] == who and since < _COOLDOWN_S:
+            return JSONResponse(
+                {"error": "give the table a beat — someone else may want to act "
+                          f"({_COOLDOWN_S - since:.0f}s)",
+                 "cooldown": round(_COOLDOWN_S - since, 1)}, status_code=429)
+    if who:
+        _LAST_ACTOR.update(who=who, at=time.monotonic())
 
     # No await between the busy check above and this flip — atomic on the
     # event loop, so two racing submits can't both start a turn.
@@ -1438,9 +1478,15 @@ async def post_combat_enter() -> JSONResponse:
     if GAME.session.pending_combat is None:
         return JSONResponse(
             {"error": "no combat is staged", "combat_pending": False}, status_code=409)
+    # Every browser at the table learns the fight is on (their Enter buttons
+    # sleep), and the post-fight beat lands on every screen when it's over.
+    # (S2 streams the Arena picture itself; today it plays on the host's desk.)
+    HUB.broadcast({"t": "combat_started"})
     async with GAME.lock:
         report = await GAME.loop.enter_combat()
-        return JSONResponse(_turn_payload(report))
+        payload = _turn_payload(report)
+        _announce({"t": "combat_done", **payload}, with_state=False)  # payload carries state
+        return JSONResponse(payload)
 
 
 class TradeActionIn(BaseModel):
@@ -1473,6 +1519,8 @@ async def post_trade(body: TradeActionIn) -> JSONResponse:
             trade = build_state(repo, body.merchant_id).model_dump()
         except StateError:
             trade = None
+        if ok:
+            _announce({"t": "state"})   # coin and packs moved — every sidebar follows
         return JSONResponse({"ok": ok, "error": error, "trade": trade, "state": _snapshot()})
 
 
@@ -1504,6 +1552,8 @@ async def post_checkout(body: CheckoutIn) -> JSONResponse:
             trade = build_state(repo, body.merchant_id).model_dump()
         except StateError:
             trade = None
+        if ok:
+            _announce({"t": "state"})   # coin and packs moved — every sidebar follows
         return JSONResponse({"ok": ok, "error": error, "trade": trade, "state": _snapshot()})
 
 
@@ -1539,6 +1589,8 @@ async def post_equip(body: EquipIn) -> JSONResponse:
             ok, error = True, None
         except StateError as e:
             ok, error = False, str(e)
+        if ok:
+            _announce({"t": "state"})   # gear moved — every sidebar follows
         return JSONResponse({"ok": ok, "error": error, "inventory": _build_inventory(), "state": _snapshot()})
 
 
@@ -1568,6 +1620,8 @@ async def post_handover(body: HandOverIn) -> JSONResponse:
             ok, error = True, None
         except (ToolApplyError, StateError) as e:
             ok, error = False, str(e)
+        if ok:
+            _announce({"t": "state"})   # gear moved — every sidebar follows
         return JSONResponse({"ok": ok, "error": error, "inventory": _build_inventory(), "state": _snapshot()})
 
 
@@ -2276,6 +2330,10 @@ async def post_rest(body: RestIn) -> JSONResponse:
             GAME.session.emit_environment("day", None, reason="morning comes")
         if gated:
             GAME.session.pending_rest = None            # the grant is spent
+        # The whole table watches the rest resolve (bars clear, sidebars follow);
+        # the response below stays for the clicker's own popup refresh.
+        _announce({"t": "rest_taken", "kind": body.kind, "interrupted": interrupted,
+                   "cost": cost_desc, "party_size": len(GAME.session.repo.party())})
         return JSONResponse({"ok": True, "party": [_sheet_member(c, rs) for c in GAME.session.repo.party()],
                              "state": _snapshot(), "interrupted": interrupted,
                              "cost": cost_desc})
@@ -2300,6 +2358,7 @@ async def post_companion(body: CompanionIn) -> JSONResponse:
                                  "raise it in the story first"}, status_code=409)
         GAME.session.pending_companion = None            # one answer spends the offer
         if not body.accept:
+            _announce({"t": "companion_answered", "accepted": False})   # bars clear everywhere
             return JSONResponse({"ok": True, "accepted": False, "state": _snapshot()})
         try:
             char = GAME.session.repo.get_character(pending["char_id"])
@@ -2333,6 +2392,8 @@ async def post_companion(body: CompanionIn) -> JSONResponse:
             grown = []
             GAME.session.emit_companion_dismissed(
                 char.id, reason=pending.get("reason") or "parted ways")
+        _announce({"t": "companion_answered", "accepted": True,
+                   "action": pending["action"], "name": char.name, "growth": grown})
         return JSONResponse({"ok": True, "accepted": True,
                              "action": pending["action"],
                              "name": char.name, "state": _snapshot(),
@@ -2368,6 +2429,7 @@ async def post_prepare_spells(body: PrepareSpellsIn) -> JSONResponse:
             [StateOp.spells_prepared(body.char_id, body.spells)],
             char_id=body.char_id,
         )
+        _announce({"t": "state"})   # a hero changed — every sidebar follows
         return JSONResponse({"ok": True, "party": [_sheet_member(c, rs) for c in GAME.session.repo.party()],
                              "state": _snapshot()})
 
@@ -2418,6 +2480,7 @@ async def post_levelup(body: LevelUpIn) -> JSONResponse:
         grown = GAME.loop._check_companion_growth()
         if grown:
             GAME.session.pending_growth_note += grown
+        _announce({"t": "state"})   # a hero changed — every sidebar follows
         return JSONResponse({"ok": True, "party": [_sheet_member(c, rs) for c in GAME.session.repo.party()],
                              "state": _snapshot(), "growth": grown})
 
@@ -2498,6 +2561,9 @@ async def post_new(body: NewGameIn | None = None) -> JSONResponse:
                 GAME.session.emit_state(
                     EventKind.PORTRAIT_SET, [StateOp.portrait(member.id, fname)],
                     reason=f"imported portrait for {member.name}")
+        # The table started over: every OTHER browser reloads into the fresh
+        # world (the starter's own flow renders it in place and skips this).
+        HUB.broadcast({"t": "new_game"})
         return JSONResponse({"ok": True, "state": _snapshot(), "model": GAME.client_name,
                              "pack_id": GAME.pack_id, "has_progress": _has_progress(),
                              "soundscape": _soundscape()})
@@ -2509,6 +2575,7 @@ async def post_reload() -> JSONResponse:
     in The Forge appear without a New Game — the author→test convenience."""
     async with GAME.lock:
         GAME.reload_world()
+        _announce({"t": "state"})   # the refreshed world reaches every sidebar
         return JSONResponse({"state": _snapshot(), "model": GAME.client_name,
                              "pack_id": GAME.pack_id, "soundscape": _soundscape()})
 

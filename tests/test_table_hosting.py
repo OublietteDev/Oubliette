@@ -20,7 +20,7 @@ os.environ.pop("ANTHROPIC_API_KEY", None)  # force the scripted client
 from fastapi.testclient import TestClient  # noqa: E402
 from starlette.websockets import WebSocketDisconnect  # noqa: E402
 
-from oubliette.app.server import _SEAT_COOKIE, GAME, TABLE, app  # noqa: E402
+from oubliette.app.server import _LAST_ACTOR, _SEAT_COOKIE, GAME, TABLE, app  # noqa: E402
 
 client = TestClient(app)
 
@@ -38,12 +38,14 @@ def hosting():
     """Turn hosting on for one test, hand back the join code, clean up fully."""
     code = TABLE.start_hosting()
     client.cookies.clear()
+    _LAST_ACTOR.update(who=None, at=0.0)   # no courtesy-gap bleed between tests
     yield code
     TABLE.hosting = False
     TABLE.code = None
     TABLE.players.clear()
     TABLE.sockets.clear()
     client.cookies.clear()
+    _LAST_ACTOR.update(who=None, at=0.0)
 
 
 def _join(code: str, name: str) -> str:
@@ -184,6 +186,30 @@ def test_attribution_reaches_context_transcript_and_beats(hosting):
     assert player_turns[-1]["who"] == "Dana"
     # ...and the continuity beat is attributed too
     assert GAME.loop.history[-1].startswith('Dana: "I look around the market.')
+
+
+def test_courtesy_cooldown_only_bites_the_repeat_actor(hosting):
+    dana = _join(hosting, "Dana")
+    brett = _join(hosting, "Brett")
+    client.post("/api/new", headers=_seat(dana))
+    with client.websocket_connect("/ws", headers=_seat(dana)) as a, \
+         client.websocket_connect("/ws", headers=_seat(brett)) as b:
+        assert a.receive_json()["t"] == "hello"
+        assert b.receive_json()["t"] == "hello"
+        # Dana takes a turn...
+        assert client.post("/api/turn/submit", headers=_seat(dana),
+                           json={"text": "I look around."}).status_code == 200
+        while a.receive_json()["t"] not in ("end", "error"):
+            pass
+        # ...and immediately tries again: the courtesy gap refuses HER...
+        r = client.post("/api/turn/submit", headers=_seat(dana),
+                        json={"text": "me again, already!"})
+        assert r.status_code == 429 and r.json()["cooldown"] > 0
+        # ...but Brett may speak at once — the gap is personal, not a lock.
+        assert client.post("/api/turn/submit", headers=_seat(brett),
+                           json={"text": "my turn now."}).status_code == 200
+        while b.receive_json()["t"] not in ("end", "error"):
+            pass
 
 
 def test_solo_turns_carry_no_speaker():

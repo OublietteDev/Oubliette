@@ -318,6 +318,45 @@ def test_ws_hello_carries_the_lock_state():
         GAME.turn_busy = False
 
 
+def _drain_until(ws, t_type: str, guard: int = 60) -> dict:
+    """Read broadcast events until one of type `t_type` arrives."""
+    for _ in range(guard):
+        ev = ws.receive_json()
+        if ev["t"] == t_type:
+            return ev
+    raise AssertionError(f"never saw a {t_type!r} event")
+
+
+def test_confirmations_broadcast_to_the_table():
+    """Table moments — a rest, a companion answer, a wrap, gear moving — render
+    from the broadcast channel on EVERY browser, not just the clicker's."""
+    _new()
+    with client.websocket_connect("/ws") as ws:
+        assert ws.receive_json()["t"] == "hello"
+        # a short rest resolves on the channel, fresh snapshot stapled on
+        assert client.post("/api/rest", json={"kind": "short"}).json()["ok"]
+        ev = _drain_until(ws, "rest_taken")
+        assert ev["kind"] == "short" and "purse_cp" in ev["state"]
+        # gear moving is a bare state refresh for every sidebar
+        r = client.post("/api/equip", json={"char_id": "pc", "item_id": "leather_jerkin",
+                                            "equip": True})
+        assert r.json()["ok"]
+        assert "purse_cp" in _drain_until(ws, "state")["state"]
+        # a companion answer carries the outcome
+        from oubliette.app.server import GAME
+        GAME.session.pending_companion = {
+            "action": "recruit", "char_id": "stray_pup", "name": "Scrap",
+            "kind": "creature", "origin": "recruited", "reason": "test"}
+        assert client.post("/api/companion", json={"accept": True}).json()["ok"]
+        ev = _drain_until(ws, "companion_answered")
+        assert ev["accepted"] is True and ev["name"] == "Scrap"
+        # the wrap ceremony: the pen comes out, then the recap — for everyone
+        client.post("/api/turn", json={"text": "I look around the market."})
+        assert client.post("/api/wrap").json()["wrapped"] is True
+        _drain_until(ws, "wrapping")
+        assert _drain_until(ws, "wrapped")["wrapped"] is True
+
+
 def test_journal_roundtrips_and_is_invisible_to_the_dm():
     _new()
     # a never-written journal opens seeded (the blank-page fix), with default binding
