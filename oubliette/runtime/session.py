@@ -55,6 +55,8 @@ class Session:
         self.npc_statblocks: dict = {}      # {npc id -> StatBlock id} for the combat bridge (Phase 4a)
         self.world_map: str | None = None   # top-level map background image filename (pack)
         self.bestiary_gate = None           # per-world bestiary knowledge cutoff (manifest)
+        self.house_rules = None             # the author's table variants (manifest HouseRules);
+                                            # None = play by the book (custom seeds / tests)
         self.force_ended: bool = False      # the DM terminally closed the game (force_end_session tool);
                                             # distinct from an ordinary session wrap-up, which continues play
         self.campaign_ended: bool = False   # the campaign truly ENDED (hardcore TPK, S4) — permanent;
@@ -122,6 +124,7 @@ class Session:
             ai_profiles = world.ai_profiles
             npc_statblocks = world.npc_statblocks
             bestiary_gate = world.bestiary_gate
+            house_rules = world.house_rules
             authored_quests = {q.id: q for q in world.quests}
             factions = {f.id: f for f in world.factions}
             travel_scale = world.travel_scale
@@ -141,6 +144,7 @@ class Session:
             ai_profiles = ()
             npc_statblocks = {}
             bestiary_gate = None
+            house_rules = None
             authored_quests = {}
             factions = {}
             travel_scale = None
@@ -211,6 +215,7 @@ class Session:
         session.npc_statblocks = {**npc_statblocks, **evolved_forms}
         session.world_map = world_map
         session.bestiary_gate = bestiary_gate
+        session.house_rules = house_rules
         session.force_ended = force_ended
         session.campaign_ended = campaign_ended
         session.table = table

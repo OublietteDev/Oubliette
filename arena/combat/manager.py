@@ -197,6 +197,11 @@ class CombatManager:
     """Manages the overall combat state, turn flow, and creature registry."""
 
     def __init__(self) -> None:
+        # A fresh manager plays by the book; load_encounter installs the
+        # world's house rules (they're process-wide — see combat.house_rules).
+        from arena.combat import house_rules as house_rules_mod
+        house_rules_mod.reset()
+
         self.state: CombatState = CombatState.NOT_STARTED
         self.turn_phase: TurnPhase = TurnPhase.START_OF_TURN
         self.initiative: InitiativeTracker = InitiativeTracker()
@@ -369,6 +374,9 @@ class CombatManager:
             encounter: The Encounter model to load.
             data_dir: Base directory for resolving creature_id file paths.
         """
+        from arena.combat import house_rules as house_rules_mod
+        house_rules_mod.set_active(encounter.house_rules)
+
         self.grid = HexGrid(encounter.grid_width, encounter.grid_height)
 
         # Apply terrain (hazard hexes keep their authored damage spec — the
@@ -465,11 +473,32 @@ class CombatManager:
         self.state = CombatState.ROLLING_INITIATIVE
         self.initiative.reset()
 
+        # House rule — side initiative: one unmodified d20 per SIDE (heroes,
+        # foes), re-rolled until distinct so the sides can never interleave;
+        # within a side the sort's dexterity tiebreak orders the turns.
+        from arena.combat import house_rules as house_rules_mod
+        side_rolls: dict[str, int] = {}
+        if house_rules_mod.active().initiative == "side":
+            hero_roll, foe_roll = roll_die(20), roll_die(20)
+            while foe_roll == hero_roll:
+                foe_roll = roll_die(20)
+            side_rolls = {"hero": hero_roll, "foe": foe_roll}
+            self.log.add(CombatEvent(
+                event_type=CombatEventType.INFO,
+                message=(f"Side initiative — heroes {hero_roll}, foes {foe_roll}: "
+                         f"{'the heroes' if hero_roll > foe_roll else 'the foes'} "
+                         "act first each round."),
+            ))
+
         for cid, combatant in self.combatants.items():
             c = combatant.creature
             dex_mod = get_effective_ability_modifier(c, "dexterity")
             init_bonus = get_initiative_bonus(c)
-            roll = roll_die(20) + dex_mod + init_bonus
+            if side_rolls:
+                side = "hero" if combatant.team in ("player", "ally") else "foe"
+                roll = side_rolls[side]
+            else:
+                roll = roll_die(20) + dex_mod + init_bonus
             dex_score = c.ability_scores.get_score("dexterity")
 
             # Snapshot max resources for display (PlayerCharacter only)
@@ -1002,8 +1031,39 @@ class CombatManager:
             if self.active_zones:
                 from arena.combat.zones import reset_zone_round_tracking
                 reset_zone_round_tracking(self.active_zones)
+            # House rule — re-roll initiative at the top of each round.
+            from arena.combat import house_rules as house_rules_mod
+            if house_rules_mod.active().initiative == "reroll":
+                self._reroll_initiative()
 
         self._start_current_turn()
+
+    def _reroll_initiative(self) -> None:
+        """House rule: everyone still standing re-rolls initiative for the new
+        round. Recomputes each live entry's roll in place (the lair stays fixed
+        at 20), re-sorts, and restarts the round from the new top — the round
+        number and every other bit of combat state are untouched."""
+        for entry in self.initiative.entries:
+            if entry.is_lair:
+                continue
+            combatant = self.combatants.get(entry.creature_id)
+            if combatant is None:
+                continue
+            c = combatant.creature
+            entry.initiative_roll = (
+                roll_die(20)
+                + get_effective_ability_modifier(c, "dexterity")
+                + get_initiative_bonus(c)
+            )
+            entry.tiebreaker = random.random()
+        self.initiative._sort()
+        self.initiative.current_index = 0
+        self.log.add(CombatEvent(
+            event_type=CombatEventType.INFO,
+            message="Initiative re-rolled: "
+                    + ", ".join(f"{e.name} {e.initiative_roll}"
+                                for e in self.initiative.entries),
+        ))
 
     # ------------------------------------------------------------------
     # Legendary Actions

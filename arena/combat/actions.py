@@ -474,6 +474,47 @@ def _pack_tactics_advantage(
     return False
 
 
+def _flanking_advantage(
+    attacker, attacker_id, target, target_id,
+    attacker_pos, target_pos, combatants, grid, is_melee,
+) -> bool:
+    """House rule (DMG variant): the attacker has advantage on a MELEE attack
+    when a conscious, non-incapacitated ally is on the target's OPPOSITE side —
+    attacker, target, and ally in a line, both within 5 ft of the target
+    (hex-exact for single-hex creatures; anchor positions approximate larger
+    footprints). The same walk as Pack Tactics, plus the geometry."""
+    if not is_melee or not combatants or attacker_pos is None or target_pos is None:
+        return False
+    from arena.grid.footprint import min_distance_between
+
+    if min_distance_between(attacker_pos, attacker.size, target_pos, target.size) > 1:
+        return False                     # reach weapons don't flank — both hug the target
+    attacker_comb = combatants.get(attacker_id)
+    team = getattr(attacker_comb, "team", None)
+    if team is None:
+        return False
+    for cid, comb in combatants.items():
+        if cid in (attacker_id, target_id):
+            continue
+        if getattr(comb, "team", None) != team:
+            continue
+        ally = comb.creature
+        if not ally.is_conscious or has_condition(ally, Condition.INCAPACITATED):
+            continue
+        ally_pos = grid.find_creature(cid)
+        if ally_pos is None:
+            continue
+        if min_distance_between(ally_pos, ally.size, target_pos, target.size) > 1:
+            continue
+        # Opposite sides = the target sits ON the line between them: the trip
+        # attacker → target → ally is exactly as long as attacker → ally.
+        if attacker_pos.distance_to(ally_pos) == (
+            attacker_pos.distance_to(target_pos) + target_pos.distance_to(ally_pos)
+        ):
+            return True
+    return False
+
+
 def resolve_attack_hit(
     attacker: Creature,
     attacker_id: str,
@@ -696,13 +737,22 @@ def resolve_attack_hit(
         attacker, attacker_id, target, target_id, target_pos, combatants, grid,
     )
 
+    # House rule — flanking (DMG variant): melee advantage when an ally is on
+    # the target's opposite side. Off by default; the world's author enables it.
+    from arena.combat import house_rules as house_rules_mod
+    flank_adv = house_rules_mod.active().flanking and _flanking_advantage(
+        attacker, attacker_id, target, target_id,
+        attacker_pos, target_pos, combatants, grid, is_melee,
+    )
+
     # Ranged positional disadvantage (D-ACT-4): long range and/or a foe in melee.
     ranged_dis, ranged_reason = ranged_positional_disadvantage(
         attacker_pos, attacker.size, target_pos, target.size, action,
         attacker_id, combatants,
     )
 
-    total_adv_sources = max(advantage, 0) + max(condition_adv, 0) + (1 if pack_adv else 0)
+    total_adv_sources = (max(advantage, 0) + max(condition_adv, 0)
+                         + (1 if pack_adv else 0) + (1 if flank_adv else 0))
     total_dis_sources = (
         abs(min(advantage, 0)) + abs(min(condition_adv, 0))
         + (1 if ranged_dis else 0)
@@ -808,8 +858,11 @@ def resolve_attack_hit(
                 cast_level=cast_level,
             )
 
-    # Determine result (crit range may be expanded by features/feats)
+    # Determine result (crit range may be expanded by features/feats — and by
+    # the house rule that gives EVERYONE crits on 19–20)
     crit_threshold = get_effective_crit_range(attacker)
+    if house_rules_mod.active().crit_range_19:
+        crit_threshold = min(crit_threshold, 19)
     if natural_roll >= crit_threshold:
         result = AttackResult.CRITICAL_HIT
     elif natural_roll == 1:

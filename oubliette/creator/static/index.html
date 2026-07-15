@@ -673,6 +673,44 @@ function worldSettingsPanel(m) {
         <div class="help">Creatures at or below this CR are always shown — e.g. <b>0</b> means everyone has seen a rat. Set <b>below 0</b> to gate <i>everything</i> until encountered.</div>
       </div>
     </div>
+  </div>
+  ${houseRulesPanel(m)}`;
+}
+// --- house rules (manifest-level: the author's table variants) --------------
+function houseRulesPanel(m) {
+  const hr = (m && m.house_rules) || {};
+  const init = hr.initiative || "standard";
+  const check = (id, on, label, help) => `
+      <div class="field">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+          <input type="checkbox" id="${id}" ${on ? "checked" : ""}
+                 style="width:auto; flex:none; margin:0">
+          <span>${label}</span>
+        </label>
+        <div class="help">${help}</div>
+      </div>`;
+  return `<div class="group">
+    <div class="ghead"><span class="gtoggle" style="cursor:default"><h3>House rules</h3></span></div>
+    <div class="gcards" style="display:block; padding:10px 14px">
+      <div class="help" style="margin-bottom:8px">Your world's table variants — enforced by the engine, shown to players read-only. Everything off = play exactly by the book.</div>
+      <div class="field">
+        <label>Initiative</label>
+        <select id="hr-initiative">
+          <option value="standard" ${init === "standard" ? "selected" : ""}>Standard — everyone rolls d20 + DEX</option>
+          <option value="side" ${init === "side" ? "selected" : ""}>Side initiative — all heroes act, then all foes</option>
+          <option value="reroll" ${init === "reroll" ? "selected" : ""}>Re-roll — everyone re-rolls each round</option>
+        </select>
+        <div class="help">Side initiative rolls one d20 per side each fight; re-roll keeps individual initiative but shuffles the order every round.</div>
+      </div>
+      ${check("hr-flanking", hr.flanking, "Flanking",
+              "Melee attacks have advantage when an ally is on the target's opposite side — rewards positioning, speeds fights up.")}
+      ${check("hr-crit19", hr.crit_range_19, "Crits on 19–20",
+              "Everyone scores a critical hit on a natural 19 or 20 — swingier, deadlier fights (monsters get it too).")}
+      ${check("hr-brutal", hr.brutal_crits, "Brutal crits",
+              "A critical hit's extra dice come in maximized instead of re-rolled — a crit always feels like a crit.")}
+      ${check("hr-potion-ba", hr.potions_bonus_action, "Potions are a bonus action",
+              "Drinking any potion costs a bonus action instead of an action — heroes can heal and still fight.")}
+    </div>
   </div>`;
 }
 function wireWorldSettings() {
@@ -691,6 +729,27 @@ function wireWorldSettings() {
     if (isNaN(v)) v = 0;
     ensureGate().max_known_cr = v; markDirty();
   });
+  wireHouseRules();
+}
+function wireHouseRules() {
+  const initSel = document.getElementById("hr-initiative");
+  if (!initSel) return;
+  const ensureRules = () => {
+    state.contents.pack = state.contents.pack || {};
+    if (!state.contents.pack.house_rules)
+      state.contents.pack.house_rules = {
+        initiative: "standard", flanking: false, crit_range_19: false,
+        brutal_crits: false, potions_bonus_action: false,
+      };
+    return state.contents.pack.house_rules;
+  };
+  initSel.addEventListener("change", () => { ensureRules().initiative = initSel.value; markDirty(); });
+  [["hr-flanking", "flanking"], ["hr-crit19", "crit_range_19"],
+   ["hr-brutal", "brutal_crits"], ["hr-potion-ba", "potions_bonus_action"]]
+    .forEach(([id, key]) => {
+      const cb = document.getElementById(id);
+      if (cb) cb.addEventListener("change", () => { ensureRules()[key] = cb.checked; markDirty(); });
+    });
 }
 
 // One card. `i` is the entry's index in listOf(kind) — edit/delete key off it, so it

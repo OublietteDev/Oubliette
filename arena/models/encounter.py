@@ -30,6 +30,19 @@ class TerrainHex(BaseModel):
     extra_data: dict = Field(default_factory=dict)  # e.g., {"damage": "1d6 fire"}
 
 
+class HouseRules(BaseModel):
+    """Per-world rule variants, delivered with the encounter — the first
+    table-level settings to cross the story→Arena boundary. Authored in the
+    Forge; every default is by-the-book, so an encounter file without this
+    block plays exactly as before."""
+
+    initiative: str = "standard"  # "standard" | "side" (one d20 per side) |
+                                  # "reroll" (everyone re-rolls each round)
+    flanking: bool = False        # melee advantage from an ally on the opposite side
+    crit_range_19: bool = False   # everyone crits on 19–20
+    brutal_crits: bool = False    # crit dice are MAXIMIZED instead of re-rolled
+
+
 class CombatantEntry(BaseModel):
     """A creature placed in an encounter."""
 
@@ -59,6 +72,7 @@ class Encounter(BaseModel):
     use_ai_for_enemies: bool = True
     use_ai_for_allies: bool = False
     auto_roll_initiative: bool = True
+    house_rules: HouseRules = Field(default_factory=HouseRules)
 
     # Lair actions (encounter-level, not creature-level)
     has_lair: bool = False

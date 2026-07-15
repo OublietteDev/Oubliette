@@ -64,6 +64,21 @@ class TravelScale(_Strict):
     days: float = Field(gt=0, le=365)  # travel days between the two pins
 
 
+class HouseRules(_Strict):
+    """Per-world rule variants — the author's table tweaks, chosen in the Forge
+    and enforced by the engine (players see them read-only; the author decides,
+    so nobody breaks the game with a toggle). All default OFF: an untouched
+    world plays exactly by the book."""
+    initiative: Literal["standard", "side", "reroll"] = "standard"
+    #   side   — one d20 per side: all heroes act, then all foes (DMG variant)
+    #   reroll — everyone re-rolls initiative at the top of each round
+    flanking: bool = False           # melee advantage when an ally is on the
+                                     # target's opposite side (DMG variant)
+    crit_range_19: bool = False      # everyone crits on 19–20
+    brutal_crits: bool = False       # crit dice are MAXIMIZED instead of re-rolled
+    potions_bonus_action: bool = False   # drinking any potion is a bonus action
+
+
 class PackManifest(_Strict):
     id: str
     schema_version: int              # this doc defines version 1
@@ -80,6 +95,8 @@ class PackManifest(_Strict):
                                      # pre-selected at New Game, never binding
     travel_scale: TravelScale | None = None   # two-pin travel-time calibration (W3);
                                      # None = journeys cost no time
+    house_rules: HouseRules = Field(default_factory=HouseRules)  # the author's
+                                     # table variants (multiplayer pre-work)
 
 
 # --- items -------------------------------------------------------------------

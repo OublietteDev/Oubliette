@@ -172,6 +172,28 @@ def _current_day() -> int:
     return current_day(GAME.session.store.read_all())
 
 
+def _house_rule_labels() -> list[str]:
+    """The world's active house rules as short player-readable labels — only
+    the rules that DIFFER from the book, so an untouched world shows none."""
+    hr = getattr(GAME.session, "house_rules", None)
+    if hr is None:
+        return []
+    labels = []
+    if hr.initiative == "side":
+        labels.append("Side initiative — all heroes act, then all foes")
+    elif hr.initiative == "reroll":
+        labels.append("Initiative is re-rolled at the top of every round")
+    if hr.flanking:
+        labels.append("Flanking — melee advantage when allies sandwich a foe")
+    if hr.crit_range_19:
+        labels.append("Everyone crits on 19–20")
+    if hr.brutal_crits:
+        labels.append("Brutal crits — critical dice come in maximized")
+    if hr.potions_bonus_action:
+        labels.append("Drinking a potion is a bonus action")
+    return labels
+
+
 def _snapshot() -> dict:
     repo = GAME.session.repo
     pc = repo.pc()
@@ -207,6 +229,9 @@ def _snapshot() -> dict:
         # Living-world W2: whether this world authors factions at all — drives
         # the menu item; the Factions page itself is served (redacted) separately.
         "has_factions": bool(getattr(GAME.session, "factions", None)),
+        # The world's house rules (author-set, read-only for players): human
+        # labels for the Settings page; empty list = plays by the book.
+        "house_rules": _house_rule_labels(),
         "pc": _pc_view(pc),                          # the lead PC (back-compat)
         "party": [_pc_view(c) for c in repo.party()],  # the whole roster (HUD)
         # The party's shared money (copper + a preformatted display string).

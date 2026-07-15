@@ -321,7 +321,8 @@ def stage_combat(
                            ruleset=ruleset,
                            portraits=portraits,
                            battle=_battle_for(session),
-                           companion_kits=_companion_kits(party, session, portraits))
+                           companion_kits=_companion_kits(party, session, portraits),
+                           house_rules=getattr(session, "house_rules", None))
 
     scratch_dir = Path(tempfile.mkdtemp(prefix="oubliette-combat-", dir=scratch_root))
     encounter_path = scratch_dir / "encounter.json"

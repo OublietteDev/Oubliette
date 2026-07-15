@@ -1008,6 +1008,7 @@
       <div class="contract-form" id="settings-difficulty"></div>
       <div class="contract-form" id="settings-contract"></div>
       <div class="contract-form" id="settings-narration"></div>
+      <div class="contract-form" id="settings-houserules"></div>
     </div>
     <div class="ng-foot">
       <div class="spacer"></div>
@@ -1648,6 +1649,7 @@ function renderState(s) {
   $("scene").textContent = s.scene || "";
   $("env-badge").textContent = envLabel(s.time_of_day, s.weather);
   hasFactions = !!s.has_factions;   // living-world W2: drives the Factions menu item
+  houseRuleLabels = s.house_rules || [];   // the world's table variants (read-only)
   // Header: the world/pack you're playing. Location breadcrumb: parent > sublocation,
   // with the innermost spot highlighted — a quick "where am I" for the scene card.
   $("world-name").textContent = s.pack_name || "";
@@ -2891,6 +2893,22 @@ $("cg-import-file").addEventListener("change", e => {
 });
 
 // --- Settings (edit this campaign's table + difficulty mid-game) ----------
+let houseRuleLabels = [];   // author-set world rule variants (from state snapshots)
+function renderHouseRules(root) {
+  // Read-only: the world's AUTHOR chose these in the Forge; the table plays them.
+  root.innerHTML = "";
+  if (!houseRuleLabels.length) return;
+  root.appendChild(el("h3", null, "House Rules"));
+  const note = el("div", "sh-flavor",
+    "Set by this world's author — part of the world, not a setting.");
+  note.style.marginBottom = "6px";
+  root.appendChild(note);
+  houseRuleLabels.forEach(t => {
+    const line = el("div", null, "• " + t);
+    line.style.margin = "3px 0"; line.style.fontSize = "13px";
+    root.appendChild(line);
+  });
+}
 async function openSettings() {
   const presets = await ensurePresets();
   const d = await (await fetch("/api/table")).json();
@@ -2902,6 +2920,7 @@ async function openSettings() {
   await refreshTtsStatus();                        // narration: re-check what's installed
   buildNarrationForm($("settings-narration"));
   fillNarrationForm($("settings-narration"));
+  renderHouseRules($("settings-houserules"));
   $("settings-overlay").classList.remove("hidden");
 }
 function closeSettings() { $("settings-overlay").classList.add("hidden"); }

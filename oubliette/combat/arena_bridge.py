@@ -45,7 +45,9 @@ from arena.models.actions import (
 )
 from arena.models.character import Creature, CreatureSize, CreatureType, PlayerCharacter
 from arena.models.conditions import BuffEffect
-from arena.models.encounter import CombatantEntry, Encounter, TerrainHex, TerrainType
+from arena.models.encounter import (CombatantEntry, Encounter,
+                                    HouseRules as ArenaHouseRules,
+                                    TerrainHex, TerrainType)
 from arena.models.monster import Monster
 from arena.paths import DATA_DIR
 
@@ -426,7 +428,8 @@ def equipped_wards(
     return resist, immune
 
 
-def _drink_action(item: SrdEquipment, qty: int) -> Action:
+def _drink_action(item: SrdEquipment, qty: int,
+                  potions_bonus_action: bool = False) -> Action:
     """One self-targeted "drink it" Action for a mapped consumable. The entry
     invariant of the handoff-v2 contract is set HERE: the action enters combat with
     ``current_uses == uses_per_rest == the inventory stack quantity``, so the result's
@@ -456,7 +459,9 @@ def _drink_action(item: SrdEquipment, qty: int) -> Action:
             parts.append(f"{ability.capitalize()} becomes {score}")
             buffs.append(BuffEffect(stat=ability, modifier_type="set", value=score))
         effect = ", ".join(parts)
-    bonus = "bonus" in (consumable.action or "").lower()
+    # House rule: the world may declare EVERY potion a bonus-action drink;
+    # otherwise the item's own authored action cost decides.
+    bonus = potions_bonus_action or "bonus" in (consumable.action or "").lower()
     return Action(
         name=item.name,
         description=f"Drink the {item.name}: {effect}.",
@@ -488,7 +493,8 @@ def _drinkable(item: SrdEquipment | None) -> bool:
 
 
 def consumable_actions(
-    char: Character, catalog: dict[str, SrdEquipment] | None
+    char: Character, catalog: dict[str, SrdEquipment] | None,
+    potions_bonus_action: bool = False,
 ) -> list[Action]:
     """The Arena actions for the drinkable consumables in a character's inventory.
 
@@ -506,7 +512,8 @@ def consumable_actions(
         if not _drinkable(catalog.get(stack.item_id)):
             continue
         qty_by_id[stack.item_id] = qty_by_id.get(stack.item_id, 0) + stack.qty
-    return [_drink_action(catalog[item_id], qty) for item_id, qty in qty_by_id.items()]
+    return [_drink_action(catalog[item_id], qty, potions_bonus_action)
+            for item_id, qty in qty_by_id.items()]
 
 
 # RAW spell-scroll save DCs by the inscribed spell's level. The scroll's fixed
@@ -808,6 +815,7 @@ def character_to_player(
     char: Character,
     catalog: dict[str, SrdEquipment] | None = None,
     ruleset=None,
+    potions_bonus_action: bool = False,
 ) -> PlayerCharacter:
     """Map a party member (`Character`, kind=pc) → an Arena `PlayerCharacter`.
     With a `catalog` (the SRD equipment dict), the inventory's drinkable
@@ -877,7 +885,7 @@ def character_to_player(
                 DEFAULT_DAMAGE_TYPE, prof, carrier, magic_bonus=weapon_bonus,
             ),
             *turn_spells,
-            *consumable_actions(char, catalog),
+            *consumable_actions(char, catalog, potions_bonus_action),
             *scroll_actions(char, catalog, ruleset),
             *weapon_kit_actions(char, catalog),
             *extra_actions,
@@ -1226,6 +1234,7 @@ def build_encounter(
     portraits: PortraitDirs | None = None,
     battle: BattleSetting | None = None,
     companion_kits: dict[str, Monster] | None = None,
+    house_rules=None,
 ) -> EncounterPlan:
     """Assemble an Arena `Encounter` from the live party + resolved enemies +
     terrain. Counts are pre-expanded (one `CombatantEntry` per individual, with
@@ -1249,6 +1258,17 @@ def build_encounter(
     persistent_ids: dict[str, str] = {}
     loot_by_name: dict[str, list[ValueEntry]] = {}
     resources_by_name: dict[str, StagedResources] = {}
+
+    # House rules (per-world variants): the combat-behavior rules ride the
+    # encounter file into the Arena; the potion action-economy rule is baked
+    # into the drink actions right here, story-side.
+    potions_bonus = bool(getattr(house_rules, "potions_bonus_action", False))
+    arena_rules = ArenaHouseRules(
+        initiative=getattr(house_rules, "initiative", "standard"),
+        flanking=bool(getattr(house_rules, "flanking", False)),
+        crit_range_19=bool(getattr(house_rules, "crit_range_19", False)),
+        brutal_crits=bool(getattr(house_rules, "brutal_crits", False)),
+    )
 
     grid_w = battle.grid_width if battle else GRID_WIDTH
     grid_h = battle.grid_height if battle else GRID_HEIGHT
@@ -1276,9 +1296,9 @@ def build_encounter(
             creature.current_hit_points = max(0, min(char.hp, char.max_hp))
             creature.experience_points = 0
             creature.actions = [*creature.actions,
-                                *consumable_actions(char, catalog)]
+                                *consumable_actions(char, catalog, potions_bonus)]
         else:
-            creature = character_to_player(char, catalog, ruleset)
+            creature = character_to_player(char, catalog, ruleset, potions_bonus)
         pos = _spawn_anchor(creature.size, player_col, taken, grid_w, grid_h)
         if portraits is not None:
             art = _token_image([portraits.pc], [char.portrait])
@@ -1330,6 +1350,7 @@ def build_encounter(
         background_image=battle.background_path if battle else None,
         background_offset=battle.background_offset if battle else (0.0, 0.0),
         background_scale=battle.background_scale if battle else 1.0,
+        house_rules=arena_rules,
     )
     return EncounterPlan(
         encounter=encounter,

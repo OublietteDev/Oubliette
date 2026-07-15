@@ -91,6 +91,7 @@ class LoadedWorld:
     pack_name: str = ""            # the pack's display name (manifest.name; bestiary source label)
     statblocks: tuple = ()         # the pack's authored StatBlocks (this-world bestiary section)
     bestiary_gate: "BestiaryGate | None" = None   # per-world bestiary knowledge cutoff (manifest)
+    house_rules: "HouseRules | None" = None       # the author's table variants (manifest)
     quests: tuple = ()             # the pack's authored quests (offered during play, not canon)
     factions: tuple = ()           # the pack's authored Factions (living-world W2)
     world_events: tuple = ()       # the pack's scheduled WorldEvents (living-world W4)
@@ -763,7 +764,8 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
         travel_scale=manifest.travel_scale,
         ruleset=ruleset,
         pack_name=manifest.name, statblocks=tuple(statblocks),
-        bestiary_gate=manifest.bestiary_gate, quests=tuple(quests),
+        bestiary_gate=manifest.bestiary_gate, house_rules=manifest.house_rules,
+        quests=tuple(quests),
         factions=tuple(factions), world_events=tuple(world_events),
         ai_profiles=tuple(ai_profiles),
         npc_statblocks={n.id: n.stat_block for n in npcs if n.stat_block},

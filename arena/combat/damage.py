@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 
 from arena.models.character import Creature
 from arena.models.actions import DamageRoll
-from arena.util.dice import roll_expression
+from arena.util.dice import parse_dice_expression, roll_expression
 from arena.combat.events import CombatEvent, CombatEventType
 from arena.combat.stat_modifiers import (
     get_effective_ability_modifier,
@@ -60,6 +60,19 @@ class DamagePacket:
         return detail
 
 
+def _max_expression(expression: str) -> tuple[int, list[int]]:
+    """A dice expression at its maximum — 2d6 → (12, [6, 6]). The brutal-crits
+    house rule's version of the crit dice. Falls back to a normal roll if the
+    expression doesn't parse as dice."""
+    try:
+        count, sides, modifier = parse_dice_expression(expression)
+    except (ValueError, AttributeError):
+        return roll_expression(expression)
+    if count == 0:
+        return modifier, []
+    return count * sides + modifier, [sides] * count
+
+
 def roll_damage(
     damage_rolls: list[DamageRoll],
     attacker: Creature,
@@ -81,9 +94,15 @@ def roll_damage(
         # Roll the dice
         dice_total, dice_list = roll_expression(dr.dice)
 
-        # Critical hit: roll dice again and add
+        # Critical hit: roll dice again and add. House rule "brutal crits":
+        # the extra dice come in MAXIMIZED instead of re-rolled — a crit
+        # always feels like a crit.
         if is_critical:
-            crit_total, crit_list = roll_expression(dr.dice)
+            from arena.combat import house_rules as house_rules_mod
+            if house_rules_mod.active().brutal_crits:
+                crit_total, crit_list = _max_expression(dr.dice)
+            else:
+                crit_total, crit_list = roll_expression(dr.dice)
             dice_total += crit_total
             dice_list = dice_list + crit_list
 
