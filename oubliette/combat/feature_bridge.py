@@ -125,6 +125,18 @@ def features_for(char: Character) -> list[Feature]:
     char_class = (sheet.char_class or "").strip().lower()
     out: list[Feature] = []
 
+    # Feats (sheet.feats are plain names): Alert is the one with combat-engine
+    # teeth — +5 initiative and immunity to surprise. Other feats stay
+    # story-side prose until they earn an engine mapping.
+    for feat_name in getattr(sheet, "feats", None) or ():
+        if feat_name.strip().lower() == "alert":
+            out.append(Feature(
+                name="Alert",
+                description="+5 initiative; cannot be surprised while conscious.",
+                bonus_initiative=5,
+                grants_condition_immunities=["surprised"],
+            ))
+
     for ref in sheet.features:
         name = ref.name.strip().lower()
         desc = ref.text or ref.name

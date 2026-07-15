@@ -1668,6 +1668,7 @@ function renderEncounters() {
         </select></label>
         <label>Party level ≥ <input type="number" min="1" max="20" style="width:60px" data-enc-lvl="${i}" value="${(en.trigger && en.trigger.min_party_level) || ""}" placeholder="any" /></label>
         <label class="chk" style="display:inline-flex"><input type="checkbox" data-enc-once="${i}"${en.once !== false ? " checked" : ""}> once per campaign</label>
+        <label class="chk" style="display:inline-flex" title="A true ambush: the party is surprised and loses its opening turn (heroes with Alert are immune)"><input type="checkbox" data-enc-ambush="${i}"${en.ambush ? " checked" : ""}> ambush (party surprised)</label>
       </div>
       <textarea data-enc-brief="${i}" placeholder="Secret staging notes for the AI DM — how the fight begins (“they drop from the rafters as the doors slam shut”)." style="margin-top:8px">${esc(en.briefing || "")}</textarea>
     </div>`).join("") || '<div class="nothing" style="margin-bottom:8px">No keyed encounters — fights here are up to the AI DM.</div>';
@@ -1683,6 +1684,7 @@ function renderEncounters() {
   on("[data-enc-time]", "change", e => { trig(+e.target.dataset.encTime).time_of_day = e.target.value; });
   on("[data-enc-lvl]", "input", e => { trig(+e.target.dataset.encLvl).min_party_level = e.target.value; });
   on("[data-enc-once]", "change", e => { encs[+e.target.dataset.encOnce].once = e.target.checked; });
+  on("[data-enc-ambush]", "change", e => { encs[+e.target.dataset.encAmbush].ambush = e.target.checked; });
   on("[data-enc-brief]", "input", e => { encs[+e.target.dataset.encBrief].briefing = e.target.value; });
   const sum = document.getElementById("encSummary");
   if (sum) sum.textContent = encs.length ? ` — ${encs.length}` : " — none";
@@ -1910,6 +1912,11 @@ function renderBattle() {
       <div class="cue-row"><span class="cue-when">layout</span>
         <span style="flex:1">${b.grid_width}×${b.grid_height} grid · ${nTerrain} terrain hex${nTerrain === 1 ? "" : "es"}</span>
       </div>
+      <div class="cue-row" title="Give this battlefield's walls hit points and heroes (and foes' spells) can smash through them — a wooden palisade breaks before a keep. Empty = walls here are permanent scenery.">
+        <span class="cue-when">wall HP</span>
+        <input type="number" id="btlWallHp" min="1" max="500" style="width:80px" value="${b.wall_hp || ""}" placeholder="solid" />
+        <span style="flex:1; font-size:11px; opacity:.7">hit points per wall hex — empty = unbreakable scenery</span>
+      </div>
       <div style="display:flex; gap:8px; margin-top:8px">
         <button class="btn mini" type="button" id="btlOpen">Open in Arena (paint terrain &amp; fit image)</button>
         <button class="btn mini danger" type="button" id="btlRemove">Remove battle map</button>
@@ -1932,6 +1939,11 @@ function renderBattle() {
       if (_preview) { _preview.pause(); _preview = null; }
       _preview = new Audio(`/api/pack/${encodeURIComponent(state.id)}/audio/${encodeURIComponent(f)}`);
       _preview.play().catch(e => toast("Couldn't play that track: " + (e.message || e)));
+    });
+    document.getElementById("btlWallHp").addEventListener("change", e => {
+      const v = parseInt(e.target.value, 10);
+      if (v >= 1) editorCtx.battle.wall_hp = Math.min(500, v);
+      else { delete editorCtx.battle.wall_hp; e.target.value = ""; }
     });
     document.getElementById("btlOpen").addEventListener("click", openBattleEditor);
     document.getElementById("btlRemove").addEventListener("click", () => { editorCtx.battle = null; renderBattle(); });
@@ -2059,6 +2071,7 @@ function confirmPlace(original) {
                     enemies: en.enemies.map(e => (+e.count > 1 ? { ref: e.ref.trim(), count: +e.count }
                                                                : { ref: e.ref.trim() })),
                     trigger: trig, once: en.once !== false };
+      if (en.ambush) out.ambush = true;
       if ((en.briefing || "").trim()) out.briefing = en.briefing.trim();
       return out;
     });

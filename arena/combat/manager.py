@@ -248,6 +248,10 @@ class CombatManager:
         # Entering one of these hexes hurts — walked into or shoved into alike.
         self.terrain_hazards: dict[tuple[int, int], str] = {}
 
+        # Destructible authored walls: {(q, r) -> remaining hp}, read from wall
+        # terrain extra_data at load. A wall hex absent here is plain scenery.
+        self.terrain_wall_hp: dict[tuple[int, int], int] = {}
+
         # Terrain modifications (e.g., Wall of Stone, Spike Growth)
         self.active_terrain_mods: list = []  # list[TerrainModification], imported lazily
 
@@ -271,6 +275,10 @@ class CombatManager:
         self.legendary_points: dict[str, int] = {}  # creature_id -> remaining points
         self._legendary_queue: list[str] = []  # eligible creature IDs after turn ends
         self._legendary_actor_id: str | None = None  # who is currently acting
+
+        # Surprise (SRD): the side caught off guard, from the encounter file;
+        # marked as a SURPRISED condition per creature when initiative rolls.
+        self._surprised_side: str | None = None
 
         # Lair action tracking
         self.lair_actions: list = []  # list[Action], loaded from encounter
@@ -359,6 +367,8 @@ class CombatManager:
         if c is not None and (
             is_slowed(c.creature)
             or has_condition(c.creature, Condition.CONFUSED)
+            or has_condition(c.creature, Condition.SURPRISED)  # SRD: no reactions
+                                                # until their first turn ends
         ):
             return True
         return False
@@ -376,12 +386,14 @@ class CombatManager:
         """
         from arena.combat import house_rules as house_rules_mod
         house_rules_mod.set_active(encounter.house_rules)
+        self._surprised_side = encounter.surprised_side
 
         self.grid = HexGrid(encounter.grid_width, encounter.grid_height)
 
         # Apply terrain (hazard hexes keep their authored damage spec — the
         # grid cell only stores the type, so the spec lives on the manager)
         self.terrain_hazards = {}
+        self.terrain_wall_hp = {}
         for th in encounter.terrain:
             coord = HexCoord(th.position[0], th.position[1])
             self.grid.set_terrain(coord, th.terrain_type)
@@ -389,6 +401,10 @@ class CombatManager:
                 spec = (th.extra_data or {}).get("damage")
                 if spec:
                     self.terrain_hazards[(coord.q, coord.r)] = str(spec)
+            elif th.terrain_type == TerrainType.WALL:
+                hp = (th.extra_data or {}).get("hp")
+                if hp:                        # destructible authored wall
+                    self.terrain_wall_hp[(coord.q, coord.r)] = int(hp)
 
         # Load and place combatants
         for entry in encounter.combatants:
@@ -534,6 +550,25 @@ class CombatManager:
                 is_lair=True,
             )
             self.initiative.add_entry(lair_entry)
+
+        # Surprise (SRD): mark the caught-off-guard side. apply_condition
+        # respects condition immunity, so an Alert hero shrugs it off here.
+        if self._surprised_side:
+            for cid, comb in self.combatants.items():
+                side = "player" if comb.team in ("player", "ally") else "enemy"
+                if side != self._surprised_side:
+                    continue
+                ev = apply_condition(comb.creature, cid, Condition.SURPRISED,
+                                     source="surprise")
+                if ev is not None:
+                    self.log.add(ev)
+                else:
+                    self.log.add(CombatEvent(
+                        event_type=CombatEventType.INFO,
+                        message=f"{comb.creature.name} cannot be surprised — "
+                                "they saw it coming!",
+                        source_id=cid,
+                    ))
 
         # Log initiative order
         for entry in self.initiative.entries:
@@ -787,6 +822,25 @@ class CombatManager:
                     source_id=combatant.creature_id,
                 )
             )
+            self.end_turn()
+            return
+
+        # Surprise (SRD): a surprised creature loses its FIRST turn — skipped
+        # here, and the condition ends WITH that turn (their reactions come
+        # back once their slot in the round has passed).
+        if has_condition(combatant.creature, Condition.SURPRISED):
+            self.log.add(
+                CombatEvent(
+                    event_type=CombatEventType.INFO,
+                    message=(
+                        f"{combatant.creature.name} is surprised — caught off "
+                        f"guard, they lose the turn!"
+                    ),
+                    source_id=combatant.creature_id,
+                )
+            )
+            remove_condition(combatant.creature, combatant.creature_id,
+                             Condition.SURPRISED)
             self.end_turn()
             return
 
@@ -3125,6 +3179,91 @@ class CombatManager:
         if not wall_hexes:
             return None
         return self._execute_wall_spell(action, combatant, wall_hexes)
+
+    # ------------------------------------------------------------------
+    # Destructible walls (SRD gap-fill): smash a spell-wall panel or an
+    # authored terrain wall that the battlefield gave hit points.
+    # ------------------------------------------------------------------
+
+    def wall_target_at(self, hex_coord: HexCoord) -> dict | None:
+        """The breakable wall at a hex, or None.
+
+        Returns {"kind": "spell", "wall": ActiveWall, "panel": index} for a
+        spell wall's intact panel, or {"kind": "terrain", "key": (q, r)} for
+        an authored wall hex with hit points. Indestructible walls (Wall of
+        Force, plain scenery) return None — they aren't targets."""
+        for wall in self.active_walls:
+            for idx, panel in enumerate(wall.panels):
+                if panel.is_destroyed or panel.max_hp is None:
+                    continue
+                if hex_coord in panel.hexes:
+                    return {"kind": "spell", "wall": wall, "panel": idx}
+        key = (hex_coord.q, hex_coord.r)
+        if key in self.terrain_wall_hp:
+            return {"kind": "terrain", "key": key}
+        return None
+
+    def attack_wall(self, attacker_id: str, hex_coord: HexCoord,
+                    action: Action) -> bool:
+        """Resolve an attack action against a breakable wall at *hex_coord*.
+
+        Object rules, kept simple: a wall doesn't dodge, so the attack hits
+        without a roll; damage is the action's dice (no crit), and — per the
+        SRD's object rules — poison and psychic damage do nothing to a wall.
+        Returns True if the swing resolved (the caller spends the action)."""
+        target = self.wall_target_at(hex_coord)
+        if target is None or action.attack is None:
+            return False
+        from arena.combat.damage import roll_damage
+        attacker = self.combatants[attacker_id].creature
+        packets = roll_damage(action.attack.damage, attacker)
+        total = sum(p.amount for p in packets
+                    if p.dtype not in ("poison", "psychic"))
+        if target["kind"] == "spell":
+            wall, idx = target["wall"], target["panel"]
+            destroyed = wall.damage_panel(idx, total)
+            panel = wall.panels[idx]
+            self.log.add(CombatEvent(
+                event_type=CombatEventType.DAMAGE,
+                message=(f"{attacker.name} smashes at the {wall.name} — "
+                         f"{total} damage. "
+                         + ("A panel SHATTERS!" if destroyed else
+                            f"The panel holds ({panel.current_hp}/{panel.max_hp} hp).")),
+                source_id=attacker_id,
+                details={"wall_attack": True, "destroyed": destroyed},
+            ))
+        else:
+            key = target["key"]
+            remaining = self.terrain_wall_hp[key] - total
+            if remaining <= 0:
+                del self.terrain_wall_hp[key]
+                self.grid.set_terrain(HexCoord(*key), TerrainType.NORMAL)
+                self.log.add(CombatEvent(
+                    event_type=CombatEventType.DAMAGE,
+                    message=(f"{attacker.name} smashes the wall — {total} "
+                             "damage. It CRUMBLES, and the way is open!"),
+                    source_id=attacker_id,
+                    details={"wall_attack": True, "destroyed": True},
+                ))
+            else:
+                self.terrain_wall_hp[key] = remaining
+                self.log.add(CombatEvent(
+                    event_type=CombatEventType.DAMAGE,
+                    message=(f"{attacker.name} batters the wall — {total} "
+                             f"damage. It holds ({remaining} hp)."),
+                    source_id=attacker_id,
+                    details={"wall_attack": True, "destroyed": False},
+                ))
+        # A broken wall opens paths and sightlines NOW — refresh the mover's
+        # blocked set the same way a fresh wall-cast does (LOS reads live).
+        if self.movement is not None:
+            self.movement.blocked_hexes = self._get_wall_blocked_hexes()
+        # The swing spends its action-economy slot like any attack.
+        self._mark_action_type_used(action)
+        self.selected_action = None
+        self._cast_level = None
+        self.turn_phase = TurnPhase.AWAITING_ACTION
+        return True
 
     def _get_wall_blocked_hexes(self) -> set[tuple[int, int]]:
         """Compute the set of (q, r) tuples blocked by active walls.

@@ -40,6 +40,11 @@ class Condition(str, Enum):
     SLOWED = "slowed"  # Slow (D-CTRL-1): the visible marker for the Slow spell.
     # Carries the badge + is the is_slowed() source (no reactions, action XOR
     # bonus); the speed/AC/DEX-save penalties ride alongside on the "Slow" buff.
+    SURPRISED = "surprised"  # SRD surprise: caught off guard as the fight opened —
+    # loses its first turn (the manager's start-of-turn hook skips it and clears
+    # this) and can't take reactions while it lasts. Applied at initiative from
+    # the encounter's surprised_side; Alert-style immunity blocks it (the feat's
+    # grants_condition_immunities carries "surprised").
     CONFUSED = "confused"  # Confusion (D-CTRL-1): can't take reactions and rolls a
     # d10 at the start of each turn for its behavior (wander / freeze / lash out /
     # act normally). Lifecycle: applied on a failed save with an end-of-turn

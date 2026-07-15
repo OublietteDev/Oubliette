@@ -1136,8 +1136,13 @@ def battle_setting(battle: "BattleMap", pack_dir: Path | None) -> BattleSetting:
             kind = TerrainType(t.terrain_type)
         except ValueError:
             continue
+        extra = dict(t.extra_data)
+        # Destructible walls: the battlefield's wall_hp stamps every wall hex
+        # (a per-hex authored "hp" in extra_data wins if present).
+        if kind == TerrainType.WALL and battle.wall_hp and "hp" not in extra:
+            extra["hp"] = battle.wall_hp
         terrain.append(TerrainHex(position=(q, r), terrain_type=kind,
-                                  extra_data=dict(t.extra_data)))
+                                  extra_data=extra))
 
     def _asset(sub: str, name: str | None) -> str | None:
         if not name or pack_dir is None:
@@ -1235,6 +1240,7 @@ def build_encounter(
     battle: BattleSetting | None = None,
     companion_kits: dict[str, Monster] | None = None,
     house_rules=None,
+    surprised: str = "none",
 ) -> EncounterPlan:
     """Assemble an Arena `Encounter` from the live party + resolved enemies +
     terrain. Counts are pre-expanded (one `CombatantEntry` per individual, with
@@ -1351,6 +1357,9 @@ def build_encounter(
         background_offset=battle.background_offset if battle else (0.0, 0.0),
         background_scale=battle.background_scale if battle else 1.0,
         house_rules=arena_rules,
+        # Surprise: the story's side names ("party"/"enemies") become the
+        # Arena's team names; "none" ships as None (no one is surprised).
+        surprised_side={"party": "player", "enemies": "enemy"}.get(surprised),
     )
     return EncounterPlan(
         encounter=encounter,

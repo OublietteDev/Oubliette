@@ -38,6 +38,10 @@ class EncounterRequest(BaseModel):
     """Emitted by the narrator when it detects hostility (declarative, §8)."""
 
     kind: str = "brawl"         # "ambush", "standoff", "brawl", ...
+    # Surprise (SRD): which side is caught off guard when the fight opens. The
+    # DM judges it from the fiction (or an authored keyed ambush sets it); the
+    # surprised side loses its first turn and takes no reactions until then.
+    surprised: Literal["none", "party", "enemies"] = "none"
     enemies: list[EnemyRef] = Field(default_factory=list)
     # Friendly entities that fight on the player's side this encounter (4b-ally):
     # ids of present, allied persistent entities (a recruited person-NPC, a guard

@@ -11,6 +11,8 @@ from arena.grid.hexgrid import HexGrid
 from arena.combat.actions import resolve_attack, ActionResult
 from arena.combat.events import CombatEvent, CombatEventType
 from arena.combat.condition_effects import can_take_actions
+from arena.combat.conditions import has_condition
+from arena.models.conditions import Condition
 
 if TYPE_CHECKING:
     from arena.combat.manager import Combatant
@@ -62,6 +64,10 @@ def check_opportunity_attacks(
 
         # Check if reaction already used
         if reaction_used.get(cid, False):
+            continue
+
+        # Surprise (SRD): no reactions until their first turn has passed
+        if has_condition(combatant.creature, Condition.SURPRISED):
             continue
 
         # Must be hostile (different team)

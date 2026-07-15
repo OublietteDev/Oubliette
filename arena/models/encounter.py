@@ -73,6 +73,10 @@ class Encounter(BaseModel):
     use_ai_for_allies: bool = False
     auto_roll_initiative: bool = True
     house_rules: HouseRules = Field(default_factory=HouseRules)
+    # SRD surprise: the side caught off guard when this fight opens ("player" |
+    # "enemy" | None). Surprised combatants lose their first turn and take no
+    # reactions until it passes; creatures immune to surprise (Alert) are exempt.
+    surprised_side: str | None = None
 
     # Lair actions (encounter-level, not creature-level)
     has_lair: bool = False

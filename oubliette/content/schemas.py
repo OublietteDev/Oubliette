@@ -578,6 +578,10 @@ class BattleMap(_Strict):
     grid_width: int = Field(default=20, ge=5, le=40)
     grid_height: int = Field(default=15, ge=5, le=40)
     terrain: list[BattleTerrain] = Field(default_factory=list)
+    wall_hp: int | None = Field(default=None, ge=1, le=500)  # destructible walls:
+                                     # hit points per wall hex on THIS battlefield
+                                     # (a wooden palisade breaks before a keep);
+                                     # None = walls here are permanent scenery
 
 
 # --- factions (living-world W2) -----------------------------------------------
@@ -628,6 +632,8 @@ class KeyedEncounter(_Strict):
     trigger: KeyedTrigger = Field(default_factory=KeyedTrigger)
     once: bool = True                # fire at most once per campaign; False re-arms
                                      # each new visit (night wolves you dodged by day)
+    ambush: bool = False             # a true ambush: the PARTY is surprised — they lose
+                                     # their opening turn (SRD surprise; Alert is immune)
     briefing: str = ""               # DM-secret staging text ("they drop from the rafters")
     # Authored friendlies: pack NPC entity ids who fight PLAYER-SIDE in this
     # fight (Seraphel rising beside the party). Rides the EncounterRequest.allies

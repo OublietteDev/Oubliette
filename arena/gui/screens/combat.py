@@ -1039,6 +1039,27 @@ class CombatScreen(Screen):
                     self._check_pending_counterspell()
                     self._check_pending_reroll()
                     return
+            # Destructible walls: an attack aimed at a breakable wall hex
+            # smashes it instead of cancelling — spell-wall panels and
+            # authored walls with hit points alike (indestructible walls
+            # still fall through to the cancel below).
+            if (selected and selected.attack is not None
+                    and self.combat.wall_target_at(clicked_hex) is not None):
+                from arena.grid.footprint import min_distance_between
+                from arena.models.character import CreatureSize
+                reach_ft = (selected.attack.reach
+                            if selected.attack.attack_type.startswith("melee")
+                            else selected.attack.range_normal) or 5
+                dist = min_distance_between(
+                    combatant.position, combatant.creature.size,
+                    clicked_hex, CreatureSize.MEDIUM,
+                )
+                if dist <= max(1, reach_ft // 5):
+                    if self.combat.attack_wall(
+                            combatant.creature_id, clicked_hex, selected):
+                        return
+                return                    # a wall out of reach: keep aiming
+
             # Clicking empty hex cancels target selection
             if self._pending_help:
                 self._pending_help = False

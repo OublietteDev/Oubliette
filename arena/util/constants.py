@@ -281,6 +281,7 @@ CONDITION_DISPLAY: dict[str, tuple[str, str]] = {
     "reckless": ("RK", "condition_neutral"),  # double-edged: adv on its melee, but attackers gain adv vs it
     "confused": ("CF", "condition_debuff"),
     "slowed": ("SL", "condition_debuff"),
+    "surprised": ("SP", "condition_debuff"),  # loses its first turn; no reactions until it passes
 }
 
 PROFICIENCY_BY_LEVEL = {
