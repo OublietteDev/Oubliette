@@ -255,10 +255,18 @@ def test_best_equipped_weapon_counts_not_the_sum():
 
 
 def test_defensive_magic_items_stack_into_ac():
-    pc = _pc(equipped=["armor_1", "ring_of_protection"])  # +1 armor, +1 ring
+    # the ring requires attunement (the +1 armor doesn't) — bonded, both count
+    pc = _pc(equipped=["armor_1", "ring_of_protection"],  # +1 armor, +1 ring
+             attuned=["ring_of_protection"])
     creature = character_to_player(pc, RS.equipment)
     assert creature.armor_class == 15 + 2                 # story AC 15
     assert creature.actions[0].attack.magical is False    # weapon untouched
+
+
+def test_unattuned_ring_of_protection_wards_nothing():
+    pc = _pc(equipped=["armor_1", "ring_of_protection"])  # ring worn, never bonded
+    creature = character_to_player(pc, RS.equipment)
+    assert creature.armor_class == 15 + 1                 # only the armor's +1
 
 
 def test_ammunition_is_skipped_for_the_melee_basic_attack():

@@ -179,10 +179,19 @@ def _pc(**over) -> Character:
 
 
 def test_equipped_pack_weapon_bonus_reaches_the_bridge():
+    # the Flametongue requires attunement — bonded, its +1 reaches the bridge
+    pc = _pc(inventory=[ItemStack(item_id="brightvale_flametongue", qty=1)],
+             equipped=["brightvale_flametongue"], attuned=["brightvale_flametongue"])
+    cat = mechanics_catalog(RS, [_flametongue()])
+    assert equipped_magic(pc, cat) == (1, 0)
+
+
+def test_an_unattuned_attunement_item_is_inert():
+    # worn but never bonded: the blade is just a sword (attunement enforcement)
     pc = _pc(inventory=[ItemStack(item_id="brightvale_flametongue", qty=1)],
              equipped=["brightvale_flametongue"])
     cat = mechanics_catalog(RS, [_flametongue()])
-    assert equipped_magic(pc, cat) == (1, 0)
+    assert equipped_magic(pc, cat) == (0, 0)
 
 
 def test_equipped_pack_defensive_item_raises_ac():

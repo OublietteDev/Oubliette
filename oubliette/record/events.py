@@ -30,6 +30,9 @@ class EventKind(str, Enum):
     CREATE_ENTITY = "create_entity"     # canon content born provisional (§7)
     CANON_PROMOTED = "canon_promoted"   # provisional -> confirmed (§11)
     EQUIP_CHANGED = "equip_changed"     # player loadout change (bounded player action)
+    ATTUNEMENT_CHANGED = "attunement_changed"  # a hero's attuned-item bonds changed outside a rest
+                                        # (an attuned item left their hands); rest-time attunement
+                                        # choices ride REST_TAKEN itself
     LOCATION_CHANGED = "location_changed"   # party travels to another Place (DM tool)
     ENVIRONMENT_CHANGED = "environment_changed"  # time-of-day / weather (DM-reported)
     QUEST_STARTED = "quest_started"     # a new quest the DM introduced
@@ -82,8 +85,8 @@ class StateOp(BaseModel):
     `hp_set`/`conditions` are absolute (D7)."""
 
     op: Literal["coin", "gold", "item", "hp_set", "xp", "conditions", "equip",
-                "slots_used", "hit_dice_used", "resources_used", "max_hp", "level",
-                "portrait", "spells_prepared"]
+                "attune", "slots_used", "hit_dice_used", "resources_used", "max_hp",
+                "level", "portrait", "spells_prepared"]
     char: str
     item_id: str | None = None
     delta: int | None = None
@@ -125,6 +128,10 @@ class StateOp(BaseModel):
     @classmethod
     def equip(cls, char: str, item_ids: list[str]) -> "StateOp":
         return cls(op="equip", char=char, item_ids=list(item_ids))
+
+    @classmethod
+    def attune(cls, char: str, item_ids: list[str]) -> "StateOp":
+        return cls(op="attune", char=char, item_ids=list(item_ids))
 
     @classmethod
     def slots_used(cls, char: str, mapping: dict) -> "StateOp":
@@ -173,6 +180,8 @@ class StateOp(BaseModel):
             repo.set_conditions(self.char, self.conditions or [])
         elif self.op == "equip":
             repo.set_equipped(self.char, self.item_ids or [])
+        elif self.op == "attune":
+            repo.set_attuned(self.char, self.item_ids or [])
         elif self.op == "slots_used":
             repo.set_slots_used(self.char, {int(k): v for k, v in (self.mapping or {}).items()})
         elif self.op == "hit_dice_used":

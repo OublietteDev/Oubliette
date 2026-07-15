@@ -147,6 +147,7 @@ class Character(BaseModel):
     coin: int = 0
     inventory: list[ItemStack] = Field(default_factory=list)
     equipped: list[str] = Field(default_factory=list)   # item_ids worn/wielded (player loadout)
+    attuned: list[str] = Field(default_factory=list)    # item_ids bonded (max 3; chosen when the party rests)
     # The full D&D build (PCs from chargen). NPCs leave it None and run on stat-block
     # combat stats. Protected resource trackers (mutated in CS5: rests / casting).
     sheet: CharacterSheet | None = None

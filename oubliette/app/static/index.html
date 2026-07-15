@@ -375,6 +375,11 @@
   .sr-row .sr-name { flex: 1; font-family: var(--serif); color: var(--ink); }
   .sr-row .sr-flavor { font-size: 11.5px; color: var(--faint); }
   .sr-row input[type=number] { width: 60px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font: inherit; padding: 6px 8px; }
+  /* the attunement ritual (rest-time bond picker) */
+  .sr-attune { margin: -2px 0 6px; padding: 8px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; }
+  .sr-attn-hd { font-size: 11.5px; color: var(--faint); margin-bottom: 4px; }
+  .sr-attn-item { display: block; font-size: 13px; color: var(--ink); margin: 3px 0; cursor: pointer; }
+  .sr-attn-item input { margin-right: 7px; }
   .sr-foot { display: flex; align-items: center; padding: 14px 18px; border-top: 1px solid var(--line); }
   .trade-modal { width: min(740px, 92vw); max-height: 86vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--accent); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
   .trade-head { display: flex; align-items: center; gap: 14px; padding: 15px 18px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(0,0,0,.25), transparent); }
@@ -673,6 +678,8 @@
   .inv-row .meta { font-size: 12px; color: var(--faint); display: flex; gap: 10px; flex-wrap: wrap; }
   .inv-row .meta .ac { color: var(--accent-2); }
   .inv-row .meta .val { color: var(--gold); }
+  .inv-row .meta .attn { color: var(--faint); font-style: italic; }
+  .inv-row .meta .attn.on { color: var(--gold); font-style: normal; }
   .inv-eq { font-size: 10px; color: var(--accent-2); border: 1px solid #41613f; border-radius: 999px; padding: 1px 8px; text-transform: uppercase; letter-spacing: .06em; }
   .inv-row button { font: inherit; font-size: 12px; cursor: pointer; border-radius: 7px; padding: 6px 12px; border: 1px solid var(--line); background: #2a231d; color: var(--ink); }
   .inv-row button:hover { border-color: var(--accent); }
@@ -1126,8 +1133,8 @@
 
 <div id="shortrest-overlay" class="overlay hidden">
   <div class="sr-modal">
-    <div class="sr-head"><h2>Short Rest</h2><div class="spacer"></div></div>
-    <div class="sr-note">Each hero may spend hit dice to heal (rolled + CON). Short-rest features recharge for the whole party.</div>
+    <div class="sr-head"><h2 id="shortrest-title">Short Rest</h2><div class="spacer"></div></div>
+    <div class="sr-note" id="shortrest-note">Each hero may spend hit dice to heal (rolled + CON). Short-rest features recharge for the whole party.</div>
     <div class="sr-body" id="shortrest-body"></div>
     <div class="sr-foot">
       <button class="act" id="shortrest-cancel">Cancel</button>
@@ -1973,11 +1980,8 @@ function hideRestBar() { restBar.classList.add("hidden"); }
 $("rest-take").addEventListener("click", async () => {
   hideRestBar();
   if (busy || gameEnded || combatPending) return;
-  if (restKind === "long") { await doRestParty("long", null); return; }
-  if (!(sheetParty || []).length) {     // popup needs the roster; fetch if the sheet never opened
-    try { renderSheet(await (await fetch("/api/sheet")).json()); } catch (e) { /* transient */ }
-  }
-  openShortRest();
+  if (restKind === "long") { await startLongRest(); return; }
+  await openShortRest();               // refreshes the roster itself
 });
 $("rest-dismiss").addEventListener("click", hideRestBar);
 
@@ -4147,6 +4151,8 @@ function invRow(it, memberId) {
   if (it.qty > 1) meta.appendChild(el("span", null, "×" + it.qty));
   meta.appendChild(el("span", null, cap(it.category)));
   if (it.armor_class != null) meta.appendChild(el("span", "ac", "AC " + it.armor_class));
+  if (it.requires_attunement) meta.appendChild(el("span", "attn" + (it.attuned ? " on" : ""),
+    it.attuned ? "✦ attuned" : "needs attunement (at a rest)"));
   if (it.value_text) meta.appendChild(el("span", "val", "~" + it.value_text));
   info.appendChild(meta);
   row.appendChild(info);
@@ -4413,7 +4419,8 @@ function renderSheetMember(m) {
   const eq = el("div", "sh-sec"); eq.appendChild(el("h3", null, "Equipment"));
   const tags = el("div", "sh-tags2");
   m.inventory.forEach(it => tags.appendChild(el("span", "sh-pill",
-    `${it.name}${it.qty > 1 ? " ×" + it.qty : ""}${it.equipped ? " ⚔" : ""}`)));
+    `${it.name}${it.qty > 1 ? " ×" + it.qty : ""}${it.equipped ? " ⚔" : ""}` +
+    (it.attuned ? " ✦" : it.requires_attunement ? " (unattuned)" : ""))));
   if (!m.inventory.length) tags.appendChild(el("span", "sh-flavor", "empty-handed"));
   eq.appendChild(tags); root.appendChild(eq);
 
@@ -4449,7 +4456,7 @@ function renderRestBar(m) {
       send("We find somewhere to settle in for the night and rest.");
       return;
     }
-    doRestParty("long", null);
+    startLongRest();
   });
   longBtn.title = restStrictness !== "free"
     ? "This table gates long rests — this asks the DM in the story"
@@ -4469,26 +4476,75 @@ function renderRestBar(m) {
   bar.appendChild(exBtn);
   return bar;
 }
-// The party short-rest popup: a hit-dice spinner per hero, one Confirm.
+// The party rest popup: a hit-dice spinner per hero (short rests) plus the
+// attunement ritual (any rest) — each hero picks which of their attunable items
+// they're bonded to, up to the cap, and the choice applies AS PART of the rest.
 let shortRestInputs = {};
-function openShortRest() {
+let attuneChecks = {};          // charId -> [{cb, itemId}] (the ritual's checkboxes)
+let restPopupKind = "short";
+async function refreshRoster() {
+  // the popup reads sheetParty; re-fetch so hit dice and attunables are current
+  try { renderSheet(await (await fetch("/api/sheet")).json()); } catch (e) { /* transient */ }
+}
+function partyHasAttunables() {
+  return (sheetParty || []).some(m => m.attunement && m.attunement.attunable.length);
+}
+function openRestPopup(kind) {
+  restPopupKind = kind;
+  $("shortrest-title").textContent = kind === "long" ? "Long Rest" : "Short Rest";
+  $("shortrest-note").textContent = kind === "long"
+    ? "The party beds down for the night: full HP, spell slots, and resources at dawn."
+    : "Each hero may spend hit dice to heal (rolled + CON). Short-rest features recharge for the whole party.";
   const body = $("shortrest-body"); body.innerHTML = "";
-  shortRestInputs = {};
+  shortRestInputs = {}; attuneChecks = {};
   (sheetParty || []).forEach(m => {
-    const avail = m.hit_dice ? (m.hit_dice.total - m.hit_dice.used) : 0;
     const row = el("div", "sr-row");
     row.appendChild(el("span", "sr-name", m.name));
-    if (m.hit_dice && m.hit_dice.die && avail > 0) {
-      const inp = el("input"); inp.type = "number"; inp.min = 0; inp.max = avail; inp.value = 0;
-      shortRestInputs[m.id] = inp;
-      row.appendChild(inp);
-      row.appendChild(el("span", "sr-flavor", `of ${avail}d${m.hit_dice.die}`));
-    } else {
-      row.appendChild(el("span", "sr-flavor", avail > 0 ? "" : "no hit dice"));
+    if (kind === "short") {
+      const avail = m.hit_dice ? (m.hit_dice.total - m.hit_dice.used) : 0;
+      if (m.hit_dice && m.hit_dice.die && avail > 0) {
+        const inp = el("input"); inp.type = "number"; inp.min = 0; inp.max = avail; inp.value = 0;
+        shortRestInputs[m.id] = inp;
+        row.appendChild(inp);
+        row.appendChild(el("span", "sr-flavor", `of ${avail}d${m.hit_dice.die}`));
+      } else {
+        row.appendChild(el("span", "sr-flavor", avail > 0 ? "" : "no hit dice"));
+      }
     }
     body.appendChild(row);
+    const at = m.attunement;
+    if (at && at.attunable.length) {
+      const box = el("div", "sr-attune");
+      box.appendChild(el("div", "sr-attn-hd",
+        `Attunement — up to ${at.max} bonded items; the rest is when bonds form or end:`));
+      const checks = [];
+      const seatbelts = () => {
+        const n = checks.filter(c => c.cb.checked).length;
+        checks.forEach(c => { c.cb.disabled = !c.cb.checked && n >= at.max; });
+      };
+      at.attunable.forEach(it => {
+        const lab = el("label", "sr-attn-item");
+        const cb = el("input"); cb.type = "checkbox"; cb.checked = !!it.attuned;
+        cb.addEventListener("change", seatbelts);
+        checks.push({ cb, itemId: it.item_id });
+        lab.appendChild(cb);
+        lab.appendChild(document.createTextNode(" " + it.name));
+        box.appendChild(lab);
+      });
+      seatbelts();
+      attuneChecks[m.id] = checks;
+      body.appendChild(box);
+    }
   });
   $("shortrest-overlay").classList.remove("hidden");
+}
+async function openShortRest() { await refreshRoster(); openRestPopup("short"); }
+// A long rest opens the popup only when there's an attunement choice to make —
+// otherwise it stays the same single click it's always been.
+async function startLongRest() {
+  await refreshRoster();
+  if (partyHasAttunables()) { openRestPopup("long"); return; }
+  await doRestParty("long", null, null);
 }
 function closeShortRest() { $("shortrest-overlay").classList.add("hidden"); }
 async function confirmShortRest() {
@@ -4497,14 +4553,20 @@ async function confirmShortRest() {
     const v = Math.max(0, parseInt(inp.value || "0", 10));
     if (v) by[id] = v;
   });
+  const attuneBy = {};
+  Object.entries(attuneChecks).forEach(([id, checks]) => {
+    attuneBy[id] = checks.filter(c => c.cb.checked).map(c => c.itemId);
+  });
   closeShortRest();
-  await doRestParty("short", by);
+  await doRestParty(restPopupKind, restPopupKind === "short" ? by : null,
+                    Object.keys(attuneBy).length ? attuneBy : null);
 }
-async function doRestParty(kind, hitDiceBy) {
+async function doRestParty(kind, hitDiceBy, attuneBy) {
   try {
     const res = await fetch("/api/rest", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kind, hit_dice_by: hitDiceBy || null }),
+      body: JSON.stringify({ kind, hit_dice_by: hitDiceBy || null,
+                             attune_by: attuneBy || null }),
     });
     const data = await res.json();
     if (!data.ok) { addMessage("System", data.message || ("Rest failed: " + (data.error || "unknown")), "system"); return; }

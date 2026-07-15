@@ -381,7 +381,8 @@ def equipped_magic(
     equipped defensive magic item adds its bonus to AC (armor + shield + ring DO
     stack). Ammunition is skipped — the basic attack is melee. The catalog is the
     session's merged SRD+pack set (module-kit S1), so Forge-authored +X items
-    enchant exactly like SRD ones."""
+    enchant exactly like SRD ones. An item that requires attunement is INERT
+    unless its bearer is attuned to it (the rest-time ritual)."""
     weapon_bonus, ac_bonus = 0, 0
     if not catalog:
         return 0, 0
@@ -389,6 +390,8 @@ def equipped_magic(
         item = catalog.get(item_id)
         if item is None or not item.magic_bonus:
             continue
+        if item.requires_attunement and item_id not in char.attuned:
+            continue                       # worn, but the bond was never made
         if item.item_type == "weapon":
             weapon_bonus = max(weapon_bonus, item.magic_bonus)
         elif item.item_type != "ammunition":
@@ -402,7 +405,8 @@ def equipped_wards(
     """(resistances, immunities) granted by the character's EQUIPPED items
     (module-kit S1.5 — Armor of Fire Resistance, a Ring of Poison Immunity).
     Deduplicated, first-seen order kept for a stable encounter file; the caller
-    merges them with whatever the character already carries (racial traits)."""
+    merges them with whatever the character already carries (racial traits).
+    An item that requires attunement wards nothing unless its bearer is attuned."""
     resist: list[str] = []
     immune: list[str] = []
     if not catalog:
@@ -411,6 +415,8 @@ def equipped_wards(
         item = catalog.get(item_id)
         if item is None:
             continue
+        if item.requires_attunement and item_id not in char.attuned:
+            continue                       # worn, but the bond was never made
         for dt in getattr(item, "grants_resistances", ()) or ():
             if dt not in resist:
                 resist.append(dt)

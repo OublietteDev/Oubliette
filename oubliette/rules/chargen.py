@@ -22,6 +22,7 @@ from ..content.ruleset import Ruleset
 from ..content.srd_schemas import CharClass, SrdEquipment
 from ..enums import Ability, Skill
 from ..record.rng import Rng
+from .attune import MAX_ATTUNED as ATTUNE_CAP
 from ..state.models import (AncestryChoice, Character, CharacterSheet,
                             FeatureRef, Item, ItemStack)
 from . import derive
@@ -511,6 +512,11 @@ def _assemble(build: CharacterBuild, cc: CharClass, race, subrace, subclass, bg,
     equipped = _auto_loadout(grants, ruleset)
     item_by_id = {it.id: it for it in items}
     equipped_items = [item_by_id[i] for i in equipped if i in item_by_id]
+    # A fresh hero arrives already bonded to their granted attunement items (up
+    # to the cap) — a starting kit that only works after the first rest would
+    # read as broken. From here on, attunement changes at rests.
+    attuned = [i for i in order if i in ruleset.equipment
+               and ruleset.equipment[i].requires_attunement][:ATTUNE_CAP]
 
     char = Character(
         id=char_id, name=build.name, kind="pc", level=START_LEVEL,
@@ -518,7 +524,7 @@ def _assemble(build: CharacterBuild, cc: CharClass, race, subrace, subclass, bg,
         skill_proficiencies=(set(build.skills) | {Skill(s) for s in bg.skill_proficiencies}
                              | set(build.race_skills)),
         coin=bg.starting_gold * 100,     # backgrounds author gp; wallet is copper
-        inventory=inventory, equipped=equipped,
+        inventory=inventory, equipped=equipped, attuned=attuned,
         sheet=sheet, description=build.description,
     )
     char.max_hp = derive.computed_max_hp(char, ruleset) or char.max_hp

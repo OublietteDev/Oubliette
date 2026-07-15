@@ -12,6 +12,7 @@ from __future__ import annotations
 from ..canon.models import CanonRecord
 from ..coin import format_cp
 from ..enums import Ability, Skill
+from ..rules import attune as attune_rules
 from ..rules.derive import (class_resources, save_modifier, skill_modifier,
                             spell_attack_bonus, spell_save_dc, spell_slots)
 from ..state.repository import Repository
@@ -29,7 +30,7 @@ def _ord(n: int) -> str:
     return {1: "st", 2: "nd", 3: "rd"}.get(n, "th")
 
 
-def _character_cards(repo: Repository, ruleset) -> list[str]:
+def _character_cards(repo: Repository, ruleset, mechanics: dict | None = None) -> list[str]:
     """A compact mechanical 'card' per sheeted PC (CS6): who they are, what they're
     trained in, their features/spells/resources — names and key numbers, never the
     full rulebook prose. The point is for the DM to call for the RIGHT check/save
@@ -123,6 +124,25 @@ def _character_cards(repo: Repository, ruleset) -> list[str]:
                     for name, info in res.items()) + ".")
         if pc.conditions:
             out.append("    Conditions: " + ", ".join(pc.conditions) + ".")
+        # Attunement (multiplayer pre-work): the hero's live bonds, plus any
+        # carried item that is INERT until attuned — so the DM never narrates a
+        # dormant ring working, and can nudge the party toward a rest.
+        def _item_nm(item_id: str) -> str:
+            try:
+                return repo.get_item(item_id).name
+            except Exception:
+                return item_id
+        bonds = attune_rules.active_attuned(pc)
+        dormant = [i for i in attune_rules.attunable_carried(pc, mechanics)
+                   if i not in pc.attuned]
+        if bonds or dormant:
+            bits = [f"Attuned ({len(bonds)}/{attune_rules.MAX_ATTUNED}): "
+                    + (", ".join(_item_nm(i) for i in bonds) or "nothing")]
+            if dormant:
+                bits.append("carried but NOT attuned (inert until attuned — "
+                            "the ritual happens when the party rests): "
+                            + ", ".join(_item_nm(i) for i in dormant))
+            out.append("    " + "; ".join(bits) + ".")
     return out
 
 
@@ -222,7 +242,8 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   keyed_directive: dict | None = None,
                   factions: list | None = None,
                   day: int | None = None,
-                  world_event: dict | None = None) -> str:
+                  world_event: dict | None = None,
+                  mechanics: dict | None = None) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -353,7 +374,7 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
             "any consequence the fiction demands.")
     # CS6: the mechanical 'card(s)' — who the PC(s) are in rules terms, so the DM
     # calls for the right checks/saves and narrates rules-aware (reference only).
-    lines.extend(_character_cards(repo, ruleset))
+    lines.extend(_character_cards(repo, ruleset, mechanics))
     # Only NPCs whose home is the party's current location are "present" in the
     # scene — this keeps the prompt scoped as the cast grows. An NPC with no home
     # is "nowhere in particular" and isn't placed in any scene. Everyone remains

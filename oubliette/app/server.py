@@ -37,6 +37,8 @@ from ..record.rng import Rng
 from ..rules import derive
 from ..rules.chargen_view import chargen_options, preview_payload
 from ..rules.chargen import CharacterBuild, ChargenError, build_character
+from ..rules.attune import (MAX_ATTUNED, active_attuned, attunable_carried,
+                            requires_attunement, validate_attunement)
 from ..rules.rest import long_rest_ops, short_rest_ops, reprepare_window_open
 from ..rules.rest_gate import RestGateError, long_rest_cost, roll_interruption
 from ..rules.levelup import (LevelUpChoice, LevelUpError, level_up, level_up_plan,
@@ -235,12 +237,30 @@ def _has_progress() -> bool:
                for ev in GAME.session.store.read_all())
 
 
+def _prune_attunement(char_ids: list[str]) -> None:
+    """End any attunement bond to an item its bearer no longer carries (it was
+    handed over or sold). Recorded as ATTUNEMENT_CHANGED so the break replays;
+    a no-op for members whose bonds all still hold. Call under GAME.lock, after
+    the inventory-moving event has been applied."""
+    for cid in char_ids:
+        try:
+            char = GAME.session.repo.get_character(cid)
+        except StateError:
+            continue
+        live = active_attuned(char)
+        if live != char.attuned:
+            GAME.session.emit_state(
+                EventKind.ATTUNEMENT_CHANGED, [StateOp.attune(cid, live)],
+                reason=f"{char.name}'s attunement ended — item no longer held")
+
+
 def _build_inventory() -> dict:
     """Per party-member inventory with item details for the inventory panel. Also
     ships `details`: a compact {item_id: hover-card} map covering ONLY the ids the
     party actually carries (never the whole catalog), so the panel can show what an
     item actually does."""
     repo = GAME.session.repo
+    catalog = getattr(GAME.session, "mechanics_catalog", None)
     party = []
     carried: set[str] = set()
     for c in repo.party():
@@ -255,6 +275,8 @@ def _build_inventory() -> dict:
                 "value_text": format_cp(it.value_cp) if it.value_cp else None,
                 "armor_class": it.armor_class,
                 "equippable": it.equippable, "equipped": s.item_id in c.equipped,
+                "requires_attunement": requires_attunement(catalog, s.item_id),
+                "attuned": s.item_id in c.attuned,
                 "tags": it.tags, "spell": s.spell, "spell_name": _spell_name(rs, s.spell),
                 "spell_level": s.spell_level,
             })
@@ -1137,6 +1159,8 @@ async def post_trade(body: TradeActionIn) -> JSONResponse:
                 return JSONResponse({"ok": False, "error": "unknown action"}, status_code=400)
             rt = GAME.loop.dispatcher.resolve(tx)              # validate
             GAME.session.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
+            if body.action == "sell":                          # a sold bond breaks
+                _prune_attunement([c.id for c in repo.party()])
             ok, error = True, None
         except (ToolApplyError, StateError) as e:
             ok, error = False, str(e)
@@ -1168,6 +1192,7 @@ async def post_checkout(body: CheckoutIn) -> JSONResponse:
             ops, reason = checkout_ops(repo, body.merchant_id, buy, sell,
                                        recipient=body.recipient)
             GAME.session.emit_state(EventKind.TOOL_APPLIED, ops, tool="transact", reason=reason)
+            _prune_attunement(sorted({owner for owner, _, _ in sell}))  # sold bonds break
             ok, error = True, None
         except (ToolApplyError, StateError) as e:
             ok, error = False, str(e)
@@ -1235,6 +1260,7 @@ async def post_handover(body: HandOverIn) -> JSONResponse:
                                     spell_level=body.spell_level)
             rt = GAME.loop.dispatcher.resolve(tx)
             GAME.session.emit_state(EventKind.TOOL_APPLIED, rt.ops, tool=rt.tool, reason=rt.reason)
+            _prune_attunement([body.from_id])   # a bond breaks with the hand-over
             ok, error = True, None
         except (ToolApplyError, StateError) as e:
             ok, error = False, str(e)
@@ -1633,7 +1659,10 @@ def _sheet_member(char: Character, rs: Ruleset) -> dict:
                       for a in Ability},
         "saves": saves, "skills": skills, "derived": d,
         "inventory": [{"name": _stack_label(rs, s), "qty": s.qty,
-                       "equipped": s.item_id in char.equipped} for s in char.inventory],
+                       "equipped": s.item_id in char.equipped,
+                       "requires_attunement": requires_attunement(
+                           getattr(GAME.session, "mechanics_catalog", None), s.item_id),
+                       "attuned": s.item_id in char.attuned} for s in char.inventory],
         # Money is the shared party purse (all PCs draw on it), preformatted.
         "purse_cp": GAME.session.repo.party_cp,
         "purse_text": format_cp(GAME.session.repo.party_cp),
@@ -1642,6 +1671,25 @@ def _sheet_member(char: Character, rs: Ruleset) -> dict:
         "hit_dice_used": char.hit_dice_used, "slots_used": dict(char.spell_slots_used),
         "resources_used": dict(char.resources_used),
     }
+    # The rest-time attunement ritual (multiplayer pre-work): what this hero could
+    # bond with and their current bonds — drives the rest popup's picker. Only
+    # shipped when there's a choice to make, so the popup stays clean otherwise.
+    catalog = getattr(GAME.session, "mechanics_catalog", None)
+    attunable = attunable_carried(char, catalog)
+    if attunable or char.attuned:
+        def _nm(item_id: str) -> str:
+            eq = (catalog or {}).get(item_id)
+            if eq is not None and getattr(eq, "name", None):
+                return eq.name
+            try:
+                return repo.get_item(item_id).name
+            except StateError:
+                return item_id
+        out["attunement"] = {
+            "max": MAX_ATTUNED, "attuned": active_attuned(char),
+            "attunable": [{"item_id": i, "name": _nm(i), "attuned": i in char.attuned}
+                          for i in attunable],
+        }
     if sheet is None:
         return out
     cc = rs.classes.get(sheet.char_class)
@@ -1840,6 +1888,8 @@ class RestIn(BaseModel):
     kind: str                       # "short" | "long"
     hit_dice: int = 0               # legacy single-member hit-dice spend
     hit_dice_by: dict[str, int] | None = None  # short rest: hit dice each member spends, by char id
+    attune_by: dict[str, list[str]] | None = None  # the rest-time attunement ritual: each member's
+                                    # FULL desired bond list (absolute, max 3); omitted = unchanged
 
 
 @app.post("/api/rest")
@@ -1860,6 +1910,20 @@ async def post_rest(body: RestIn) -> JSONResponse:
         rs = _ruleset()
         if body.kind not in ("short", "long"):
             return JSONResponse({"ok": False, "error": "rest kind must be 'short' or 'long'"}, status_code=400)
+        # The attunement ritual (multiplayer pre-work): validate every member's
+        # requested bond list FIRST — a bad choice must abort before the night's
+        # cost is charged or the interruption die is rolled.
+        attune_ops: list = []
+        catalog = getattr(GAME.session, "mechanics_catalog", None)
+        try:
+            for cid, ids in (body.attune_by or {}).items():
+                char = GAME.session.repo.get_character(cid)
+                wanted = validate_attunement(char, catalog, ids)
+                if wanted != char.attuned:
+                    attune_ops.append(StateOp.attune(cid, wanted))
+        except StateError as e:
+            return JSONResponse({"ok": False, "error": "attune", "message": str(e)},
+                                status_code=400)
         cost_ops: list = []
         cost_desc: str | None = None
         interrupted = False
@@ -1896,8 +1960,10 @@ async def post_rest(body: RestIn) -> JSONResponse:
                 else:                                   # legacy: only the named member spends
                     hd = max(0, body.hit_dice) if char.id == body.char_id else 0
                 ops += short_rest_ops(char, rs, spend_hit_dice=hd, rng=GAME.rng)
-        GAME.session.emit_state(EventKind.REST_TAKEN, ops + cost_ops, rest=effective,
-                                interrupted=interrupted, cost=cost_desc)
+        # Attunement ops ride the same REST_TAKEN event — even an interrupted
+        # night: the ritual is the rest's quiet hour, which the party had.
+        GAME.session.emit_state(EventKind.REST_TAKEN, ops + attune_ops + cost_ops,
+                                rest=effective, interrupted=interrupted, cost=cost_desc)
         # The world clock (living-world W3): a night consumed — long, or long
         # ATTEMPTED and interrupted — rolls the world to next morning. The day
         # number derives from the REST_TAKEN record itself; here we only turn

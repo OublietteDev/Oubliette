@@ -143,7 +143,8 @@ class TurnLoop:
                              if keyed is not None else None),
             factions=self._faction_context(),
             day=world_clock.current_day(events),
-            world_event=world_event)
+            world_event=world_event,
+            mechanics=getattr(self.session, "mechanics_catalog", None))
 
     def _story_so_far(self) -> str:
         """The DM's cumulative past-session notes (W5) as the SESSION-STABLE context
