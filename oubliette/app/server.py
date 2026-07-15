@@ -338,11 +338,16 @@ async def post_seat(body: SeatIn, request: Request) -> JSONResponse:
     return JSONResponse({"ok": True, "seats": GAME.session.seats})
 
 
-def _turn_lock(busy: bool) -> None:
+def _turn_lock(busy: bool, who: str | None = None) -> None:
     """Flip the one-turn-at-a-time flag and tell every client, together —
-    the flag gates /api/turn/submit; the event drives every send button."""
+    the flag gates /api/turn/submit; the event drives every send button.
+    `who` names the player with the floor, so a locked composer can say
+    "the Phantom is listening to Dana" instead of just going dark."""
     GAME.turn_busy = busy
-    HUB.broadcast({"t": "lock", "busy": busy})
+    event = {"t": "lock", "busy": busy}
+    if busy and who:
+        event["who"] = who
+    HUB.broadcast(event)
 
 
 @app.websocket("/ws")
@@ -1304,7 +1309,7 @@ async def post_turn_submit(body: TurnIn, request: Request) -> JSONResponse:
     # No await between the busy check above and this flip — atomic on the
     # event loop, so two racing submits can't both start a turn.
     HUB.broadcast({"t": "turn_start", "text": text, "ooc": body.ooc, "who": who})
-    _turn_lock(True)
+    _turn_lock(True, who)
 
     def _emit(item: dict) -> None:
         # Every turn event — from worker threads and from the task alike —
@@ -1369,7 +1374,8 @@ async def post_turn_submit(body: TurnIn, request: Request) -> JSONResponse:
                     _speak(chunker.feed(delta))
 
             async with GAME.lock:
-                report = await GAME.loop.take_turn(text, on_text=on_text, ooc=body.ooc)
+                report = await GAME.loop.take_turn(text, on_text=on_text, ooc=body.ooc,
+                                                   speaker=who)
                 payload = _turn_payload(report)
             # The game lock is RELEASED here: everything below is audio-only.
             # Holding it through a slow tier's tail synthesis froze every other

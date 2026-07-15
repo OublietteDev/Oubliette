@@ -109,6 +109,10 @@ class TurnLoop:
         # lint didn't catch — e.g. a hand-edited pack): suppressed for THIS process
         # so a broken fight logs one anomaly, not one per turn. {(place, enc id)}
         self._keyed_broken: set = set()
+        # Who is speaking THIS turn (multiplayer S1): a display name at a hosted
+        # table, else None. Set by take_turn, cleared by enter_combat (the
+        # post-fight beat belongs to the table, not to whoever clicked Enter).
+        self._turn_speaker: str | None = None
 
     def _build_context(self, player_text: str = "", growth: list | None = None,
                        keyed=None, world_event: dict | None = None) -> str:
@@ -148,7 +152,9 @@ class TurnLoop:
             factions=self._faction_context(),
             day=world_clock.current_day(events),
             world_event=world_event,
-            mechanics=getattr(self.session, "mechanics_catalog", None))
+            mechanics=getattr(self.session, "mechanics_catalog", None),
+            seats=(getattr(self.session, "seats", None) or None),
+            speaker=self._turn_speaker)
 
     def _story_so_far(self) -> str:
         """The DM's cumulative past-session notes (W5) as the SESSION-STABLE context
@@ -159,7 +165,14 @@ class TurnLoop:
         events = self.session.store.read_all()
         return story_so_far([n["dm_private"] for n in session_notes(events)])
 
-    async def take_turn(self, player_text: str, on_text=None, ooc: bool = False) -> TurnReport:
+    async def take_turn(self, player_text: str, on_text=None, ooc: bool = False,
+                        speaker: str | None = None) -> TurnReport:
+        # Who is speaking (multiplayer S1): a display name when a hosted table
+        # attributed this message, else None and everything reads as before.
+        # Stored on the loop for the turn (one turn at a time by design): the
+        # context's SPEAKER line, the PLAYER_MESSAGE event, and the continuity
+        # beat all draw from it.
+        self._turn_speaker = speaker
         # A new in-character turn moves the fiction on: any standing rest grant
         # (S3) expires — the DM's "you may rest now" was for THAT moment, not a
         # coupon. Out-of-character table-talk leaves the offer standing.
@@ -226,11 +239,13 @@ class TurnLoop:
                 assessment = assessment.model_copy(update={"encounter": None, "trade": None})
                 self.debug.append("note", stage="assess",
                                   coerced="encounter/trade suppressed (keyed encounter armed)")
-        # The PLAYER_MESSAGE event carries the raw text + the parsed intent (§4.1).
-        player_event = self.session.emit_log(
-            EventKind.PLAYER_MESSAGE, text=player_text,
-            intent=assessment.intent.model_dump(mode="json"),
-        )
+        # The PLAYER_MESSAGE event carries the raw text + the parsed intent (§4.1)
+        # — and, at a hosted table, who spoke (so the transcript replays names).
+        _msg_payload: dict = {"text": player_text,
+                              "intent": assessment.intent.model_dump(mode="json")}
+        if self._turn_speaker:
+            _msg_payload["speaker"] = self._turn_speaker
+        player_event = self.session.emit_log(EventKind.PLAYER_MESSAGE, **_msg_payload)
         self.debug.append(
             "assessment", verb=assessment.intent.verb.value,
             tier=assessment.tier.value, requires_roll=assessment.requires_roll,
@@ -885,6 +900,7 @@ class TurnLoop:
         it as the single COMBAT_RESULT event. Clears the pending lock."""
         import asyncio
 
+        self._turn_speaker = None   # the fight's beat belongs to the whole table
         pending = self.session.pending_combat
         if pending is None:
             raise CombatError("no combat is staged")
@@ -1020,7 +1036,9 @@ class TurnLoop:
             # DM's small recent-turns window with duplicates.
             self.session.emit_narration(report.narration, "", caused_by=caused_by)
             return
-        parts = [f'Player: "{report.player_text.strip()}"']
+        # At a hosted table the beat names its speaker — the DM's short-term
+        # memory then knows who asked what, several turns back, for free.
+        parts = [f'{self._turn_speaker or "Player"}: "{report.player_text.strip()}"']
         if report.roll_outcome is not None and report.assessment.roll is not None:
             parts.append(
                 f"[{report.roll_outcome.purpose}: rolled {report.roll_outcome.total} "

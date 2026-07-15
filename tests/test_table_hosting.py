@@ -158,6 +158,34 @@ def test_seat_memory_claim_steal_release_and_replay(hosting):
     assert r.json()["seats"] == {}
 
 
+def test_attribution_reaches_context_transcript_and_beats(hosting):
+    dana = _join(hosting, "Dana")
+    client.post("/api/new", headers=_seat(dana))
+    pc = [c.id for c in GAME.session.repo.party()
+          if not getattr(c, "companion", False)][0]
+    client.post("/api/seat", json={"char_ids": [pc]}, headers=_seat(dana))
+    with client.websocket_connect("/ws", headers=_seat(dana)) as ws:
+        assert ws.receive_json()["t"] == "hello"
+        assert client.post("/api/turn/submit", headers=_seat(dana),
+                           json={"text": "I look around the market."}).status_code == 200
+        while True:
+            ev = ws.receive_json()
+            if ev["t"] == "lock" and ev["busy"]:
+                assert ev["who"] == "Dana"    # "the Phantom is listening to Dana…"
+            if ev["t"] in ("end", "error"):
+                break
+    # the DM's context knows the seats and the speaker...
+    ctx = GAME.loop._build_context()
+    assert "[played by Dana]" in ctx
+    assert "SPEAKING NOW: Dana" in ctx
+    # ...the durable transcript replays the name...
+    turns = client.get("/api/transcript", headers=_seat(dana)).json()["turns"]
+    player_turns = [t for t in turns if t["role"] == "player"]
+    assert player_turns[-1]["who"] == "Dana"
+    # ...and the continuity beat is attributed too
+    assert GAME.loop.history[-1].startswith('Dana: "I look around the market.')
+
+
 def test_solo_turns_carry_no_speaker():
     client.post("/api/new")
     with client.websocket_connect("/ws") as ws:

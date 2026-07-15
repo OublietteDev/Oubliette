@@ -243,7 +243,9 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   factions: list | None = None,
                   day: int | None = None,
                   world_event: dict | None = None,
-                  mechanics: dict | None = None) -> str:
+                  mechanics: dict | None = None,
+                  seats: dict | None = None,
+                  speaker: str | None = None) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -308,13 +310,45 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
     party = repo.party()
     heroes = [p for p in party if not p.companion]
     companions = [p for p in party if p.companion]
+    # The seated-table framing (multiplayer S1): you are the DM of a TABLE —
+    # one chair or many — and the players at it speak for the heroes. When a
+    # hosted table supplies a seat map, each hero line names its player and
+    # each message names its speaker; solo play is simply a table of one.
+    seat_of: dict[str, str] = {}
+    for nm, ids in (seats or {}).items():
+        for cid in ids:
+            seat_of[cid] = nm
+
+    def _seat_tag(p) -> str:
+        if not seats:
+            return ""
+        owner = seat_of.get(p.id)
+        return (f" [played by {owner}]" if owner
+                else " [open seat — anyone at the table may act for this hero]")
+
     if len(heroes) == 1:
-        lines.append(f"PARTY: {_party_line(heroes[0])}")
+        lines.append(f"PARTY: {_party_line(heroes[0])}{_seat_tag(heroes[0])}")
     else:
-        lines.append("PARTY (the player controls ALL of these heroes — address them by name/id, "
-                     "call for whoever's check fits, and award XP/loot to each):")
+        if seats:
+            lines.append(
+                "PARTY — this table seats several PLAYERS, and each message names its "
+                "speaker. Address the speaker's own hero for personal beats and the whole "
+                "table for shared ones; call for whoever's check fits, award XP/loot to "
+                "each hero. Anyone may act for any hero — the seat tags say whose voice "
+                "usually belongs to whom:")
+        else:
+            lines.append(
+                "PARTY — one table, several heroes; the player at it speaks for them all "
+                "(address heroes by name/id, call for whoever's check fits, and award "
+                "XP/loot to each):")
         for p in heroes:
-            lines.append(f"  - {_party_line(p)}")
+            lines.append(f"  - {_party_line(p)}{_seat_tag(p)}")
+    if speaker:
+        pcs = [p.name for p in heroes if seat_of.get(p.id) == speaker]
+        lines.append(f"SPEAKING NOW: {speaker}"
+                     + (f" (their hero: {', '.join(pcs)})" if pcs
+                        else " (no claimed hero — a voice at the table)")
+                     + " — answer them by name when it fits, as a DM does.")
     if companions:
         lines.append("COMPANIONS (they TRAVEL with the party and fight at its side, "
                      "player-controlled — but they are still your characters to voice: "

@@ -42,7 +42,10 @@ def transcript_turns(events: list[Event]) -> list[dict]:
         if ev.kind == EventKind.PLAYER_MESSAGE.value:
             text = ev.payload.get("text", "")
             if text:
-                turns.append({"role": "player", "text": text})
+                turn = {"role": "player", "text": text}
+                if ev.payload.get("speaker"):     # hosted-table attribution (multiplayer S1)
+                    turn["who"] = ev.payload["speaker"]
+                turns.append(turn)
         elif ev.kind == EventKind.NARRATION_RECORDED.value:
             text = ev.payload.get("narration", "")
             if text:

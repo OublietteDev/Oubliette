@@ -1801,11 +1801,15 @@ function renderPartyRoster(party) {
 }
 
 let busy = false;
-function setBusy(b) {
+const IDLE_PLACEHOLDER = "What do you do?  (Enter to send · Shift+Enter for a new line)";
+function setBusy(b, who) {
   busy = b;
   const locked = b || gameEnded || combatPending;
   sendBtn.disabled = locked; input.disabled = locked;
   document.querySelector(".composer").classList.toggle("locked", locked);  // visible dim, not just dead keys
+  // At a hosted table, a dead send button says WHY: someone has the floor.
+  input.placeholder = (b && who && who !== tableInfo.you)
+    ? `The Phantom is listening to ${who}…` : IDLE_PLACEHOLDER;
   if (!locked) input.focus();
 }
 
@@ -1819,7 +1823,7 @@ let tableInfo = { hosting: false, joined: true };   // /api/hosting snapshot
 let tableSeats = [];                                // live 'seats' presence events
 
 function routeEvent(ev) {
-  if (ev.t === "hello" || ev.t === "lock") setBusy(!!ev.busy);
+  if (ev.t === "hello" || ev.t === "lock") setBusy(!!ev.busy, ev.who);
   else if (ev.t === "turn_start") {
     if (turnR) turnR.abandon();  // a new turn supersedes a still-draining tail
     hideWrapBar();               // a fresh action supersedes any pending wrap proposal
@@ -5519,8 +5523,13 @@ async function boot() {
   // Replay the session-in-progress transcript so a reload lands you exactly where you
   // left off (W3), instead of a blank chat. A fresh game shows the opening prompt.
   if (tx.turns && tx.turns.length) {
-    tx.turns.forEach(t => addMessage(t.role === "player" ? "You" : "The Phantom",
-                                     t.text, t.role === "player" ? "player" : "dm"));
+    tx.turns.forEach(t => {
+      // Hosted-table attribution survives the replay: another player's words
+      // come back under their name; yours (and all of solo play) stay "You".
+      const label = t.role !== "player" ? "The Phantom"
+        : (t.who && t.who !== tableInfo.you ? t.who : "You");
+      addMessage(label, t.text, t.role === "player" ? "player" : "dm");
+    });
     addMessage("System", "— resumed where you left off —", "system");
   } else {
     addMessage("System", "The Phantom waits at the head of the table. Describe what you do to begin.", "system");
