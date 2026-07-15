@@ -13,6 +13,8 @@ import json
 import os
 import tempfile
 
+import pytest
+
 # Must be set BEFORE importing the server (it builds the game at import time).
 os.environ.setdefault("OUBLIETTE_DB", os.path.join(tempfile.mkdtemp(), "test.sqlite"))
 os.environ.setdefault("OUBLIETTE_CONFIG", os.path.join(tempfile.mkdtemp(), "cfg.json"))
@@ -25,6 +27,17 @@ from oubliette.tts import engine as tts_engine  # noqa: E402
 from oubliette.tts.chunker import SentenceChunker, clean_for_speech  # noqa: E402
 
 client = TestClient(app)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _one_portal():
+    """Run the whole module inside the client's context manager: ONE anyio
+    portal (one event loop) shared by every request and websocket, matching
+    the single uvicorn loop in production. Without it each request gets a
+    throwaway loop, and the background turn task /api/turn/submit spawns dies
+    with its request's portal instead of broadcasting to /ws."""
+    with client:
+        yield
 
 
 # --- the chunker -----------------------------------------------------------
@@ -171,12 +184,17 @@ def _fake_engine(monkeypatch):
 
 
 def _stream_events(payload: dict) -> list[dict]:
+    """Submit the turn over HTTP and collect its events off /ws — the
+    persistent broadcast channel that replaced the per-request SSE stream."""
     events = []
-    with client.stream("POST", "/api/turn/stream", json=payload) as r:
-        assert r.status_code == 200
-        for line in r.iter_lines():
-            if line.startswith("data:"):
-                events.append(json.loads(line[5:].strip()))
+    with client.websocket_connect("/ws") as ws:
+        assert ws.receive_json()["t"] == "hello"
+        assert client.post("/api/turn/submit", json=payload).status_code == 200
+        while True:
+            ev = ws.receive_json()
+            events.append(ev)
+            if ev["t"] in ("end", "error"):
+                break
     return events
 
 

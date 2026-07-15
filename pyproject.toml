@@ -12,14 +12,17 @@ dependencies = [
 [project.optional-dependencies]
 # Real model play needs NO extra deps — the Anthropic adapter uses the stdlib
 # (urllib). The scripted client runs fully offline. Just set ANTHROPIC_API_KEY.
-web = ["fastapi>=0.110", "uvicorn>=0.29"]
+# websockets: the persistent per-browser event channel (multiplayer S1) —
+# uvicorn serves WS only when a ws library is installed.
+web = ["fastapi>=0.110", "uvicorn>=0.29", "websockets>=12"]
 # The Arena — the tactical combat app (launched as its own window). pygame only.
 arena = ["pygame>=2.5"]
 # Voiced narration: tier 1 (Kokoro 82M on CPU) + tier 2 (Qwen3-TTS 1.7B via
 # llama.cpp — `tokenizers` reads its tokenizer.json; the GGUF's own vocab is a
 # dummy). Model files download separately into models/<tier>/ (setup's picker).
 tts = ["kokoro-onnx>=0.4", "tokenizers>=0.15"]
-dev = ["pytest>=8.0", "fastapi>=0.110", "uvicorn>=0.29", "httpx>=0.27", "pygame>=2.5"]
+dev = ["pytest>=8.0", "fastapi>=0.110", "uvicorn>=0.29", "websockets>=12",
+       "httpx>=0.27", "pygame>=2.5"]
 
 [project.scripts]
 oubliette = "oubliette.app.repl:main"

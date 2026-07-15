@@ -1765,15 +1765,52 @@ function setBusy(b) {
   if (!locked) input.focus();
 }
 
-async function send(textOverride) {
-  const override = typeof textOverride === "string";
-  const text = (override ? textOverride : input.value).trim();
-  if (!text || busy) return;
-  if (!override) input.value = "";
-  hideWrapBar();                 // a fresh action supersedes any pending wrap proposal
-  hideRestBar();                 // ...and any pending rest proposal
-  addMessage("You", text, "player");
-  setBusy(true);
+// --- the event channel (multiplayer S1 groundwork) --------------------------
+// One websocket per browser, held for the whole visit. A submitted turn renders
+// from these BROADCAST events — for the sender and any future joiner alike, one
+// render path — so every solo session exercises the multiplayer plumbing.
+let turnR = null;            // the in-flight turn's renderer, built on turn_start
+let sockWasOpen = false;     // distinguishes a reconnect from the first connect
+
+function routeEvent(ev) {
+  if (ev.t === "hello" || ev.t === "lock") setBusy(!!ev.busy);
+  else if (ev.t === "turn_start") {
+    if (turnR) turnR.abandon();  // a new turn supersedes a still-draining tail
+    hideWrapBar();               // a fresh action supersedes any pending wrap proposal
+    hideRestBar();               // ...and any pending rest proposal
+    addMessage("You", ev.text, "player");
+    narrReset();                 // a new message is the player barging in: hush leftovers
+    turnR = makeTurnRenderer();
+  }
+  else if (ev.t === "audio") narrEnqueue(ev);   // a narration clip is ready — queue it
+  else if (ev.t === "delta" || ev.t === "done" || ev.t === "error") {
+    if (turnR) turnR.handle(ev);
+  }
+  // "end" (the voice caught up with the text) needs no client action
+}
+
+function connectSocket() {
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  const sock = new WebSocket(`${proto}//${location.host}/ws`);
+  sock.addEventListener("open", () => {
+    if (sockWasOpen) {
+      // A RE-connect: a turn may have finished while we were gone — resync the
+      // panels (the hello event restores the lock state). The chat text of a
+      // fully-missed turn returns on the next page reload (transcript replay).
+      if (turnR) { turnR.abandon(); turnR = null; }
+      fetch("/api/state").then(r => r.json()).then(d => renderState(d.state)).catch(() => {});
+    }
+    sockWasOpen = true;
+  });
+  sock.addEventListener("message", (m) => {
+    let ev; try { ev = JSON.parse(m.data); } catch (e) { return; }
+    routeEvent(ev);
+  });
+  sock.addEventListener("close", () => setTimeout(connectSocket, 1500));
+}
+connectSocket();
+
+function makeTurnRenderer() {
   const thinkRow = el("div", "row dm");
   const think = el("div", "msg dm");
   think.innerHTML = `<div class="thinking"><span>The Phantom considers</span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
@@ -1790,10 +1827,6 @@ async function send(textOverride) {
   const CATCHUP_BACKLOG = 220;   // above this many buffered chars, speed up to catch up
   let bubble = null, body = null, acc = "", pending = "", removedThink = false;
   let streamDone = false, finalized = false, rafId = null, doneData = null, lastTick = null;
-  // A new message is the player barging in: stop any leftover narration. The send
-  // click is a user gesture, so it can also unlock audio after a page reload.
-  if (narrOn && TTS.enabled && !soundOn) enableSound();
-  narrReset();
   // Movie mode holds the typewriter back so text appears in step with the voice
   // (upto = how far the currently-playing clip covers). Any failure — no clips,
   // a rewritten turn, a dropped connection — releases the gate: text always wins.
@@ -1856,8 +1889,6 @@ async function send(textOverride) {
       ensureBubble();
       pending += data.v;                                   // buffer; the pump reveals it
       startPump();
-    } else if (data.t === "audio") {
-      narrEnqueue(data);                                   // a narration clip is ready — queue it
     } else if (data.t === "done") {
       ensureBubble();
       doneData = data;
@@ -1880,31 +1911,45 @@ async function send(textOverride) {
       addMessage("System", data.error || "something went wrong", "system");
     }
   }
+  function abandon() {
+    // A new turn_start (or a dropped socket) superseded this renderer while it
+    // was still revealing: snap to whatever is final and get out of the way.
+    if (finalized) return;
+    streamDone = true; movieGate = false;
+    acc += pending; pending = "";
+    if (!removedThink) { thinkRow.remove(); removedThink = true; }
+    finalize();                              // safe with no doneData: renders acc, adds nothing
+  }
+  return { handle, abandon };
+}
+
+async function send(textOverride) {
+  const override = typeof textOverride === "string";
+  const text = (override ? textOverride : input.value).trim();
+  if (!text || busy) return;
+  if (!override) input.value = "";
+  // The send click is a user gesture, so it can unlock audio after a page reload.
+  if (narrOn && TTS.enabled && !soundOn) enableSound();
+  setBusy(true);                             // optimistic; the lock broadcast is the truth
   try {
-    const res = await fetch("/api/turn/stream", {
+    const res = await fetch("/api/turn/submit", {
       method: "POST", headers: {"content-type": "application/json"},
       body: JSON.stringify({ text, ooc: oocMode, narrate: narrOn && TTS.enabled && soundOn })
     });
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = "";
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      let idx;
-      while ((idx = buf.indexOf("\n\n")) >= 0) {
-        const line = buf.slice(0, idx).trim();
-        buf = buf.slice(idx + 2);
-        if (line.startsWith("data:")) handle(JSON.parse(line.slice(5).trim()));
-      }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setBusy(false);
+      if (!override) input.value = text;     // nothing was sent — give the words back
+      addMessage("System", data.error || "the table did not accept that", "system");
     }
+    // Accepted: nothing more to do here. The whole turn — the "You" echo, the
+    // DM's narration, the final state — renders from the broadcast channel,
+    // exactly the way every other browser at the table renders it.
   } catch (e) {
-    if (!removedThink) thinkRow.remove();
-    streamDone = true;                       // stop the reveal pump if the socket dropped mid-stream
-    movieGate = false;                       // …and never leave text waiting on a voice that died with it
+    setBusy(false);
+    if (!override) input.value = text;
     addMessage("System", "Connection lost: " + e, "system");
-  } finally { setBusy(false); }
+  }
 }
 
 // Enter the staged tactical fight: launches The Arena (a desktop window) on the

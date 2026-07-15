@@ -19,8 +19,8 @@ import traceback
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel
 
 from ..coin import authored_to_cp, format_cp
@@ -81,6 +81,9 @@ class _Game:
 
     def __init__(self) -> None:
         self.lock = asyncio.Lock()
+        self.turn_busy = False   # a submitted turn is in flight (set/cleared ON the
+                                 # event loop, so the check in /api/turn/submit is
+                                 # race-free) — the table takes one turn at a time
         self.client_name = "scripted"
         self.pack_id = DEFAULT_PACK            # world for a new game (saves pin their own)
         self._open()
@@ -130,6 +133,74 @@ class _Game:
 
 
 GAME = _Game()
+
+
+class _Hub:
+    """The table's broadcast channel (multiplayer S1 groundwork).
+
+    Every open browser holds one websocket, and every event a turn produces —
+    the player's own text, narration deltas, audio-clip announcements, the
+    final payload, lock state — fans out to ALL of them, the sender included.
+    The sender renders its turn from the broadcast exactly the way a joiner
+    will, so there is one render path and every solo session exercises the
+    multiplayer plumbing.
+
+    Fan-out is a plain put_nowait per client queue: synchronous and
+    non-blocking, so it can run on the event loop directly, or hop over from
+    a worker thread via `loop.call_soon_threadsafe(HUB.broadcast, event)` —
+    which also gives events a single total order every client sees."""
+
+    def __init__(self) -> None:
+        self._queues: set[asyncio.Queue] = set()
+
+    def attach(self) -> asyncio.Queue:
+        q: asyncio.Queue = asyncio.Queue()
+        self._queues.add(q)
+        return q
+
+    def detach(self, q: asyncio.Queue) -> None:
+        self._queues.discard(q)
+
+    def broadcast(self, event: dict) -> None:
+        for q in list(self._queues):
+            q.put_nowait(event)
+
+
+HUB = _Hub()
+_TURN_TASKS: set = set()   # in-flight turn tasks, anchored against GC
+
+
+def _turn_lock(busy: bool) -> None:
+    """Flip the one-turn-at-a-time flag and tell every client, together —
+    the flag gates /api/turn/submit; the event drives every send button."""
+    GAME.turn_busy = busy
+    HUB.broadcast({"t": "lock", "busy": busy})
+
+
+@app.websocket("/ws")
+async def ws_events(ws: WebSocket) -> None:
+    """The persistent event channel each browser holds for its whole visit.
+    Outbound only for now (turns are submitted over plain HTTP and rendered
+    from this channel); the read loop exists to notice the disconnect."""
+    await ws.accept()
+    q = HUB.attach()
+
+    async def _pump() -> None:
+        while True:
+            await ws.send_text(json.dumps(await q.get()))
+
+    pump = asyncio.create_task(_pump())
+    try:
+        # A late arrival must know whether the table is mid-turn — the hello
+        # is what disables their send button on connect.
+        await ws.send_text(json.dumps({"t": "hello", "busy": GAME.turn_busy}))
+        while True:
+            await ws.receive_text()   # nothing meaningful arrives yet
+    except WebSocketDisconnect:
+        pass
+    finally:
+        pump.cancel()
+        HUB.detach(q)
 
 
 # --- serialization ----------------------------------------------------------
@@ -1015,10 +1086,18 @@ async def post_turn(body: TurnIn) -> JSONResponse:
         return JSONResponse(_turn_payload(report))
 
 
-@app.post("/api/turn/stream", response_model=None)
-async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
-    """Server-Sent Events: stream narration deltas, then a final payload.
-    Events: {"t":"delta","v":"..."} during generation, then {"t":"done", ...}."""
+@app.post("/api/turn/submit")
+async def post_turn_submit(body: TurnIn) -> JSONResponse:
+    """Submit a turn; the turn itself renders on the broadcast channel.
+
+    The reply is only an acceptance receipt. The player's text, narration
+    deltas, audio-clip announcements, the final payload and the lock release
+    all fan out over /ws to every connected browser — the sender included, so
+    there is exactly one render path (multiplayer S1's decoupling). Events:
+    {"t":"turn_start"} then {"t":"lock",busy:true}, {"t":"delta"} during
+    generation, {"t":"done", ...} with the payload, {"t":"lock",busy:false}
+    once the text finishes (never held for audio), tail {"t":"audio"} clips,
+    and an {"t":"end"} sentinel when the voice catches up."""
     text = body.text.strip()
     if not text:
         return JSONResponse({"error": "empty message"}, status_code=400)
@@ -1028,68 +1107,82 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
         return JSONResponse(
             {"error": "a fight is underway — enter the Arena to resolve it", "combat_pending": True},
             status_code=409)
+    if GAME.turn_busy or GAME.lock.locked():
+        # Free-for-all with a lock, not a queue: while the DM is answering,
+        # every other send is refused — a queued duplicate question would be
+        # a wasted turn. The lock UI makes this a rare race, not a workflow.
+        return JSONResponse({"error": "the DM is already answering", "busy": True},
+                            status_code=409)
 
     loop = asyncio.get_running_loop()
-    queue: asyncio.Queue = asyncio.Queue()
 
-    # Voiced narration (opt-in per request): finished sentences go to the TTS as
-    # the text streams, and each clip is announced on this same stream as
-    # {"t":"audio", url, upto} — `upto` being how many narration chars (in the
-    # client's UTF-16 units) the clip covers (movie mode reveals text up to it).
-    # Unavailable/failed narration NEVER blocks the turn: the text flows exactly
-    # as today. The engine's FIRST load is a real model load (tens of seconds on
-    # the Qwen tier) — it happens on a worker thread, never on the event loop.
-    engine, tts_reason = (
-        await asyncio.get_running_loop().run_in_executor(None, tts_engine.get_engine)
-        if body.narrate else (None, None))
-    chunker = SentenceChunker() if engine is not None else None
-    voice = tts_engine.active_voice() if engine is not None else None
-    clip_jobs: list = []
-    streamed = {"text": ""}   # exactly what the chunker was fed (attempt 0's stream)
-    if engine is not None:
-        # A slow tier's unfinished tail from the LAST turn must not queue ahead
-        # of this one — the player already moved on (the client killed its audio
-        # on send). Cancel whatever hasn't started; the running clip finishes.
-        global _TTS_TURN_JOBS
-        for j in _TTS_TURN_JOBS:
-            j.cancel()
-        _TTS_TURN_JOBS = clip_jobs
-
-    def _u16(n: int) -> int:
-        # The chunker counts Python code points; the client indexes UTF-16 units
-        # (an astral emoji is 1 vs 2) — convert so movie mode never lands short
-        # or splits a surrogate pair.
-        return len(streamed["text"][:n].encode("utf-16-le")) // 2
-
-    def _synth(raw: str, upto16: int) -> None:    # runs on the TTS worker thread
-        speakable = clean_for_speech(raw)
-        if not speakable:
-            return
-        try:
-            wav = engine.synthesize(speakable, voice=voice)
-        except Exception as e:                    # a bad sentence loses its clip, nothing more
-            GAME.loop.debug.append("anomaly", stage="tts", error=repr(e))
-            return
-        _emit({"t": "audio", "url": f"/api/tts/clip/{_store_clip(wav)}", "upto": upto16})
-
-    def _speak(sentences: list) -> None:
-        for raw, upto in sentences:
-            clip_jobs.append(_tts_pool().submit(_synth, raw, _u16(upto)))
-
-    def on_text(delta: str) -> None:
-        # Called from the model's worker thread → hop back onto the loop safely.
-        loop.call_soon_threadsafe(queue.put_nowait, {"t": "delta", "v": delta})
-        if chunker is not None:
-            streamed["text"] += delta
-            _speak(chunker.feed(delta))
+    # No await between the busy check above and this flip — atomic on the
+    # event loop, so two racing submits can't both start a turn.
+    HUB.broadcast({"t": "turn_start", "text": text, "ooc": body.ooc})
+    _turn_lock(True)
 
     def _emit(item: dict) -> None:
-        # Enqueue via the loop so a final 'done' lands AFTER all delta callbacks
-        # (which on_text scheduled the same way) — preserves stream order.
-        loop.call_soon_threadsafe(queue.put_nowait, item)
+        # Every turn event — from worker threads and from the task alike —
+        # goes through call_soon_threadsafe, so all clients see one total
+        # order (a final 'done' always lands AFTER all delta callbacks).
+        loop.call_soon_threadsafe(HUB.broadcast, item)
 
     async def run_turn() -> None:
         try:
+            # Voiced narration (opt-in per request): finished sentences go to
+            # the TTS as the text streams, and each clip is announced on the
+            # channel as {"t":"audio", url, upto} — `upto` being how many
+            # narration chars (in the client's UTF-16 units) the clip covers
+            # (movie mode reveals text up to it). Unavailable/failed narration
+            # NEVER blocks the turn. The engine's FIRST load is a real model
+            # load (tens of seconds on the Qwen tier) — it happens here inside
+            # the task, on a worker thread, so the submit receipt above was
+            # not held behind it and the event loop never freezes.
+            engine, tts_reason = (
+                await loop.run_in_executor(None, tts_engine.get_engine)
+                if body.narrate else (None, None))
+            chunker = SentenceChunker() if engine is not None else None
+            voice = tts_engine.active_voice() if engine is not None else None
+            clip_jobs: list = []
+            streamed = {"text": ""}   # exactly what the chunker was fed (attempt 0's stream)
+            if engine is not None:
+                # A slow tier's unfinished tail from the LAST turn must not
+                # queue ahead of this one — the player already moved on (every
+                # client kills its audio on turn_start). Cancel whatever hasn't
+                # started; the running clip finishes.
+                global _TTS_TURN_JOBS
+                for j in _TTS_TURN_JOBS:
+                    j.cancel()
+                _TTS_TURN_JOBS = clip_jobs
+
+            def _u16(n: int) -> int:
+                # The chunker counts Python code points; the client indexes UTF-16 units
+                # (an astral emoji is 1 vs 2) — convert so movie mode never lands short
+                # or splits a surrogate pair.
+                return len(streamed["text"][:n].encode("utf-16-le")) // 2
+
+            def _synth(raw: str, upto16: int) -> None:    # runs on the TTS worker thread
+                speakable = clean_for_speech(raw)
+                if not speakable:
+                    return
+                try:
+                    wav = engine.synthesize(speakable, voice=voice)
+                except Exception as e:                    # a bad sentence loses its clip, nothing more
+                    GAME.loop.debug.append("anomaly", stage="tts", error=repr(e))
+                    return
+                _emit({"t": "audio", "url": f"/api/tts/clip/{_store_clip(wav)}", "upto": upto16})
+
+            def _speak(sentences: list) -> None:
+                for raw, upto in sentences:
+                    clip_jobs.append(_tts_pool().submit(_synth, raw, _u16(upto)))
+
+            def on_text(delta: str) -> None:
+                # Called from the model's worker thread → hop back onto the loop safely.
+                _emit({"t": "delta", "v": delta})
+                if chunker is not None:
+                    streamed["text"] += delta
+                    _speak(chunker.feed(delta))
+
             async with GAME.lock:
                 report = await GAME.loop.take_turn(text, on_text=on_text, ooc=body.ooc)
                 payload = _turn_payload(report)
@@ -1117,10 +1210,12 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
                         streamed["text"] = final
                         _speak(chunker.feed(final))
                     _speak(chunker.flush())
-            # 'done' goes out NOW — chips and state land instantly. The client
-            # reads until the stream closes, so tail clips ride AFTER it; the
-            # stream ends with an 'end' sentinel once the voice catches up.
+            # 'done' goes out NOW — chips and state land instantly — and the
+            # table unlocks with it: the input lock releases when the TEXT
+            # finishes, never the audio. Tail clips ride after; the 'end'
+            # sentinel marks the voice catching up.
             _emit(payload)
+            loop.call_soon_threadsafe(_turn_lock, False)   # ordered after 'done'
             if clip_jobs:
                 from concurrent.futures import wait as _fwait
                 await loop.run_in_executor(None, lambda: _fwait(clip_jobs, timeout=90))
@@ -1130,25 +1225,18 @@ async def post_turn_stream(body: TurnIn) -> StreamingResponse | JSONResponse:
                         "anomaly", stage="tts",
                         error=f"{dropped} tail clip(s) unfinished after 90s — dropped")
             _emit({"t": "end"})
-        except Exception as e:  # surface failures to the client, don't hang
+        except Exception as e:  # surface failures to the clients, don't hang
             # …but never silently: keep the full traceback (console + debug log)
             # so a one-off failure is diagnosable after the fact.
             traceback.print_exc()
             GAME.loop.debug.append("anomaly", stage="turn_stream", error=repr(e))
             _emit({"t": "error", "error": str(e)})
+            loop.call_soon_threadsafe(_turn_lock, False)   # never leave the table locked
 
-    async def events():
-        task = asyncio.create_task(run_turn())
-        try:
-            while True:
-                item = await queue.get()
-                yield f"data: {json.dumps(item)}\n\n"
-                if item.get("t") in ("end", "error"):
-                    break
-        finally:
-            await task
-
-    return StreamingResponse(events(), media_type="text/event-stream")
+    task = asyncio.create_task(run_turn())
+    _TURN_TASKS.add(task)                       # asyncio keeps only weak refs —
+    task.add_done_callback(_TURN_TASKS.discard)  # anchor it or GC can eat a turn
+    return JSONResponse({"accepted": True})
 
 
 @app.post("/api/combat/enter")

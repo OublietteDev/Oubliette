@@ -24,6 +24,17 @@ from oubliette.app.server import GAME, app  # noqa: E402
 client = TestClient(app)
 
 
+@pytest.fixture(scope="module", autouse=True)
+def _one_portal():
+    """Run the whole module inside the client's context manager: ONE anyio
+    portal (one event loop) shared by every request and websocket, matching
+    the single uvicorn loop in production. Without it each request gets a
+    throwaway loop, and the background turn task /api/turn/submit spawns dies
+    with its request's portal instead of broadcasting to /ws."""
+    with client:
+        yield
+
+
 def _new():
     client.post("/api/new")
 
@@ -228,24 +239,83 @@ def test_empty_message_rejected():
     assert r.status_code == 400
 
 
-def test_stream_endpoint_yields_deltas_then_done():
-    _new()
+def _ws_turn(payload: dict) -> list[dict]:
+    """Submit a turn over HTTP and collect its events off the broadcast channel
+    (/ws) — the persistent per-browser websocket that replaced the SSE stream."""
     events = []
-    with client.stream("POST", "/api/turn/stream",
-                       json={"text": "I look around the market."}) as r:
-        assert r.status_code == 200
-        for line in r.iter_lines():
-            if line.startswith("data:"):
-                events.append(json.loads(line[5:].strip()))
+    with client.websocket_connect("/ws") as ws:
+        assert ws.receive_json()["t"] == "hello"
+        r = client.post("/api/turn/submit", json=payload)
+        assert r.status_code == 200 and r.json()["accepted"] is True
+        while True:
+            ev = ws.receive_json()
+            events.append(ev)
+            if ev["t"] in ("end", "error"):
+                break
+    return events
+
+
+def test_submit_broadcasts_deltas_then_done():
+    _new()
+    events = _ws_turn({"text": "I look around the market."})
     types = [e["t"] for e in events]
-    # The stream closes with an "end" sentinel; "done" (the turn payload) comes
-    # before it, so tail narration clips can ride after the chips land.
+    # The player's own text comes back as the broadcast's opening event (the
+    # sender renders it from the channel like everyone else), the lock brackets
+    # the turn, and "done" (the turn payload) precedes the "end" sentinel so
+    # tail narration clips can ride after the chips land.
+    assert types[0] == "turn_start" and events[0]["text"] == "I look around the market."
+    assert [e["busy"] for e in events if e["t"] == "lock"] == [True, False]
     assert "delta" in types and types[-1] == "end"
     done = next(e for e in events if e["t"] == "done")
     assert done["narration"] and done["state"]["purse_cp"] == 15_00
     # the streamed deltas reconstruct the final narration
     streamed = "".join(e["v"] for e in events if e["t"] == "delta")
     assert streamed.strip() == done["narration"].strip()
+
+
+def test_broadcast_reaches_every_connected_client():
+    _new()
+    # Two browsers at the table: BOTH see the whole turn — the sender's echo,
+    # the deltas, the payload — regardless of who submitted it.
+    with client.websocket_connect("/ws") as a, client.websocket_connect("/ws") as b:
+        assert a.receive_json()["t"] == "hello"
+        assert b.receive_json()["t"] == "hello"
+        assert client.post("/api/turn/submit",
+                           json={"text": "I wave to the merchant."}).status_code == 200
+        seen = []
+        for ws in (a, b):
+            events = []
+            while True:
+                ev = ws.receive_json()
+                events.append(ev)
+                if ev["t"] in ("end", "error"):
+                    break
+            seen.append(events)
+    assert [e["t"] for e in seen[0]] == [e["t"] for e in seen[1]]
+    assert seen[0][0]["text"] == seen[1][0]["text"] == "I wave to the merchant."
+
+
+def test_submit_refused_while_a_turn_is_in_flight():
+    _new()
+    # Free-for-all with a lock, not a queue: a second send while the DM is
+    # answering is refused outright, never queued.
+    GAME.turn_busy = True
+    try:
+        r = client.post("/api/turn/submit", json={"text": "me too!"})
+        assert r.status_code == 409 and r.json()["busy"] is True
+    finally:
+        GAME.turn_busy = False
+
+
+def test_ws_hello_carries_the_lock_state():
+    _new()
+    GAME.turn_busy = True
+    try:
+        with client.websocket_connect("/ws") as ws:
+            hello = ws.receive_json()
+            assert hello["t"] == "hello" and hello["busy"] is True
+    finally:
+        GAME.turn_busy = False
 
 
 def test_journal_roundtrips_and_is_invisible_to_the_dm():
