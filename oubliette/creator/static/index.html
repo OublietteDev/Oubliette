@@ -1577,6 +1577,7 @@ function placeForm(pl) {
           <div id="encList" style="margin-top:10px"></div>
           <button class="btn mini" id="addEnc" type="button">+ Add an encounter</button>
           <datalist id="encRefOptions"></datalist>
+          <datalist id="encAllyOptions"></datalist>
           <div class="help" style="margin-top:8px">Fights that <b>will</b> happen here — not left to the AI DM's whim. When its conditions are met, the DM narrates the approach and the battle begins, every campaign. Enemies can be this world's creatures, any SRD monster (type to search), or one of your NPCs by id. These skip the table's encounter budget — <b>Party level ≥</b> is your tool for holding a deadly fight back until the party can survive it.</div>
         </details>
       </div>
@@ -1636,6 +1637,10 @@ async function fillEncRefOptions() {
   listOf("npcs").forEach(n => opts.push(`<option value="${esc(n.id)}">NPC — ${esc(n.name)}</option>`));
   srdRefCache.forEach(m => opts.push(`<option value="${esc(m.name)}">SRD — CR ${m.cr ?? "?"}</option>`));
   dl.innerHTML = opts.join("");
+  // Allies are this world's NPCs only (they fight player-side by entity id).
+  const adl = document.getElementById("encAllyOptions");
+  if (adl) adl.innerHTML = listOf("npcs")
+    .map(n => `<option value="${esc(n.id)}">${esc(n.name)}</option>`).join("");
 }
 function renderEncounters() {
   const box = document.getElementById("encList");
@@ -1655,6 +1660,13 @@ function renderEncounters() {
           <button class="btn mini danger" type="button" data-enc-edel="${i}:${j}">✕</button>
         </div>`).join("")}
       <button class="btn mini" type="button" data-enc-eadd="${i}">+ Add an enemy</button>
+      <div style="margin:6px 0 2px; font-size:12px; opacity:.8" title="Your NPCs who fight ON THE PARTY'S SIDE in this encounter — player-controlled for the fight, full stat-block kit if they carry one (Seraphel rising beside the party).">Allies (fight player-side)</div>
+      ${(en.allies || []).map((a, j) => `
+        <div class="exit-row">
+          <input list="encAllyOptions" data-enc-ally="${i}:${j}" value="${esc(a || "")}" placeholder="one of this world's NPCs, by id" />
+          <button class="btn mini danger" type="button" data-enc-adel="${i}:${j}">✕</button>
+        </div>`).join("")}
+      <button class="btn mini" type="button" data-enc-aadd="${i}">+ Add an ally</button>
       <div class="cue-row" style="margin-top:8px; gap:8px; flex-wrap:wrap">
         <label>Fires <select data-enc-when="${i}">
           <option value="every_visit"${["first_visit", "event"].includes(en.trigger && en.trigger.when) ? "" : " selected"}>any visit</option>
@@ -1678,6 +1690,9 @@ function renderEncounters() {
   on("[data-enc-del]", "click", e => { encs.splice(+e.target.dataset.encDel, 1); renderEncounters(); });
   on("[data-enc-eadd]", "click", e => { const en = encs[+e.target.dataset.encEadd]; if (!en.enemies) en.enemies = []; en.enemies.push({ ref: "", count: 1 }); renderEncounters(); });
   on("[data-enc-edel]", "click", e => { const [i, j] = at(e.target, "encEdel"); encs[i].enemies.splice(j, 1); renderEncounters(); });
+  on("[data-enc-aadd]", "click", e => { const en = encs[+e.target.dataset.encAadd]; if (!en.allies) en.allies = []; en.allies.push(""); renderEncounters(); });
+  on("[data-enc-adel]", "click", e => { const [i, j] = at(e.target, "encAdel"); encs[i].allies.splice(j, 1); renderEncounters(); });
+  on("[data-enc-ally]", "input", e => { const [i, j] = at(e.target, "encAlly"); encs[i].allies[j] = e.target.value; });
   on("[data-enc-ref]", "input", e => { const [i, j] = at(e.target, "encRef"); encs[i].enemies[j].ref = e.target.value; });
   on("[data-enc-count]", "input", e => { const [i, j] = at(e.target, "encCount"); encs[i].enemies[j].count = Math.max(1, +e.target.value || 1); });
   on("[data-enc-when]", "change", e => { trig(+e.target.dataset.encWhen).when = e.target.value; });
@@ -2072,6 +2087,10 @@ function confirmPlace(original) {
                                                                : { ref: e.ref.trim() })),
                     trigger: trig, once: en.once !== false };
       if (en.ambush) out.ambush = true;
+      // Allies survive the round-trip (they used to be silently stripped —
+      // a hand-authored Seraphel would vanish on any Forge re-save).
+      const allies = (en.allies || []).map(a => (a || "").trim()).filter(Boolean);
+      if (allies.length) out.allies = allies;
       if ((en.briefing || "").trim()) out.briefing = en.briefing.trim();
       return out;
     });
