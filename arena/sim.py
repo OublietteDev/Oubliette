@@ -45,6 +45,12 @@ def run_fight(enc_dict: dict, seed: int, round_cap: int) -> dict:
 
     cm = CombatManager()
     cm.load_encounter(enc, Path("."))     # creature paths are absolute
+    # Same rule the handoff sets for story fights: a fully-downed player team
+    # LOSES now. Without it, stabilized-at-0 heroes count as "still fighting",
+    # the enemy has no conscious target left, and a stomp drifts to the round
+    # cap — an enemy victory laundered into a draw (found live by Chris:
+    # 92 "draws" against a young bronze dragon that had downed everyone).
+    cm.solo_defeat_when_downed = True
     cm.roll_initiative()
     cm.begin_combat()
 

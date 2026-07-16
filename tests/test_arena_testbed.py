@@ -222,6 +222,21 @@ def test_sim_batch_is_deterministic_and_honest(world):
     assert "floor" in a["caveat"]
 
 
+def test_a_stomped_party_is_an_enemy_win_not_a_draw(world):
+    """Found live by Chris: 92 'draws' against a dragon that had downed the
+    whole party — stabilized-at-0 heroes counted as still fighting, and the
+    enemy had no conscious target left to finish. The sim now arms the same
+    solo_defeat_when_downed rule the handoff sets: fully downed = defeat."""
+    from arena.sim import run_batch
+    p = stage_test_fight(world, _PACKS_ROOT / "brightvale",
+                         enemies=[("ogre", 2)], party_level=1, party_size=1,
+                         watch=True)
+    r = run_batch(p.encounter_path, 5, seed=11, round_cap=30)
+    shutil.rmtree(p.scratch_dir, ignore_errors=True)
+    assert r["wins"]["enemy"] >= 4                 # two ogres vs a lone level-1
+    assert r["wins"]["draw"] == 0                  # a stomp is never a draw
+
+
 def test_round_cap_reports_a_draw(world):
     from arena.sim import run_batch
     p = stage_test_fight(world, _PACKS_ROOT / "brightvale",
