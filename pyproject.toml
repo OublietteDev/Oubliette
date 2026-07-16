@@ -15,14 +15,15 @@ dependencies = [
 # websockets: the persistent per-browser event channel (multiplayer S1) —
 # uvicorn serves WS only when a ws library is installed.
 web = ["fastapi>=0.110", "uvicorn>=0.29", "websockets>=12"]
-# The Arena — the tactical combat app (launched as its own window). pygame only.
-arena = ["pygame>=2.5"]
+# The Arena — the tactical combat app (launched as its own window). pillow
+# encodes the multiplayer frame stream (S2); the Arena itself is pygame only.
+arena = ["pygame>=2.5", "pillow>=10"]
 # Voiced narration: tier 1 (Kokoro 82M on CPU) + tier 2 (Qwen3-TTS 1.7B via
 # llama.cpp — `tokenizers` reads its tokenizer.json; the GGUF's own vocab is a
 # dummy). Model files download separately into models/<tier>/ (setup's picker).
 tts = ["kokoro-onnx>=0.4", "tokenizers>=0.15"]
 dev = ["pytest>=8.0", "fastapi>=0.110", "uvicorn>=0.29", "websockets>=12",
-       "httpx>=0.27", "pygame>=2.5"]
+       "httpx>=0.27", "pygame>=2.5", "pillow>=10"]
 
 [project.scripts]
 oubliette = "oubliette.app.repl:main"

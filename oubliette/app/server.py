@@ -154,18 +154,33 @@ class _Hub:
 
     def __init__(self) -> None:
         self._queues: set[asyncio.Queue] = set()
+        self._frames: dict[asyncio.Queue, dict] = {}   # per-client latest-frame slot
 
     def attach(self) -> asyncio.Queue:
         q: asyncio.Queue = asyncio.Queue()
         self._queues.add(q)
+        self._frames[q] = {"jpeg": None, "queued": False}
         return q
 
     def detach(self, q: asyncio.Queue) -> None:
         self._queues.discard(q)
+        self._frames.pop(q, None)
 
     def broadcast(self, event: dict) -> None:
         for q in list(self._queues):
             q.put_nowait(event)
+
+    def broadcast_frame(self, jpeg: bytes) -> None:
+        """Fan an Arena frame (S2) out to every browser, latest-wins per client:
+        the slot is overwritten and a marker queued only if none is pending, so
+        a browser that can't keep 10fps coalesces to the freshest picture — a
+        slow link means a lower frame rate, never a growing backlog. Everything
+        runs on the one event loop, so slot flips need no lock."""
+        for q, slot in list(self._frames.items()):
+            slot["jpeg"] = jpeg
+            if not slot["queued"]:
+                slot["queued"] = True
+                q.put_nowait({"_frame": slot})
 
 
 HUB = _Hub()
@@ -400,13 +415,28 @@ async def ws_events(ws: WebSocket) -> None:
 
     async def _pump() -> None:
         while True:
-            await ws.send_text(json.dumps(await q.get()))
+            ev = await q.get()
+            slot = ev.get("_frame")
+            if slot is not None:
+                # An Arena frame marker (S2): binary on the same pipe. Clear the
+                # pending flag BEFORE reading, so a frame that lands mid-send
+                # queues a fresh marker rather than being lost.
+                slot["queued"] = False
+                if slot["jpeg"]:
+                    await ws.send_bytes(slot["jpeg"])
+            else:
+                await ws.send_text(json.dumps(ev))
 
     pump = None
     try:
         # A late arrival must know whether the table is mid-turn — the hello
         # is what disables their send button on connect.
         await ws.send_text(json.dumps(hello))
+        if _ARENA["last_jpeg"] is not None:
+            # A fight is streaming and its board may be idle (change-detection
+            # sends nothing while still) — hand the newcomer the last picture
+            # so their canvas isn't black until something moves.
+            await ws.send_bytes(_ARENA["last_jpeg"])
         pump = asyncio.create_task(_pump())   # buffered events ride AFTER hello
         if TABLE.hosting:
             TABLE.sockets[token] = TABLE.sockets.get(token, 0) + 1
@@ -417,10 +447,20 @@ async def ws_events(ws: WebSocket) -> None:
                 msg = json.loads(raw)
             except ValueError:
                 continue
-            # The one inbound message so far: this listener's narration wish.
-            # The host synthesizes when anyone at the table wants the voice.
+            # This listener's narration wish. The host synthesizes when anyone
+            # at the table wants the voice.
             if msg.get("t") == "narrate":
                 (_NARRATING.add if msg.get("on") else _NARRATING.discard)(q)
+            # A click on the streamed fight (S2): forward it to the Arena as-is.
+            # Anyone seated may act — the same social contract as the chat.
+            elif msg.get("t") == "arena":
+                sock = _ARENA["sock"]
+                if sock is not None:
+                    try:
+                        async with _ARENA_SEND_LOCK:
+                            await sock.send_text(json.dumps(msg))
+                    except Exception:
+                        pass          # the fight just ended under the click
     except WebSocketDisconnect:
         pass
     finally:
@@ -433,6 +473,44 @@ async def ws_events(ws: WebSocket) -> None:
             if TABLE.sockets[token] <= 0:
                 del TABLE.sockets[token]
             HUB.broadcast(TABLE.seats_event())
+
+
+# The Arena frame bridge (multiplayer S2). The subprocess inherits our
+# environment, reads OUBLIETTE_ARENA_BRIDGE (set in main()), and connects back
+# here to push JPEG frames of the fight and receive remote players' input. The
+# token is the whole gate: minted per server run, unguessable, and never shown
+# to a browser — so a LAN visitor without a seat can neither watch nor click.
+_ARENA_TOKEN = secrets.token_urlsafe(16)
+_ARENA: dict = {"sock": None, "last_jpeg": None}
+_ARENA_SEND_LOCK = asyncio.Lock()   # serialize input forwards from many browsers
+
+
+@app.websocket("/ws/arena")
+async def ws_arena(ws: WebSocket) -> None:
+    """The Arena subprocess's end of the bridge: binary messages are board
+    frames (fanned out to every browser, latest-wins); text messages are
+    reserved for the audio cues of S3."""
+    if ws.query_params.get("token") != _ARENA_TOKEN:
+        await ws.close(code=4403)
+        return
+    await ws.accept()
+    _ARENA["sock"] = ws
+    try:
+        while True:
+            msg = await ws.receive()
+            if msg.get("type") == "websocket.disconnect":
+                break
+            data = msg.get("bytes")
+            if data:
+                _ARENA["last_jpeg"] = data
+                HUB.broadcast_frame(data)
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if _ARENA["sock"] is ws:
+            # The fight's window closed: no stale board for late arrivals.
+            _ARENA["sock"] = None
+            _ARENA["last_jpeg"] = None
 
 
 # --- serialization ----------------------------------------------------------
@@ -2786,6 +2864,12 @@ def main() -> None:
     hosting = "--host" in sys.argv or os.environ.get("OUBLIETTE_HOST", "") == "1"
     bind, port = "127.0.0.1", 8000
     url = f"http://127.0.0.1:{port}"
+    # The Arena frame bridge (S2): the combat subprocess inherits this and
+    # connects back to stream the fight. Set for solo play too — one path,
+    # every session exercises the multiplayer plumbing (and a lone player
+    # gets a live board in their browser for free).
+    os.environ["OUBLIETTE_ARENA_BRIDGE"] = (
+        f"ws://127.0.0.1:{port}/ws/arena?token={_ARENA_TOKEN}")
     if hosting:
         code = TABLE.start_hosting()
         bind = "0.0.0.0"

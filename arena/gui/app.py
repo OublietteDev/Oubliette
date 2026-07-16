@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pygame
 
+from arena import stream as _stream
 from arena.gui.screens.base import Screen
 from arena.gui.screens.combat import CombatScreen
 from arena.gui.background_slideshow import BackgroundSlideshow
@@ -75,6 +76,15 @@ class App:
         # (the standalone menu/builders were removed); `play_encounter` navigates straight
         # to combat via `go_to_combat` before `run()`, so there's no initial screen here.
         self.current_screen: Screen | None = None
+
+        # Multiplayer frame bridge (S2): when the app server set the bridge URL
+        # in our inherited environment, stream the fight to every browser at the
+        # table and replay their clicks here. Absent the variable (solo launch,
+        # tests), this is None and the loop below runs exactly as it always has.
+        self.bridge = _stream.Bridge.from_env()
+        self._frame_no = 0
+        if self.bridge is not None:
+            self.bridge.start()
 
     def _switch_to(self, new_screen: Screen) -> None:
         """Transition from current screen to new_screen."""
@@ -151,6 +161,8 @@ class App:
             self._render()
             self.clock.tick(self.fps)
 
+        if self.bridge is not None:
+            self.bridge.stop()
         self.cursor_manager.restore_system_cursor()
         pygame.quit()
 
@@ -161,6 +173,12 @@ class App:
                 self.running = False
             else:
                 # Delegate all other events to the current screen
+                self.current_screen.handle_event(event)
+        if self.bridge is not None and self.current_screen is not None:
+            # Remote players' input, replayed as if the host had made it —
+            # the same dispatch path as real events (the two-entry-points
+            # lesson: never a side door around the GUI's own routing).
+            for event in self.bridge.take_events():
                 self.current_screen.handle_event(event)
 
     def _update(self) -> None:
@@ -181,3 +199,7 @@ class App:
         # Custom cursor drawn last — always on top of everything
         self.cursor_manager.render(self.screen)
         pygame.display.flip()
+        if self.bridge is not None:
+            self._frame_no += 1
+            if self._frame_no % _stream.FRAME_EVERY == 0:
+                self.bridge.offer(self.screen)

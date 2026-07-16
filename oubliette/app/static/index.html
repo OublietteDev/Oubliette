@@ -231,6 +231,16 @@
   .world-card .wc-name { font-family: var(--serif); font-size: 16px; color: var(--gold); }
   .world-card .wc-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
   .hidden { display: none; }
+  /* the streamed Arena (multiplayer S2): a fixed 1280×720 board, CSS-scaled to fit */
+  #arena-overlay { z-index: 60; background: rgba(0,0,0,.78); }
+  .arena-frame { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; }
+  .arena-head { display: flex; align-items: center; gap: 10px; padding: 7px 12px;
+    border-bottom: 1px solid var(--line); }
+  .arena-title { font-family: var(--serif); color: var(--gold); font-size: 15px; }
+  .arena-status { color: var(--muted); font-size: 12px; font-style: italic; }
+  #arena-canvas { display: block; background: #000; cursor: crosshair; outline: none;
+    width: min(1280px, 94vw, calc((96vh - 60px) * 1.7778)); aspect-ratio: 16 / 9; height: auto; }
   /* start menu (front door) */
   .start-modal { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; width: min(420px, 92vw); box-shadow: var(--shadow); padding: 30px 26px; text-align: center; }
   .start-modal h2 { font-family: var(--serif); color: var(--gold); margin: 0 0 4px; font-size: 27px; }
@@ -986,6 +996,19 @@
     <div class="start-actions" style="margin-top:16px">
       <button class="start-btn" id="seats-close">Close</button>
     </div>
+  </div>
+</div>
+
+<div id="arena-overlay" class="overlay hidden">
+  <div class="arena-frame">
+    <div class="arena-head">
+      <span class="arena-title">⚔ The Arena</span>
+      <span id="arena-status" class="arena-status"></span>
+      <div class="spacer"></div>
+      <button class="act" id="arena-esc" title="Press ESC in the Arena — leaves a finished fight, breaks off a live one">⎋ Leave the fight</button>
+      <button class="act" id="arena-hide" title="Keep fighting on the host's screen; reopen with ⚔ Watch the fight">Hide</button>
+    </div>
+    <canvas id="arena-canvas" width="1280" height="720" tabindex="0"></canvas>
   </div>
 </div>
 
@@ -1916,11 +1939,14 @@ function routeEvent(ev) {
   }
   else if (ev.t === "combat_started") {
     narrReset();                               // the Arena takes the stage — hush the storyteller
-    enterArenaBtn.disabled = true;
-    enterArenaBtn.textContent = "⚔ Fighting…";
-    addMessage("System", "⚔ The Arena opens on the host's screen — play out the fight there, then the tale returns here.", "system");
+    enterArenaBtn.disabled = false;            // it reopens the board while the fight runs
+    enterArenaBtn.textContent = "⚔ Watch the fight";
+    arenaLive = true;
+    showArenaView("the Arena is taking the stage…");
+    addMessage("System", "⚔ The Arena takes the stage — fight from this very window, or on the host's screen.", "system");
   }
   else if (ev.t === "combat_done") {
+    closeArenaView();
     const bubble = addMessage("The Phantom", "", "dm");
     bubble.querySelector(".body").innerHTML = md(ev.narration || "");
     addChips(bubble, ev);
@@ -1946,6 +1972,7 @@ function routeEvent(ev) {
 function connectSocket() {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   const sock = new WebSocket(`${proto}//${location.host}/ws`);
+  sock.binaryType = "arraybuffer";           // Arena frames (S2) ride the same pipe
   sock.addEventListener("open", () => {
     liveSock = sock;
     sendNarratePref();
@@ -1955,10 +1982,14 @@ function connectSocket() {
       // fully-missed turn returns on the next page reload (transcript replay).
       if (turnR) { turnR.abandon(); turnR = null; }
       fetch("/api/state").then(r => r.json()).then(d => renderState(d.state)).catch(() => {});
+      // If a fight ended while we were gone, the overlay must not linger; if it
+      // still runs, the server re-sends the board right after hello — self-heals.
+      if (arenaLive) closeArenaView();
     }
     sockWasOpen = true;
   });
   sock.addEventListener("message", (m) => {
+    if (typeof m.data !== "string") { arenaFrame(m.data); return; }   // a board frame
     let ev; try { ev = JSON.parse(m.data); } catch (e) { return; }
     routeEvent(ev);
   });
@@ -2229,9 +2260,97 @@ async function send(textOverride) {
   }
 }
 
+// --- the streamed Arena (multiplayer S2): frames down, clicks back -----------
+// The fight is a real pygame window on the host; every browser gets it as a
+// live 1280×720 picture on this canvas and sends raw coordinates back. The
+// coordinate space is fixed by the resolution freeze — only CSS scaling to
+// undo, no game-side math.
+const arenaCanvas = $("arena-canvas");
+const arenaCtx = arenaCanvas.getContext("2d");
+let arenaLive = false;      // a fight is streaming (combat_started → combat_done)
+let arenaSeq = 0, arenaDrawn = 0;   // JPEG decode is async — never draw stale over fresh
+
+function showArenaView(status) {
+  $("arena-overlay").classList.remove("hidden");
+  if (status !== undefined) $("arena-status").textContent = status;
+  arenaCanvas.focus();
+}
+function closeArenaView() {
+  arenaLive = false;
+  $("arena-overlay").classList.add("hidden");
+  $("arena-status").textContent = "";
+  arenaCtx.clearRect(0, 0, 1280, 720);
+}
+
+async function arenaFrame(buf) {
+  const seq = ++arenaSeq;
+  if (!arenaLive) {          // a mid-fight arrival: the stream IS the announcement
+    arenaLive = true;
+    enterArenaBtn.textContent = "⚔ Watch the fight";
+    showArenaView();
+  }
+  let bmp;
+  try { bmp = await createImageBitmap(new Blob([buf], { type: "image/jpeg" })); }
+  catch (e) { return; }
+  if (seq > arenaDrawn) {
+    arenaDrawn = seq;
+    arenaCtx.drawImage(bmp, 0, 0, 1280, 720);
+    $("arena-status").textContent = "";
+  }
+  bmp.close();
+}
+
+function arenaSend(o) {
+  if (liveSock && liveSock.readyState === WebSocket.OPEN)
+    liveSock.send(JSON.stringify({ t: "arena", ...o }));
+}
+function arenaXY(e) {
+  const r = arenaCanvas.getBoundingClientRect();
+  return { x: Math.round((e.clientX - r.left) * 1280 / r.width),
+           y: Math.round((e.clientY - r.top) * 720 / r.height) };
+}
+arenaCanvas.addEventListener("mousedown", (e) => {
+  e.preventDefault(); arenaCanvas.focus();
+  arenaSend({ k: "down", ...arenaXY(e), b: e.button + 1 });
+});
+arenaCanvas.addEventListener("mouseup", (e) => {
+  e.preventDefault();
+  arenaSend({ k: "up", ...arenaXY(e), b: e.button + 1 });
+});
+arenaCanvas.addEventListener("contextmenu", (e) => e.preventDefault());
+let arenaLastMove = 0;
+arenaCanvas.addEventListener("mousemove", (e) => {
+  const now = performance.now();          // hover drives targeting highlights and
+  if (now - arenaLastMove < 45) return;   // tooltips — forward it, gently throttled
+  arenaLastMove = now;
+  arenaSend({ k: "move", ...arenaXY(e) });
+});
+arenaCanvas.addEventListener("wheel", (e) => {
+  e.preventDefault();                     // wheel zooms the board, not the page
+  arenaSend({ k: "wheel", ...arenaXY(e), dy: -Math.sign(e.deltaY) });
+}, { passive: false });
+// Keys: ESC hides the overlay locally (the browser reflex) — sending a real ESC
+// into the fight is the explicit "Leave the fight" button, because in the Arena
+// it BREAKS OFF a live fight and that shouldn't be one habitual keystroke away.
+const ARENA_KEYS = { "Enter": "return", " ": "space", "ArrowUp": "up",
+  "ArrowDown": "down", "ArrowLeft": "left", "ArrowRight": "right", "Tab": "tab",
+  "Backspace": "backspace", "Delete": "delete", "Home": "home", "End": "end",
+  "PageUp": "page up", "PageDown": "page down" };
+arenaCanvas.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { $("arena-overlay").classList.add("hidden"); return; }
+  let name = ARENA_KEYS[e.key];
+  if (name === undefined) name = e.key.length === 1 ? e.key.toLowerCase() : "";
+  if (!name) return;
+  e.preventDefault();
+  arenaSend({ k: "key", key: name });
+});
+$("arena-hide").addEventListener("click", () => $("arena-overlay").classList.add("hidden"));
+$("arena-esc").addEventListener("click", () => arenaSend({ k: "key", key: "escape" }));
+
 // Enter the staged tactical fight: launches The Arena (a desktop window) on the
 // server, blocks until you exit it, then renders the DM's post-combat beat.
 async function enterArena() {
+  if (arenaLive) { showArenaView(); return; }   // mid-fight: the button reopens the board
   if (!combatPending) return;
   // The staging note, the "Fighting…" button state, the post-fight beat, the
   // chips and cards — all of it renders from the broadcast channel on every
