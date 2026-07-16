@@ -1,0 +1,7514 @@
+{
+ "roster": [
+  "fighter",
+  "cleric",
+  "rogue",
+  "wizard"
+ ],
+ "levels": {
+  "fighter": {
+   "items": [
+    {
+     "id": "explorers_pack",
+     "name": "Explorer's Pack",
+     "category": "gear",
+     "tags": [
+      "pack"
+     ],
+     "value_cp": 1000,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": null
+    },
+    {
+     "id": "chain_mail",
+     "name": "Chain Mail",
+     "category": "armor",
+     "tags": [
+      "heavy"
+     ],
+     "value_cp": 7500,
+     "armor_class": 16,
+     "armor_type": "heavy",
+     "dex_cap": null,
+     "damage": null
+    },
+    {
+     "id": "longsword",
+     "name": "Longsword",
+     "category": "weapon",
+     "tags": [
+      "martial",
+      "melee"
+     ],
+     "value_cp": 1500,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": "1d8"
+    },
+    {
+     "id": "shield",
+     "name": "Shield",
+     "category": "armor",
+     "tags": [
+      "shield"
+     ],
+     "value_cp": 1000,
+     "armor_class": 2,
+     "armor_type": "shield",
+     "dex_cap": null,
+     "damage": null
+    },
+    {
+     "id": "light_crossbow",
+     "name": "Light Crossbow",
+     "category": "weapon",
+     "tags": [
+      "simple",
+      "ranged"
+     ],
+     "value_cp": 2500,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": "1d8"
+    },
+    {
+     "id": "rations_1_day",
+     "name": "Rations (1 day)",
+     "category": "gear",
+     "tags": [],
+     "value_cp": 50,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": null
+    }
+   ],
+   "levels": {
+    "1": {
+     "id": "bench_fighter",
+     "name": "Bram",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 1,
+     "abilities": {
+      "str": 16,
+      "dex": 14,
+      "con": 15,
+      "int": 11,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "athletics",
+      "religion",
+      "perception",
+      "insight"
+     ],
+     "hp": 12,
+     "max_hp": 12,
+     "armor_class": 18,
+     "attack_bonus": 5,
+     "damage": "1d8",
+     "xp": 0,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "chain_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "longsword",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "chain_mail",
+      "shield",
+      "longsword"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "fighter",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": null,
+      "ancestry": null,
+      "base_abilities": {
+       "str": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "int": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "str",
+       "con"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "heavy",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "martial"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Fighting Style",
+        "source": "class",
+        "text": "Adopt a fighting style (e.g. Defense: +1 AC while wearing armor).",
+        "level": 1
+       },
+       {
+        "name": "Second Wind",
+        "source": "class",
+        "text": "Once per short/long rest, a bonus action to regain 1d10 + fighter level HP.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark fighter \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "2": {
+     "id": "bench_fighter",
+     "name": "Bram",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 2,
+     "abilities": {
+      "str": 16,
+      "dex": 14,
+      "con": 15,
+      "int": 11,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "athletics",
+      "religion",
+      "perception",
+      "insight"
+     ],
+     "hp": 20,
+     "max_hp": 20,
+     "armor_class": 12,
+     "attack_bonus": 5,
+     "damage": "1d8",
+     "xp": 300,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "chain_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "longsword",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "chain_mail",
+      "shield",
+      "longsword"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "fighter",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": null,
+      "ancestry": null,
+      "base_abilities": {
+       "str": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "int": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "str",
+       "con"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "heavy",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "martial"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Fighting Style",
+        "source": "class",
+        "text": "Adopt a fighting style (e.g. Defense: +1 AC while wearing armor).",
+        "level": 1
+       },
+       {
+        "name": "Second Wind",
+        "source": "class",
+        "text": "Once per short/long rest, a bonus action to regain 1d10 + fighter level HP.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Action Surge",
+        "source": "class",
+        "text": "Once per short/long rest, take one additional action on your turn.",
+        "level": 2
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark fighter \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "3": {
+     "id": "bench_fighter",
+     "name": "Bram",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 3,
+     "abilities": {
+      "str": 16,
+      "dex": 14,
+      "con": 15,
+      "int": 11,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "athletics",
+      "religion",
+      "perception",
+      "insight"
+     ],
+     "hp": 28,
+     "max_hp": 28,
+     "armor_class": 12,
+     "attack_bonus": 5,
+     "damage": "1d8",
+     "xp": 900,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "chain_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "longsword",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "chain_mail",
+      "shield",
+      "longsword"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "fighter",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "champion",
+      "ancestry": null,
+      "base_abilities": {
+       "str": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "int": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "str",
+       "con"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "heavy",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "martial"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Fighting Style",
+        "source": "class",
+        "text": "Adopt a fighting style (e.g. Defense: +1 AC while wearing armor).",
+        "level": 1
+       },
+       {
+        "name": "Second Wind",
+        "source": "class",
+        "text": "Once per short/long rest, a bonus action to regain 1d10 + fighter level HP.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Action Surge",
+        "source": "class",
+        "text": "Once per short/long rest, take one additional action on your turn.",
+        "level": 2
+       },
+       {
+        "name": "Martial Archetype",
+        "source": "class",
+        "text": "Choose a martial archetype that shapes your approach to battle.",
+        "level": 3
+       },
+       {
+        "name": "Improved Critical",
+        "source": "subclass",
+        "text": "Your weapon attacks score a critical hit on a roll of 19 or 20.",
+        "level": 3
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark fighter \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "4": {
+     "id": "bench_fighter",
+     "name": "Bram",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 4,
+     "abilities": {
+      "str": 18,
+      "dex": 14,
+      "con": 15,
+      "int": 11,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "athletics",
+      "religion",
+      "perception",
+      "insight"
+     ],
+     "hp": 36,
+     "max_hp": 36,
+     "armor_class": 12,
+     "attack_bonus": 5,
+     "damage": "1d8",
+     "xp": 2700,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "chain_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "longsword",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "chain_mail",
+      "shield",
+      "longsword"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "fighter",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "champion",
+      "ancestry": null,
+      "base_abilities": {
+       "str": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "int": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "str",
+       "con"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "heavy",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "martial"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Fighting Style",
+        "source": "class",
+        "text": "Adopt a fighting style (e.g. Defense: +1 AC while wearing armor).",
+        "level": 1
+       },
+       {
+        "name": "Second Wind",
+        "source": "class",
+        "text": "Once per short/long rest, a bonus action to regain 1d10 + fighter level HP.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Action Surge",
+        "source": "class",
+        "text": "Once per short/long rest, take one additional action on your turn.",
+        "level": 2
+       },
+       {
+        "name": "Martial Archetype",
+        "source": "class",
+        "text": "Choose a martial archetype that shapes your approach to battle.",
+        "level": 3
+       },
+       {
+        "name": "Improved Critical",
+        "source": "subclass",
+        "text": "Your weapon attacks score a critical hit on a roll of 19 or 20.",
+        "level": 3
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark fighter \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "5": {
+     "id": "bench_fighter",
+     "name": "Bram",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 5,
+     "abilities": {
+      "str": 18,
+      "dex": 14,
+      "con": 15,
+      "int": 11,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "athletics",
+      "religion",
+      "perception",
+      "insight"
+     ],
+     "hp": 44,
+     "max_hp": 44,
+     "armor_class": 12,
+     "attack_bonus": 5,
+     "damage": "1d8",
+     "xp": 6500,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "chain_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "longsword",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "chain_mail",
+      "shield",
+      "longsword"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "fighter",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "champion",
+      "ancestry": null,
+      "base_abilities": {
+       "str": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "int": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "str",
+       "con"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "heavy",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "martial"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Fighting Style",
+        "source": "class",
+        "text": "Adopt a fighting style (e.g. Defense: +1 AC while wearing armor).",
+        "level": 1
+       },
+       {
+        "name": "Second Wind",
+        "source": "class",
+        "text": "Once per short/long rest, a bonus action to regain 1d10 + fighter level HP.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Action Surge",
+        "source": "class",
+        "text": "Once per short/long rest, take one additional action on your turn.",
+        "level": 2
+       },
+       {
+        "name": "Martial Archetype",
+        "source": "class",
+        "text": "Choose a martial archetype that shapes your approach to battle.",
+        "level": 3
+       },
+       {
+        "name": "Improved Critical",
+        "source": "subclass",
+        "text": "Your weapon attacks score a critical hit on a roll of 19 or 20.",
+        "level": 3
+       },
+       {
+        "name": "Extra Attack",
+        "source": "class",
+        "text": "Attack twice, instead of once, when you take the Attack action.",
+        "level": 5
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark fighter \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "6": {
+     "id": "bench_fighter",
+     "name": "Bram",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 6,
+     "abilities": {
+      "str": 20,
+      "dex": 14,
+      "con": 15,
+      "int": 11,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "athletics",
+      "religion",
+      "perception",
+      "insight"
+     ],
+     "hp": 52,
+     "max_hp": 52,
+     "armor_class": 12,
+     "attack_bonus": 5,
+     "damage": "1d8",
+     "xp": 14000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "chain_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "longsword",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "chain_mail",
+      "shield",
+      "longsword"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "fighter",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "champion",
+      "ancestry": null,
+      "base_abilities": {
+       "str": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "int": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "str",
+       "con"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "heavy",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "martial"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Fighting Style",
+        "source": "class",
+        "text": "Adopt a fighting style (e.g. Defense: +1 AC while wearing armor).",
+        "level": 1
+       },
+       {
+        "name": "Second Wind",
+        "source": "class",
+        "text": "Once per short/long rest, a bonus action to regain 1d10 + fighter level HP.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Action Surge",
+        "source": "class",
+        "text": "Once per short/long rest, take one additional action on your turn.",
+        "level": 2
+       },
+       {
+        "name": "Martial Archetype",
+        "source": "class",
+        "text": "Choose a martial archetype that shapes your approach to battle.",
+        "level": 3
+       },
+       {
+        "name": "Improved Critical",
+        "source": "subclass",
+        "text": "Your weapon attacks score a critical hit on a roll of 19 or 20.",
+        "level": 3
+       },
+       {
+        "name": "Extra Attack",
+        "source": "class",
+        "text": "Attack twice, instead of once, when you take the Attack action.",
+        "level": 5
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark fighter \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "7": {
+     "id": "bench_fighter",
+     "name": "Bram",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 7,
+     "abilities": {
+      "str": 20,
+      "dex": 14,
+      "con": 15,
+      "int": 11,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "athletics",
+      "religion",
+      "perception",
+      "insight"
+     ],
+     "hp": 60,
+     "max_hp": 60,
+     "armor_class": 12,
+     "attack_bonus": 5,
+     "damage": "1d8",
+     "xp": 23000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "chain_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "longsword",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "chain_mail",
+      "shield",
+      "longsword"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "fighter",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "champion",
+      "ancestry": null,
+      "base_abilities": {
+       "str": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "int": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "str",
+       "con"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "heavy",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "martial"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Fighting Style",
+        "source": "class",
+        "text": "Adopt a fighting style (e.g. Defense: +1 AC while wearing armor).",
+        "level": 1
+       },
+       {
+        "name": "Second Wind",
+        "source": "class",
+        "text": "Once per short/long rest, a bonus action to regain 1d10 + fighter level HP.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Action Surge",
+        "source": "class",
+        "text": "Once per short/long rest, take one additional action on your turn.",
+        "level": 2
+       },
+       {
+        "name": "Martial Archetype",
+        "source": "class",
+        "text": "Choose a martial archetype that shapes your approach to battle.",
+        "level": 3
+       },
+       {
+        "name": "Improved Critical",
+        "source": "subclass",
+        "text": "Your weapon attacks score a critical hit on a roll of 19 or 20.",
+        "level": 3
+       },
+       {
+        "name": "Extra Attack",
+        "source": "class",
+        "text": "Attack twice, instead of once, when you take the Attack action.",
+        "level": 5
+       },
+       {
+        "name": "Remarkable Athlete",
+        "source": "subclass",
+        "text": "Add half your proficiency bonus to Str, Dex, or Con checks that don't already use it.",
+        "level": 7
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark fighter \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "8": {
+     "id": "bench_fighter",
+     "name": "Bram",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 8,
+     "abilities": {
+      "str": 20,
+      "dex": 14,
+      "con": 17,
+      "int": 11,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "athletics",
+      "religion",
+      "perception",
+      "insight"
+     ],
+     "hp": 69,
+     "max_hp": 69,
+     "armor_class": 12,
+     "attack_bonus": 5,
+     "damage": "1d8",
+     "xp": 34000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "chain_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "longsword",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "chain_mail",
+      "shield",
+      "longsword"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "fighter",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "champion",
+      "ancestry": null,
+      "base_abilities": {
+       "str": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "int": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "str",
+       "con"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "heavy",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "martial"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Fighting Style",
+        "source": "class",
+        "text": "Adopt a fighting style (e.g. Defense: +1 AC while wearing armor).",
+        "level": 1
+       },
+       {
+        "name": "Second Wind",
+        "source": "class",
+        "text": "Once per short/long rest, a bonus action to regain 1d10 + fighter level HP.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Action Surge",
+        "source": "class",
+        "text": "Once per short/long rest, take one additional action on your turn.",
+        "level": 2
+       },
+       {
+        "name": "Martial Archetype",
+        "source": "class",
+        "text": "Choose a martial archetype that shapes your approach to battle.",
+        "level": 3
+       },
+       {
+        "name": "Improved Critical",
+        "source": "subclass",
+        "text": "Your weapon attacks score a critical hit on a roll of 19 or 20.",
+        "level": 3
+       },
+       {
+        "name": "Extra Attack",
+        "source": "class",
+        "text": "Attack twice, instead of once, when you take the Attack action.",
+        "level": 5
+       },
+       {
+        "name": "Remarkable Athlete",
+        "source": "subclass",
+        "text": "Add half your proficiency bonus to Str, Dex, or Con checks that don't already use it.",
+        "level": 7
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark fighter \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "9": {
+     "id": "bench_fighter",
+     "name": "Bram",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 9,
+     "abilities": {
+      "str": 20,
+      "dex": 14,
+      "con": 17,
+      "int": 11,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "athletics",
+      "religion",
+      "perception",
+      "insight"
+     ],
+     "hp": 78,
+     "max_hp": 78,
+     "armor_class": 12,
+     "attack_bonus": 5,
+     "damage": "1d8",
+     "xp": 48000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "chain_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "longsword",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "chain_mail",
+      "shield",
+      "longsword"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "fighter",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "champion",
+      "ancestry": null,
+      "base_abilities": {
+       "str": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "int": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "str",
+       "con"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "heavy",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "martial"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Fighting Style",
+        "source": "class",
+        "text": "Adopt a fighting style (e.g. Defense: +1 AC while wearing armor).",
+        "level": 1
+       },
+       {
+        "name": "Second Wind",
+        "source": "class",
+        "text": "Once per short/long rest, a bonus action to regain 1d10 + fighter level HP.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Action Surge",
+        "source": "class",
+        "text": "Once per short/long rest, take one additional action on your turn.",
+        "level": 2
+       },
+       {
+        "name": "Martial Archetype",
+        "source": "class",
+        "text": "Choose a martial archetype that shapes your approach to battle.",
+        "level": 3
+       },
+       {
+        "name": "Improved Critical",
+        "source": "subclass",
+        "text": "Your weapon attacks score a critical hit on a roll of 19 or 20.",
+        "level": 3
+       },
+       {
+        "name": "Extra Attack",
+        "source": "class",
+        "text": "Attack twice, instead of once, when you take the Attack action.",
+        "level": 5
+       },
+       {
+        "name": "Remarkable Athlete",
+        "source": "subclass",
+        "text": "Add half your proficiency bonus to Str, Dex, or Con checks that don't already use it.",
+        "level": 7
+       },
+       {
+        "name": "Indomitable",
+        "source": "class",
+        "text": "Reroll a failed saving throw; once per long rest.",
+        "level": 9
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark fighter \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    }
+   }
+  },
+  "cleric": {
+   "items": [
+    {
+     "id": "shield",
+     "name": "Shield",
+     "category": "armor",
+     "tags": [
+      "shield"
+     ],
+     "value_cp": 1000,
+     "armor_class": 2,
+     "armor_type": "shield",
+     "dex_cap": null,
+     "damage": null
+    },
+    {
+     "id": "amulet",
+     "name": "Amulet",
+     "category": "gear",
+     "tags": [
+      "focus"
+     ],
+     "value_cp": 500,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": null
+    },
+    {
+     "id": "mace",
+     "name": "Mace",
+     "category": "weapon",
+     "tags": [
+      "simple",
+      "melee"
+     ],
+     "value_cp": 500,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": "1d6"
+    },
+    {
+     "id": "scale_mail",
+     "name": "Scale Mail",
+     "category": "armor",
+     "tags": [
+      "medium"
+     ],
+     "value_cp": 5000,
+     "armor_class": 14,
+     "armor_type": "medium",
+     "dex_cap": 2,
+     "damage": null
+    },
+    {
+     "id": "light_crossbow",
+     "name": "Light Crossbow",
+     "category": "weapon",
+     "tags": [
+      "simple",
+      "ranged"
+     ],
+     "value_cp": 2500,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": "1d8"
+    },
+    {
+     "id": "priests_pack",
+     "name": "Priest's Pack",
+     "category": "gear",
+     "tags": [
+      "pack"
+     ],
+     "value_cp": 1900,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": null
+    },
+    {
+     "id": "explorers_pack",
+     "name": "Explorer's Pack",
+     "category": "gear",
+     "tags": [
+      "pack"
+     ],
+     "value_cp": 1000,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": null
+    },
+    {
+     "id": "rations_1_day",
+     "name": "Rations (1 day)",
+     "category": "gear",
+     "tags": [],
+     "value_cp": 50,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": null
+    }
+   ],
+   "levels": {
+    "1": {
+     "id": "bench_cleric",
+     "name": "Mirelle",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 1,
+     "abilities": {
+      "str": 14,
+      "dex": 11,
+      "con": 15,
+      "int": 9,
+      "wis": 16,
+      "cha": 13
+     },
+     "skill_proficiencies": [
+      "insight",
+      "religion",
+      "medicine",
+      "persuasion"
+     ],
+     "hp": 10,
+     "max_hp": 10,
+     "armor_class": 16,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 0,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "amulet",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "mace",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "scale_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "priests_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 12,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "scale_mail",
+      "shield",
+      "mace"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "cleric",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "life",
+      "ancestry": null,
+      "base_abilities": {
+       "wis": 15,
+       "con": 14,
+       "str": 13,
+       "cha": 12,
+       "dex": 10,
+       "int": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "cha",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast cleric spells using Wisdom. Prepare WIS mod + cleric level spells from the cleric list each day; you know 3 cantrips at 1st level.",
+        "level": 1
+       },
+       {
+        "name": "Divine Domain",
+        "source": "class",
+        "text": "Choose a divine domain that grants bonus spells and features.",
+        "level": 1
+       },
+       {
+        "name": "Domain Spells",
+        "source": "subclass",
+        "text": "You always have these domain spells prepared, and they don't count against your number of prepared spells: 1st\u2014bless, cure wounds; 3rd\u2014lesser restoration, spiritual weapon; 5th\u2014beacon of hope, revivify; 7th\u2014death ward, guardian of faith; 9th\u2014mass cure wounds, raise dead.",
+        "level": 1
+       },
+       {
+        "name": "Bonus Proficiency",
+        "source": "subclass",
+        "text": "You gain proficiency with heavy armor.",
+        "level": 1
+       },
+       {
+        "name": "Disciple of Life",
+        "source": "subclass",
+        "text": "Whenever a spell of 1st level or higher restores hit points to a creature, it regains extra hit points equal to 2 + the spell's level.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "wis",
+      "cantrips_known": [
+       "sacred_flame",
+       "guidance",
+       "thaumaturgy"
+      ],
+      "spells_known": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word"
+      ],
+      "spells_prepared": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark cleric \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "2": {
+     "id": "bench_cleric",
+     "name": "Mirelle",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 2,
+     "abilities": {
+      "str": 14,
+      "dex": 11,
+      "con": 15,
+      "int": 9,
+      "wis": 16,
+      "cha": 13
+     },
+     "skill_proficiencies": [
+      "insight",
+      "religion",
+      "medicine",
+      "persuasion"
+     ],
+     "hp": 17,
+     "max_hp": 17,
+     "armor_class": 10,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 300,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "amulet",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "mace",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "scale_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "priests_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 12,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "scale_mail",
+      "shield",
+      "mace"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "cleric",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "life",
+      "ancestry": null,
+      "base_abilities": {
+       "wis": 15,
+       "con": 14,
+       "str": 13,
+       "cha": 12,
+       "dex": 10,
+       "int": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "cha",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast cleric spells using Wisdom. Prepare WIS mod + cleric level spells from the cleric list each day; you know 3 cantrips at 1st level.",
+        "level": 1
+       },
+       {
+        "name": "Divine Domain",
+        "source": "class",
+        "text": "Choose a divine domain that grants bonus spells and features.",
+        "level": 1
+       },
+       {
+        "name": "Domain Spells",
+        "source": "subclass",
+        "text": "You always have these domain spells prepared, and they don't count against your number of prepared spells: 1st\u2014bless, cure wounds; 3rd\u2014lesser restoration, spiritual weapon; 5th\u2014beacon of hope, revivify; 7th\u2014death ward, guardian of faith; 9th\u2014mass cure wounds, raise dead.",
+        "level": 1
+       },
+       {
+        "name": "Bonus Proficiency",
+        "source": "subclass",
+        "text": "You gain proficiency with heavy armor.",
+        "level": 1
+       },
+       {
+        "name": "Disciple of Life",
+        "source": "subclass",
+        "text": "Whenever a spell of 1st level or higher restores hit points to a creature, it regains extra hit points equal to 2 + the spell's level.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Channel Divinity",
+        "source": "class",
+        "text": "Channel divine energy for magical effects, regaining uses on a short or long rest. You gain more uses per rest as you level (1 at 2nd, 2 at 6th, 3 at 18th).",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Turn Undead",
+        "source": "class",
+        "text": "As an action, present your holy symbol; each undead within 30 feet that fails a Wisdom save is turned for 1 minute.",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Preserve Life",
+        "source": "subclass",
+        "text": "As an action, use Channel Divinity to restore hit points equal to five times your cleric level, divided among creatures within 30 feet (up to half each one's maximum).",
+        "level": 2
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "wis",
+      "cantrips_known": [
+       "sacred_flame",
+       "guidance",
+       "thaumaturgy"
+      ],
+      "spells_known": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith"
+      ],
+      "spells_prepared": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark cleric \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "3": {
+     "id": "bench_cleric",
+     "name": "Mirelle",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 3,
+     "abilities": {
+      "str": 14,
+      "dex": 11,
+      "con": 15,
+      "int": 9,
+      "wis": 16,
+      "cha": 13
+     },
+     "skill_proficiencies": [
+      "insight",
+      "religion",
+      "medicine",
+      "persuasion"
+     ],
+     "hp": 24,
+     "max_hp": 24,
+     "armor_class": 10,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 900,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "amulet",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "mace",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "scale_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "priests_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 12,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "scale_mail",
+      "shield",
+      "mace"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "cleric",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "life",
+      "ancestry": null,
+      "base_abilities": {
+       "wis": 15,
+       "con": 14,
+       "str": 13,
+       "cha": 12,
+       "dex": 10,
+       "int": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "cha",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast cleric spells using Wisdom. Prepare WIS mod + cleric level spells from the cleric list each day; you know 3 cantrips at 1st level.",
+        "level": 1
+       },
+       {
+        "name": "Divine Domain",
+        "source": "class",
+        "text": "Choose a divine domain that grants bonus spells and features.",
+        "level": 1
+       },
+       {
+        "name": "Domain Spells",
+        "source": "subclass",
+        "text": "You always have these domain spells prepared, and they don't count against your number of prepared spells: 1st\u2014bless, cure wounds; 3rd\u2014lesser restoration, spiritual weapon; 5th\u2014beacon of hope, revivify; 7th\u2014death ward, guardian of faith; 9th\u2014mass cure wounds, raise dead.",
+        "level": 1
+       },
+       {
+        "name": "Bonus Proficiency",
+        "source": "subclass",
+        "text": "You gain proficiency with heavy armor.",
+        "level": 1
+       },
+       {
+        "name": "Disciple of Life",
+        "source": "subclass",
+        "text": "Whenever a spell of 1st level or higher restores hit points to a creature, it regains extra hit points equal to 2 + the spell's level.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Channel Divinity",
+        "source": "class",
+        "text": "Channel divine energy for magical effects, regaining uses on a short or long rest. You gain more uses per rest as you level (1 at 2nd, 2 at 6th, 3 at 18th).",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Turn Undead",
+        "source": "class",
+        "text": "As an action, present your holy symbol; each undead within 30 feet that fails a Wisdom save is turned for 1 minute.",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Preserve Life",
+        "source": "subclass",
+        "text": "As an action, use Channel Divinity to restore hit points equal to five times your cleric level, divided among creatures within 30 feet (up to half each one's maximum).",
+        "level": 2
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "wis",
+      "cantrips_known": [
+       "sacred_flame",
+       "guidance",
+       "thaumaturgy"
+      ],
+      "spells_known": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary"
+      ],
+      "spells_prepared": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark cleric \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "4": {
+     "id": "bench_cleric",
+     "name": "Mirelle",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 4,
+     "abilities": {
+      "str": 14,
+      "dex": 11,
+      "con": 15,
+      "int": 9,
+      "wis": 18,
+      "cha": 13
+     },
+     "skill_proficiencies": [
+      "insight",
+      "religion",
+      "medicine",
+      "persuasion"
+     ],
+     "hp": 31,
+     "max_hp": 31,
+     "armor_class": 10,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 2700,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "amulet",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "mace",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "scale_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "priests_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 12,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "scale_mail",
+      "shield",
+      "mace"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "cleric",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "life",
+      "ancestry": null,
+      "base_abilities": {
+       "wis": 15,
+       "con": 14,
+       "str": 13,
+       "cha": 12,
+       "dex": 10,
+       "int": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "cha",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast cleric spells using Wisdom. Prepare WIS mod + cleric level spells from the cleric list each day; you know 3 cantrips at 1st level.",
+        "level": 1
+       },
+       {
+        "name": "Divine Domain",
+        "source": "class",
+        "text": "Choose a divine domain that grants bonus spells and features.",
+        "level": 1
+       },
+       {
+        "name": "Domain Spells",
+        "source": "subclass",
+        "text": "You always have these domain spells prepared, and they don't count against your number of prepared spells: 1st\u2014bless, cure wounds; 3rd\u2014lesser restoration, spiritual weapon; 5th\u2014beacon of hope, revivify; 7th\u2014death ward, guardian of faith; 9th\u2014mass cure wounds, raise dead.",
+        "level": 1
+       },
+       {
+        "name": "Bonus Proficiency",
+        "source": "subclass",
+        "text": "You gain proficiency with heavy armor.",
+        "level": 1
+       },
+       {
+        "name": "Disciple of Life",
+        "source": "subclass",
+        "text": "Whenever a spell of 1st level or higher restores hit points to a creature, it regains extra hit points equal to 2 + the spell's level.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Channel Divinity",
+        "source": "class",
+        "text": "Channel divine energy for magical effects, regaining uses on a short or long rest. You gain more uses per rest as you level (1 at 2nd, 2 at 6th, 3 at 18th).",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Turn Undead",
+        "source": "class",
+        "text": "As an action, present your holy symbol; each undead within 30 feet that fails a Wisdom save is turned for 1 minute.",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Preserve Life",
+        "source": "subclass",
+        "text": "As an action, use Channel Divinity to restore hit points equal to five times your cleric level, divided among creatures within 30 feet (up to half each one's maximum).",
+        "level": 2
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "wis",
+      "cantrips_known": [
+       "sacred_flame",
+       "guidance",
+       "thaumaturgy",
+       "light"
+      ],
+      "spells_known": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary",
+       "spiritual_weapon",
+       "hold_person"
+      ],
+      "spells_prepared": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary",
+       "spiritual_weapon",
+       "hold_person"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark cleric \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "5": {
+     "id": "bench_cleric",
+     "name": "Mirelle",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 5,
+     "abilities": {
+      "str": 14,
+      "dex": 11,
+      "con": 15,
+      "int": 9,
+      "wis": 18,
+      "cha": 13
+     },
+     "skill_proficiencies": [
+      "insight",
+      "religion",
+      "medicine",
+      "persuasion"
+     ],
+     "hp": 38,
+     "max_hp": 38,
+     "armor_class": 10,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 6500,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "amulet",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "mace",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "scale_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "priests_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 12,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "scale_mail",
+      "shield",
+      "mace"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "cleric",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "life",
+      "ancestry": null,
+      "base_abilities": {
+       "wis": 15,
+       "con": 14,
+       "str": 13,
+       "cha": 12,
+       "dex": 10,
+       "int": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "cha",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast cleric spells using Wisdom. Prepare WIS mod + cleric level spells from the cleric list each day; you know 3 cantrips at 1st level.",
+        "level": 1
+       },
+       {
+        "name": "Divine Domain",
+        "source": "class",
+        "text": "Choose a divine domain that grants bonus spells and features.",
+        "level": 1
+       },
+       {
+        "name": "Domain Spells",
+        "source": "subclass",
+        "text": "You always have these domain spells prepared, and they don't count against your number of prepared spells: 1st\u2014bless, cure wounds; 3rd\u2014lesser restoration, spiritual weapon; 5th\u2014beacon of hope, revivify; 7th\u2014death ward, guardian of faith; 9th\u2014mass cure wounds, raise dead.",
+        "level": 1
+       },
+       {
+        "name": "Bonus Proficiency",
+        "source": "subclass",
+        "text": "You gain proficiency with heavy armor.",
+        "level": 1
+       },
+       {
+        "name": "Disciple of Life",
+        "source": "subclass",
+        "text": "Whenever a spell of 1st level or higher restores hit points to a creature, it regains extra hit points equal to 2 + the spell's level.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Channel Divinity",
+        "source": "class",
+        "text": "Channel divine energy for magical effects, regaining uses on a short or long rest. You gain more uses per rest as you level (1 at 2nd, 2 at 6th, 3 at 18th).",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Turn Undead",
+        "source": "class",
+        "text": "As an action, present your holy symbol; each undead within 30 feet that fails a Wisdom save is turned for 1 minute.",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Preserve Life",
+        "source": "subclass",
+        "text": "As an action, use Channel Divinity to restore hit points equal to five times your cleric level, divided among creatures within 30 feet (up to half each one's maximum).",
+        "level": 2
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       },
+       {
+        "name": "Destroy Undead",
+        "source": "class",
+        "text": "When an undead fails its save against your Turn Undead, it is instantly destroyed if its CR is at or below a threshold that rises with your level (CR 1/2 at 5th, up to CR 4 at 17th).",
+        "level": 5
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "wis",
+      "cantrips_known": [
+       "sacred_flame",
+       "guidance",
+       "thaumaturgy",
+       "light"
+      ],
+      "spells_known": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary",
+       "spiritual_weapon",
+       "hold_person",
+       "lesser_restoration"
+      ],
+      "spells_prepared": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary",
+       "spiritual_weapon",
+       "hold_person",
+       "lesser_restoration"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark cleric \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "6": {
+     "id": "bench_cleric",
+     "name": "Mirelle",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 6,
+     "abilities": {
+      "str": 14,
+      "dex": 11,
+      "con": 15,
+      "int": 9,
+      "wis": 18,
+      "cha": 13
+     },
+     "skill_proficiencies": [
+      "insight",
+      "religion",
+      "medicine",
+      "persuasion"
+     ],
+     "hp": 45,
+     "max_hp": 45,
+     "armor_class": 10,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 14000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "amulet",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "mace",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "scale_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "priests_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 12,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "scale_mail",
+      "shield",
+      "mace"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "cleric",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "life",
+      "ancestry": null,
+      "base_abilities": {
+       "wis": 15,
+       "con": 14,
+       "str": 13,
+       "cha": 12,
+       "dex": 10,
+       "int": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "cha",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast cleric spells using Wisdom. Prepare WIS mod + cleric level spells from the cleric list each day; you know 3 cantrips at 1st level.",
+        "level": 1
+       },
+       {
+        "name": "Divine Domain",
+        "source": "class",
+        "text": "Choose a divine domain that grants bonus spells and features.",
+        "level": 1
+       },
+       {
+        "name": "Domain Spells",
+        "source": "subclass",
+        "text": "You always have these domain spells prepared, and they don't count against your number of prepared spells: 1st\u2014bless, cure wounds; 3rd\u2014lesser restoration, spiritual weapon; 5th\u2014beacon of hope, revivify; 7th\u2014death ward, guardian of faith; 9th\u2014mass cure wounds, raise dead.",
+        "level": 1
+       },
+       {
+        "name": "Bonus Proficiency",
+        "source": "subclass",
+        "text": "You gain proficiency with heavy armor.",
+        "level": 1
+       },
+       {
+        "name": "Disciple of Life",
+        "source": "subclass",
+        "text": "Whenever a spell of 1st level or higher restores hit points to a creature, it regains extra hit points equal to 2 + the spell's level.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Channel Divinity",
+        "source": "class",
+        "text": "Channel divine energy for magical effects, regaining uses on a short or long rest. You gain more uses per rest as you level (1 at 2nd, 2 at 6th, 3 at 18th).",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Turn Undead",
+        "source": "class",
+        "text": "As an action, present your holy symbol; each undead within 30 feet that fails a Wisdom save is turned for 1 minute.",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Preserve Life",
+        "source": "subclass",
+        "text": "As an action, use Channel Divinity to restore hit points equal to five times your cleric level, divided among creatures within 30 feet (up to half each one's maximum).",
+        "level": 2
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       },
+       {
+        "name": "Destroy Undead",
+        "source": "class",
+        "text": "When an undead fails its save against your Turn Undead, it is instantly destroyed if its CR is at or below a threshold that rises with your level (CR 1/2 at 5th, up to CR 4 at 17th).",
+        "level": 5
+       },
+       {
+        "name": "Blessed Healer",
+        "source": "subclass",
+        "text": "When you cast a spell of 1st level or higher that restores hit points to another creature, you regain hit points equal to 2 + the spell's level.",
+        "level": 6
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "wis",
+      "cantrips_known": [
+       "sacred_flame",
+       "guidance",
+       "thaumaturgy",
+       "light"
+      ],
+      "spells_known": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary",
+       "spiritual_weapon",
+       "hold_person",
+       "lesser_restoration",
+       "silence"
+      ],
+      "spells_prepared": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary",
+       "spiritual_weapon",
+       "hold_person",
+       "lesser_restoration",
+       "silence"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark cleric \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "7": {
+     "id": "bench_cleric",
+     "name": "Mirelle",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 7,
+     "abilities": {
+      "str": 14,
+      "dex": 11,
+      "con": 15,
+      "int": 9,
+      "wis": 18,
+      "cha": 13
+     },
+     "skill_proficiencies": [
+      "insight",
+      "religion",
+      "medicine",
+      "persuasion"
+     ],
+     "hp": 52,
+     "max_hp": 52,
+     "armor_class": 10,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 23000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "amulet",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "mace",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "scale_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "priests_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 12,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "scale_mail",
+      "shield",
+      "mace"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "cleric",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "life",
+      "ancestry": null,
+      "base_abilities": {
+       "wis": 15,
+       "con": 14,
+       "str": 13,
+       "cha": 12,
+       "dex": 10,
+       "int": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "cha",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast cleric spells using Wisdom. Prepare WIS mod + cleric level spells from the cleric list each day; you know 3 cantrips at 1st level.",
+        "level": 1
+       },
+       {
+        "name": "Divine Domain",
+        "source": "class",
+        "text": "Choose a divine domain that grants bonus spells and features.",
+        "level": 1
+       },
+       {
+        "name": "Domain Spells",
+        "source": "subclass",
+        "text": "You always have these domain spells prepared, and they don't count against your number of prepared spells: 1st\u2014bless, cure wounds; 3rd\u2014lesser restoration, spiritual weapon; 5th\u2014beacon of hope, revivify; 7th\u2014death ward, guardian of faith; 9th\u2014mass cure wounds, raise dead.",
+        "level": 1
+       },
+       {
+        "name": "Bonus Proficiency",
+        "source": "subclass",
+        "text": "You gain proficiency with heavy armor.",
+        "level": 1
+       },
+       {
+        "name": "Disciple of Life",
+        "source": "subclass",
+        "text": "Whenever a spell of 1st level or higher restores hit points to a creature, it regains extra hit points equal to 2 + the spell's level.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Channel Divinity",
+        "source": "class",
+        "text": "Channel divine energy for magical effects, regaining uses on a short or long rest. You gain more uses per rest as you level (1 at 2nd, 2 at 6th, 3 at 18th).",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Turn Undead",
+        "source": "class",
+        "text": "As an action, present your holy symbol; each undead within 30 feet that fails a Wisdom save is turned for 1 minute.",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Preserve Life",
+        "source": "subclass",
+        "text": "As an action, use Channel Divinity to restore hit points equal to five times your cleric level, divided among creatures within 30 feet (up to half each one's maximum).",
+        "level": 2
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       },
+       {
+        "name": "Destroy Undead",
+        "source": "class",
+        "text": "When an undead fails its save against your Turn Undead, it is instantly destroyed if its CR is at or below a threshold that rises with your level (CR 1/2 at 5th, up to CR 4 at 17th).",
+        "level": 5
+       },
+       {
+        "name": "Blessed Healer",
+        "source": "subclass",
+        "text": "When you cast a spell of 1st level or higher that restores hit points to another creature, you regain hit points equal to 2 + the spell's level.",
+        "level": 6
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "wis",
+      "cantrips_known": [
+       "sacred_flame",
+       "guidance",
+       "thaumaturgy",
+       "light"
+      ],
+      "spells_known": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary",
+       "spiritual_weapon",
+       "hold_person",
+       "lesser_restoration",
+       "silence",
+       "spirit_guardians"
+      ],
+      "spells_prepared": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary",
+       "spiritual_weapon",
+       "hold_person",
+       "lesser_restoration",
+       "silence",
+       "spirit_guardians"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark cleric \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "8": {
+     "id": "bench_cleric",
+     "name": "Mirelle",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 8,
+     "abilities": {
+      "str": 14,
+      "dex": 11,
+      "con": 15,
+      "int": 9,
+      "wis": 20,
+      "cha": 13
+     },
+     "skill_proficiencies": [
+      "insight",
+      "religion",
+      "medicine",
+      "persuasion"
+     ],
+     "hp": 59,
+     "max_hp": 59,
+     "armor_class": 10,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 34000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "amulet",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "mace",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "scale_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "priests_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 12,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "scale_mail",
+      "shield",
+      "mace"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "cleric",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "life",
+      "ancestry": null,
+      "base_abilities": {
+       "wis": 15,
+       "con": 14,
+       "str": 13,
+       "cha": 12,
+       "dex": 10,
+       "int": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "cha",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast cleric spells using Wisdom. Prepare WIS mod + cleric level spells from the cleric list each day; you know 3 cantrips at 1st level.",
+        "level": 1
+       },
+       {
+        "name": "Divine Domain",
+        "source": "class",
+        "text": "Choose a divine domain that grants bonus spells and features.",
+        "level": 1
+       },
+       {
+        "name": "Domain Spells",
+        "source": "subclass",
+        "text": "You always have these domain spells prepared, and they don't count against your number of prepared spells: 1st\u2014bless, cure wounds; 3rd\u2014lesser restoration, spiritual weapon; 5th\u2014beacon of hope, revivify; 7th\u2014death ward, guardian of faith; 9th\u2014mass cure wounds, raise dead.",
+        "level": 1
+       },
+       {
+        "name": "Bonus Proficiency",
+        "source": "subclass",
+        "text": "You gain proficiency with heavy armor.",
+        "level": 1
+       },
+       {
+        "name": "Disciple of Life",
+        "source": "subclass",
+        "text": "Whenever a spell of 1st level or higher restores hit points to a creature, it regains extra hit points equal to 2 + the spell's level.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Channel Divinity",
+        "source": "class",
+        "text": "Channel divine energy for magical effects, regaining uses on a short or long rest. You gain more uses per rest as you level (1 at 2nd, 2 at 6th, 3 at 18th).",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Turn Undead",
+        "source": "class",
+        "text": "As an action, present your holy symbol; each undead within 30 feet that fails a Wisdom save is turned for 1 minute.",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Preserve Life",
+        "source": "subclass",
+        "text": "As an action, use Channel Divinity to restore hit points equal to five times your cleric level, divided among creatures within 30 feet (up to half each one's maximum).",
+        "level": 2
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       },
+       {
+        "name": "Destroy Undead",
+        "source": "class",
+        "text": "When an undead fails its save against your Turn Undead, it is instantly destroyed if its CR is at or below a threshold that rises with your level (CR 1/2 at 5th, up to CR 4 at 17th).",
+        "level": 5
+       },
+       {
+        "name": "Blessed Healer",
+        "source": "subclass",
+        "text": "When you cast a spell of 1st level or higher that restores hit points to another creature, you regain hit points equal to 2 + the spell's level.",
+        "level": 6
+       },
+       {
+        "name": "Divine Strike",
+        "source": "subclass",
+        "text": "Once per turn, when you hit with a weapon attack, deal an extra 1d8 radiant damage (2d8 at 14th level).",
+        "level": 8
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "wis",
+      "cantrips_known": [
+       "sacred_flame",
+       "guidance",
+       "thaumaturgy",
+       "light"
+      ],
+      "spells_known": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary",
+       "spiritual_weapon",
+       "hold_person",
+       "lesser_restoration",
+       "silence",
+       "spirit_guardians",
+       "dispel_magic",
+       "mass_healing_word"
+      ],
+      "spells_prepared": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary",
+       "spiritual_weapon",
+       "hold_person",
+       "lesser_restoration",
+       "silence",
+       "spirit_guardians",
+       "dispel_magic",
+       "mass_healing_word"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark cleric \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "9": {
+     "id": "bench_cleric",
+     "name": "Mirelle",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 9,
+     "abilities": {
+      "str": 14,
+      "dex": 11,
+      "con": 15,
+      "int": 9,
+      "wis": 20,
+      "cha": 13
+     },
+     "skill_proficiencies": [
+      "insight",
+      "religion",
+      "medicine",
+      "persuasion"
+     ],
+     "hp": 66,
+     "max_hp": 66,
+     "armor_class": 10,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 48000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "shield",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "amulet",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "mace",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "scale_mail",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "light_crossbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "priests_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 12,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "scale_mail",
+      "shield",
+      "mace"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "cleric",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "life",
+      "ancestry": null,
+      "base_abilities": {
+       "wis": 15,
+       "con": 14,
+       "str": 13,
+       "cha": 12,
+       "dex": 10,
+       "int": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "cha",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [
+       "light",
+       "medium",
+       "shields"
+      ],
+      "weapon_proficiencies": [
+       "simple"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast cleric spells using Wisdom. Prepare WIS mod + cleric level spells from the cleric list each day; you know 3 cantrips at 1st level.",
+        "level": 1
+       },
+       {
+        "name": "Divine Domain",
+        "source": "class",
+        "text": "Choose a divine domain that grants bonus spells and features.",
+        "level": 1
+       },
+       {
+        "name": "Domain Spells",
+        "source": "subclass",
+        "text": "You always have these domain spells prepared, and they don't count against your number of prepared spells: 1st\u2014bless, cure wounds; 3rd\u2014lesser restoration, spiritual weapon; 5th\u2014beacon of hope, revivify; 7th\u2014death ward, guardian of faith; 9th\u2014mass cure wounds, raise dead.",
+        "level": 1
+       },
+       {
+        "name": "Bonus Proficiency",
+        "source": "subclass",
+        "text": "You gain proficiency with heavy armor.",
+        "level": 1
+       },
+       {
+        "name": "Disciple of Life",
+        "source": "subclass",
+        "text": "Whenever a spell of 1st level or higher restores hit points to a creature, it regains extra hit points equal to 2 + the spell's level.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Channel Divinity",
+        "source": "class",
+        "text": "Channel divine energy for magical effects, regaining uses on a short or long rest. You gain more uses per rest as you level (1 at 2nd, 2 at 6th, 3 at 18th).",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Turn Undead",
+        "source": "class",
+        "text": "As an action, present your holy symbol; each undead within 30 feet that fails a Wisdom save is turned for 1 minute.",
+        "level": 2
+       },
+       {
+        "name": "Channel Divinity: Preserve Life",
+        "source": "subclass",
+        "text": "As an action, use Channel Divinity to restore hit points equal to five times your cleric level, divided among creatures within 30 feet (up to half each one's maximum).",
+        "level": 2
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       },
+       {
+        "name": "Destroy Undead",
+        "source": "class",
+        "text": "When an undead fails its save against your Turn Undead, it is instantly destroyed if its CR is at or below a threshold that rises with your level (CR 1/2 at 5th, up to CR 4 at 17th).",
+        "level": 5
+       },
+       {
+        "name": "Blessed Healer",
+        "source": "subclass",
+        "text": "When you cast a spell of 1st level or higher that restores hit points to another creature, you regain hit points equal to 2 + the spell's level.",
+        "level": 6
+       },
+       {
+        "name": "Divine Strike",
+        "source": "subclass",
+        "text": "Once per turn, when you hit with a weapon attack, deal an extra 1d8 radiant damage (2d8 at 14th level).",
+        "level": 8
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "wis",
+      "cantrips_known": [
+       "sacred_flame",
+       "guidance",
+       "thaumaturgy",
+       "light"
+      ],
+      "spells_known": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary",
+       "spiritual_weapon",
+       "hold_person",
+       "lesser_restoration",
+       "silence",
+       "spirit_guardians",
+       "dispel_magic",
+       "mass_healing_word",
+       "revivify"
+      ],
+      "spells_prepared": [
+       "cure_wounds",
+       "bless",
+       "guiding_bolt",
+       "healing_word",
+       "shield_of_faith",
+       "sanctuary",
+       "spiritual_weapon",
+       "hold_person",
+       "lesser_restoration",
+       "silence",
+       "spirit_guardians",
+       "dispel_magic",
+       "mass_healing_word",
+       "revivify"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark cleric \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    }
+   }
+  },
+  "rogue": {
+   "items": [
+    {
+     "id": "leather_armor",
+     "name": "Leather Armor",
+     "category": "armor",
+     "tags": [
+      "light"
+     ],
+     "value_cp": 1000,
+     "armor_class": 11,
+     "armor_type": "light",
+     "dex_cap": null,
+     "damage": null
+    },
+    {
+     "id": "dagger",
+     "name": "Dagger",
+     "category": "weapon",
+     "tags": [
+      "simple",
+      "melee"
+     ],
+     "value_cp": 200,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": "1d4"
+    },
+    {
+     "id": "thieves_tools",
+     "name": "Thieves' Tools",
+     "category": "gear",
+     "tags": [
+      "tool"
+     ],
+     "value_cp": 2500,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": null
+    },
+    {
+     "id": "rapier",
+     "name": "Rapier",
+     "category": "weapon",
+     "tags": [
+      "martial",
+      "melee"
+     ],
+     "value_cp": 2500,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": "1d8"
+    },
+    {
+     "id": "shortbow",
+     "name": "Shortbow",
+     "category": "weapon",
+     "tags": [
+      "simple",
+      "ranged"
+     ],
+     "value_cp": 2500,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": "1d6"
+    },
+    {
+     "id": "burglars_pack",
+     "name": "Burglar's Pack",
+     "category": "gear",
+     "tags": [
+      "pack"
+     ],
+     "value_cp": 1600,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": null
+    },
+    {
+     "id": "explorers_pack",
+     "name": "Explorer's Pack",
+     "category": "gear",
+     "tags": [
+      "pack"
+     ],
+     "value_cp": 1000,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": null
+    },
+    {
+     "id": "rations_1_day",
+     "name": "Rations (1 day)",
+     "category": "gear",
+     "tags": [],
+     "value_cp": 50,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": null
+    }
+   ],
+   "levels": {
+    "1": {
+     "id": "bench_rogue",
+     "name": "Vex",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 1,
+     "abilities": {
+      "str": 9,
+      "dex": 16,
+      "con": 15,
+      "int": 13,
+      "wis": 14,
+      "cha": 11
+     },
+     "skill_proficiencies": [
+      "investigation",
+      "stealth",
+      "religion",
+      "insight",
+      "acrobatics",
+      "perception"
+     ],
+     "hp": 10,
+     "max_hp": 10,
+     "armor_class": 14,
+     "attack_bonus": 5,
+     "damage": "1d4",
+     "xp": 0,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "leather_armor",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "dagger",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "thieves_tools",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rapier",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shortbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "burglars_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 15,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "leather_armor",
+      "rapier"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "rogue",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": null,
+      "ancestry": null,
+      "base_abilities": {
+       "dex": 15,
+       "con": 14,
+       "wis": 13,
+       "int": 12,
+       "cha": 10,
+       "str": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "dex"
+      ],
+      "expertise": [
+       "perception",
+       "stealth"
+      ],
+      "armor_proficiencies": [
+       "light"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "hand crossbows",
+       "longswords",
+       "rapiers",
+       "shortswords"
+      ],
+      "tool_proficiencies": [
+       "thieves' tools"
+      ],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Expertise",
+        "source": "class",
+        "text": "Choose two of your skill proficiencies (or one skill and your thieves' tools) to double your proficiency bonus on; choose two more at 6th level.",
+        "level": 1
+       },
+       {
+        "name": "Sneak Attack",
+        "source": "class",
+        "text": "Once per turn, deal an extra 1d6 damage to a creature you hit with a finesse or ranged weapon when you have advantage, or when an ally is within 5 feet of the target and you don't have disadvantage. The damage rises by 1d6 at each odd level (up to 10d6 at 19th).",
+        "level": 1
+       },
+       {
+        "name": "Thieves' Cant",
+        "source": "class",
+        "text": "You know thieves' cant, a secret mix of dialect, jargon, and code, and can hide messages in seemingly normal conversation.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark rogue \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "2": {
+     "id": "bench_rogue",
+     "name": "Vex",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 2,
+     "abilities": {
+      "str": 9,
+      "dex": 16,
+      "con": 15,
+      "int": 13,
+      "wis": 14,
+      "cha": 11
+     },
+     "skill_proficiencies": [
+      "investigation",
+      "stealth",
+      "religion",
+      "insight",
+      "acrobatics",
+      "perception"
+     ],
+     "hp": 17,
+     "max_hp": 17,
+     "armor_class": 13,
+     "attack_bonus": 5,
+     "damage": "1d4",
+     "xp": 300,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "leather_armor",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "dagger",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "thieves_tools",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rapier",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shortbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "burglars_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 15,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "leather_armor",
+      "rapier"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "rogue",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": null,
+      "ancestry": null,
+      "base_abilities": {
+       "dex": 15,
+       "con": 14,
+       "wis": 13,
+       "int": 12,
+       "cha": 10,
+       "str": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "dex"
+      ],
+      "expertise": [
+       "perception",
+       "stealth"
+      ],
+      "armor_proficiencies": [
+       "light"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "hand crossbows",
+       "longswords",
+       "rapiers",
+       "shortswords"
+      ],
+      "tool_proficiencies": [
+       "thieves' tools"
+      ],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Expertise",
+        "source": "class",
+        "text": "Choose two of your skill proficiencies (or one skill and your thieves' tools) to double your proficiency bonus on; choose two more at 6th level.",
+        "level": 1
+       },
+       {
+        "name": "Sneak Attack",
+        "source": "class",
+        "text": "Once per turn, deal an extra 1d6 damage to a creature you hit with a finesse or ranged weapon when you have advantage, or when an ally is within 5 feet of the target and you don't have disadvantage. The damage rises by 1d6 at each odd level (up to 10d6 at 19th).",
+        "level": 1
+       },
+       {
+        "name": "Thieves' Cant",
+        "source": "class",
+        "text": "You know thieves' cant, a secret mix of dialect, jargon, and code, and can hide messages in seemingly normal conversation.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Cunning Action",
+        "source": "class",
+        "text": "On each of your turns, use a bonus action to Dash, Disengage, or Hide.",
+        "level": 2
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark rogue \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "3": {
+     "id": "bench_rogue",
+     "name": "Vex",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 3,
+     "abilities": {
+      "str": 9,
+      "dex": 16,
+      "con": 15,
+      "int": 13,
+      "wis": 14,
+      "cha": 11
+     },
+     "skill_proficiencies": [
+      "investigation",
+      "stealth",
+      "religion",
+      "insight",
+      "acrobatics",
+      "perception"
+     ],
+     "hp": 24,
+     "max_hp": 24,
+     "armor_class": 13,
+     "attack_bonus": 5,
+     "damage": "1d4",
+     "xp": 900,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "leather_armor",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "dagger",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "thieves_tools",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rapier",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shortbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "burglars_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 15,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "leather_armor",
+      "rapier"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "rogue",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "thief",
+      "ancestry": null,
+      "base_abilities": {
+       "dex": 15,
+       "con": 14,
+       "wis": 13,
+       "int": 12,
+       "cha": 10,
+       "str": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "dex"
+      ],
+      "expertise": [
+       "perception",
+       "stealth"
+      ],
+      "armor_proficiencies": [
+       "light"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "hand crossbows",
+       "longswords",
+       "rapiers",
+       "shortswords"
+      ],
+      "tool_proficiencies": [
+       "thieves' tools"
+      ],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Expertise",
+        "source": "class",
+        "text": "Choose two of your skill proficiencies (or one skill and your thieves' tools) to double your proficiency bonus on; choose two more at 6th level.",
+        "level": 1
+       },
+       {
+        "name": "Sneak Attack",
+        "source": "class",
+        "text": "Once per turn, deal an extra 1d6 damage to a creature you hit with a finesse or ranged weapon when you have advantage, or when an ally is within 5 feet of the target and you don't have disadvantage. The damage rises by 1d6 at each odd level (up to 10d6 at 19th).",
+        "level": 1
+       },
+       {
+        "name": "Thieves' Cant",
+        "source": "class",
+        "text": "You know thieves' cant, a secret mix of dialect, jargon, and code, and can hide messages in seemingly normal conversation.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Cunning Action",
+        "source": "class",
+        "text": "On each of your turns, use a bonus action to Dash, Disengage, or Hide.",
+        "level": 2
+       },
+       {
+        "name": "Fast Hands",
+        "source": "subclass",
+        "text": "Use your Cunning Action bonus action to make a Sleight of Hand check, use thieves' tools to disarm a trap or open a lock, or use an object.",
+        "level": 3
+       },
+       {
+        "name": "Second-Story Work",
+        "source": "subclass",
+        "text": "Climbing no longer costs extra movement, and your running jump distance increases by your Dexterity modifier (in feet).",
+        "level": 3
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark rogue \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "4": {
+     "id": "bench_rogue",
+     "name": "Vex",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 4,
+     "abilities": {
+      "str": 9,
+      "dex": 18,
+      "con": 15,
+      "int": 13,
+      "wis": 14,
+      "cha": 11
+     },
+     "skill_proficiencies": [
+      "investigation",
+      "stealth",
+      "religion",
+      "insight",
+      "acrobatics",
+      "perception"
+     ],
+     "hp": 31,
+     "max_hp": 31,
+     "armor_class": 14,
+     "attack_bonus": 5,
+     "damage": "1d4",
+     "xp": 2700,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "leather_armor",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "dagger",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "thieves_tools",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rapier",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shortbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "burglars_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 15,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "leather_armor",
+      "rapier"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "rogue",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "thief",
+      "ancestry": null,
+      "base_abilities": {
+       "dex": 15,
+       "con": 14,
+       "wis": 13,
+       "int": 12,
+       "cha": 10,
+       "str": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "dex"
+      ],
+      "expertise": [
+       "perception",
+       "stealth"
+      ],
+      "armor_proficiencies": [
+       "light"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "hand crossbows",
+       "longswords",
+       "rapiers",
+       "shortswords"
+      ],
+      "tool_proficiencies": [
+       "thieves' tools"
+      ],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Expertise",
+        "source": "class",
+        "text": "Choose two of your skill proficiencies (or one skill and your thieves' tools) to double your proficiency bonus on; choose two more at 6th level.",
+        "level": 1
+       },
+       {
+        "name": "Sneak Attack",
+        "source": "class",
+        "text": "Once per turn, deal an extra 1d6 damage to a creature you hit with a finesse or ranged weapon when you have advantage, or when an ally is within 5 feet of the target and you don't have disadvantage. The damage rises by 1d6 at each odd level (up to 10d6 at 19th).",
+        "level": 1
+       },
+       {
+        "name": "Thieves' Cant",
+        "source": "class",
+        "text": "You know thieves' cant, a secret mix of dialect, jargon, and code, and can hide messages in seemingly normal conversation.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Cunning Action",
+        "source": "class",
+        "text": "On each of your turns, use a bonus action to Dash, Disengage, or Hide.",
+        "level": 2
+       },
+       {
+        "name": "Fast Hands",
+        "source": "subclass",
+        "text": "Use your Cunning Action bonus action to make a Sleight of Hand check, use thieves' tools to disarm a trap or open a lock, or use an object.",
+        "level": 3
+       },
+       {
+        "name": "Second-Story Work",
+        "source": "subclass",
+        "text": "Climbing no longer costs extra movement, and your running jump distance increases by your Dexterity modifier (in feet).",
+        "level": 3
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark rogue \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "5": {
+     "id": "bench_rogue",
+     "name": "Vex",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 5,
+     "abilities": {
+      "str": 9,
+      "dex": 18,
+      "con": 15,
+      "int": 13,
+      "wis": 14,
+      "cha": 11
+     },
+     "skill_proficiencies": [
+      "investigation",
+      "stealth",
+      "religion",
+      "insight",
+      "acrobatics",
+      "perception"
+     ],
+     "hp": 38,
+     "max_hp": 38,
+     "armor_class": 14,
+     "attack_bonus": 5,
+     "damage": "1d4",
+     "xp": 6500,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "leather_armor",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "dagger",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "thieves_tools",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rapier",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shortbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "burglars_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 15,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "leather_armor",
+      "rapier"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "rogue",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "thief",
+      "ancestry": null,
+      "base_abilities": {
+       "dex": 15,
+       "con": 14,
+       "wis": 13,
+       "int": 12,
+       "cha": 10,
+       "str": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "dex"
+      ],
+      "expertise": [
+       "perception",
+       "stealth"
+      ],
+      "armor_proficiencies": [
+       "light"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "hand crossbows",
+       "longswords",
+       "rapiers",
+       "shortswords"
+      ],
+      "tool_proficiencies": [
+       "thieves' tools"
+      ],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Expertise",
+        "source": "class",
+        "text": "Choose two of your skill proficiencies (or one skill and your thieves' tools) to double your proficiency bonus on; choose two more at 6th level.",
+        "level": 1
+       },
+       {
+        "name": "Sneak Attack",
+        "source": "class",
+        "text": "Once per turn, deal an extra 1d6 damage to a creature you hit with a finesse or ranged weapon when you have advantage, or when an ally is within 5 feet of the target and you don't have disadvantage. The damage rises by 1d6 at each odd level (up to 10d6 at 19th).",
+        "level": 1
+       },
+       {
+        "name": "Thieves' Cant",
+        "source": "class",
+        "text": "You know thieves' cant, a secret mix of dialect, jargon, and code, and can hide messages in seemingly normal conversation.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Cunning Action",
+        "source": "class",
+        "text": "On each of your turns, use a bonus action to Dash, Disengage, or Hide.",
+        "level": 2
+       },
+       {
+        "name": "Fast Hands",
+        "source": "subclass",
+        "text": "Use your Cunning Action bonus action to make a Sleight of Hand check, use thieves' tools to disarm a trap or open a lock, or use an object.",
+        "level": 3
+       },
+       {
+        "name": "Second-Story Work",
+        "source": "subclass",
+        "text": "Climbing no longer costs extra movement, and your running jump distance increases by your Dexterity modifier (in feet).",
+        "level": 3
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       },
+       {
+        "name": "Uncanny Dodge",
+        "source": "class",
+        "text": "When an attacker you can see hits you, use a reaction to halve the attack's damage.",
+        "level": 5
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark rogue \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "6": {
+     "id": "bench_rogue",
+     "name": "Vex",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 6,
+     "abilities": {
+      "str": 9,
+      "dex": 18,
+      "con": 15,
+      "int": 13,
+      "wis": 14,
+      "cha": 11
+     },
+     "skill_proficiencies": [
+      "investigation",
+      "stealth",
+      "religion",
+      "insight",
+      "acrobatics",
+      "perception"
+     ],
+     "hp": 45,
+     "max_hp": 45,
+     "armor_class": 14,
+     "attack_bonus": 5,
+     "damage": "1d4",
+     "xp": 14000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "leather_armor",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "dagger",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "thieves_tools",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rapier",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shortbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "burglars_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 15,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "leather_armor",
+      "rapier"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "rogue",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "thief",
+      "ancestry": null,
+      "base_abilities": {
+       "dex": 15,
+       "con": 14,
+       "wis": 13,
+       "int": 12,
+       "cha": 10,
+       "str": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "dex"
+      ],
+      "expertise": [
+       "perception",
+       "stealth"
+      ],
+      "armor_proficiencies": [
+       "light"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "hand crossbows",
+       "longswords",
+       "rapiers",
+       "shortswords"
+      ],
+      "tool_proficiencies": [
+       "thieves' tools"
+      ],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Expertise",
+        "source": "class",
+        "text": "Choose two of your skill proficiencies (or one skill and your thieves' tools) to double your proficiency bonus on; choose two more at 6th level.",
+        "level": 1
+       },
+       {
+        "name": "Sneak Attack",
+        "source": "class",
+        "text": "Once per turn, deal an extra 1d6 damage to a creature you hit with a finesse or ranged weapon when you have advantage, or when an ally is within 5 feet of the target and you don't have disadvantage. The damage rises by 1d6 at each odd level (up to 10d6 at 19th).",
+        "level": 1
+       },
+       {
+        "name": "Thieves' Cant",
+        "source": "class",
+        "text": "You know thieves' cant, a secret mix of dialect, jargon, and code, and can hide messages in seemingly normal conversation.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Cunning Action",
+        "source": "class",
+        "text": "On each of your turns, use a bonus action to Dash, Disengage, or Hide.",
+        "level": 2
+       },
+       {
+        "name": "Fast Hands",
+        "source": "subclass",
+        "text": "Use your Cunning Action bonus action to make a Sleight of Hand check, use thieves' tools to disarm a trap or open a lock, or use an object.",
+        "level": 3
+       },
+       {
+        "name": "Second-Story Work",
+        "source": "subclass",
+        "text": "Climbing no longer costs extra movement, and your running jump distance increases by your Dexterity modifier (in feet).",
+        "level": 3
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       },
+       {
+        "name": "Uncanny Dodge",
+        "source": "class",
+        "text": "When an attacker you can see hits you, use a reaction to halve the attack's damage.",
+        "level": 5
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark rogue \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "7": {
+     "id": "bench_rogue",
+     "name": "Vex",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 7,
+     "abilities": {
+      "str": 9,
+      "dex": 18,
+      "con": 15,
+      "int": 13,
+      "wis": 14,
+      "cha": 11
+     },
+     "skill_proficiencies": [
+      "investigation",
+      "stealth",
+      "religion",
+      "insight",
+      "acrobatics",
+      "perception"
+     ],
+     "hp": 52,
+     "max_hp": 52,
+     "armor_class": 14,
+     "attack_bonus": 5,
+     "damage": "1d4",
+     "xp": 23000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "leather_armor",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "dagger",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "thieves_tools",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rapier",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shortbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "burglars_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 15,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "leather_armor",
+      "rapier"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "rogue",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "thief",
+      "ancestry": null,
+      "base_abilities": {
+       "dex": 15,
+       "con": 14,
+       "wis": 13,
+       "int": 12,
+       "cha": 10,
+       "str": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "dex"
+      ],
+      "expertise": [
+       "perception",
+       "stealth"
+      ],
+      "armor_proficiencies": [
+       "light"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "hand crossbows",
+       "longswords",
+       "rapiers",
+       "shortswords"
+      ],
+      "tool_proficiencies": [
+       "thieves' tools"
+      ],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Expertise",
+        "source": "class",
+        "text": "Choose two of your skill proficiencies (or one skill and your thieves' tools) to double your proficiency bonus on; choose two more at 6th level.",
+        "level": 1
+       },
+       {
+        "name": "Sneak Attack",
+        "source": "class",
+        "text": "Once per turn, deal an extra 1d6 damage to a creature you hit with a finesse or ranged weapon when you have advantage, or when an ally is within 5 feet of the target and you don't have disadvantage. The damage rises by 1d6 at each odd level (up to 10d6 at 19th).",
+        "level": 1
+       },
+       {
+        "name": "Thieves' Cant",
+        "source": "class",
+        "text": "You know thieves' cant, a secret mix of dialect, jargon, and code, and can hide messages in seemingly normal conversation.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Cunning Action",
+        "source": "class",
+        "text": "On each of your turns, use a bonus action to Dash, Disengage, or Hide.",
+        "level": 2
+       },
+       {
+        "name": "Fast Hands",
+        "source": "subclass",
+        "text": "Use your Cunning Action bonus action to make a Sleight of Hand check, use thieves' tools to disarm a trap or open a lock, or use an object.",
+        "level": 3
+       },
+       {
+        "name": "Second-Story Work",
+        "source": "subclass",
+        "text": "Climbing no longer costs extra movement, and your running jump distance increases by your Dexterity modifier (in feet).",
+        "level": 3
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       },
+       {
+        "name": "Uncanny Dodge",
+        "source": "class",
+        "text": "When an attacker you can see hits you, use a reaction to halve the attack's damage.",
+        "level": 5
+       },
+       {
+        "name": "Evasion",
+        "source": "class",
+        "text": "When you make a Dexterity save for half damage, you instead take no damage on a success and half on a failure.",
+        "level": 7
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark rogue \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "8": {
+     "id": "bench_rogue",
+     "name": "Vex",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 8,
+     "abilities": {
+      "str": 9,
+      "dex": 20,
+      "con": 15,
+      "int": 13,
+      "wis": 14,
+      "cha": 11
+     },
+     "skill_proficiencies": [
+      "investigation",
+      "stealth",
+      "religion",
+      "insight",
+      "acrobatics",
+      "perception"
+     ],
+     "hp": 59,
+     "max_hp": 59,
+     "armor_class": 15,
+     "attack_bonus": 5,
+     "damage": "1d4",
+     "xp": 34000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "leather_armor",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "dagger",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "thieves_tools",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rapier",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shortbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "burglars_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 15,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "leather_armor",
+      "rapier"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "rogue",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "thief",
+      "ancestry": null,
+      "base_abilities": {
+       "dex": 15,
+       "con": 14,
+       "wis": 13,
+       "int": 12,
+       "cha": 10,
+       "str": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "dex"
+      ],
+      "expertise": [
+       "perception",
+       "stealth"
+      ],
+      "armor_proficiencies": [
+       "light"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "hand crossbows",
+       "longswords",
+       "rapiers",
+       "shortswords"
+      ],
+      "tool_proficiencies": [
+       "thieves' tools"
+      ],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Expertise",
+        "source": "class",
+        "text": "Choose two of your skill proficiencies (or one skill and your thieves' tools) to double your proficiency bonus on; choose two more at 6th level.",
+        "level": 1
+       },
+       {
+        "name": "Sneak Attack",
+        "source": "class",
+        "text": "Once per turn, deal an extra 1d6 damage to a creature you hit with a finesse or ranged weapon when you have advantage, or when an ally is within 5 feet of the target and you don't have disadvantage. The damage rises by 1d6 at each odd level (up to 10d6 at 19th).",
+        "level": 1
+       },
+       {
+        "name": "Thieves' Cant",
+        "source": "class",
+        "text": "You know thieves' cant, a secret mix of dialect, jargon, and code, and can hide messages in seemingly normal conversation.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Cunning Action",
+        "source": "class",
+        "text": "On each of your turns, use a bonus action to Dash, Disengage, or Hide.",
+        "level": 2
+       },
+       {
+        "name": "Fast Hands",
+        "source": "subclass",
+        "text": "Use your Cunning Action bonus action to make a Sleight of Hand check, use thieves' tools to disarm a trap or open a lock, or use an object.",
+        "level": 3
+       },
+       {
+        "name": "Second-Story Work",
+        "source": "subclass",
+        "text": "Climbing no longer costs extra movement, and your running jump distance increases by your Dexterity modifier (in feet).",
+        "level": 3
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       },
+       {
+        "name": "Uncanny Dodge",
+        "source": "class",
+        "text": "When an attacker you can see hits you, use a reaction to halve the attack's damage.",
+        "level": 5
+       },
+       {
+        "name": "Evasion",
+        "source": "class",
+        "text": "When you make a Dexterity save for half damage, you instead take no damage on a success and half on a failure.",
+        "level": 7
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark rogue \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "9": {
+     "id": "bench_rogue",
+     "name": "Vex",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 9,
+     "abilities": {
+      "str": 9,
+      "dex": 20,
+      "con": 15,
+      "int": 13,
+      "wis": 14,
+      "cha": 11
+     },
+     "skill_proficiencies": [
+      "investigation",
+      "stealth",
+      "religion",
+      "insight",
+      "acrobatics",
+      "perception"
+     ],
+     "hp": 66,
+     "max_hp": 66,
+     "armor_class": 15,
+     "attack_bonus": 5,
+     "damage": "1d4",
+     "xp": 48000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "leather_armor",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "dagger",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "thieves_tools",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rapier",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "shortbow",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "burglars_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 15,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "leather_armor",
+      "rapier"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "rogue",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "thief",
+      "ancestry": null,
+      "base_abilities": {
+       "dex": 15,
+       "con": 14,
+       "wis": 13,
+       "int": 12,
+       "cha": 10,
+       "str": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "dex"
+      ],
+      "expertise": [
+       "perception",
+       "stealth"
+      ],
+      "armor_proficiencies": [
+       "light"
+      ],
+      "weapon_proficiencies": [
+       "simple",
+       "hand crossbows",
+       "longswords",
+       "rapiers",
+       "shortswords"
+      ],
+      "tool_proficiencies": [
+       "thieves' tools"
+      ],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Expertise",
+        "source": "class",
+        "text": "Choose two of your skill proficiencies (or one skill and your thieves' tools) to double your proficiency bonus on; choose two more at 6th level.",
+        "level": 1
+       },
+       {
+        "name": "Sneak Attack",
+        "source": "class",
+        "text": "Once per turn, deal an extra 1d6 damage to a creature you hit with a finesse or ranged weapon when you have advantage, or when an ally is within 5 feet of the target and you don't have disadvantage. The damage rises by 1d6 at each odd level (up to 10d6 at 19th).",
+        "level": 1
+       },
+       {
+        "name": "Thieves' Cant",
+        "source": "class",
+        "text": "You know thieves' cant, a secret mix of dialect, jargon, and code, and can hide messages in seemingly normal conversation.",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Cunning Action",
+        "source": "class",
+        "text": "On each of your turns, use a bonus action to Dash, Disengage, or Hide.",
+        "level": 2
+       },
+       {
+        "name": "Fast Hands",
+        "source": "subclass",
+        "text": "Use your Cunning Action bonus action to make a Sleight of Hand check, use thieves' tools to disarm a trap or open a lock, or use an object.",
+        "level": 3
+       },
+       {
+        "name": "Second-Story Work",
+        "source": "subclass",
+        "text": "Climbing no longer costs extra movement, and your running jump distance increases by your Dexterity modifier (in feet).",
+        "level": 3
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       },
+       {
+        "name": "Uncanny Dodge",
+        "source": "class",
+        "text": "When an attacker you can see hits you, use a reaction to halve the attack's damage.",
+        "level": 5
+       },
+       {
+        "name": "Evasion",
+        "source": "class",
+        "text": "When you make a Dexterity save for half damage, you instead take no damage on a success and half on a failure.",
+        "level": 7
+       },
+       {
+        "name": "Supreme Sneak",
+        "source": "subclass",
+        "text": "You have advantage on Dexterity (Stealth) checks if you move no more than half your speed on the same turn.",
+        "level": 9
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": null,
+      "cantrips_known": [],
+      "spells_known": [],
+      "spells_prepared": []
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark rogue \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    }
+   }
+  },
+  "wizard": {
+   "items": [
+    {
+     "id": "spellbook",
+     "name": "Spellbook",
+     "category": "gear",
+     "tags": [
+      "arcane"
+     ],
+     "value_cp": 5000,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": null
+    },
+    {
+     "id": "explorers_pack",
+     "name": "Explorer's Pack",
+     "category": "gear",
+     "tags": [
+      "pack"
+     ],
+     "value_cp": 1000,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": null
+    },
+    {
+     "id": "quarterstaff",
+     "name": "Quarterstaff",
+     "category": "weapon",
+     "tags": [
+      "simple",
+      "melee"
+     ],
+     "value_cp": 20,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": "1d6"
+    },
+    {
+     "id": "rations_1_day",
+     "name": "Rations (1 day)",
+     "category": "gear",
+     "tags": [],
+     "value_cp": 50,
+     "armor_class": null,
+     "armor_type": null,
+     "dex_cap": null,
+     "damage": null
+    }
+   ],
+   "levels": {
+    "1": {
+     "id": "bench_wizard",
+     "name": "Aldous",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 1,
+     "abilities": {
+      "str": 11,
+      "dex": 14,
+      "con": 15,
+      "int": 16,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "arcana",
+      "investigation",
+      "religion",
+      "insight"
+     ],
+     "hp": 8,
+     "max_hp": 8,
+     "armor_class": 12,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 0,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "spellbook",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "quarterstaff",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "quarterstaff"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "wizard",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": null,
+      "ancestry": null,
+      "base_abilities": {
+       "int": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "str": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [],
+      "weapon_proficiencies": [
+       "daggers",
+       "darts",
+       "slings",
+       "quarterstaffs",
+       "light crossbows"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast wizard spells using Intelligence. Prepare INT mod + wizard level spells from your spellbook each day.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Recovery",
+        "source": "class",
+        "text": "Once per day on a short rest, recover spell slots totalling up to half your wizard level (rounded up).",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "int",
+      "cantrips_known": [
+       "fire_bolt",
+       "mage_hand",
+       "light"
+      ],
+      "spells_known": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands"
+      ],
+      "spells_prepared": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark wizard \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "2": {
+     "id": "bench_wizard",
+     "name": "Aldous",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 2,
+     "abilities": {
+      "str": 11,
+      "dex": 14,
+      "con": 15,
+      "int": 16,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "arcana",
+      "investigation",
+      "religion",
+      "insight"
+     ],
+     "hp": 14,
+     "max_hp": 14,
+     "armor_class": 12,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 300,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "spellbook",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "quarterstaff",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "quarterstaff"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "wizard",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "evocation",
+      "ancestry": null,
+      "base_abilities": {
+       "int": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "str": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [],
+      "weapon_proficiencies": [
+       "daggers",
+       "darts",
+       "slings",
+       "quarterstaffs",
+       "light crossbows"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast wizard spells using Intelligence. Prepare INT mod + wizard level spells from your spellbook each day.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Recovery",
+        "source": "class",
+        "text": "Once per day on a short rest, recover spell slots totalling up to half your wizard level (rounded up).",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Tradition",
+        "source": "class",
+        "text": "Choose an arcane tradition that shapes your magic.",
+        "level": 2
+       },
+       {
+        "name": "Evocation Savant",
+        "source": "subclass",
+        "text": "Halve the time and gold to copy evocation spells into your spellbook.",
+        "level": 2
+       },
+       {
+        "name": "Sculpt Spells",
+        "source": "subclass",
+        "text": "When you cast an evocation spell affecting others, you can protect allies from its effects.",
+        "level": 2
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "int",
+      "cantrips_known": [
+       "fire_bolt",
+       "mage_hand",
+       "light"
+      ],
+      "spells_known": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep"
+      ],
+      "spells_prepared": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark wizard \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "3": {
+     "id": "bench_wizard",
+     "name": "Aldous",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 3,
+     "abilities": {
+      "str": 11,
+      "dex": 14,
+      "con": 15,
+      "int": 16,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "arcana",
+      "investigation",
+      "religion",
+      "insight"
+     ],
+     "hp": 20,
+     "max_hp": 20,
+     "armor_class": 12,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 900,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "spellbook",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "quarterstaff",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "quarterstaff"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "wizard",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "evocation",
+      "ancestry": null,
+      "base_abilities": {
+       "int": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "str": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [],
+      "weapon_proficiencies": [
+       "daggers",
+       "darts",
+       "slings",
+       "quarterstaffs",
+       "light crossbows"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast wizard spells using Intelligence. Prepare INT mod + wizard level spells from your spellbook each day.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Recovery",
+        "source": "class",
+        "text": "Once per day on a short rest, recover spell slots totalling up to half your wizard level (rounded up).",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Tradition",
+        "source": "class",
+        "text": "Choose an arcane tradition that shapes your magic.",
+        "level": 2
+       },
+       {
+        "name": "Evocation Savant",
+        "source": "subclass",
+        "text": "Halve the time and gold to copy evocation spells into your spellbook.",
+        "level": 2
+       },
+       {
+        "name": "Sculpt Spells",
+        "source": "subclass",
+        "text": "When you cast an evocation spell affecting others, you can protect allies from its effects.",
+        "level": 2
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "int",
+      "cantrips_known": [
+       "fire_bolt",
+       "mage_hand",
+       "light"
+      ],
+      "spells_known": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave"
+      ],
+      "spells_prepared": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark wizard \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "4": {
+     "id": "bench_wizard",
+     "name": "Aldous",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 4,
+     "abilities": {
+      "str": 11,
+      "dex": 14,
+      "con": 15,
+      "int": 18,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "arcana",
+      "investigation",
+      "religion",
+      "insight"
+     ],
+     "hp": 26,
+     "max_hp": 26,
+     "armor_class": 12,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 2700,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "spellbook",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "quarterstaff",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "quarterstaff"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "wizard",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "evocation",
+      "ancestry": null,
+      "base_abilities": {
+       "int": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "str": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [],
+      "weapon_proficiencies": [
+       "daggers",
+       "darts",
+       "slings",
+       "quarterstaffs",
+       "light crossbows"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast wizard spells using Intelligence. Prepare INT mod + wizard level spells from your spellbook each day.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Recovery",
+        "source": "class",
+        "text": "Once per day on a short rest, recover spell slots totalling up to half your wizard level (rounded up).",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Tradition",
+        "source": "class",
+        "text": "Choose an arcane tradition that shapes your magic.",
+        "level": 2
+       },
+       {
+        "name": "Evocation Savant",
+        "source": "subclass",
+        "text": "Halve the time and gold to copy evocation spells into your spellbook.",
+        "level": 2
+       },
+       {
+        "name": "Sculpt Spells",
+        "source": "subclass",
+        "text": "When you cast an evocation spell affecting others, you can protect allies from its effects.",
+        "level": 2
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "int",
+      "cantrips_known": [
+       "fire_bolt",
+       "mage_hand",
+       "light",
+       "prestidigitation"
+      ],
+      "spells_known": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave",
+       "detect_magic",
+       "misty_step"
+      ],
+      "spells_prepared": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave",
+       "detect_magic",
+       "misty_step"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark wizard \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "5": {
+     "id": "bench_wizard",
+     "name": "Aldous",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 5,
+     "abilities": {
+      "str": 11,
+      "dex": 14,
+      "con": 15,
+      "int": 18,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "arcana",
+      "investigation",
+      "religion",
+      "insight"
+     ],
+     "hp": 32,
+     "max_hp": 32,
+     "armor_class": 12,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 6500,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "spellbook",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "quarterstaff",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "quarterstaff"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "wizard",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "evocation",
+      "ancestry": null,
+      "base_abilities": {
+       "int": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "str": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [],
+      "weapon_proficiencies": [
+       "daggers",
+       "darts",
+       "slings",
+       "quarterstaffs",
+       "light crossbows"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast wizard spells using Intelligence. Prepare INT mod + wizard level spells from your spellbook each day.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Recovery",
+        "source": "class",
+        "text": "Once per day on a short rest, recover spell slots totalling up to half your wizard level (rounded up).",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Tradition",
+        "source": "class",
+        "text": "Choose an arcane tradition that shapes your magic.",
+        "level": 2
+       },
+       {
+        "name": "Evocation Savant",
+        "source": "subclass",
+        "text": "Halve the time and gold to copy evocation spells into your spellbook.",
+        "level": 2
+       },
+       {
+        "name": "Sculpt Spells",
+        "source": "subclass",
+        "text": "When you cast an evocation spell affecting others, you can protect allies from its effects.",
+        "level": 2
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "int",
+      "cantrips_known": [
+       "fire_bolt",
+       "mage_hand",
+       "light",
+       "prestidigitation"
+      ],
+      "spells_known": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave",
+       "detect_magic",
+       "misty_step",
+       "scorching_ray"
+      ],
+      "spells_prepared": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave",
+       "detect_magic",
+       "misty_step",
+       "scorching_ray"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark wizard \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "6": {
+     "id": "bench_wizard",
+     "name": "Aldous",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 6,
+     "abilities": {
+      "str": 11,
+      "dex": 14,
+      "con": 15,
+      "int": 18,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "arcana",
+      "investigation",
+      "religion",
+      "insight"
+     ],
+     "hp": 38,
+     "max_hp": 38,
+     "armor_class": 12,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 14000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "spellbook",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "quarterstaff",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "quarterstaff"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "wizard",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "evocation",
+      "ancestry": null,
+      "base_abilities": {
+       "int": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "str": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [],
+      "weapon_proficiencies": [
+       "daggers",
+       "darts",
+       "slings",
+       "quarterstaffs",
+       "light crossbows"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast wizard spells using Intelligence. Prepare INT mod + wizard level spells from your spellbook each day.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Recovery",
+        "source": "class",
+        "text": "Once per day on a short rest, recover spell slots totalling up to half your wizard level (rounded up).",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Tradition",
+        "source": "class",
+        "text": "Choose an arcane tradition that shapes your magic.",
+        "level": 2
+       },
+       {
+        "name": "Evocation Savant",
+        "source": "subclass",
+        "text": "Halve the time and gold to copy evocation spells into your spellbook.",
+        "level": 2
+       },
+       {
+        "name": "Sculpt Spells",
+        "source": "subclass",
+        "text": "When you cast an evocation spell affecting others, you can protect allies from its effects.",
+        "level": 2
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "int",
+      "cantrips_known": [
+       "fire_bolt",
+       "mage_hand",
+       "light",
+       "prestidigitation"
+      ],
+      "spells_known": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave",
+       "detect_magic",
+       "misty_step",
+       "scorching_ray",
+       "mirror_image"
+      ],
+      "spells_prepared": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave",
+       "detect_magic",
+       "misty_step",
+       "scorching_ray",
+       "mirror_image"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark wizard \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "7": {
+     "id": "bench_wizard",
+     "name": "Aldous",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 7,
+     "abilities": {
+      "str": 11,
+      "dex": 14,
+      "con": 15,
+      "int": 18,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "arcana",
+      "investigation",
+      "religion",
+      "insight"
+     ],
+     "hp": 44,
+     "max_hp": 44,
+     "armor_class": 12,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 23000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "spellbook",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "quarterstaff",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "quarterstaff"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "wizard",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "evocation",
+      "ancestry": null,
+      "base_abilities": {
+       "int": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "str": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [],
+      "weapon_proficiencies": [
+       "daggers",
+       "darts",
+       "slings",
+       "quarterstaffs",
+       "light crossbows"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast wizard spells using Intelligence. Prepare INT mod + wizard level spells from your spellbook each day.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Recovery",
+        "source": "class",
+        "text": "Once per day on a short rest, recover spell slots totalling up to half your wizard level (rounded up).",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Tradition",
+        "source": "class",
+        "text": "Choose an arcane tradition that shapes your magic.",
+        "level": 2
+       },
+       {
+        "name": "Evocation Savant",
+        "source": "subclass",
+        "text": "Halve the time and gold to copy evocation spells into your spellbook.",
+        "level": 2
+       },
+       {
+        "name": "Sculpt Spells",
+        "source": "subclass",
+        "text": "When you cast an evocation spell affecting others, you can protect allies from its effects.",
+        "level": 2
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "int",
+      "cantrips_known": [
+       "fire_bolt",
+       "mage_hand",
+       "light",
+       "prestidigitation"
+      ],
+      "spells_known": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave",
+       "detect_magic",
+       "misty_step",
+       "scorching_ray",
+       "mirror_image",
+       "shatter"
+      ],
+      "spells_prepared": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave",
+       "detect_magic",
+       "misty_step",
+       "scorching_ray",
+       "mirror_image",
+       "shatter"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark wizard \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "8": {
+     "id": "bench_wizard",
+     "name": "Aldous",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 8,
+     "abilities": {
+      "str": 11,
+      "dex": 14,
+      "con": 15,
+      "int": 20,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "arcana",
+      "investigation",
+      "religion",
+      "insight"
+     ],
+     "hp": 50,
+     "max_hp": 50,
+     "armor_class": 12,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 34000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "spellbook",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "quarterstaff",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "quarterstaff"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "wizard",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "evocation",
+      "ancestry": null,
+      "base_abilities": {
+       "int": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "str": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [],
+      "weapon_proficiencies": [
+       "daggers",
+       "darts",
+       "slings",
+       "quarterstaffs",
+       "light crossbows"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast wizard spells using Intelligence. Prepare INT mod + wizard level spells from your spellbook each day.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Recovery",
+        "source": "class",
+        "text": "Once per day on a short rest, recover spell slots totalling up to half your wizard level (rounded up).",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Tradition",
+        "source": "class",
+        "text": "Choose an arcane tradition that shapes your magic.",
+        "level": 2
+       },
+       {
+        "name": "Evocation Savant",
+        "source": "subclass",
+        "text": "Halve the time and gold to copy evocation spells into your spellbook.",
+        "level": 2
+       },
+       {
+        "name": "Sculpt Spells",
+        "source": "subclass",
+        "text": "When you cast an evocation spell affecting others, you can protect allies from its effects.",
+        "level": 2
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "int",
+      "cantrips_known": [
+       "fire_bolt",
+       "mage_hand",
+       "light",
+       "prestidigitation"
+      ],
+      "spells_known": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave",
+       "detect_magic",
+       "misty_step",
+       "scorching_ray",
+       "mirror_image",
+       "shatter",
+       "fireball",
+       "counterspell"
+      ],
+      "spells_prepared": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave",
+       "detect_magic",
+       "misty_step",
+       "scorching_ray",
+       "mirror_image",
+       "shatter",
+       "fireball",
+       "counterspell"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark wizard \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    },
+    "9": {
+     "id": "bench_wizard",
+     "name": "Aldous",
+     "kind": "pc",
+     "companion": false,
+     "companion_origin": null,
+     "level": 9,
+     "abilities": {
+      "str": 11,
+      "dex": 14,
+      "con": 15,
+      "int": 20,
+      "wis": 13,
+      "cha": 9
+     },
+     "skill_proficiencies": [
+      "arcana",
+      "investigation",
+      "religion",
+      "insight"
+     ],
+     "hp": 56,
+     "max_hp": 56,
+     "armor_class": 12,
+     "attack_bonus": 4,
+     "damage": "1d6",
+     "xp": 48000,
+     "conditions": [],
+     "coin": 1500,
+     "inventory": [
+      {
+       "item_id": "spellbook",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "explorers_pack",
+       "qty": 2,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "quarterstaff",
+       "qty": 1,
+       "spell": null,
+       "spell_level": null
+      },
+      {
+       "item_id": "rations_1_day",
+       "qty": 20,
+       "spell": null,
+       "spell_level": null
+      }
+     ],
+     "equipped": [
+      "quarterstaff"
+     ],
+     "attuned": [],
+     "sheet": {
+      "race": "human",
+      "char_class": "wizard",
+      "background": "acolyte",
+      "subrace": null,
+      "subclass": "evocation",
+      "ancestry": null,
+      "base_abilities": {
+       "int": 15,
+       "con": 14,
+       "dex": 13,
+       "wis": 12,
+       "str": 10,
+       "cha": 8
+      },
+      "ability_method": "standard_array",
+      "saving_throw_proficiencies": [
+       "int",
+       "wis"
+      ],
+      "expertise": [],
+      "armor_proficiencies": [],
+      "weapon_proficiencies": [
+       "daggers",
+       "darts",
+       "slings",
+       "quarterstaffs",
+       "light crossbows"
+      ],
+      "tool_proficiencies": [],
+      "languages": [
+       "Common",
+       "elvish",
+       "celestial",
+       "dwarvish"
+      ],
+      "features": [
+       {
+        "name": "Spellcasting",
+        "source": "class",
+        "text": "Cast wizard spells using Intelligence. Prepare INT mod + wizard level spells from your spellbook each day.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Recovery",
+        "source": "class",
+        "text": "Once per day on a short rest, recover spell slots totalling up to half your wizard level (rounded up).",
+        "level": 1
+       },
+       {
+        "name": "Shelter of the Faithful",
+        "source": "background",
+        "text": "You and your companions can receive free healing and care at temples of your faith, and you command the respect of those who share your religion.",
+        "level": 1
+       },
+       {
+        "name": "Arcane Tradition",
+        "source": "class",
+        "text": "Choose an arcane tradition that shapes your magic.",
+        "level": 2
+       },
+       {
+        "name": "Evocation Savant",
+        "source": "subclass",
+        "text": "Halve the time and gold to copy evocation spells into your spellbook.",
+        "level": 2
+       },
+       {
+        "name": "Sculpt Spells",
+        "source": "subclass",
+        "text": "When you cast an evocation spell affecting others, you can protect allies from its effects.",
+        "level": 2
+       },
+       {
+        "name": "Ability Score Improvement",
+        "source": "class",
+        "text": "Increase ability scores or take a feat.",
+        "level": 4
+       }
+      ],
+      "feats": [],
+      "speed": 30,
+      "size": "Medium",
+      "alignment": "neutral good",
+      "personality_traits": [],
+      "ideals": [],
+      "bonds": [],
+      "flaws": [],
+      "spellcasting_ability": "int",
+      "cantrips_known": [
+       "fire_bolt",
+       "mage_hand",
+       "light",
+       "prestidigitation"
+      ],
+      "spells_known": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave",
+       "detect_magic",
+       "misty_step",
+       "scorching_ray",
+       "mirror_image",
+       "shatter",
+       "fireball",
+       "counterspell",
+       "haste"
+      ],
+      "spells_prepared": [
+       "magic_missile",
+       "shield",
+       "mage_armor",
+       "burning_hands",
+       "sleep",
+       "thunderwave",
+       "detect_magic",
+       "misty_step",
+       "scorching_ray",
+       "mirror_image",
+       "shatter",
+       "fireball",
+       "counterspell",
+       "haste"
+      ]
+     },
+     "spell_slots_used": {},
+     "hit_dice_used": 0,
+     "resources_used": {},
+     "portrait": null,
+     "description": "Benchmark wizard \u2014 the proving ground's known quantity.",
+     "disposition": "",
+     "faction": null,
+     "home_location": null,
+     "price_list": {}
+    }
+   }
+  }
+ }
+}

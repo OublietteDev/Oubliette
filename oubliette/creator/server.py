@@ -33,7 +33,7 @@ from dataclasses import replace
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from ..content import packaging
 from ..content.loader import PackValidationError, load_pack
@@ -934,6 +934,67 @@ def edit_battlefield(pack_id: str, body: BattleEditIn) -> JSONResponse:
         return JSONResponse({"error": f"battlefield edit failed: {e}"}, status_code=500)
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
+
+
+# --- the proving ground (Arena test beds, T1) -------------------------------
+# A sandbox fight: the author's creatures vs the benchmark party, in the real
+# Arena window, on an authored battlefield if chosen. Same blocking-subprocess
+# shape as the battlefield editor above; nothing persists — the result is
+# summarized for the epilogue line and discarded.
+
+class TestFightEnemy(BaseModel):
+    ref: str                                  # statblock id/name (world or SRD)
+    count: int = Field(default=1, ge=1, le=12)
+
+
+class TestFightIn(BaseModel):
+    enemies: list[TestFightEnemy]
+    party_level: int = Field(default=3, ge=1, le=9)
+    party_size: int = Field(default=4, ge=1, le=4)
+    allies: list[str] = []                    # creature refs on the player side
+    place_id: str | None = None               # a place with an authored battle map
+    watch: bool = False                       # the AI plays the party too
+
+
+@app.post("/api/pack/{pack_id}/test-fight")
+def test_fight(pack_id: str, body: TestFightIn) -> JSONResponse:
+    """Stage and run one sandbox fight, blocking until the Arena window closes,
+    then return a small honest epilogue. The pack must LOAD (same door as the
+    game) — a world that fails validation can't promise a faithful fight."""
+    if _pack_dir(pack_id) is None:
+        return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
+    from ..combat.arena_launch import cleanup, run_arena
+    from ..combat.boundary import CombatError
+    from ..combat.testbed import stage_test_fight
+    from ..content.loader import PackValidationError, load_pack
+    try:
+        world = load_pack(pack_id, packs_root=_packs_root())
+    except PackValidationError as e:
+        return JSONResponse({"error": "the world must pass validation before a "
+                                      "test fight — save and fix the report first",
+                             "details": e.errors[:8]}, status_code=400)
+    try:
+        pending = stage_test_fight(
+            world, _packs_root() / pack_id,
+            enemies=[(e.ref, e.count) for e in body.enemies],
+            party_level=body.party_level, party_size=body.party_size,
+            allies=body.allies, place_id=body.place_id, watch=body.watch)
+    except CombatError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    try:
+        handoff = run_arena(pending)          # blocks until the window closes
+    except CombatError as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    finally:
+        cleanup(pending)
+    party = [{"name": c.get("name"), "hp": c.get("hp"), "max_hp": c.get("max_hp"),
+              "conscious": c.get("is_conscious", True)}
+             for c in handoff.get("combatants", []) if c.get("team") == "player"]
+    return JSONResponse({"ok": True,
+                         "outcome": handoff.get("outcome"),
+                         "winner": handoff.get("winner"),
+                         "rounds": handoff.get("rounds"),
+                         "party": party})
 
 
 class NewIn(BaseModel):

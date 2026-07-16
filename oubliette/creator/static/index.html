@@ -813,9 +813,120 @@ function wireCharOptions() {
     })
     .catch(() => { box.innerHTML = '<div class="help">The option lists didn\'t load — reopen the world to retry.</div>'; });
 }
+// --- the training grounds (Arena test beds T1: the proving ground) ----------
+function trainingGroundsPanel() {
+  return `<div class="group">
+    <div class="ghead"><span class="gtoggle" style="cursor:default"><h3>Training grounds</h3></span></div>
+    <div class="gcards" style="display:block; padding:10px 14px">
+      <div class="help" style="margin-bottom:8px">Playtest your creatures against the <b>benchmark party</b> — Bram the fighter, Mirelle the cleric, Vex the rogue, and Aldous the wizard, built by the real rules at the level you pick. A real Arena window opens on this machine: fight it yourself, or tick watch mode and the AI plays both sides. Nothing is saved — no XP, no story, just the answer.</div>
+      <div id="tg-body"></div>
+    </div>
+  </div>`;
+}
+let tgSrdList = null;   // the SRD monster names, fetched once per session
+function ensureTestFight() {
+  if (!state.testFight)
+    state.testFight = { enemies: [{ ref: "", count: 1 }], allies: "", level: 3,
+                        size: 4, place: "", watch: false, status: "", running: false };
+  return state.testFight;
+}
+function wireTrainingGrounds() {
+  const body = document.getElementById("tg-body");
+  if (!body) return;
+  const tf = ensureTestFight();
+  const creatureOptions = () => {
+    const world = (state.contents.statblocks || []).map(s => `<option value="${esc(s.name || s.id)}">`);
+    const srd = (tgSrdList || []).map(m => `<option value="${esc(m.name)}">`);
+    return world.join("") + srd.join("");
+  };
+  const paint = () => {
+    const placeOpts = (state.contents.places || []).filter(p => p.battle)
+      .map(p => `<option value="${esc(p.id)}"${tf.place === p.id ? " selected" : ""}>${esc(p.name || p.id)}</option>`).join("");
+    body.innerHTML = `
+      <datalist id="tg-creatures">${creatureOptions()}</datalist>
+      <div class="field"><label>Enemies</label>
+        ${tf.enemies.map((e, i) => `
+          <div style="display:flex; gap:8px; margin-bottom:6px">
+            <input data-tg-ref="${i}" list="tg-creatures" placeholder="a creature of yours, or any SRD monster by name" value="${esc(e.ref)}" style="flex:3">
+            <input data-tg-count="${i}" type="number" min="1" max="12" value="${e.count}" style="flex:0 0 64px" title="how many">
+            <button class="btn mini danger" data-tg-del="${i}" ${tf.enemies.length === 1 ? "disabled" : ""}>✕</button>
+          </div>`).join("")}
+        <button class="btn mini" id="tg-add">+ Add enemy</button>
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap">
+        <div class="field" style="flex:1; min-width:110px"><label>Party level</label>
+          <select id="tg-level">${[1,2,3,4,5,6,7,8,9].map(l => `<option value="${l}"${tf.level === l ? " selected" : ""}>${l}</option>`).join("")}</select></div>
+        <div class="field" style="flex:1; min-width:110px"><label>Party size</label>
+          <select id="tg-size">${[1,2,3,4].map(s => `<option value="${s}"${tf.size === s ? " selected" : ""}>${s}</option>`).join("")}</select>
+          <div class="help">Fighter first, then cleric, rogue, wizard.</div></div>
+        <div class="field" style="flex:2; min-width:170px"><label>Battlefield</label>
+          <select id="tg-place"><option value="">Plain field</option>${placeOpts}</select></div>
+      </div>
+      <div class="field"><label>Allies beside the party (optional, comma-separated creature names)</label>
+        <input id="tg-allies" value="${esc(tf.allies)}" placeholder="e.g. Lean Wolf, Guard"></div>
+      <div class="field"><label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+        <input type="checkbox" id="tg-watch" ${tf.watch ? "checked" : ""} style="width:auto; flex:none; margin:0">
+        <span>Watch mode — the AI plays the party too</span></label></div>
+      <button class="btn" id="tg-fight" ${tf.running ? "disabled" : ""}>${tf.running ? "⚔ The Arena is open — fight in its window…" : "⚔ Fight"}</button>
+      <div class="help" id="tg-status" style="margin-top:8px">${esc(tf.status)}</div>`;
+    wire();
+  };
+  const wire = () => {
+    body.querySelectorAll("[data-tg-ref]").forEach(inp =>
+      inp.addEventListener("change", () => { tf.enemies[+inp.dataset.tgRef].ref = inp.value; }));
+    body.querySelectorAll("[data-tg-count]").forEach(inp =>
+      inp.addEventListener("change", () => { tf.enemies[+inp.dataset.tgCount].count = Math.max(1, +inp.value || 1); }));
+    body.querySelectorAll("[data-tg-del]").forEach(b =>
+      b.addEventListener("click", () => { tf.enemies.splice(+b.dataset.tgDel, 1); paint(); }));
+    document.getElementById("tg-add").addEventListener("click", () => { tf.enemies.push({ ref: "", count: 1 }); paint(); });
+    document.getElementById("tg-level").addEventListener("change", e => { tf.level = +e.target.value; });
+    document.getElementById("tg-size").addEventListener("change", e => { tf.size = +e.target.value; });
+    document.getElementById("tg-place").addEventListener("change", e => { tf.place = e.target.value; });
+    document.getElementById("tg-allies").addEventListener("change", e => { tf.allies = e.target.value; });
+    document.getElementById("tg-watch").addEventListener("change", e => { tf.watch = e.target.checked; });
+    document.getElementById("tg-fight").addEventListener("click", fight);
+  };
+  const fight = async () => {
+    const enemies = tf.enemies.filter(e => e.ref.trim()).map(e => ({ ref: e.ref.trim(), count: e.count }));
+    if (!enemies.length) { tf.status = "Name at least one enemy."; paint(); return; }
+    tf.running = true; tf.status = ""; paint();
+    try {
+      const r = await fetch(`/api/pack/${encodeURIComponent(state.id)}/test-fight`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enemies, party_level: tf.level, party_size: tf.size,
+          allies: tf.allies.split(",").map(s => s.trim()).filter(Boolean),
+          place_id: tf.place || null, watch: tf.watch }),
+      });
+      const d = await r.json();
+      if (!r.ok || d.error) tf.status = d.error || "the fight failed to launch";
+      else {
+        const hp = (d.party || []).map(p => `${p.name} ${p.conscious ? `${p.hp}/${p.max_hp}` : "down"}`).join(", ");
+        const what = d.outcome === "victory" ? "Victory" : d.outcome === "defeat" ? "Defeat"
+          : d.outcome ? d.outcome[0].toUpperCase() + d.outcome.slice(1) : "Done";
+        tf.status = `${what} in ${d.rounds ?? "?"} round(s)${hp ? " — " + hp : ""}.`;
+      }
+    } catch (e) { tf.status = "the fight failed: " + e; }
+    tf.running = false; paint();
+  };
+  if (!tgSrdList)
+    fetch("/api/srd/monsters").then(r => r.json())
+      .then(d => { tgSrdList = d.monsters || []; paint(); }).catch(() => {});
+  paint();
+}
+function testFightCreature(i) {
+  const sb = listOf("statblocks")[i];
+  if (!sb) return;
+  const tf = ensureTestFight();
+  tf.enemies = [{ ref: sb.name || sb.id, count: 1 }];
+  tf.status = "";
+  wireTrainingGrounds();
+  const el = document.getElementById("tg-body");
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+}
 function wireWorldSettings() {
   wireWorldDetails();
   wireCharOptions();
+  wireTrainingGrounds();
   const cb = document.getElementById("ws-gate-enabled");
   if (!cb) return;
   const ensureGate = () => {
@@ -875,7 +986,7 @@ function cardHtml(kind, e, i, depth, node) {
         <div class="cline">${esc(describe(kind, e))}</div>
       </div>
       ${editable ? `<div class="cactions">
-        ${kind === "statblocks" ? `<button class="btn mini" data-attacks="${i}" title="Attacks, multiattack, special moves & raw data">⚔ Combat</button>` : ""}
+        ${kind === "statblocks" ? `<button class="btn mini" data-attacks="${i}" title="Attacks, multiattack, special moves & raw data">⚔ Combat</button><button class="btn mini" data-testfight="${i}" title="Send it to the Training grounds — fight it with the benchmark party">⚔ Test</button>` : ""}
         <button class="btn mini" data-edit="${kind}" data-i="${i}">Edit</button>
         <button class="btn mini danger" data-del="${kind}" data-i="${i}">Delete</button></div>` : ""}
     </div>`;
@@ -942,7 +1053,7 @@ function render() {
   const m = state.contents.pack || {};
   d.innerHTML = `<h2>${esc(m.name || state.id)}</h2>
     <div class="sub">${esc(m.description || "")}${m.author ? ` · by ${esc(m.author)}` : ""} · v${esc(m.version || "?")}</div>
-    ${statusBanner()}${worldDetailsPanel(m)}${worldSettingsPanel(m)}${charOptionsPanel(m)}${ORDER.map(renderGroup).join("")}`;
+    ${statusBanner()}${worldDetailsPanel(m)}${worldSettingsPanel(m)}${charOptionsPanel(m)}${trainingGroundsPanel()}${ORDER.map(renderGroup).join("")}`;
   wireWorldSettings();
   d.querySelectorAll("[data-edit]").forEach(b =>
     b.addEventListener("click", () => openEditor(b.dataset.edit, +b.dataset.i)));
@@ -960,6 +1071,8 @@ function render() {
     b.addEventListener("click", openClonePicker));
   d.querySelectorAll("[data-attacks]").forEach(b =>
     b.addEventListener("click", () => openAttacksEditor(+b.dataset.attacks)));
+  d.querySelectorAll("[data-testfight]").forEach(b =>
+    b.addEventListener("click", () => testFightCreature(+b.dataset.testfight)));
   d.querySelectorAll("[data-toggle]").forEach(t =>
     t.addEventListener("click", () => {
       const kind = t.dataset.toggle;
