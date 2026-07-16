@@ -122,13 +122,13 @@ REM host.bat uses this so friends across the internet can join with just a
 REM link + join code - no router changes, no accounts, nothing for THEM to
 REM install. A failure here never blocks the game: hosting on your own
 REM network works without it (run setup again later to add remote play).
-if not exist "tools" mkdir "tools"
-if not exist "tools\cloudflared.exe" (
+if not exist "bin" mkdir "bin"
+if not exist "bin\cloudflared.exe" (
   echo.
   echo  Downloading the remote-play helper ^(cloudflared, about 60 MB^)...
-  curl.exe -fL --retry 3 -o "tools\cloudflared.exe" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
+  curl.exe -fL --retry 3 -o "bin\cloudflared.exe" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
   if errorlevel 1 (
-    del "tools\cloudflared.exe" >nul 2>nul
+    del "bin\cloudflared.exe" >nul 2>nul
     echo  [!] Could not fetch the remote-play helper. Hosting on your own
     echo      network still works; run this setup again later to add
     echo      internet play.

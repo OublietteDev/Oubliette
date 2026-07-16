@@ -290,7 +290,7 @@ def test_find_cloudflared_honours_the_override(tmp_path, monkeypatch):
     assert _find_cloudflared() is None
 
 
-def test_start_tunnel_harvests_url_and_reports_a_dead_door(tmp_path, monkeypatch):
+def test_start_tunnel_probes_falls_back_and_reports_a_dead_door(tmp_path, monkeypatch):
     import subprocess
     import threading
     import time as _time
@@ -324,7 +324,8 @@ def test_start_tunnel_harvests_url_and_reports_a_dead_door(tmp_path, monkeypatch
     banner = ["INF Requesting new quick Tunnel on trycloudflare.com...\n",
               "INF |  https://brave-mice-march.trycloudflare.com  |\n"]
 
-    # a healthy tunnel: address harvested, door reported open
+    # a healthy tunnel: address harvested, PROVEN from outside, door open
+    monkeypatch.setattr(srv, "_probe_tunnel", lambda url: True)
     monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: _Proc(banner, True))
     try:
         srv._start_tunnel(8000)
@@ -345,11 +346,33 @@ def test_start_tunnel_harvests_url_and_reports_a_dead_door(tmp_path, monkeypatch
 
     # the Brett case: the tunnel WAS up, then the helper died (crash, sleep) —
     # the door must be reported shut, never a badge pointing at nowhere
-    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: _Proc(banner, False))
+    live = _Proc(banner, True)
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: live)
     try:
         srv._start_tunnel(8000)
+        assert _wait_for("up")
+        live.terminate()                       # ...and then it dies on its own
         assert _wait_for("failed") and srv._TUNNEL["url"] is None
     finally:
+        srv._TUNNEL.update(url=None, proc=None, state="off")
+
+    # an address that never opens from outside: ONE retry forced onto HTTP/2
+    # (the known QUIC-mangled-network fix); the second, proven tunnel wins
+    cmds = []
+    def _popen(cmd, **k):
+        cmds.append(cmd)
+        return _Proc(banner, True)
+    probes = iter([False, True])
+    monkeypatch.setattr(srv, "_probe_tunnel", lambda url: next(probes))
+    monkeypatch.setattr(subprocess, "Popen", _popen)
+    try:
+        srv._start_tunnel(8000)
+        assert _wait_for("up")
+        assert srv._TUNNEL["url"] == "https://brave-mice-march.trycloudflare.com"
+        assert len(cmds) == 2 and "--protocol" in cmds[1] and "http2" in cmds[1]
+        assert "--protocol" not in cmds[0]     # first try lets cloudflared choose
+    finally:
+        srv._TUNNEL["proc"].terminate()
         srv._TUNNEL.update(url=None, proc=None, state="off")
 
 

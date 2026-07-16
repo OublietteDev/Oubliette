@@ -18,8 +18,9 @@ pyruntime.tar.gz
 dist/
 
 # Downloaded helper binaries (setup.bat fetches cloudflared.exe here for
-# remote-play hosting) — never committed.
-tools/
+# remote-play hosting) — never committed. NOT tools/ — that's tracked source
+# (the data generators).
+bin/
 
 # The Forge writes timestamped pack backups here before each save — local safety
 # net, not shared history.

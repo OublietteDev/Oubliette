@@ -2018,6 +2018,8 @@ function renderTableBadge() {
       const addr = (tableInfo.addresses || [])[0];
       text = `⌂ code ${tableInfo.code}` + (addr ? ` · ${addr}:${location.port || 80}` : "");
       if (tableInfo.tunnel_state === "starting") text += " · 🌐 opening…";
+      else if (tableInfo.tunnel_state === "failed") text += " · 🌐 closed";
+      else text += " · wifi only";     // no helper: the door was never tried
     }
     $("invite-btn").classList.remove("hidden");
   } else {
@@ -2033,9 +2035,13 @@ function renderTableBadge() {
 // on the clipboard, ready for the group chat — no console to read, no URL to
 // retype. Internet address when the tunnel is up, LAN address otherwise.
 $("invite-btn").addEventListener("click", async () => {
+  // An honest invitation: a LAN address only works on the host's own wifi —
+  // SAY so, or "you have to be on my wifi?" becomes a mystery to debug.
   const where = tableInfo.tunnel
     || `http://${(tableInfo.addresses || [])[0] || "?"}:${location.port || 80}`;
-  const invite = `Join my Oubliette table: ${where} — join code ${tableInfo.code}`;
+  const invite = tableInfo.tunnel
+    ? `Join my Oubliette table: ${where} — join code ${tableInfo.code}`
+    : `Join my Oubliette table (same wifi only): ${where} — join code ${tableInfo.code}`;
   try { await navigator.clipboard.writeText(invite); } catch (e) { return; }
   const btn = $("invite-btn");
   btn.textContent = "✓ Copied!";

@@ -13,7 +13,7 @@ house key, share it in the group chat, not in public.
 
 ## Door 1 — the built-in internet door (recommended; it's automatic)
 
-Setup fetches a small helper (`tools\cloudflared.exe`, a Cloudflare "quick
+Setup fetches a small helper (`bin\cloudflared.exe`, a Cloudflare "quick
 tunnel"). When you run **host.bat** and the helper is there, the game opens
 the internet door by itself:
 
@@ -36,7 +36,7 @@ Notes:
   the Windows-firewall prompt is bypassed. (You may still see and allow
   it — harmless either way.)
 - Skipped the helper at setup, or the download failed? Run setup.bat again
-  — or place `cloudflared.exe` in the game's `tools\` folder yourself.
+  — or place `cloudflared.exe` in the game's `bin\` folder yourself.
   Without it, hosting simply stays LAN-only.
 
 ## Door 2 — Tailscale (best for a standing weekly table)
@@ -79,6 +79,11 @@ code as the only lock. If you go this way, host only while you're playing.
 
 ## When a friend can't get in
 
+- **Does your invite say "(same wifi only)"?** Then the internet door never
+  opened — the helper isn't on disk (run setup.bat, or drop
+  `cloudflared.exe` into `bin\`) or it failed to open (badge shows
+  "🌐 closed"). A LAN address works only for people on your own wifi;
+  everyone else times out. This is the most common cause by far.
 - **"Connection timed out" / a Cloudflare error page.** First look at your
   own header badge. If the 🌐 address is gone, the tunnel died (the helper
   crashed, the network hiccuped, the machine slept) — restart `host.bat`

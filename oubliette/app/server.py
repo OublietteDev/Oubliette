@@ -307,7 +307,7 @@ _TUNNEL_RE = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
 
 def _find_cloudflared() -> str | None:
     """The helper exe, if this machine has one: an explicit override, the
-    tools/ dir setup.bat downloads into (next to the game, and next to this
+    bin/ dir setup.bat downloads into (next to the game, and next to this
     package for the dev tree), or anything already on PATH."""
     import shutil
     override = os.environ.get("OUBLIETTE_CLOUDFLARED", "").strip()
@@ -315,16 +315,40 @@ def _find_cloudflared() -> str | None:
         return override if Path(override).is_file() else None
     exe = "cloudflared.exe" if os.name == "nt" else "cloudflared"
     for root in (Path.cwd(), Path(__file__).resolve().parents[2]):
-        p = root / "tools" / exe
+        p = root / "bin" / exe
         if p.is_file():
             return str(p)
     return shutil.which("cloudflared")
 
 
-def _start_tunnel(port: int) -> None:
-    """Spawn the quick tunnel and read its output on a daemon thread until the
-    trycloudflare address appears. State is polled by the host's browser via
-    /api/hosting — 'starting' renders as a patient badge, 'failed' as LAN-only."""
+def _probe_tunnel(url: str) -> bool:
+    """GET /api/hosting through the PUBLIC address — out to Cloudflare's edge
+    and back through the tunnel, the exact path a remote friend's browser
+    takes. Only a passed probe earns the badge its 🌐: "up" must mean
+    "verified reachable from the internet", never "printed an address".
+    Generous retries — a fresh quick-tunnel address takes a few seconds to
+    propagate. (The endpoint is ungated, and the request arrives wearing the
+    tunnel's forwarding header, so the probe leaks nothing a guest wouldn't see.)"""
+    import urllib.request
+    deadline = time.time() + 45
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(url + "/api/hosting", timeout=8) as r:
+                if getattr(r, "status", 0) == 200:
+                    return True
+        except Exception:
+            pass
+        time.sleep(3)
+    return False
+
+
+def _start_tunnel(port: int, protocol: str | None = None) -> None:
+    """Spawn the quick tunnel, harvest the trycloudflare address from its
+    output, and PROVE it from the outside before declaring the door open.
+    An address that never opens gets one retry forced onto HTTP/2 over TCP
+    (the one known culprit with a clean fix: a network mangling QUIC/UDP).
+    State is polled by the host's browser via /api/hosting — 'starting'
+    renders as a patient badge, 'failed' as LAN-only."""
     exe = _find_cloudflared()
     if exe is None:
         return
@@ -332,10 +356,13 @@ def _start_tunnel(port: int) -> None:
     import subprocess
     import threading
     _TUNNEL["state"] = "starting"
+    cmd = [exe, "tunnel", "--no-autoupdate"]
+    if protocol:
+        cmd += ["--protocol", protocol]
+    cmd += ["--url", f"http://127.0.0.1:{port}"]
     try:
         proc = subprocess.Popen(
-            [exe, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{port}"],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, encoding="utf-8", errors="replace",
             creationflags=0x08000000 if os.name == "nt" else 0)  # no console window
     except OSError:
@@ -344,20 +371,42 @@ def _start_tunnel(port: int) -> None:
     _TUNNEL["proc"] = proc
     atexit.register(proc.terminate)          # the tunnel dies with the game
 
+    def _open_for_business(url: str) -> None:
+        if _probe_tunnel(url):
+            _TUNNEL.update(url=url, state="up")
+            print(f"\n  Remote friends visit:  {url}\n"
+                  f"  (plus the join code — or click Invite in the game)\n")
+            return
+        # The address never opened from the outside. Supersede BEFORE
+        # terminating, so the harvest thread's exit clause knows this
+        # death was ours and not the tunnel's own.
+        _TUNNEL["proc"] = None
+        proc.terminate()
+        if protocol is None:
+            print("  [!] The tunnel never opened from outside — "
+                  "retrying over HTTP/2…")
+            _start_tunnel(port, protocol="http2")
+        else:
+            _TUNNEL.update(url=None, state="failed")
+            print("\n  [!] The internet door could not be opened — friends on"
+                  "\n      your own wifi can still join via the LAN address.\n")
+
     def _harvest() -> None:
+        found = False
         for line in proc.stdout:             # drained for the process's lifetime
-            if _TUNNEL["url"] is None:
+            if not found:
                 m = _TUNNEL_RE.search(line)
                 if m:
-                    _TUNNEL.update(url=m.group(0), state="up")
-                    print(f"\n  Remote friends visit:  {m.group(0)}\n"
-                          f"  (plus the join code — or click Invite in the game)\n")
+                    found = True
+                    threading.Thread(target=_open_for_business,
+                                     args=(m.group(0),), daemon=True).start()
         # The tunnel process is GONE (crash, network loss, machine slept and
-        # woke). Whatever the badge said a second ago, the door is shut — say
-        # so, or the host keeps handing out an address that leads nowhere.
-        _TUNNEL.update(url=None, state="failed")
-        print("\n  [!] The internet door closed (the tunnel helper exited)."
-              "\n      Restart host.bat and send friends the NEW invite.\n")
+        # woke) — unless we killed it ourselves for the HTTP/2 retry. Say so,
+        # or the host keeps handing out an address that leads nowhere.
+        if _TUNNEL["proc"] is proc:
+            _TUNNEL.update(url=None, state="failed")
+            print("\n  [!] The internet door closed (the tunnel helper exited)."
+                  "\n      Restart host.bat and send friends the NEW invite.\n")
 
     threading.Thread(target=_harvest, name="invite-tunnel", daemon=True).start()
 
