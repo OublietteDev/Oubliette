@@ -57,6 +57,9 @@ class Session:
         self.bestiary_gate = None           # per-world bestiary knowledge cutoff (manifest)
         self.house_rules = None             # the author's table variants (manifest HouseRules);
                                             # None = play by the book (custom seeds / tests)
+        self.chargen_deny = None            # character options this world switches off
+                                            # (manifest ChargenDeny) — the chargen doors
+                                            # honor it; replay never does
         self.seats: dict = {}               # seat memory (multiplayer S1): {display name ->
                                             # owned hero ids}; folded from SEAT_CLAIMED events
         self.force_ended: bool = False      # the DM terminally closed the game (force_end_session tool);
@@ -127,6 +130,7 @@ class Session:
             npc_statblocks = world.npc_statblocks
             bestiary_gate = world.bestiary_gate
             house_rules = world.house_rules
+            chargen_deny = world.chargen_deny
             authored_quests = {q.id: q for q in world.quests}
             factions = {f.id: f for f in world.factions}
             travel_scale = world.travel_scale
@@ -147,6 +151,7 @@ class Session:
             npc_statblocks = {}
             bestiary_gate = None
             house_rules = None
+            chargen_deny = None
             authored_quests = {}
             factions = {}
             travel_scale = None
@@ -229,6 +234,7 @@ class Session:
         session.world_map = world_map
         session.bestiary_gate = bestiary_gate
         session.house_rules = house_rules
+        session.chargen_deny = chargen_deny
         session.force_ended = force_ended
         session.campaign_ended = campaign_ended
         session.table = table

@@ -79,6 +79,21 @@ class HouseRules(_Strict):
     potions_bonus_action: bool = False   # drinking any potion is a bonus action
 
 
+class ChargenDeny(_Strict):
+    """Per-world character options the author has switched OFF (Forge v2.0).
+    Stored as DENY lists so content added to the SRD later defaults to allowed.
+    Honored at the chargen doors only — the pickers never offer a denied option
+    and a crafted build is rejected — never at replay: an existing save whose
+    hero predates the rule keeps working, and imported heroes are exempt (a
+    carried hero predates the world's rules, like an existing save)."""
+    classes: list[str] = Field(default_factory=list)
+    races: list[str] = Field(default_factory=list)
+    backgrounds: list[str] = Field(default_factory=list)
+
+    def any(self) -> bool:
+        return bool(self.classes or self.races or self.backgrounds)
+
+
 class PackManifest(_Strict):
     id: str
     schema_version: int              # this doc defines version 1
@@ -97,6 +112,9 @@ class PackManifest(_Strict):
                                      # None = journeys cost no time
     house_rules: HouseRules = Field(default_factory=HouseRules)  # the author's
                                      # table variants (multiplayer pre-work)
+    chargen_deny: ChargenDeny = Field(default_factory=ChargenDeny)  # character
+                                     # options this world switches off ("no
+                                     # warlocks, no dragonborn")
 
 
 # --- items -------------------------------------------------------------------

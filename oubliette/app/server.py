@@ -31,7 +31,7 @@ from ..coin import authored_to_cp, format_cp
 from ..combat.arena_bridge import character_to_player
 from ..content import packaging
 from ..content.loader import (DEFAULT_PACK, _PACKS_ROOT, PackValidationError,
-                              available_packs, load_pack)
+                              available_packs, chargen_ruleset, load_pack)
 from ..content.ruleset import Ruleset, load_ruleset
 from ..journal.store import Journal, JournalStore
 from ..quest import offers as quest_offers
@@ -2121,9 +2121,14 @@ def _wizard_ruleset(pack: str | None, *, refresh: bool = False) -> Ruleset:
     session's. Options fetches refresh the cache (a re-imported world reads
     fresh); previews reuse it — one disk load per wizard, not per keystroke."""
     if not pack:
-        return _ruleset()
+        # The session's world may switch options off too — same door, same rule.
+        return chargen_ruleset(_ruleset(), GAME.session.chargen_deny)
     if refresh or pack not in _WIZARD_WORLDS:
-        _WIZARD_WORLDS[pack] = load_pack(pack).ruleset
+        world = load_pack(pack)
+        # The wizard's copy is pre-filtered by the world's chargen_deny: denied
+        # options never reach the pickers, and a crafted build fails validation
+        # as unknown-in-this-world. The SESSION ruleset stays whole (replay).
+        _WIZARD_WORLDS[pack] = chargen_ruleset(world.ruleset, world.chargen_deny)
     return _WIZARD_WORLDS[pack]
 
 
@@ -2892,9 +2897,13 @@ async def post_new(body: NewGameIn | None = None) -> JSONResponse:
                 return JSONResponse({"ok": False, "errors": [f"world {target!r} won't load"]},
                                     status_code=400)
         rs = world.ruleset if world is not None else _ruleset()
+        # New builds gate through the world's chargen_deny; imports below stay
+        # on the FULL ruleset — a carried hero predates this world's rules,
+        # exactly like an existing save.
+        rs_gate = chargen_ruleset(rs, world.chargen_deny if world is not None else None)
         for b in builds:
             try:
-                build_character(b, rs)
+                build_character(b, rs_gate)
             except ChargenError as e:
                 return JSONResponse({"ok": False, "errors": e.errors}, status_code=400)
         parsed_imports: list[tuple[Character, list, tuple | None]] = []

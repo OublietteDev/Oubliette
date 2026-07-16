@@ -28,8 +28,8 @@ from ..state.models import Character, Item as StateItem, ItemStack
 from ..state.repository import InMemoryRepository
 from .ruleset import _VALID_SKILLS, Ruleset, load_ruleset
 from .schemas import (NPC, AiProfile, AuthoredQuest, BattleMap, BestiaryGate,
-                      Faction, Item, Lore, Place, PackManifest, Scenario, StatBlock,
-                      TravelScale, WorldEvent)
+                      ChargenDeny, Faction, Item, Lore, Place, PackManifest,
+                      Scenario, StatBlock, TravelScale, WorldEvent)
 from .srd_schemas import Background, PackSpell, SrdEquipment
 
 DEFAULT_PACK = "brightvale"
@@ -92,6 +92,9 @@ class LoadedWorld:
     statblocks: tuple = ()         # the pack's authored StatBlocks (this-world bestiary section)
     bestiary_gate: "BestiaryGate | None" = None   # per-world bestiary knowledge cutoff (manifest)
     house_rules: "HouseRules | None" = None       # the author's table variants (manifest)
+    chargen_deny: "ChargenDeny | None" = None     # character options this world switches
+                                   # off (manifest) — honored at the chargen doors
+                                   # via `chargen_ruleset`, never at replay
     quests: tuple = ()             # the pack's authored quests (offered during play, not canon)
     factions: tuple = ()           # the pack's authored Factions (living-world W2)
     world_events: tuple = ()       # the pack's scheduled WorldEvents (living-world W4)
@@ -422,6 +425,46 @@ def _lint_travel_scale(manifest: PackManifest | None, places: list[Place],
                       "maps — pick two pins on the SAME map")
 
 
+def _lint_chargen_deny(manifest: PackManifest | None, ruleset: Ruleset,
+                       pack_backgrounds: list[Background],
+                       errors: list[str]) -> None:
+    """The world's switched-off character options (Forge v2.0): every denied id
+    must exist (a typo'd deny would silently allow what the author meant to
+    forbid), and each kind must leave at least one option standing — a world
+    where no class can be picked has no characters."""
+    deny = getattr(manifest, "chargen_deny", None) if manifest else None
+    if deny is None or not deny.any():
+        return
+    where = "pack.json: chargen_deny"
+    backgrounds = set(ruleset.backgrounds) | {b.id for b in pack_backgrounds}
+    for label, one, denied, known in (
+            ("classes", "class", deny.classes, set(ruleset.classes)),
+            ("races", "race", deny.races, set(ruleset.races)),
+            ("backgrounds", "background", deny.backgrounds, backgrounds)):
+        for ref in denied:
+            if ref not in known:
+                errors.append(f"{where}.{label} references unknown {one} {ref!r}")
+        if known and not (known - set(denied)):
+            errors.append(f"{where}.{label} denies every {one}"
+                          f" — a world must leave at least one pickable")
+
+
+def chargen_ruleset(rs: Ruleset, deny: "ChargenDeny | None") -> Ruleset:
+    """The ruleset a chargen door judges by: the world's denied classes/races/
+    backgrounds removed, everything else untouched. ONLY the doors use this —
+    the session plays and replays on the full ruleset, so an existing save
+    whose hero predates a deny keeps deriving its sheet forever."""
+    if deny is None or not deny.any():
+        return rs
+    return replace(
+        rs,
+        classes={k: v for k, v in rs.classes.items() if k not in deny.classes},
+        races={k: v for k, v in rs.races.items() if k not in deny.races},
+        backgrounds={k: v for k, v in rs.backgrounds.items()
+                     if k not in deny.backgrounds},
+    )
+
+
 def _lint_factions(factions: list[Faction], npcs: list[NPC],
                    statblocks: list[StatBlock], quests: list[AuthoredQuest],
                    errors: list[str]) -> None:
@@ -711,6 +754,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
     _lint_factions(factions, npcs, statblocks, quests, errors)
     _lint_world_events(world_events, places, quests, factions, errors)
     _lint_travel_scale(manifest, places, errors)
+    _lint_chargen_deny(manifest, ruleset, backgrounds, errors)
     _dup_ids(lore, "lore", errors)        # subjects are free-form, so only ids are checked
     _dup_ids(ai_profiles, "ai_profiles", errors)
     _lint_backgrounds(backgrounds, items, ruleset, errors)
@@ -765,6 +809,7 @@ def load_pack(pack_id: str = DEFAULT_PACK, packs_root: Path | None = None) -> Lo
         ruleset=ruleset,
         pack_name=manifest.name, statblocks=tuple(statblocks),
         bestiary_gate=manifest.bestiary_gate, house_rules=manifest.house_rules,
+        chargen_deny=manifest.chargen_deny,
         quests=tuple(quests),
         factions=tuple(factions), world_events=tuple(world_events),
         ai_profiles=tuple(ai_profiles),

@@ -662,6 +662,45 @@ function statusBanner() {
       <ul>${w.map(x => `<li>${esc(x.message)}</li>`).join("")}</ul></div>`;
   return html;
 }
+// --- world details (manifest-level: the cover page players see) ------------
+function worldDetailsPanel(m) {
+  return `<div class="group">
+    <div class="ghead"><span class="gtoggle" style="cursor:default"><h3>World details</h3></span></div>
+    <div class="gcards" style="display:block; padding:10px 14px">
+      <div class="help" style="margin-bottom:8px">The world's cover page — the name, author, and description players see when picking a world. The folder id (<b>${esc(m.id || state.id)}</b>) is fixed.</div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap">
+        <div class="field" style="flex:2; min-width:180px"><label>Name</label>
+          <input id="wd-name" value="${esc(m.name || "")}"></div>
+        <div class="field" style="flex:2; min-width:160px"><label>Author</label>
+          <input id="wd-author" value="${esc(m.author || "")}"></div>
+        <div class="field" style="flex:1; min-width:100px"><label>Version</label>
+          <input id="wd-version" value="${esc(m.version || "")}">
+          <div class="help">e.g. 1.2.0 — bump when you share a changed world.</div></div>
+      </div>
+      <div class="field"><label>Description</label>
+        <textarea id="wd-desc" rows="2">${esc(m.description || "")}</textarea></div>
+    </div>
+  </div>`;
+}
+function wireWorldDetails() {
+  const bind = (id, key, after) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", () => {
+      state.contents.pack = state.contents.pack || {};
+      state.contents.pack[key] = el.value;
+      markDirty();
+      if (after) after(el.value);
+    });
+  };
+  bind("wd-name", "name", v => {           // the header + sidebar echo the rename live
+    const h = document.querySelector("#detail h2");
+    if (h) h.textContent = v || state.id;
+  });
+  bind("wd-author", "author");
+  bind("wd-version", "version");
+  bind("wd-desc", "description");
+}
 // --- world settings (manifest-level: the bestiary knowledge gate) ----------
 function worldSettingsPanel(m) {
   const g = (m && m.bestiary_gate) || { enabled: false, max_known_cr: 0 };
@@ -723,7 +762,60 @@ function houseRulesPanel(m) {
     </div>
   </div>`;
 }
+// --- character options (manifest-level: the world's chargen allow/deny) -----
+function charOptionsPanel(m) {
+  return `<div class="group">
+    <div class="ghead"><span class="gtoggle" style="cursor:default"><h3>Character options</h3></span></div>
+    <div class="gcards" style="display:block; padding:10px 14px">
+      <div class="help" style="margin-bottom:8px">What character creation offers in this world — uncheck a class, race, or background and no new hero can pick it ("no warlocks, no dragonborn"). Heroes that already exist, and heroes imported from another campaign, are never affected. Your world's own authored backgrounds appear here too.</div>
+      <div id="co-lists"><div class="help">Loading the option lists…</div></div>
+    </div>
+  </div>`;
+}
+function wireCharOptions() {
+  const box = document.getElementById("co-lists");
+  if (!box) return;
+  const ensureDeny = () => {
+    state.contents.pack = state.contents.pack || {};
+    if (!state.contents.pack.chargen_deny)
+      state.contents.pack.chargen_deny = { classes: [], races: [], backgrounds: [] };
+    return state.contents.pack.chargen_deny;
+  };
+  const fill = lists => {
+    const deny = (state.contents.pack && state.contents.pack.chargen_deny) ||
+                 { classes: [], races: [], backgrounds: [] };
+    const section = (key, label, opts) => {
+      const allowed = opts.filter(o => !(deny[key] || []).includes(o.id)).map(o => o.id);
+      return `<div class="field"><label>${label}</label>
+        ${checklist(`co-${key}`, opts.map(o => [o.id, o.name]), allowed)}</div>`;
+    };
+    box.innerHTML = section("classes", "Classes", lists.classes)
+      + section("races", "Races", lists.races)
+      + section("backgrounds", "Backgrounds", lists.backgrounds);
+    ["classes", "races", "backgrounds"].forEach(key => {
+      const group = document.getElementById(`co-${key}`);
+      if (!group) return;
+      group.addEventListener("change", () => {
+        const on = new Set(readChecklist(`co-${key}`));
+        ensureDeny()[key] = lists[key].filter(o => !on.has(o.id)).map(o => o.id);
+        markDirty();
+      });
+    });
+  };
+  if (state.chargenLists) { fill(state.chargenLists); return; }
+  fetch(`/api/chargen/options?pack=${encodeURIComponent(state.id)}`)
+    .then(r => r.json())
+    .then(o => {
+      const slim = arr => (arr || []).map(x => ({ id: x.id, name: x.name }));
+      state.chargenLists = { classes: slim(o.classes), races: slim(o.races),
+                             backgrounds: slim(o.backgrounds) };
+      fill(state.chargenLists);
+    })
+    .catch(() => { box.innerHTML = '<div class="help">The option lists didn\'t load — reopen the world to retry.</div>'; });
+}
 function wireWorldSettings() {
+  wireWorldDetails();
+  wireCharOptions();
   const cb = document.getElementById("ws-gate-enabled");
   if (!cb) return;
   const ensureGate = () => {
@@ -850,7 +942,7 @@ function render() {
   const m = state.contents.pack || {};
   d.innerHTML = `<h2>${esc(m.name || state.id)}</h2>
     <div class="sub">${esc(m.description || "")}${m.author ? ` · by ${esc(m.author)}` : ""} · v${esc(m.version || "?")}</div>
-    ${statusBanner()}${worldSettingsPanel(m)}${ORDER.map(renderGroup).join("")}`;
+    ${statusBanner()}${worldDetailsPanel(m)}${worldSettingsPanel(m)}${charOptionsPanel(m)}${ORDER.map(renderGroup).join("")}`;
   wireWorldSettings();
   d.querySelectorAll("[data-edit]").forEach(b =>
     b.addEventListener("click", () => openEditor(b.dataset.edit, +b.dataset.i)));
