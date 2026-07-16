@@ -2109,10 +2109,22 @@ def _stack_label(rs: Ruleset, stack) -> str:
     return f"{base}: {sp}"
 
 
-def _chargen_options() -> dict:
-    # The ruleset → wizard-options projection moved to rules.chargen_view so the
-    # Forge renders chargen from the same source of truth (no drift).
-    return chargen_options(_ruleset())
+_WIZARD_WORLDS: dict[str, Ruleset] = {}   # pack_id → merged ruleset for the New Game wizard
+
+
+def _wizard_ruleset(pack: str | None, *, refresh: bool = False) -> Ruleset:
+    """The ruleset a chargen request runs against. The New Game wizard builds
+    FOR a world that isn't loaded yet (the chosen world only loads at /api/new),
+    so with `?pack=` the CHOSEN world's own pack-merged ruleset serves — the
+    options, the live preview, and the final validation all agree with the game
+    about to start instead of the one still loaded. Without `?pack=`, the
+    session's. Options fetches refresh the cache (a re-imported world reads
+    fresh); previews reuse it — one disk load per wizard, not per keystroke."""
+    if not pack:
+        return _ruleset()
+    if refresh or pack not in _WIZARD_WORLDS:
+        _WIZARD_WORLDS[pack] = load_pack(pack).ruleset
+    return _WIZARD_WORLDS[pack]
 
 
 def _preview_payload(char: Character, items, rs: Ruleset) -> dict:
@@ -2120,8 +2132,15 @@ def _preview_payload(char: Character, items, rs: Ruleset) -> dict:
 
 
 @app.get("/api/chargen/options")
-async def get_chargen_options() -> JSONResponse:
-    return JSONResponse(_chargen_options())
+async def get_chargen_options(pack: str | None = None) -> JSONResponse:
+    # The ruleset → wizard-options projection lives in rules.chargen_view so the
+    # Forge renders chargen from the same source of truth (no drift).
+    try:
+        rs = _wizard_ruleset(pack, refresh=True)
+    except Exception:
+        return JSONResponse({"ok": False, "errors": [f"world {pack!r} won't load"]},
+                            status_code=400)
+    return JSONResponse(chargen_options(rs))
 
 
 # --- the bestiary (global SRD monster reference) -----------------------------
@@ -2827,10 +2846,15 @@ async def post_levelup(body: LevelUpIn) -> JSONResponse:
 
 
 @app.post("/api/chargen/preview")
-async def post_chargen_preview(body: CharacterBuild) -> JSONResponse:
+async def post_chargen_preview(body: CharacterBuild, pack: str | None = None) -> JSONResponse:
     """Run the firewall live: validate the in-progress build and return either the
-    aggregated errors or the fully-derived preview sheet. Never mutates state."""
-    rs = _ruleset()
+    aggregated errors or the fully-derived preview sheet. Never mutates state.
+    With `?pack=`, the build is judged by the CHOSEN world's ruleset (the New
+    Game wizard builds for a world that isn't loaded yet)."""
+    try:
+        rs = _wizard_ruleset(pack)
+    except Exception:
+        return JSONResponse({"ok": False, "errors": [f"world {pack!r} won't load"]})
     try:
         char, items = build_character(body, rs)
     except ChargenError as e:
@@ -2854,25 +2878,27 @@ async def post_new(body: NewGameIn | None = None) -> JSONResponse:
         builds = ((body.builds if body and body.builds else
                    ([body.build] if body and body.build else [])) or [])
         # Validate EVERY character BEFORE erasing the save — an invalid build must not
-        # cost the player their game. The ruleset is global, so the current session's
-        # serves regardless of which world we're about to start.
-        rs = _ruleset()
-        for b in builds:
-            try:
-                build_character(b, rs)
-            except ChargenError as e:
-                return JSONResponse({"ok": False, "errors": e.errors}, status_code=400)
-        # Imported heroes gate against the TARGET world (its merged catalog) before
-        # the save is erased, for the same reason.
-        parsed_imports: list[tuple[Character, list, tuple | None]] = []
+        # cost the player their game. Builds and imports alike gate against the
+        # TARGET world's merged ruleset (not the still-loaded previous world's):
+        # the wizard offered the chosen world's own backgrounds and spells, so
+        # its picks must be judged by the world about to start.
         raw_imports = (body.imports if body and body.imports else [])
-        if raw_imports:
+        world = None
+        if builds or raw_imports:
             target = (body.pack_id if body and body.pack_id else GAME.pack_id)
             try:
                 world = load_pack(target)
             except Exception:
                 return JSONResponse({"ok": False, "errors": [f"world {target!r} won't load"]},
                                     status_code=400)
+        rs = world.ruleset if world is not None else _ruleset()
+        for b in builds:
+            try:
+                build_character(b, rs)
+            except ChargenError as e:
+                return JSONResponse({"ok": False, "errors": e.errors}, status_code=400)
+        parsed_imports: list[tuple[Character, list, tuple | None]] = []
+        if raw_imports:
             for i, raw in enumerate(raw_imports):
                 try:
                     parsed_imports.append(_read_import_bundle(raw, world))

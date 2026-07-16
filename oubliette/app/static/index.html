@@ -2813,7 +2813,16 @@ function cgNewSlot() {
   return cg;
 }
 async function ngToCharacter() {
-  if (!cgOpt) cgOpt = await (await fetch("/api/chargen/options")).json();
+  // Options come from the CHOSEN world, fetched fresh each time — its own
+  // backgrounds and spells must be pickable before the world is ever loaded.
+  try {
+    const res = await fetch(`/api/chargen/options?pack=${encodeURIComponent(ngPack.id)}`);
+    if (!res.ok) throw new Error("options");
+    cgOpt = await res.json();
+  } catch (e) {
+    alert(`Couldn't read the character options for “${ngPack.name}” — the world may not load. Try re-importing it.`);
+    return;
+  }
   const n = Math.max(0, Math.min(6, parseInt($("ng-party-size").value || "1", 10)));
   cgParty = [];
   for (let i = 0; i < n; i++) cgParty.push(cgNewSlot());
@@ -3311,7 +3320,9 @@ function cgPreview() {
     const seq = ++cgSeq;                  // tag this request; ignore stale responses
     let data;
     try {
-      data = await (await fetch("/api/chargen/preview", {
+      // The preview judges the build by the same world the options came from.
+      const url = "/api/chargen/preview" + (ngPack ? `?pack=${encodeURIComponent(ngPack.id)}` : "");
+      data = await (await fetch(url, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(cgBuild()),
       })).json();

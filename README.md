@@ -95,13 +95,11 @@ pytest                          # the full acceptance + engine suite
 *v1.0 is stable and fun, but honest about its rough edges. Full list to be tracked in GitHub Issues.*
 
 - **Bestiary art is ~20% complete.** Every creature works fully in the Arena — all abilities, actions, spells, and legendary actions — they just show a generic token until art is added. This grows slowly over time. Art added via a pack is unaffected and displays fine in the bestiary.
-- **API calls occasionally drop.** A dropped connection mid-call surfaces an error (no effect on gameplay or the DM's memory) — but it's annoying if it takes ~300 seconds to time out.
+- **API calls occasionally drop.** A dropped connection mid-call surfaces an error promptly (no effect on gameplay or the DM's memory) — just send your turn again.
 - **Racial traits are now wired into the engine.** v1.0 brought Relentless Endurance, the dragonborn breath weapon and ancestry resistance, dwarven poison resistance, and more; the last three holdouts landed after it — Halfling Lucky rerolls natural 1s on attacks, checks, and saves (story and Arena alike), Gnome Cunning grants advantage on INT/WIS/CHA saves against magic, and the tiefling's Infernal Legacy is real: thaumaturgy known from level 1, Hellish Rebuke once per long rest at 3rd, Darkness at 5th — castable in the Arena even by tieflings with no spellcasting class. (One nicety remains: a non-caster's sheet has no spellcasting panel, so thaumaturgy shows only in the DM's narration.)
-- **Walls are indestructible.** You can cheese melee enemies by dropping a Wall of Force or Wall of Stone and then plinking them with cantrips.
 - **Charge attacks don't animate.** Pounce, Trample, and Charge resolve correctly in code but have no visual yet — needs investigation and a fix.
 - **Encounter balance is still being tuned.** v0.9.2 added a party-CR budget — improvised fights are now sized to the party's real levels and size and to your chosen difficulty (Story → Hardcore) — but the CR bands themselves will take several more balancing passes before every fight feels fair at every level.
 - **Arena token art can be sized inconsistently.** The plan is a token previewer that lets you adjust framing so your art (and the current bestiary art) is represented well.
-- **New Game character creation uses the current session's ruleset, not the chosen world's.** When you start a New Game, the background and spell options come from whichever world was last loaded — so a brand-new world's own pack content can't be picked at its own character creation. Workaround: start the New Game once with the world/pack you want, save and close, then start the New Game a second time — the options now reflect that world. This only matters if you regularly switch between multiple packs. (Your save is safe throughout: it isn't deleted until character generation finishes.)
 
 ---
 
