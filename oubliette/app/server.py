@@ -16,6 +16,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import secrets
 import time
 import traceback
@@ -294,6 +295,69 @@ def _lan_addresses() -> list[str]:
     return addrs
 
 
+# --- the invite tunnel (S4: remote friends without touching a console) -------
+# When hosting starts and the cloudflared helper is on disk (setup.bat fetches
+# it), the server runs the quick tunnel itself and harvests the public https
+# address from its output. The host never reads a console: the address lands
+# in the header badge and the Invite button. No helper, or any failure →
+# hosting quietly stays LAN-only, exactly as before.
+_TUNNEL: dict = {"url": None, "proc": None, "state": "off"}  # off|starting|up|failed
+_TUNNEL_RE = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
+
+
+def _find_cloudflared() -> str | None:
+    """The helper exe, if this machine has one: an explicit override, the
+    tools/ dir setup.bat downloads into (next to the game, and next to this
+    package for the dev tree), or anything already on PATH."""
+    import shutil
+    override = os.environ.get("OUBLIETTE_CLOUDFLARED", "").strip()
+    if override:
+        return override if Path(override).is_file() else None
+    exe = "cloudflared.exe" if os.name == "nt" else "cloudflared"
+    for root in (Path.cwd(), Path(__file__).resolve().parents[2]):
+        p = root / "tools" / exe
+        if p.is_file():
+            return str(p)
+    return shutil.which("cloudflared")
+
+
+def _start_tunnel(port: int) -> None:
+    """Spawn the quick tunnel and read its output on a daemon thread until the
+    trycloudflare address appears. State is polled by the host's browser via
+    /api/hosting — 'starting' renders as a patient badge, 'failed' as LAN-only."""
+    exe = _find_cloudflared()
+    if exe is None:
+        return
+    import atexit
+    import subprocess
+    import threading
+    _TUNNEL["state"] = "starting"
+    try:
+        proc = subprocess.Popen(
+            [exe, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{port}"],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, encoding="utf-8", errors="replace",
+            creationflags=0x08000000 if os.name == "nt" else 0)  # no console window
+    except OSError:
+        _TUNNEL["state"] = "failed"
+        return
+    _TUNNEL["proc"] = proc
+    atexit.register(proc.terminate)          # the tunnel dies with the game
+
+    def _harvest() -> None:
+        for line in proc.stdout:             # drained for the process's lifetime
+            if _TUNNEL["url"] is None:
+                m = _TUNNEL_RE.search(line)
+                if m:
+                    _TUNNEL.update(url=m.group(0), state="up")
+                    print(f"\n  Remote friends visit:  {m.group(0)}\n"
+                          f"  (plus the join code — or click Invite in the game)\n")
+        if _TUNNEL["url"] is None:           # exited without ever printing one
+            _TUNNEL["state"] = "failed"
+
+    threading.Thread(target=_harvest, name="invite-tunnel", daemon=True).start()
+
+
 class JoinIn(BaseModel):
     code: str = ""
     name: str = ""
@@ -316,6 +380,8 @@ async def get_hosting(request: Request) -> JSONResponse:
         # theirs. Never sent to a remote client — they had to know it already.
         out["code"] = TABLE.code
         out["addresses"] = _lan_addresses()
+        out["tunnel"] = _TUNNEL["url"]          # the internet door, when open
+        out["tunnel_state"] = _TUNNEL["state"]
     return JSONResponse(out)
 
 
@@ -2927,6 +2993,8 @@ def main() -> None:
     hosting = "--host" in sys.argv or os.environ.get("OUBLIETTE_HOST", "") == "1"
     bind, port = "127.0.0.1", 8000
     url = f"http://127.0.0.1:{port}"
+    if hosting:
+        _start_tunnel(port)   # the internet door (a no-op without the helper)
     # The Arena frame bridge (S2): the combat subprocess inherits this and
     # connects back to stream the fight. Set for solo play too — one path,
     # every session exercises the multiplayer plumbing (and a lone player

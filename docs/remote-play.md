@@ -11,31 +11,33 @@ the 5-letter join code off the header badge, and tell your friends the code
 plus the address for that door. The code is the only lock — treat it like a
 house key, share it in the group chat, not in public.
 
-## Door 1 — cloudflared (recommended: free, no account, no router surgery)
+## Door 1 — the built-in internet door (recommended; it's automatic)
 
-A "quick tunnel": one small program on the host's machine that hands you a
-temporary public https address and relays visitors to your local server.
+Setup fetches a small helper (`tools\cloudflared.exe`, a Cloudflare "quick
+tunnel"). When you run **host.bat** and the helper is there, the game opens
+the internet door by itself:
 
-1. Download `cloudflared.exe` (one file, no install):
-   <https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/>
-2. Start hosting as usual (`host.bat`).
-3. In a second terminal:
+1. Run `host.bat`.
+2. The header badge shows your join code and, a few seconds later, a 🌐
+   internet address.
+3. Click **📋 Invite** — the game copies
+   `Join my Oubliette table: https://… — join code ABCDE`
+   to your clipboard. Paste it into the group chat. That's the whole job.
 
-   ```
-   cloudflared tunnel --url http://127.0.0.1:8000
-   ```
-
-4. It prints an address like `https://random-words.trycloudflare.com` —
-   send that to your friends along with the join code. Done.
+Your friends click the link, enter the code and a name, pick their hero,
+and they're at the table — nothing for them to install, ever.
 
 Notes:
-- The address is new each run — fine for a game night, annoying for a
-  standing campaign (Tailscale below is the standing-campaign answer).
+- The address is new each game night — the Invite button makes that a
+  non-event. For a permanent address, see Tailscale below.
 - Traffic rides Cloudflare's network encrypted (https/wss); the streamed
   Arena works through it, browser clicks and all.
-- The tunnel connects to your server from *inside* your machine, so even the
-  Windows-firewall prompt is bypassed. (You may still see and allow it —
-  harmless either way.)
+- The tunnel connects to your server from *inside* your machine, so even
+  the Windows-firewall prompt is bypassed. (You may still see and allow
+  it — harmless either way.)
+- Skipped the helper at setup, or the download failed? Run setup.bat again
+  — or place `cloudflared.exe` in the game's `tools\` folder yourself.
+  Without it, hosting simply stays LAN-only.
 
 ## Door 2 — Tailscale (best for a standing weekly table)
 

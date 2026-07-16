@@ -267,3 +267,81 @@ def test_join_code_is_for_the_hosts_own_browser_only():
     assert _is_host_browser("127.0.0.1", {"forwarded": "for=203.0.113.9"}) is False
     assert _is_host_browser("192.168.1.7", {}) is False
     assert _is_host_browser(None, {}) is False
+
+
+# --- the invite tunnel (S4: remote play without touching a console) ----------
+
+def test_tunnel_url_is_harvested_from_cloudflared_banner():
+    from oubliette.app.server import _TUNNEL_RE
+    banner = ("2026-07-16T03:14:15Z INF +  https://plump-owls-sing.trycloudflare.com  + |")
+    m = _TUNNEL_RE.search(banner)
+    assert m and m.group(0) == "https://plump-owls-sing.trycloudflare.com"
+    assert _TUNNEL_RE.search("INF Starting tunnel connection...") is None
+
+
+def test_find_cloudflared_honours_the_override(tmp_path, monkeypatch):
+    from oubliette.app.server import _find_cloudflared
+    fake = tmp_path / "cloudflared.exe"
+    fake.write_bytes(b"MZ")
+    monkeypatch.setenv("OUBLIETTE_CLOUDFLARED", str(fake))
+    assert _find_cloudflared() == str(fake)
+    # a set-but-wrong override means "no helper", never a PATH surprise
+    monkeypatch.setenv("OUBLIETTE_CLOUDFLARED", str(tmp_path / "ghost.exe"))
+    assert _find_cloudflared() is None
+
+
+def test_start_tunnel_harvests_url_and_survives_failure(tmp_path, monkeypatch):
+    import subprocess
+    import time as _time
+
+    from oubliette.app import server as srv
+
+    fake = tmp_path / "cloudflared.exe"
+    fake.write_bytes(b"MZ")
+    monkeypatch.setenv("OUBLIETTE_CLOUDFLARED", str(fake))
+
+    class _Proc:
+        def __init__(self, lines):
+            self.stdout = iter(lines)
+        def terminate(self):
+            pass
+
+    lines = ["INF Requesting new quick Tunnel on trycloudflare.com...\n",
+             "INF |  https://brave-mice-march.trycloudflare.com  |\n"]
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: _Proc(lines))
+    try:
+        srv._start_tunnel(8000)
+        for _ in range(100):                      # the harvest thread races us
+            if srv._TUNNEL["state"] == "up":
+                break
+            _time.sleep(0.02)
+        assert srv._TUNNEL["url"] == "https://brave-mice-march.trycloudflare.com"
+        assert srv._TUNNEL["state"] == "up"
+    finally:
+        srv._TUNNEL.update(url=None, proc=None, state="off")
+
+    # a helper that dies without ever printing an address → failed, not hung
+    monkeypatch.setattr(subprocess, "Popen",
+                        lambda *a, **k: _Proc(["ERR couldn't reach the internet\n"]))
+    try:
+        srv._start_tunnel(8000)
+        for _ in range(100):
+            if srv._TUNNEL["state"] == "failed":
+                break
+            _time.sleep(0.02)
+        assert srv._TUNNEL["state"] == "failed" and srv._TUNNEL["url"] is None
+    finally:
+        srv._TUNNEL.update(url=None, proc=None, state="off")
+
+
+def test_tunnel_address_never_shown_to_guests(hosting):
+    """Same rule as the code: the invite is the HOST'S to give. A guest (or a
+    tunnelled visitor) asking /api/hosting never receives the tunnel URL."""
+    from oubliette.app import server as srv
+    srv._TUNNEL.update(url="https://brave-mice-march.trycloudflare.com", state="up")
+    try:
+        tok = _join(hosting, "Dana")
+        d = client.get("/api/hosting", headers=_seat(tok)).json()
+        assert "tunnel" not in d and "code" not in d
+    finally:
+        srv._TUNNEL.update(url=None, proc=None, state="off")

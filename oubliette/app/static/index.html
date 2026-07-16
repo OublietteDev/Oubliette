@@ -884,6 +884,7 @@
       <div class="menu-pop hidden" id="menu-pop"></div>
     </div>
     <span class="badge hidden" id="table-badge" title=""></span>
+    <button class="act hidden" id="invite-btn" title="Copy the link and join code to send to your friends">📋 Invite</button>
     <span class="badge" id="model-badge">…</span>
     <button class="act" id="reload-btn" title="Re-read the world from The Forge — keeps your current game">↻ Reload world</button>
     <button class="act" id="new-btn">New Game</button>
@@ -2007,12 +2008,18 @@ connectSocket();
 // --- hosting mode: the join screen + the table badge -------------------------
 function renderTableBadge() {
   const b = $("table-badge");
-  if (!tableInfo.hosting) { b.classList.add("hidden"); return; }
+  if (!tableInfo.hosting) { b.classList.add("hidden"); $("invite-btn").classList.add("hidden"); return; }
   const here = tableSeats.filter(p => p.connected).length;
   let text;
   if (tableInfo.code) {        // the host's browser: code + where friends point theirs
-    const addr = (tableInfo.addresses || [])[0];
-    text = `⌂ code ${tableInfo.code}` + (addr ? ` · ${addr}:${location.port || 80}` : "");
+    if (tableInfo.tunnel) {    // the internet door is open — that's THE address
+      text = `⌂ code ${tableInfo.code} · 🌐 ${tableInfo.tunnel.replace("https://", "")}`;
+    } else {
+      const addr = (tableInfo.addresses || [])[0];
+      text = `⌂ code ${tableInfo.code}` + (addr ? ` · ${addr}:${location.port || 80}` : "");
+      if (tableInfo.tunnel_state === "starting") text += " · 🌐 opening…";
+    }
+    $("invite-btn").classList.remove("hidden");
   } else {
     text = `⌂ seated as ${tableInfo.you || "…"}`;
   }
@@ -2020,6 +2027,32 @@ function renderTableBadge() {
   b.textContent = text;
   b.title = tableSeats.map(p => p.name + (p.connected ? "" : " (away)")).join(", ");
   b.classList.remove("hidden");
+}
+
+// The Invite button (host's browser only): one click puts the whole invitation
+// on the clipboard, ready for the group chat — no console to read, no URL to
+// retype. Internet address when the tunnel is up, LAN address otherwise.
+$("invite-btn").addEventListener("click", async () => {
+  const where = tableInfo.tunnel
+    || `http://${(tableInfo.addresses || [])[0] || "?"}:${location.port || 80}`;
+  const invite = `Join my Oubliette table: ${where} — join code ${tableInfo.code}`;
+  try { await navigator.clipboard.writeText(invite); } catch (e) { return; }
+  const btn = $("invite-btn");
+  btn.textContent = "✓ Copied!";
+  setTimeout(() => { btn.textContent = "📋 Invite"; }, 1600);
+});
+
+// The tunnel opens a few seconds after the server starts — the host's browser
+// keeps checking until the door is open (or declared failed), then the badge
+// and the Invite button switch to the internet address.
+async function watchTunnel() {
+  if (!tableInfo.code || tableInfo.tunnel || tableInfo.tunnel_state !== "starting") return;
+  for (let i = 0; i < 40; i++) {
+    await new Promise(r => setTimeout(r, 3000));
+    try { tableInfo = await (await fetch("/api/hosting")).json(); } catch (e) { continue; }
+    renderTableBadge();
+    if (tableInfo.tunnel || tableInfo.tunnel_state !== "starting") return;
+  }
 }
 
 function showJoinOverlay() {
@@ -5793,6 +5826,7 @@ async function boot() {
   try { tableInfo = await (await fetch("/api/hosting")).json(); } catch (e) {}
   if (tableInfo.hosting) {
     renderTableBadge();
+    watchTunnel();         // the internet door opens a beat later — follow it
     rebuildSeatOwners();   // seat memory: roster chips are right from first paint
     if (!tableInfo.joined) { showJoinOverlay(); return; }  // boot resumes via reload after joining
   }
