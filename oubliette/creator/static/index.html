@@ -212,6 +212,16 @@
   .portrait-prev.is-empty { border-style: dashed; }
   .portrait-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
   .portrait-actions label.btn { cursor: pointer; }
+  /* token previewer — frame the portrait inside the Arena's round token */
+  .token-frame-wrap { width: 100%; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .token-frame-row { display: flex; align-items: center; gap: 14px; }
+  .token-frame-circle { width: 96px; height: 96px; flex: none; position: relative; overflow: hidden;
+    border-radius: 50%; background: #000; border: 2px solid var(--line); cursor: grab; touch-action: none; }
+  .token-frame-circle:active { cursor: grabbing; }
+  .token-frame-circle img { position: absolute; max-width: none; user-select: none; pointer-events: none; }
+  .token-frame-ctrls { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+  .token-frame-ctrls label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); }
+  .token-frame-ctrls input[type="range"] { width: 150px; accent-color: var(--accent); }
   /* clone-from-existing picker */
   .clone-list { max-height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
   .clone-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
@@ -2211,6 +2221,20 @@ function statblockForm(sb) {
             <span id="f_portrait_name" class="help" style="margin:0">${v.portrait ? esc(v.portrait) : "No portrait — a silhouette is used in play."}</span>
           </div>
           <input type="hidden" id="f_portrait" value="${esc(v.portrait || "")}">
+          <div id="f_frame_wrap" class="token-frame-wrap"${v.portrait ? "" : ' style="display:none"'}>
+            <div class="token-frame-row">
+              <div id="f_frame_circle" class="token-frame-circle" title="Drag the art to reposition it">
+                <img id="f_frame_img" draggable="false" alt="">
+              </div>
+              <div class="token-frame-ctrls">
+                <label>Zoom <input type="range" id="f_token_zoom" min="0.5" max="3" step="0.05" value="${Number(v.token_zoom ?? 1)}"></label>
+                <button class="btn mini" type="button" id="f_frame_reset">Reset framing</button>
+                <span class="help" style="margin:0">This is the battle token. Drag the art, slide the zoom.</span>
+              </div>
+            </div>
+            <input type="hidden" id="f_token_ox" value="${Number(v.token_offset_x ?? 0)}">
+            <input type="hidden" id="f_token_oy" value="${Number(v.token_offset_y ?? 0)}">
+          </div>
         </div>`, "Pick an image from your computer — it's saved into this world's portraits/ folder.")}
       </div>
       <div class="mtab-pane" data-pane="abilities">
@@ -2312,6 +2336,7 @@ function wireStatblockForm(original) {
   if (fileInp) fileInp.addEventListener("change", () => { if (fileInp.files[0]) uploadCreaturePortrait(fileInp.files[0]); });
   const clearBtn = document.getElementById("f_portrait_clear");
   if (clearBtn) clearBtn.addEventListener("click", setCreaturePortrait.bind(null, ""));
+  wireTokenFrame();
 }
 // Saves the picked image into the pack's portraits/ folder (keyed by the creature's
 // id, or a slug of its name for a not-yet-saved creature) and stores the filename.
@@ -2339,6 +2364,66 @@ function setCreaturePortrait(filename) {
     img.removeAttribute("src"); img.classList.add("is-empty");
     nm.textContent = "No portrait — a silhouette is used in play."; clearBtn.style.display = "none";
   }
+  // A different image means the old framing is meaningless — start over.
+  setTokenFraming(filename ? { zoom: 1, ox: 0, oy: 0, show: true } : { show: false });
+}
+
+// ---- token previewer: frame the portrait inside the Arena's round token ----
+// The circle mirrors the Arena's math exactly: the art fills the circle by its
+// SHORT side (crop-to-fill) times the zoom, centered plus the pan (fractions
+// of the diameter). Same numbers in, same crop out.
+function setTokenFraming(o) {
+  const wrap = document.getElementById("f_frame_wrap");
+  if (!wrap) return;
+  if (o.show !== undefined) wrap.style.display = o.show ? "" : "none";
+  if (o.zoom !== undefined) document.getElementById("f_token_zoom").value = o.zoom;
+  if (o.ox !== undefined) document.getElementById("f_token_ox").value = o.ox;
+  if (o.oy !== undefined) document.getElementById("f_token_oy").value = o.oy;
+  layoutTokenFrame();
+}
+function layoutTokenFrame() {
+  const circle = document.getElementById("f_frame_circle");
+  const img = document.getElementById("f_frame_img");
+  const src = document.getElementById("f_portrait_img").getAttribute("src");
+  if (!circle || !src) return;
+  if (img.getAttribute("src") !== src) { img.src = src; }
+  if (!img.naturalWidth) { img.onload = layoutTokenFrame; return; }
+  const D = circle.clientWidth || 96;
+  const zoom = Number(document.getElementById("f_token_zoom").value) || 1;
+  const ox = Number(document.getElementById("f_token_ox").value) || 0;
+  const oy = Number(document.getElementById("f_token_oy").value) || 0;
+  const s = D / Math.min(img.naturalWidth, img.naturalHeight) * zoom;
+  const w = img.naturalWidth * s, h = img.naturalHeight * s;
+  img.style.width = w + "px"; img.style.height = h + "px";
+  img.style.left = ((D - w) / 2 + ox * D) + "px";
+  img.style.top = ((D - h) / 2 + oy * D) + "px";
+}
+function wireTokenFrame() {
+  const circle = document.getElementById("f_frame_circle");
+  if (!circle) return;
+  document.getElementById("f_token_zoom").addEventListener("input", layoutTokenFrame);
+  document.getElementById("f_frame_reset").addEventListener("click",
+    () => setTokenFraming({ zoom: 1, ox: 0, oy: 0 }));
+  let drag = null;
+  circle.addEventListener("pointerdown", (e) => {
+    drag = { x: e.clientX, y: e.clientY };
+    circle.setPointerCapture(e.pointerId);
+  });
+  circle.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const D = circle.clientWidth || 96;
+    const clamp = (n) => Math.max(-1, Math.min(1, n));
+    const oxEl = document.getElementById("f_token_ox");
+    const oyEl = document.getElementById("f_token_oy");
+    oxEl.value = clamp((Number(oxEl.value) || 0) + (e.clientX - drag.x) / D).toFixed(3);
+    oyEl.value = clamp((Number(oyEl.value) || 0) + (e.clientY - drag.y) / D).toFixed(3);
+    drag = { x: e.clientX, y: e.clientY };
+    layoutTokenFrame();
+  });
+  const end = () => { drag = null; };
+  circle.addEventListener("pointerup", end);
+  circle.addEventListener("pointercancel", end);
+  layoutTokenFrame();
 }
 function confirmStatblock(original) {
   const name = document.getElementById("f_name").value.trim();
@@ -2362,6 +2447,13 @@ function confirmStatblock(original) {
   const setStr = (key, id) => { const t = document.getElementById(id).value.trim(); if (t) base[key] = t; else delete base[key]; };
   setStr("size", "f_size"); setStr("type", "f_type"); setStr("alignment", "f_align");
   setStr("hit_dice", "f_hitdice"); setStr("ac_desc", "f_acdesc"); setStr("portrait", "f_portrait");
+  // --- token framing (previewer): written only when adjusted, keeping packs clean ---
+  const tZoom = Number(document.getElementById("f_token_zoom").value) || 1;
+  const tOx = Number(document.getElementById("f_token_ox").value) || 0;
+  const tOy = Number(document.getElementById("f_token_oy").value) || 0;
+  if (base.portrait && (tZoom !== 1 || tOx !== 0 || tOy !== 0)) {
+    base.token_zoom = tZoom; base.token_offset_x = tOx; base.token_offset_y = tOy;
+  } else { delete base.token_zoom; delete base.token_offset_x; delete base.token_offset_y; }
   // languages = ticked standard ones + the free-text "other", joined into one string
   const langs = [...readChecklist("f_langs"), ...csv(document.getElementById("f_langs_other").value)];
   if (langs.length) base.languages = langs.join(", "); else delete base.languages;

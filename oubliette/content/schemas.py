@@ -430,6 +430,13 @@ class StatBlock(_Strict):
     srd_ref: str | None = None
     portrait: str | None = None      # image filename in the source's portraits/ dir;
                                      # falls back to "<id>.png", then a silhouette
+    # How the portrait sits in the Arena's round token (the Forge's token
+    # previewer writes these): zoom on the crop-to-fill baseline (1.0 fills
+    # the circle exactly; <1 letterboxes) and pan as a fraction of the token
+    # frame (+x right, +y down).
+    token_zoom: float = Field(default=1.0, ge=0.25, le=4.0)
+    token_offset_x: float = Field(default=0.0, ge=-1.0, le=1.0)
+    token_offset_y: float = Field(default=0.0, ge=-1.0, le=1.0)
 
     # --- AI behavior -------------------------------------------------------
     # Which personality this creature fights with: a built-in preset

@@ -348,6 +348,8 @@ def draw_token(
             token_img = _get_polygon_token_image(
                 creature.token_image, poly_w, poly_h,
                 int_polygon, min_x, min_y,
+                creature.token_zoom, creature.token_offset_x,
+                creature.token_offset_y,
             )
 
     if token_img is not None:
@@ -484,7 +486,9 @@ def _draw_decoy_ghosts(
     """Draw translucent duplicate tokens behind the real one (Mirror Image)."""
     ghost_img = None
     if creature.token_image:
-        img = get_token_image(creature.token_image, radius * 2)
+        img = get_token_image(creature.token_image, radius * 2,
+                              creature.token_zoom, creature.token_offset_x,
+                              creature.token_offset_y)
         if img is not None:
             ghost_img = img.copy()
             ghost_img.set_alpha(110)
@@ -582,7 +586,10 @@ def _draw_single_hex_token(
     token_img = None
     if creature.token_image:
         diameter = radius * 2
-        token_img = get_token_image(creature.token_image, diameter)
+        token_img = get_token_image(creature.token_image, diameter,
+                                    creature.token_zoom,
+                                    creature.token_offset_x,
+                                    creature.token_offset_y)
 
     if token_img is not None:
         img_rect = token_img.get_rect(center=center)
@@ -630,8 +637,10 @@ def _draw_single_hex_token(
 # ---------------------------------------------------------------------------
 
 # Cache for polygon-clipped token images.
-# Key: (resolved_path, width, height) -> Surface or None.
-_polygon_token_cache: dict[tuple[str, int, int], pygame.Surface | None] = {}
+# Key: (resolved_path, width, height, zoom, pan_x, pan_y) -> Surface or None.
+_polygon_token_cache: dict[
+    tuple[str, int, int, float, float, float], pygame.Surface | None
+] = {}
 
 
 def _get_polygon_token_image(
@@ -641,14 +650,19 @@ def _get_polygon_token_image(
     polygon: list[tuple[int, int]],
     offset_x: int,
     offset_y: int,
+    zoom: float = 1.0,
+    pan_x: float = 0.0,
+    pan_y: float = 0.0,
 ) -> pygame.Surface | None:
     """Load, scale, and clip a token image to a polygon boundary.
 
-    The image is fit WITHIN the polygon's bounding box (contain — the whole
-    creature stays visible, centered) over an opaque black backing, then
-    clipped to the polygon shape using an alpha mask. The black backing
-    fills the letterbox margins and shows through any transparency in the
-    art, so portraits read as solid tokens instead of floating cutouts.
+    The image FILLS the polygon's bounding box (cover — the short sides
+    crop, matching the single-hex circle and the bestiary card) times any
+    authored zoom, centered plus the authored pan, over an opaque black
+    backing, then clipped to the polygon shape using an alpha mask. The
+    black backing fills any margin from zoom < 1 and shows through any
+    transparency in the art, so portraits read as solid tokens instead of
+    floating cutouts.
 
     Args:
         image_path: Path to the image file.
@@ -657,6 +671,9 @@ def _get_polygon_token_image(
         polygon: Screen-space polygon vertices (int coordinates).
         offset_x: Minimum x of the polygon bounding box.
         offset_y: Minimum y of the polygon bounding box.
+        zoom: Authored framing zoom on the cover baseline (1.0 = fill).
+        pan_x: Authored pan, fraction of the box width (+ = right).
+        pan_y: Authored pan, fraction of the box height (+ = down).
 
     Returns:
         A ``width`` x ``height`` SRCALPHA surface with the image clipped
@@ -668,7 +685,8 @@ def _get_polygon_token_image(
         return None
 
     resolved = str(_Path(image_path).resolve())
-    cache_key = (resolved, width, height)
+    cache_key = (resolved, width, height,
+                 float(zoom), float(pan_x), float(pan_y))
 
     if cache_key in _polygon_token_cache:
         cached_img = _polygon_token_cache[cache_key]
@@ -687,21 +705,22 @@ def _get_polygon_token_image(
         _polygon_token_cache[cache_key] = None
         return None
 
-    # Fit the whole image inside the bounding box (contain), centered on an
-    # opaque black backing — no cropping, so the art stays centered and whole.
+    # Fill the bounding box (cover), centered plus the authored pan, on an
+    # opaque black backing — the short sides crop, like the circle token.
     orig_w, orig_h = raw.get_size()
     if orig_w == 0 or orig_h == 0:
         _polygon_token_cache[cache_key] = None
         return None
 
-    scale = min(width / orig_w, height / orig_h)
+    scale = max(width / orig_w, height / orig_h) * max(0.01, zoom)
     new_w = max(1, int(orig_w * scale))
     new_h = max(1, int(orig_h * scale))
     scaled = pygame.transform.smoothscale(raw, (new_w, new_h))
 
     composed = pygame.Surface((width, height), pygame.SRCALPHA)
     composed.fill((0, 0, 0, 255))
-    composed.blit(scaled, ((width - new_w) // 2, (height - new_h) // 2))
+    composed.blit(scaled, ((width - new_w) // 2 + int(pan_x * width),
+                           (height - new_h) // 2 + int(pan_y * height)))
 
     # Cache the composed (but unclipped) image
     _polygon_token_cache[cache_key] = composed

@@ -98,7 +98,7 @@ pytest                          # the full acceptance + engine suite
 - **API calls occasionally drop.** A dropped connection mid-call surfaces an error promptly (no effect on gameplay or the DM's memory) — just send your turn again.
 - **Racial traits are now wired into the engine.** v1.0 brought Relentless Endurance, the dragonborn breath weapon and ancestry resistance, dwarven poison resistance, and more; the last three holdouts landed after it — Halfling Lucky rerolls natural 1s on attacks, checks, and saves (story and Arena alike), Gnome Cunning grants advantage on INT/WIS/CHA saves against magic, and the tiefling's Infernal Legacy is real: thaumaturgy known from level 1, Hellish Rebuke once per long rest at 3rd, Darkness at 5th — castable in the Arena even by tieflings with no spellcasting class. (One nicety remains: a non-caster's sheet has no spellcasting panel, so thaumaturgy shows only in the DM's narration.)
 - **Encounter balance is still being tuned.** v0.9.2 added a party-CR budget — improvised fights are now sized to the party's real levels and size and to your chosen difficulty (Story → Hardcore) — but the CR bands themselves will take several more balancing passes before every fight feels fair at every level.
-- **Arena token art can be sized inconsistently.** The plan is a token previewer that lets you adjust framing so your art (and the current bestiary art) is represented well.
+- **Some bestiary art may sit oddly in its token.** Tokens now crop-to-fill (matching the bestiary card), which fixed most of the old zoomed-out look — and Forge-authored creatures have a token previewer (drag + zoom in the creature editor) for perfect framing. The built-in SRD art gets re-cropped at the source as it grows.
 
 ---
 

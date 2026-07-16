@@ -182,22 +182,55 @@ class TestScaleAndClipCircle:
         assert result.get_size() == (1, 1)
 
 
-class TestBlackBacking:
-    """B6 polish: portraits sit on an opaque black backing inside the token
-    shape, so letterbox margins and transparent art read as solid tokens."""
+class TestCoverFitAndFraming:
+    """Tokens crop-to-fill (like the bestiary card and character sheet), and
+    authors refine the framing with zoom/pan from the Forge's token
+    previewer. The opaque black backing remains underneath, so zoomed-out
+    art and transparency still read as solid tokens."""
 
-    def test_circle_letterbox_margin_is_opaque_black(self):
-        # A wide source leaves top/bottom margins inside the circle —
-        # those must be black backing, not see-through.
+    def test_wide_art_fills_the_circle_by_default(self):
+        # Cover fit: a 200x100 source scales by its SHORT side, so the
+        # circle is art edge to edge — no letterbox bars anymore.
         source = pygame.Surface((200, 100), pygame.SRCALPHA)
         source.fill((0, 255, 0, 255))
         result = _scale_and_clip_circle(source, 40)
-        margin = result.get_at((20, 5))     # inside circle, above the image
-        assert (margin.r, margin.g, margin.b, margin.a) == (0, 0, 0, 255)
-        center = result.get_at((20, 20))    # the art itself (smoothscale bleeds a little)
+        top = result.get_at((20, 2))        # inside circle, near the top
+        assert top.g > 200 and top.a == 255
+        center = result.get_at((20, 20))
         assert center.g > 200 and center.a == 255
 
-    def test_polygon_art_is_contained_centered_on_black(self, tmp_path):
+    def test_zoom_below_one_letterboxes_on_black(self):
+        # Zooming out past the fill point brings back the old contain look:
+        # margins inside the circle are opaque black backing, not see-through.
+        source = pygame.Surface((200, 100), pygame.SRCALPHA)
+        source.fill((0, 255, 0, 255))
+        result = _scale_and_clip_circle(source, 40, zoom=0.5)
+        margin = result.get_at((20, 5))     # inside circle, above the image
+        assert (margin.r, margin.g, margin.b, margin.a) == (0, 0, 0, 255)
+        center = result.get_at((20, 20))
+        assert center.g > 200 and center.a == 255
+
+    def test_pan_shifts_the_art(self):
+        # zoom 0.5 on a square source → a 20x20 art block at (10,10);
+        # offset_x 0.25 of the 40px frame shifts it to (20,10).
+        source = pygame.Surface((100, 100), pygame.SRCALPHA)
+        source.fill((255, 0, 0, 255))
+        result = _scale_and_clip_circle(source, 40, zoom=0.5, offset_x=0.25)
+        assert result.get_at((5, 20)).r == 0        # left of the art: backing
+        assert result.get_at((25, 20)).r > 200      # the shifted art
+
+    def test_framing_variants_cache_separately(self, tmp_path):
+        img = tmp_path / "tok.png"
+        surf = pygame.Surface((20, 20), pygame.SRCALPHA)
+        surf.fill((255, 0, 0, 255))
+        pygame.image.save(surf, str(img))
+        clear_cache()
+        get_token_image(str(img), 36)
+        get_token_image(str(img), 36, zoom=1.5)
+        get_token_image(str(img), 36, zoom=1.5, offset_x=0.1)
+        assert get_cache_size() == 3
+
+    def test_polygon_art_covers_the_box_on_black(self, tmp_path):
         from arena.gui.tokens import _get_polygon_token_image
 
         source = pygame.Surface((200, 100), pygame.SRCALPHA)
@@ -205,17 +238,20 @@ class TestBlackBacking:
         img = tmp_path / "wide.png"
         pygame.image.save(source, str(img))
 
-        # Polygon = the full 60x60 bounding box, so only contain/centering
-        # and the backing are under test (no mask edge effects).
+        # Polygon = the full 60x60 bounding box, so only the fit and the
+        # backing are under test (no mask edge effects). Cover: the wide
+        # source fills the box, cropping its sides.
         poly = [(0, 0), (59, 0), (59, 59), (0, 59)]
         result = _get_polygon_token_image(str(img), 60, 60, poly, 0, 0)
         assert result is not None and result.get_size() == (60, 60)
-        margin = result.get_at((30, 5))     # letterbox above the contained art
+        assert result.get_at((30, 5)).r > 200       # art edge to edge
+        assert result.get_at((30, 30)).r > 200
+        # Zoomed out, the black backing letterboxes like the old contain fit
+        # (fresh zoom → distinct cache entry, so no stale reuse either).
+        boxed = _get_polygon_token_image(str(img), 60, 60, poly, 0, 0, zoom=0.5)
+        margin = boxed.get_at((30, 5))              # above the contained art
         assert (margin.r, margin.g, margin.b, margin.a) == (0, 0, 0, 255)
-        center = result.get_at((30, 30))    # the art, whole and centered
-        assert center.r > 200 and center.a == 255
-        left_edge = result.get_at((1, 30))  # contain: full width visible
-        assert left_edge.r > 200
+        assert boxed.get_at((30, 30)).r > 200
 
 
 # ------------------------------------------------------------------

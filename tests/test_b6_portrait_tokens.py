@@ -109,6 +109,43 @@ def test_no_art_on_disk_leaves_the_circle_fallback(tmp_path):
     assert inst.creature.token_image is None
 
 
+# --- token framing (the Forge's token previewer) -------------------------------
+
+def test_authored_framing_rides_with_the_art(tmp_path):
+    dirs = _dirs(tmp_path)
+    _png(dirs.srd, "wolf.png")
+    sb = RS.bestiary["wolf"].model_copy(update={
+        "token_zoom": 1.6, "token_offset_x": -0.12, "token_offset_y": 0.25})
+    inst = enemy_from_statblock(sb, dirs)
+    assert inst.creature.token_image is not None
+    assert inst.creature.token_zoom == 1.6
+    assert inst.creature.token_offset_x == -0.12
+    assert inst.creature.token_offset_y == 0.25
+
+
+def test_default_framing_is_the_plain_cover_fit(tmp_path):
+    dirs = _dirs(tmp_path)
+    _png(dirs.srd, "wolf.png")
+    inst = enemy_from_statblock(RS.bestiary["wolf"], dirs)
+    assert (inst.creature.token_zoom, inst.creature.token_offset_x,
+            inst.creature.token_offset_y) == (1.0, 0.0, 0.0)
+
+
+def test_framing_fields_are_range_checked_at_the_pack_door():
+    import pytest
+    from pydantic import ValidationError
+
+    from oubliette.content.schemas import StatBlock
+
+    sb = StatBlock(id="x", name="X", hp=1, armor_class=10,
+                   token_zoom=2.0, token_offset_x=0.5, token_offset_y=-0.5)
+    assert sb.token_zoom == 2.0
+    with pytest.raises(ValidationError):
+        StatBlock(id="x", name="X", hp=1, armor_class=10, token_zoom=9.0)
+    with pytest.raises(ValidationError):
+        StatBlock(id="x", name="X", hp=1, armor_class=10, token_offset_x=1.5)
+
+
 # --- party PCs ----------------------------------------------------------------
 
 def test_pc_uploaded_portrait_becomes_token_art(tmp_path):

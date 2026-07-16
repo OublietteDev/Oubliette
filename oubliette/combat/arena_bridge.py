@@ -1113,6 +1113,10 @@ def enemy_from_statblock(
                            [sb.portrait, f"{sb.id}.png"])
         if art:
             creature.token_image = art
+            # Authored framing rides with the art (Forge token previewer).
+            creature.token_zoom = sb.token_zoom
+            creature.token_offset_x = sb.token_offset_x
+            creature.token_offset_y = sb.token_offset_y
     return EnemyInstance(creature=creature, xp=sb.xp, loot=_loot_to_value(sb.loot),
                          cr=sb.cr)
 

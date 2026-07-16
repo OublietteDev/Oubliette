@@ -268,6 +268,12 @@ class Creature(BaseModel):
     # Visuals
     token_image: str | None = None  # Path to image file
     token_color: str = "#808080"  # Fallback color
+    # Authored art framing (token previewer): zoom on the crop-to-fill
+    # baseline (1.0 = fill the token exactly) and pan as a fraction of the
+    # token frame (+x right, +y down).
+    token_zoom: float = 1.0
+    token_offset_x: float = 0.0
+    token_offset_y: float = 0.0
 
     # Equipment
     equipment: list[Item] = Field(default_factory=list)

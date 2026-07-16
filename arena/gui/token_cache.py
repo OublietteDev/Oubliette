@@ -21,14 +21,19 @@ import pygame
 
 logger = logging.getLogger(__name__)
 
-# Module-level cache: (absolute_path, diameter_pixels) -> Surface or None.
-# Failed loads are stored as None to avoid retrying disk I/O every frame.
-_token_image_cache: dict[tuple[str, int], pygame.Surface | None] = {}
+# Module-level cache: (absolute_path, diameter_pixels, zoom, ox, oy) -> Surface
+# or None. Failed loads are stored as None to avoid retrying disk I/O every frame.
+_token_image_cache: dict[
+    tuple[str, int, float, float, float], pygame.Surface | None
+] = {}
 
 
 def get_token_image(
     image_path: str,
     diameter: int,
+    zoom: float = 1.0,
+    offset_x: float = 0.0,
+    offset_y: float = 0.0,
 ) -> pygame.Surface | None:
     """Get a circular token image, scaled to the given diameter.
 
@@ -39,6 +44,11 @@ def get_token_image(
         image_path: Path to the image file (absolute or relative to cwd).
         diameter: Target diameter in pixels (typically
                   ``TOKEN_RADIUS * 2 * camera.zoom``).
+        zoom: Authored framing — multiplier on the crop-to-fill baseline
+              (1.0 fills the circle exactly; <1 letterboxes toward the old
+              contain look, >1 crops in tighter).
+        offset_x: Authored pan, as a fraction of the diameter (+ = right).
+        offset_y: Authored pan, as a fraction of the diameter (+ = down).
 
     Returns:
         A ``pygame.Surface`` with per-pixel alpha containing the circular
@@ -47,7 +57,8 @@ def get_token_image(
     if diameter < 1:
         return None
 
-    cache_key = (str(Path(image_path).resolve()), diameter)
+    cache_key = (str(Path(image_path).resolve()), diameter,
+                 float(zoom), float(offset_x), float(offset_y))
 
     if cache_key in _token_image_cache:
         return _token_image_cache[cache_key]
@@ -60,7 +71,7 @@ def get_token_image(
         return None
 
     # Scale and clip to circle
-    result = _scale_and_clip_circle(raw_surface, diameter)
+    result = _scale_and_clip_circle(raw_surface, diameter, zoom, offset_x, offset_y)
     _token_image_cache[cache_key] = result
     return result
 
@@ -86,18 +97,26 @@ def _load_raw_image(image_path: str) -> pygame.Surface | None:
 def _scale_and_clip_circle(
     raw_surface: pygame.Surface,
     diameter: int,
+    zoom: float = 1.0,
+    offset_x: float = 0.0,
+    offset_y: float = 0.0,
 ) -> pygame.Surface:
-    """Scale an image to fit within a circle of *diameter* pixels.
+    """Scale an image to FILL a circle of *diameter* pixels (crop-to-fill).
 
-    The image is first scaled (maintaining aspect ratio) so its largest
-    dimension equals the diameter.  It is then centered on an opaque BLACK
-    backing (so letterbox margins and any transparency in the art read as a
-    solid token, not a floating cutout), and a circular mask is applied so
-    only pixels inside the circle are visible.
+    The image is scaled (maintaining aspect ratio) so its SMALLEST dimension
+    equals the diameter — the same cover fit the bestiary card and character
+    sheet use — times any authored ``zoom``, then centered plus the authored
+    pan (fractions of the diameter). It sits on an opaque BLACK backing (so
+    any letterbox margin from zoom < 1 and any transparency in the art read
+    as a solid token, not a floating cutout), and a circular mask keeps only
+    the pixels inside the circle.
 
     Args:
         raw_surface: The raw loaded image.
         diameter: Target diameter in pixels.
+        zoom: Framing zoom on the cover baseline (1.0 = exact fill).
+        offset_x: Framing pan, fraction of the diameter (+ = right).
+        offset_y: Framing pan, fraction of the diameter (+ = down).
 
     Returns:
         A *diameter* x *diameter* ``SRCALPHA`` surface with the image
@@ -111,7 +130,7 @@ def _scale_and_clip_circle(
     if orig_w == 0 or orig_h == 0:
         return pygame.Surface((diameter, diameter), pygame.SRCALPHA)
 
-    scale_factor = diameter / max(orig_w, orig_h)
+    scale_factor = diameter / min(orig_w, orig_h) * max(0.01, zoom)
     new_w = max(1, int(orig_w * scale_factor))
     new_h = max(1, int(orig_h * scale_factor))
     scaled = pygame.transform.smoothscale(raw_surface, (new_w, new_h))
@@ -120,10 +139,9 @@ def _scale_and_clip_circle(
     result = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
     result.fill((0, 0, 0, 255))
 
-    # Center the scaled image on the result surface
-    offset_x = (diameter - new_w) // 2
-    offset_y = (diameter - new_h) // 2
-    result.blit(scaled, (offset_x, offset_y))
+    # Center the scaled image, shifted by the authored pan
+    result.blit(scaled, ((diameter - new_w) // 2 + int(offset_x * diameter),
+                         (diameter - new_h) // 2 + int(offset_y * diameter)))
 
     # Apply circular mask using BLEND_RGBA_MULT: draw a filled white
     # circle on an otherwise transparent surface, then multiply it
