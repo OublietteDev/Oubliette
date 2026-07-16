@@ -827,8 +827,25 @@ let tgSrdList = null;   // the SRD monster names, fetched once per session
 function ensureTestFight() {
   if (!state.testFight)
     state.testFight = { enemies: [{ ref: "", count: 1 }], allies: "", level: 3,
-                        size: 4, place: "", watch: false, status: "", running: false };
+                        size: 4, place: "", watch: false, status: "", running: false,
+                        sims: 100, simming: false, simResult: null };
   return state.testFight;
+}
+function renderSimTable(d) {
+  const rows = (d.party || []).map(p => `<tr>
+      <td style="padding:3px 10px 3px 0">${esc(p.name)}</td>
+      <td style="padding:3px 10px; text-align:right">${p.avg_hp_pct}%</td>
+      <td style="padding:3px 10px; text-align:right">${p.downs}/${d.iterations}</td></tr>`).join("");
+  const draws = d.wins && d.wins.draw ? ` · ${d.wins.draw} draw(s) hit the round cap` : "";
+  const stalled = d.stalled ? ` · ${d.stalled} run(s) stalled` : "";
+  return `<div style="margin-top:10px">
+    <div><b>Party wins ${d.win_pct}%</b> of ${d.iterations} fights · avg ${d.avg_rounds} rounds${draws}${stalled} · seed ${d.seed}</div>
+    <table style="border-collapse:collapse; margin-top:6px"><tr>
+      <th style="text-align:left; padding:3px 10px 3px 0; opacity:.7">Hero</th>
+      <th style="text-align:right; padding:3px 10px; opacity:.7">Avg HP left</th>
+      <th style="text-align:right; padding:3px 10px; opacity:.7">Went down</th></tr>${rows}</table>
+    <div class="help" style="margin-top:6px">${esc(d.caveat || "")}</div>
+  </div>`;
 }
 function wireTrainingGrounds() {
   const body = document.getElementById("tg-body");
@@ -867,8 +884,13 @@ function wireTrainingGrounds() {
       <div class="field"><label style="display:flex; align-items:center; gap:8px; cursor:pointer">
         <input type="checkbox" id="tg-watch" ${tf.watch ? "checked" : ""} style="width:auto; flex:none; margin:0">
         <span>Watch mode — the AI plays the party too</span></label></div>
-      <button class="btn" id="tg-fight" ${tf.running ? "disabled" : ""}>${tf.running ? "⚔ The Arena is open — fight in its window…" : "⚔ Fight"}</button>
-      <div class="help" id="tg-status" style="margin-top:8px">${esc(tf.status)}</div>`;
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+        <button class="btn" id="tg-fight" ${tf.running || tf.simming ? "disabled" : ""}>${tf.running ? "⚔ The Arena is open — fight in its window…" : "⚔ Fight"}</button>
+        <input id="tg-iters" type="number" min="1" max="200" value="${tf.sims}" style="width:70px" title="how many headless fights">
+        <button class="btn" id="tg-sim" ${tf.running || tf.simming ? "disabled" : ""}>${tf.simming ? "⌛ Simulating…" : "⌛ Simulate"}</button>
+      </div>
+      <div class="help" id="tg-status" style="margin-top:8px">${esc(tf.status)}</div>
+      ${tf.simResult ? renderSimTable(tf.simResult) : ""}`;
     wire();
   };
   const wire = () => {
@@ -885,6 +907,30 @@ function wireTrainingGrounds() {
     document.getElementById("tg-allies").addEventListener("change", e => { tf.allies = e.target.value; });
     document.getElementById("tg-watch").addEventListener("change", e => { tf.watch = e.target.checked; });
     document.getElementById("tg-fight").addEventListener("click", fight);
+    document.getElementById("tg-iters").addEventListener("change", e => {
+      tf.sims = Math.max(1, Math.min(200, +e.target.value || 100)); });
+    document.getElementById("tg-sim").addEventListener("click", simulate);
+  };
+  const config = () => ({
+    enemies: tf.enemies.filter(e => e.ref.trim()).map(e => ({ ref: e.ref.trim(), count: e.count })),
+    party_level: tf.level, party_size: tf.size,
+    allies: tf.allies.split(",").map(s => s.trim()).filter(Boolean),
+    place_id: tf.place || null,
+  });
+  const simulate = async () => {
+    const cfg = config();
+    if (!cfg.enemies.length) { tf.status = "Name at least one enemy."; paint(); return; }
+    tf.simming = true; tf.simResult = null; tf.status = ""; paint();
+    try {
+      const r = await fetch(`/api/pack/${encodeURIComponent(state.id)}/simulate`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...cfg, iterations: tf.sims }),
+      });
+      const d = await r.json();
+      if (!r.ok || d.error) tf.status = d.error || "the simulation failed";
+      else tf.simResult = d;
+    } catch (e) { tf.status = "the simulation failed: " + e; }
+    tf.simming = false; paint();
   };
   const fight = async () => {
     const enemies = tf.enemies.filter(e => e.ref.trim()).map(e => ({ ref: e.ref.trim(), count: e.count }));
@@ -912,6 +958,21 @@ function wireTrainingGrounds() {
     fetch("/api/srd/monsters").then(r => r.json())
       .then(d => { tgSrdList = d.monsters || []; paint(); }).catch(() => {});
   paint();
+}
+async function previewSpell(i, btn) {
+  const sp = listOf("spells")[i];
+  if (!sp) return;
+  const was = btn.textContent;
+  btn.disabled = true; btn.textContent = "⚔ Arena open…";
+  toast("⚔ The Arena is open — cast at the dummies; ESC when done.");
+  try {
+    const r = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/preview-spell`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spell: sp }),
+    })).json();
+    if (r.error) toast(r.error);
+  } catch (e) { toast(String(e.message || e)); }
+  btn.disabled = false; btn.textContent = was;
 }
 function testFightCreature(i) {
   const sb = listOf("statblocks")[i];
@@ -987,6 +1048,7 @@ function cardHtml(kind, e, i, depth, node) {
       </div>
       ${editable ? `<div class="cactions">
         ${kind === "statblocks" ? `<button class="btn mini" data-attacks="${i}" title="Attacks, multiattack, special moves & raw data">⚔ Combat</button><button class="btn mini" data-testfight="${i}" title="Send it to the Training grounds — fight it with the benchmark party">⚔ Test</button>` : ""}
+        ${kind === "spells" ? `<button class="btn mini" data-spellprev="${i}" title="Cast it at training dummies in the Arena — see the shape, the save, the animation">▶ Preview</button>` : ""}
         <button class="btn mini" data-edit="${kind}" data-i="${i}">Edit</button>
         <button class="btn mini danger" data-del="${kind}" data-i="${i}">Delete</button></div>` : ""}
     </div>`;
@@ -1073,6 +1135,8 @@ function render() {
     b.addEventListener("click", () => openAttacksEditor(+b.dataset.attacks)));
   d.querySelectorAll("[data-testfight]").forEach(b =>
     b.addEventListener("click", () => testFightCreature(+b.dataset.testfight)));
+  d.querySelectorAll("[data-spellprev]").forEach(b =>
+    b.addEventListener("click", () => previewSpell(+b.dataset.spellprev, b)));
   d.querySelectorAll("[data-toggle]").forEach(t =>
     t.addEventListener("click", () => {
       const kind = t.dataset.toggle;
@@ -2858,6 +2922,7 @@ async function openAttacksEditor(index) {
     </div>
     <div class="mfoot"><button class="btn" data-cancel>Cancel</button>
       <button class="btn" id="atkRaw" title="Edit the full combat data directly">⚙ Edit raw data…</button>
+      <button class="btn" id="atkPreview" title="Save, then watch it perform this kit on training dummies in the Arena">▶ Preview</button>
       <span class="mfoot-spacer"></span>
       <button class="btn primary" id="atkSave">Save attacks</button></div>`;
   document.getElementById("scrim").classList.add("open");
@@ -2878,6 +2943,29 @@ async function openAttacksEditor(index) {
   });
   modal.querySelector("[data-cancel]").addEventListener("click", closeEditor);
   document.getElementById("atkSave").addEventListener("click", saveAttacks);
+  document.getElementById("atkPreview").addEventListener("click", previewAttacks);
+}
+async function previewAttacks() {
+  // Save first (the preview reads the combat file from disk), then launch —
+  // the modal stays open so the author keeps iterating swing by swing.
+  const m = _collectMonster();
+  if (!m) return;
+  const err = document.getElementById("atk_err");
+  const btn = document.getElementById("atkPreview");
+  try {
+    const res = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/monster/${encodeURIComponent(attacksCtx.creature.id)}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ monster: m }) })).json();
+    if (res.error) { err.textContent = res.error; return; }
+    if (!(state.monsterFiles || []).includes(attacksCtx.creature.id)) (state.monsterFiles = state.monsterFiles || []).push(attacksCtx.creature.id);
+    btn.disabled = true; btn.textContent = "⚔ Arena open…";
+    err.textContent = "";
+    const r = await (await fetch(`/api/pack/${encodeURIComponent(state.id)}/preview-attack`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ statblock: attacksCtx.creature }),
+    })).json();
+    if (r.error) err.textContent = r.error;
+  } catch (e) { err.textContent = String(e.message || e); }
+  btn.disabled = false; btn.textContent = "▶ Preview";
 }
 function _attackPreview(a) {
   const ab = attacksCtx.monster.ability_scores || {};

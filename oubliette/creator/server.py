@@ -961,18 +961,12 @@ def test_fight(pack_id: str, body: TestFightIn) -> JSONResponse:
     """Stage and run one sandbox fight, blocking until the Arena window closes,
     then return a small honest epilogue. The pack must LOAD (same door as the
     game) — a world that fails validation can't promise a faithful fight."""
-    if _pack_dir(pack_id) is None:
-        return JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
     from ..combat.arena_launch import cleanup, run_arena
     from ..combat.boundary import CombatError
     from ..combat.testbed import stage_test_fight
-    from ..content.loader import PackValidationError, load_pack
-    try:
-        world = load_pack(pack_id, packs_root=_packs_root())
-    except PackValidationError as e:
-        return JSONResponse({"error": "the world must pass validation before a "
-                                      "test fight — save and fix the report first",
-                             "details": e.errors[:8]}, status_code=400)
+    world, err = _load_world_or_error(pack_id)
+    if err is not None:
+        return err
     try:
         pending = stage_test_fight(
             world, _packs_root() / pack_id,
@@ -995,6 +989,129 @@ def test_fight(pack_id: str, body: TestFightIn) -> JSONResponse:
                          "winner": handoff.get("winner"),
                          "rounds": handoff.get("rounds"),
                          "party": party})
+
+
+def _load_world_or_error(pack_id: str):
+    """(world, None) when the pack passes the game's own door, else (None,
+    the JSONResponse to return). Every test-bed launch takes this gate."""
+    from ..content.loader import PackValidationError, load_pack
+    if _pack_dir(pack_id) is None:
+        return None, JSONResponse({"error": f"no such pack: {pack_id!r}"}, status_code=404)
+    try:
+        return load_pack(pack_id, packs_root=_packs_root()), None
+    except PackValidationError as e:
+        return None, JSONResponse(
+            {"error": "the world must pass validation first — save and fix "
+                      "the report", "details": e.errors[:8]}, status_code=400)
+
+
+def _run_preview(pending) -> JSONResponse:
+    """Open the Arena on a staged preview and wait for the author to close it.
+    Previews have no epilogue — the window itself is the answer."""
+    from ..combat.arena_launch import cleanup, run_arena
+    from ..combat.boundary import CombatError
+    try:
+        run_arena(pending)
+    except CombatError as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    finally:
+        cleanup(pending)
+    return JSONResponse({"ok": True})
+
+
+class SpellPreviewIn(BaseModel):
+    spell: dict | None = None          # the form's CURRENT def (world-unsaved ok)
+    spell_id: str | None = None        # or an id already in the merged ruleset
+
+
+@app.post("/api/pack/{pack_id}/preview-spell")
+def preview_spell(pack_id: str, body: SpellPreviewIn) -> JSONResponse:
+    """The spell range: the benchmark wizard holding only this spell, two
+    training dummies downrange. Blocking, like every Arena launch here."""
+    from ..combat.boundary import CombatError
+    from ..combat.testbed import stage_spell_preview
+    world, err = _load_world_or_error(pack_id)
+    if err is not None:
+        return err
+    try:
+        pending = stage_spell_preview(world, _packs_root() / pack_id,
+                                      spell=body.spell, spell_id=body.spell_id)
+    except CombatError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return _run_preview(pending)
+
+
+class AttackPreviewIn(BaseModel):
+    statblock: dict
+
+
+@app.post("/api/pack/{pack_id}/preview-attack")
+def preview_attack(pack_id: str, body: AttackPreviewIn) -> JSONResponse:
+    """The creature performs its combat kit against training dummies while the
+    author watches — the attacks editor's one-click showcase."""
+    from ..combat.boundary import CombatError
+    from ..combat.testbed import stage_attack_preview
+    world, err = _load_world_or_error(pack_id)
+    if err is not None:
+        return err
+    try:
+        pending = stage_attack_preview(world, _packs_root() / pack_id,
+                                       statblock=body.statblock)
+    except CombatError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return _run_preview(pending)
+
+
+class SimulateIn(TestFightIn):
+    iterations: int = Field(default=100, ge=1, le=200)
+    round_cap: int = Field(default=30, ge=5, le=100)
+
+
+@app.post("/api/pack/{pack_id}/simulate")
+def simulate(pack_id: str, body: SimulateIn) -> JSONResponse:
+    """The war room: N headless AI-vs-AI runs of the configured fight, no
+    window, aggregate stats back. Seeded per batch so a run is reproducible;
+    the caveat rides the payload — these numbers are a floor, not a
+    prediction."""
+    import random as _random
+    from ..combat.boundary import CombatError
+    from ..combat.testbed import stage_test_fight
+    world, err = _load_world_or_error(pack_id)
+    if err is not None:
+        return err
+    try:
+        pending = stage_test_fight(
+            world, _packs_root() / pack_id,
+            enemies=[(e.ref, e.count) for e in body.enemies],
+            party_level=body.party_level, party_size=body.party_size,
+            allies=body.allies, place_id=body.place_id, watch=True)
+    except CombatError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    seed = _random.randint(1, 999_999)
+    spec = {"encounter": str(pending.encounter_path),
+            "iterations": body.iterations, "seed": seed,
+            "round_cap": body.round_cap}
+    spec_path = pending.scratch_dir / "sim-spec.json"
+    out_path = pending.scratch_dir / "sim-out.json"
+    try:
+        spec_path.write_text(json.dumps(spec), encoding="utf-8")
+        proc = subprocess.run(
+            [sys.executable, "-m", "arena.sim", str(spec_path), str(out_path)],
+            cwd=str(_PROJECT_ROOT), capture_output=True, text=True, timeout=600)
+        if proc.returncode != 0:
+            tail = (proc.stderr or "")[-400:]
+            return JSONResponse({"error": f"the simulation crashed: {tail}"},
+                                status_code=500)
+        return JSONResponse({"ok": True,
+                             **json.loads(out_path.read_text(encoding="utf-8"))})
+    except subprocess.TimeoutExpired:
+        return JSONResponse({"error": "the simulation ran past 10 minutes and "
+                                      "was stopped — try fewer iterations"},
+                            status_code=500)
+    except (OSError, json.JSONDecodeError) as e:
+        return JSONResponse({"error": f"simulation failed: {e}"}, status_code=500)
+    finally:
+        shutil.rmtree(pending.scratch_dir, ignore_errors=True)
 
 
 class NewIn(BaseModel):

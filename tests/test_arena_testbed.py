@@ -157,3 +157,100 @@ def test_endpoint_404s_an_unknown_pack(monkeypatch):
     client = TestClient(app)
     r = client.post("/api/pack/nope/test-fight", json={"enemies": [{"ref": "wolf"}]})
     assert r.status_code == 404
+
+
+# --- T2: the spell range / attack previews ------------------------------------
+
+def test_spell_preview_stages_the_lone_caster(world):
+    from oubliette.combat.testbed import stage_spell_preview
+    p = stage_spell_preview(world, _PACKS_ROOT / "brightvale", spell_id="fireball")
+    enc = json.loads(p.encounter_path.read_text(encoding="utf-8"))
+    teams = [(c["team"], c["name_override"]) for c in enc["combatants"]]
+    assert teams[0] == ("player", "Aldous")
+    assert [t for t, _ in teams].count("enemy") == 2      # the dummies
+    caster = json.loads(open([c for c in enc["combatants"]
+                              if c["team"] == "player"][0]["creature_id"],
+                             encoding="utf-8").read())
+    names = [a["name"] for a in caster.get("actions", [])]
+    assert "Fireball" in names and "Magic Missile" not in names   # ONLY the previewed spell
+    shutil.rmtree(p.scratch_dir, ignore_errors=True)
+
+
+def test_spell_preview_takes_an_unsaved_inline_spell(world):
+    from oubliette.combat.testbed import stage_spell_preview
+    inline = {"id": "test_zap", "name": "Test Zap", "level": 1,
+              "school": "evocation", "classes": ["wizard"],
+              "chassis": {"kind": "bolt", "range_ft": 60,
+                          "damage": "2d8", "damage_type": "lightning"},
+              "description": "An unsaved zap."}
+    p = stage_spell_preview(world, _PACKS_ROOT / "brightvale", spell=inline)
+    enc = json.loads(p.encounter_path.read_text(encoding="utf-8"))
+    assert enc["name"] == "Spell Range — Test Zap"
+    shutil.rmtree(p.scratch_dir, ignore_errors=True)
+
+
+def test_spell_preview_refuses_what_the_caster_cannot_slot(world):
+    from oubliette.combat.testbed import stage_spell_preview
+    with pytest.raises(CombatError):                       # 9th-level spell, L9 caster
+        stage_spell_preview(world, _PACKS_ROOT / "brightvale", spell_id="power_word_kill")
+
+
+def test_attack_preview_puts_the_creature_against_dummies(world):
+    from oubliette.combat.testbed import stage_attack_preview
+    sb = world.statblocks[0].model_dump(mode="json")
+    p = stage_attack_preview(world, _PACKS_ROOT / "brightvale", statblock=sb)
+    enc = json.loads(p.encounter_path.read_text(encoding="utf-8"))
+    players = [c for c in enc["combatants"] if c["team"] == "player"]
+    assert len(players) == 2 and all("Dummy" in c["name_override"] for c in players)
+    assert enc["use_ai_for_allies"] is True                # dummies pass their turns
+    shutil.rmtree(p.scratch_dir, ignore_errors=True)
+
+
+# --- T3: the war room --------------------------------------------------------------
+
+def test_sim_batch_is_deterministic_and_honest(world):
+    from arena.sim import run_batch
+    p = stage_test_fight(world, _PACKS_ROOT / "brightvale",
+                         enemies=[("wolf", 1)], party_level=3, party_size=2, watch=True)
+    a = run_batch(p.encounter_path, 3, seed=7, round_cap=30)
+    b = run_batch(p.encounter_path, 3, seed=7, round_cap=30)
+    shutil.rmtree(p.scratch_dir, ignore_errors=True)
+    assert a == b                                          # same seed, same story
+    assert a["iterations"] == 3
+    assert sum(a["wins"].values()) == 3
+    assert {q["name"] for q in a["party"]} == {"Bram", "Mirelle"}
+    assert "floor" in a["caveat"]
+
+
+def test_round_cap_reports_a_draw(world):
+    from arena.sim import run_batch
+    p = stage_test_fight(world, _PACKS_ROOT / "brightvale",
+                         enemies=[("wolf", 1)], party_level=3, party_size=2, watch=True)
+    r = run_batch(p.encounter_path, 1, seed=7, round_cap=0)   # capped before round 1 ends
+    shutil.rmtree(p.scratch_dir, ignore_errors=True)
+    assert r["wins"]["draw"] == 1 and r["win_pct"] == 0.0
+
+
+def test_simulate_endpoint_runs_the_real_headless_batch(monkeypatch):
+    from fastapi.testclient import TestClient
+    from oubliette.creator.server import app
+    monkeypatch.setenv("OUBLIETTE_PACKS_ROOT", str(_PACKS_ROOT))
+    client = TestClient(app)
+    r = client.post("/api/pack/brightvale/simulate",
+                    json={"enemies": [{"ref": "wolf", "count": 1}],
+                          "party_level": 3, "party_size": 2, "iterations": 2})
+    d = r.json()
+    assert r.status_code == 200, d
+    assert d["ok"] is True and d["iterations"] == 2
+    assert 0.0 <= d["win_pct"] <= 100.0 and d["party"]
+
+
+def test_preview_endpoints_gate_like_the_game(monkeypatch):
+    from fastapi.testclient import TestClient
+    from oubliette.creator.server import app
+    monkeypatch.setenv("OUBLIETTE_PACKS_ROOT", str(_PACKS_ROOT))
+    client = TestClient(app)
+    r = client.post("/api/pack/brightvale/preview-spell", json={"spell_id": "not_a_spell"})
+    assert r.status_code == 400
+    r = client.post("/api/pack/nope/preview-attack", json={"statblock": {}})
+    assert r.status_code == 404
