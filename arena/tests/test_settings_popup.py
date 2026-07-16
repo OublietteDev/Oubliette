@@ -96,6 +96,23 @@ def test_release_persists_the_change(popup, monkeypatch):
     assert saved                           # released: persisted
 
 
+def test_clicking_a_stream_segment_sets_the_fps(popup):
+    assert get_settings().system.stream_fps == 20      # tunnel-friendly default
+    fps, rect = popup._fps_rects()[-1]                  # the 60fps segment
+    assert fps == 60
+    popup.handle_event(_down(rect.center))
+    assert get_settings().system.stream_fps == 60
+    popup.handle_event(_up(rect.center))                # release persists (dirty)
+
+
+def test_stream_fps_drives_the_capture_cadence():
+    from arena.stream import frame_every
+    s = get_settings()
+    for fps, every in ((10, 6), (20, 3), (30, 2), (60, 1)):
+        s.system.stream_fps = fps
+        assert frame_every(60) == every
+
+
 def test_zero_opacity_skips_the_background_entirely(monkeypatch):
     """GridView treats 0% as 'no background': image skipped, hexes opaque."""
     from arena.grid.hexgrid import HexGrid

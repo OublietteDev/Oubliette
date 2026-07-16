@@ -39,8 +39,15 @@ from io import BytesIO
 import pygame
 
 ENV_VAR = "OUBLIETTE_ARENA_BRIDGE"
-FRAME_EVERY = 3      # capture every Nth rendered frame — 60fps loop → ~20fps stream
 JPEG_QUALITY = 70    # plenty for a tactical board; ~60-90KB per 1280×720 frame
+
+
+def frame_every(loop_fps: int) -> int:
+    """Capture cadence: every Nth rendered frame approximates the stream fps
+    chosen in settings (default 20 — tunnel-friendly; a same-wifi table can
+    afford 60). Read per frame, so the in-fight Options change applies live."""
+    from arena.util.settings import get_settings
+    return max(1, round(loop_fps / max(1, get_settings().system.stream_fps)))
 
 # The live bridge, if any — so the sound manager can emit audio cues (S3)
 # without threading a reference through the GUI. Set by start(), cleared by

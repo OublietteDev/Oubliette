@@ -205,5 +205,5 @@ class App:
         pygame.display.flip()
         if self.bridge is not None:
             self._frame_no += 1
-            if self._frame_no % _stream.FRAME_EVERY == 0:
+            if self._frame_no % _stream.frame_every(self.fps) == 0:
                 self.bridge.offer(self.screen)

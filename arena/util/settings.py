@@ -52,6 +52,10 @@ class SystemSettings(BaseModel):
 
     resolution: str = "1280x720"
     auto_scroll_combat_log: bool = True
+    # Multiplayer frame stream: target fps for the board broadcast to browsers.
+    # Bandwidth is the real cost (~60-90KB a frame): 20fps suits internet play
+    # through a tunnel; a same-wifi table can afford 60.
+    stream_fps: int = Field(default=20, ge=5, le=60)
 
 
 class AppSettings(BaseModel):
