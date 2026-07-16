@@ -2352,6 +2352,7 @@ function arenaSend(o) {
 }
 function arenaXY(e) {
   const r = arenaCanvas.getBoundingClientRect();
+  if (!r.width || !r.height) return null;  // unpainted/hidden canvas — no position exists
   return { x: Math.round((e.clientX - r.left) * 1280 / r.width),
            y: Math.round((e.clientY - r.top) * 720 / r.height) };
 }
@@ -2360,11 +2361,13 @@ arenaCanvas.addEventListener("mousedown", (e) => {
   // A real gesture: if autoplay policy blocked the soundtrack, this unblocks it.
   if (arenaAudio.music && arenaAudio.music.paused && !arenaMuted())
     arenaAudio.music.play().catch(() => {});
-  arenaSend({ k: "down", ...arenaXY(e), b: e.button + 1 });
+  const xy = arenaXY(e);
+  if (xy) arenaSend({ k: "down", ...xy, b: e.button + 1 });
 });
 arenaCanvas.addEventListener("mouseup", (e) => {
   e.preventDefault();
-  arenaSend({ k: "up", ...arenaXY(e), b: e.button + 1 });
+  const xy = arenaXY(e);
+  if (xy) arenaSend({ k: "up", ...xy, b: e.button + 1 });
 });
 arenaCanvas.addEventListener("contextmenu", (e) => e.preventDefault());
 let arenaLastMove = 0;
@@ -2372,11 +2375,13 @@ arenaCanvas.addEventListener("mousemove", (e) => {
   const now = performance.now();          // hover drives targeting highlights and
   if (now - arenaLastMove < 45) return;   // tooltips — forward it, gently throttled
   arenaLastMove = now;
-  arenaSend({ k: "move", ...arenaXY(e) });
+  const xy = arenaXY(e);
+  if (xy) arenaSend({ k: "move", ...xy });
 });
 arenaCanvas.addEventListener("wheel", (e) => {
   e.preventDefault();                     // wheel zooms the board, not the page
-  arenaSend({ k: "wheel", ...arenaXY(e), dy: -Math.sign(e.deltaY) });
+  const xy = arenaXY(e);
+  if (xy) arenaSend({ k: "wheel", ...xy, dy: -Math.sign(e.deltaY) });
 }, { passive: false });
 // Keys: ESC hides the overlay locally (the browser reflex) — sending a real ESC
 // into the fight is the explicit "Leave the fight" button, because in the Arena

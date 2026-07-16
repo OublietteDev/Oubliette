@@ -118,6 +118,21 @@ def test_nonsense_input_is_dropped_quietly():
     assert b.take_events() == []
 
 
+def test_malformed_coordinates_never_kill_the_fight():
+    """Found live: a hidden browser tab has a 0×0 canvas, Infinity coords
+    JSON-encode as null, and int(None) raised straight through the main loop —
+    one bad message from any browser crashed the host's Arena. Bad messages
+    drop; the good ones around them still land."""
+    b = _bridge()
+    b._inputs.append({"k": "move", "x": None, "y": None})
+    b._inputs.append({"k": "down", "x": "junk", "y": 3, "b": 1})
+    b._inputs.append({"k": "wheel", "x": 5, "y": 5, "dy": "no"})
+    b._inputs.append({"k": "move", "x": 25, "y": 20})
+    evs = b.take_events()
+    assert [e.type for e in evs] == [pygame.MOUSEMOTION]
+    assert evs[0].pos == (25, 20)
+
+
 # --- audio cues (S3) ----------------------------------------------------------
 
 class _FakeWS:

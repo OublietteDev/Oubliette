@@ -210,7 +210,11 @@ class Bridge:
                 msg = self._inputs.popleft()
             except IndexError:
                 break
-            out.extend(self._events_for(msg))
+            try:
+                out.extend(self._events_for(msg))
+            except Exception:
+                continue    # a malformed message (null coords, junk types) from
+                            # any browser is dropped — never the host's fight
         return out
 
     def _events_for(self, msg: dict) -> list["pygame.event.Event"]:
