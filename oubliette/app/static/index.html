@@ -2043,15 +2043,19 @@ $("invite-btn").addEventListener("click", async () => {
 });
 
 // The tunnel opens a few seconds after the server starts — the host's browser
-// keeps checking until the door is open (or declared failed), then the badge
-// and the Invite button switch to the internet address.
+// keeps checking until the door is open, then keeps a slow eye on it so the
+// badge never advertises an address that leads nowhere (the tunnel helper can
+// die mid-evening: a crash, a sleep-wake, a network drop).
 async function watchTunnel() {
-  if (!tableInfo.code || tableInfo.tunnel || tableInfo.tunnel_state !== "starting") return;
-  for (let i = 0; i < 40; i++) {
-    await new Promise(r => setTimeout(r, 3000));
+  if (!tableInfo.code) return;
+  while (true) {
+    let delay;
+    if (tableInfo.tunnel) delay = 30000;                        // open: keep it honest
+    else if (tableInfo.tunnel_state === "starting") delay = 3000;  // dialing: follow closely
+    else return;                                                // off or failed: done
+    await new Promise(r => setTimeout(r, delay));
     try { tableInfo = await (await fetch("/api/hosting")).json(); } catch (e) { continue; }
     renderTableBadge();
-    if (tableInfo.tunnel || tableInfo.tunnel_state !== "starting") return;
   }
 }
 

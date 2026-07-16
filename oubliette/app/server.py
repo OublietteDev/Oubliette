@@ -352,10 +352,30 @@ def _start_tunnel(port: int) -> None:
                     _TUNNEL.update(url=m.group(0), state="up")
                     print(f"\n  Remote friends visit:  {m.group(0)}\n"
                           f"  (plus the join code — or click Invite in the game)\n")
-        if _TUNNEL["url"] is None:           # exited without ever printing one
-            _TUNNEL["state"] = "failed"
+        # The tunnel process is GONE (crash, network loss, machine slept and
+        # woke). Whatever the badge said a second ago, the door is shut — say
+        # so, or the host keeps handing out an address that leads nowhere.
+        _TUNNEL.update(url=None, state="failed")
+        print("\n  [!] The internet door closed (the tunnel helper exited)."
+              "\n      Restart host.bat and send friends the NEW invite.\n")
 
     threading.Thread(target=_harvest, name="invite-tunnel", daemon=True).start()
+
+
+def _keep_awake() -> None:
+    """Hosting means friends depend on this machine staying reachable — ask
+    Windows not to sleep while the server runs (the DISPLAY may still turn
+    off; only the machine stays up, and a closed laptop lid still wins).
+    Best-effort and Windows-only; solo play never calls this."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        ES_CONTINUOUS, ES_SYSTEM_REQUIRED = 0x80000000, 0x00000001
+        ctypes.windll.kernel32.SetThreadExecutionState(
+            ES_CONTINUOUS | ES_SYSTEM_REQUIRED)
+    except Exception:
+        pass
 
 
 class JoinIn(BaseModel):
@@ -2995,6 +3015,7 @@ def main() -> None:
     url = f"http://127.0.0.1:{port}"
     if hosting:
         _start_tunnel(port)   # the internet door (a no-op without the helper)
+        _keep_awake()         # a sleeping host strands the whole table
     # The Arena frame bridge (S2): the combat subprocess inherits this and
     # connects back to stream the fight. Set for solo play too — one path,
     # every session exercises the multiplayer plumbing (and a lone player

@@ -290,8 +290,9 @@ def test_find_cloudflared_honours_the_override(tmp_path, monkeypatch):
     assert _find_cloudflared() is None
 
 
-def test_start_tunnel_harvests_url_and_survives_failure(tmp_path, monkeypatch):
+def test_start_tunnel_harvests_url_and_reports_a_dead_door(tmp_path, monkeypatch):
     import subprocess
+    import threading
     import time as _time
 
     from oubliette.app import server as srv
@@ -301,35 +302,53 @@ def test_start_tunnel_harvests_url_and_survives_failure(tmp_path, monkeypatch):
     monkeypatch.setenv("OUBLIETTE_CLOUDFLARED", str(fake))
 
     class _Proc:
-        def __init__(self, lines):
-            self.stdout = iter(lines)
+        """A stand-in tunnel: prints its lines, then either stays alive
+        (stdout blocks, like a healthy cloudflared) or exits (stdout ends)."""
+        def __init__(self, lines, stays_alive):
+            self._gate = threading.Event()
+            def _stdout():
+                yield from lines
+                if stays_alive:
+                    self._gate.wait(30)        # hold the pipe open like a live helper
+            self.stdout = _stdout()
         def terminate(self):
-            pass
+            self._gate.set()
 
-    lines = ["INF Requesting new quick Tunnel on trycloudflare.com...\n",
-             "INF |  https://brave-mice-march.trycloudflare.com  |\n"]
-    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: _Proc(lines))
+    def _wait_for(state):
+        for _ in range(200):
+            if srv._TUNNEL["state"] == state:
+                return True
+            _time.sleep(0.02)
+        return False
+
+    banner = ["INF Requesting new quick Tunnel on trycloudflare.com...\n",
+              "INF |  https://brave-mice-march.trycloudflare.com  |\n"]
+
+    # a healthy tunnel: address harvested, door reported open
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: _Proc(banner, True))
     try:
         srv._start_tunnel(8000)
-        for _ in range(100):                      # the harvest thread races us
-            if srv._TUNNEL["state"] == "up":
-                break
-            _time.sleep(0.02)
+        assert _wait_for("up")
         assert srv._TUNNEL["url"] == "https://brave-mice-march.trycloudflare.com"
-        assert srv._TUNNEL["state"] == "up"
+    finally:
+        srv._TUNNEL["proc"].terminate()
+        srv._TUNNEL.update(url=None, proc=None, state="off")
+
+    # a helper that dies without printing an address → failed, not hung
+    monkeypatch.setattr(subprocess, "Popen",
+                        lambda *a, **k: _Proc(["ERR no internet\n"], False))
+    try:
+        srv._start_tunnel(8000)
+        assert _wait_for("failed") and srv._TUNNEL["url"] is None
     finally:
         srv._TUNNEL.update(url=None, proc=None, state="off")
 
-    # a helper that dies without ever printing an address → failed, not hung
-    monkeypatch.setattr(subprocess, "Popen",
-                        lambda *a, **k: _Proc(["ERR couldn't reach the internet\n"]))
+    # the Brett case: the tunnel WAS up, then the helper died (crash, sleep) —
+    # the door must be reported shut, never a badge pointing at nowhere
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: _Proc(banner, False))
     try:
         srv._start_tunnel(8000)
-        for _ in range(100):
-            if srv._TUNNEL["state"] == "failed":
-                break
-            _time.sleep(0.02)
-        assert srv._TUNNEL["state"] == "failed" and srv._TUNNEL["url"] is None
+        assert _wait_for("failed") and srv._TUNNEL["url"] is None
     finally:
         srv._TUNNEL.update(url=None, proc=None, state="off")
 
@@ -345,3 +364,10 @@ def test_tunnel_address_never_shown_to_guests(hosting):
         assert "tunnel" not in d and "code" not in d
     finally:
         srv._TUNNEL.update(url=None, proc=None, state="off")
+
+
+def test_keep_awake_is_harmless():
+    """Best-effort by contract: whatever Windows says (or on any other OS),
+    hosting must never fail because the stay-awake request did."""
+    from oubliette.app.server import _keep_awake
+    _keep_awake()

@@ -77,6 +77,25 @@ code as the only lock. If you go this way, host only while you're playing.
   cookie holds the chair for a week, and a mid-fight refresh rejoins the
   board cold.
 
+## When a friend can't get in
+
+- **"Connection timed out" / a Cloudflare error page.** First look at your
+  own header badge. If the 🌐 address is gone, the tunnel died (the helper
+  crashed, the network hiccuped, the machine slept) — restart `host.bat`
+  and send a **fresh** invite. If the badge still shows 🌐, the problem is
+  on their side: have them try the same link from a phone on cellular.
+  If the phone works, their network (some offices and schools) is blocking
+  the tunnel.
+- **The invite link only lives while host.bat runs**, and every restart
+  mints a new one. Never re-send yesterday's link — click Invite again.
+- **The host machine must stay awake.** While hosting, the game asks
+  Windows not to sleep on its own — but closing a laptop lid still
+  overrides that, and so does shutting down. The table lives and dies
+  with your machine; that's what "the host IS the server" means.
+- **A friend who drops mid-session just reopens the link** — their seat
+  cookie holds their chair for a week, and a mid-fight refresh rejoins
+  the streamed board cold.
+
 ## The security picture, honestly
 
 - The join code is required before any API or the event channel answers, and
