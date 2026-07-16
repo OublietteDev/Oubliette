@@ -87,10 +87,10 @@ IMPACT_BEAT_MS = 250  # hold after an impact before the next beat plays
 MELEE_IMPACT_DELAY_MS = 150  # swing wind-up before melee damage lands
 TELEGRAPH_MS = 550  # AI AoE danger-zone telegraph before the cast plays
 LUNGE_EXTENT = 0.45  # how far toward the target a charge lunge reaches
-# NOTE (2026-07-02): OublietteDev tried 1.45 here and saw NO visible difference —
-# the charge lunge may not be rendering at all. Deferred (his call, not
-# worth delaying v1.0); when animation polish resumes, verify the lunge
-# cue actually fires and draws before tuning this number.
+# (2026-07-16) Solved: the lunge was gated on the swing animation's beat, and
+# charging monsters (boar, tiger, mammoth…) have no attack sheet — so it never
+# rendered, which is why tuning this once showed no visible difference. The
+# lunge now fires with the damage when no swing is playing; tune away.
 
 
 @dataclass
@@ -2682,19 +2682,32 @@ class CombatScreen(Screen):
                     beat.add_cue(self._make_damage_cue(
                         target_id, wx, wy, amount, is_crit, deferred=True,
                     ))
-                    # Charge/Pounce hit: the attacker lunges into the
-                    # target with the swing, apex right at the impact
-                    if event.details.get("charged") and event.source_id:
-                        anim_beat = self._pending_anim
-                        if anim_beat is not None and not anim_beat.fired:
-                            anim_beat.add_cue(self._make_lunge_cue(
-                                event.source_id, wx, wy,
-                                self._pending_anim_hold * 2,
-                            ))
                 else:
                     self._make_damage_cue(
                         target_id, wx, wy, amount, is_crit, deferred=False,
                     )(now)
+                # Charge/Pounce hit: the attacker lunges into the target.
+                # With a swing animation playing, the lunge rides its beat
+                # (apex right at the impact). Without one — most charging
+                # monsters have no attack sheet — the lunge IS the hit's
+                # visual, so it fires with the damage instead of never.
+                if event.details.get("charged") and event.source_id:
+                    anim_beat = self._pending_anim
+                    if (anim_beat is not None and not anim_beat.fired
+                            and self._impact_source == event.source_id):
+                        anim_beat.add_cue(self._make_lunge_cue(
+                            event.source_id, wx, wy,
+                            self._pending_anim_hold * 2,
+                        ))
+                    else:
+                        cue = self._make_lunge_cue(
+                            event.source_id, wx, wy,
+                            MELEE_IMPACT_DELAY_MS * 2,
+                        )
+                        if beat is not None and not beat.fired:
+                            beat.add_cue(cue)
+                        else:
+                            cue(now)
 
         elif event.event_type == CombatEventType.HEALING:
             amount = event.details.get("healing", 0)

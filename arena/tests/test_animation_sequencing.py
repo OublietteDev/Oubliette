@@ -548,6 +548,53 @@ class TestChargeLunge:
         screen._director.update(1000)
         assert screen._lunge_animations == {}
 
+    def _animationless_charge_events(self, charged=True):
+        """The real charging monsters' shape: Gore/Tusk/Stomp carry no
+        animation sheet, so no beat group ever opens for the attack."""
+        details = {"damage": 7}
+        if charged:
+            details["charged"] = True
+        return [
+            CombatEvent(
+                CombatEventType.ATTACK_ROLL, "hits",
+                source_id="wolf", target_id="goblin",
+                details={"attack_type": "melee_weapon"},
+            ),
+            CombatEvent(
+                CombatEventType.DAMAGE, "damage",
+                source_id="wolf", target_id="goblin",
+                details=details,
+            ),
+        ]
+
+    def test_animationless_charged_hit_still_lunges(self, monkeypatch):
+        # Boar, tiger, mammoth: their attacks have no animation asset, and
+        # the lunge used to be gated on the swing's beat — so the charge
+        # visual never rendered for the very monsters that charge. Now the
+        # lunge fires immediately, alongside the instant damage pop.
+        screen = _make_screen(monkeypatch)
+        _feed(screen, self._animationless_charge_events(charged=True), now=1000)
+        assert "wolf" in screen._lunge_animations
+        start, duration = screen._lunge_animations["wolf"][4:6]
+        assert start == 1000
+        assert duration == 2 * MELEE_IMPACT_DELAY_MS
+        assert [ft.text for ft in screen._floating_texts] == ["-7"]
+
+    def test_animationless_plain_hit_does_not_lunge(self, monkeypatch):
+        screen = _make_screen(monkeypatch)
+        _feed(screen, self._animationless_charge_events(charged=False), now=1000)
+        assert screen._lunge_animations == {}
+
+    def test_charged_hit_does_not_ride_anothers_swing(self, monkeypatch):
+        # An unfired swing beat from a DIFFERENT attacker must not carry
+        # the lunge: the charger fires immediately on its own instead.
+        screen = _make_screen(monkeypatch)
+        _feed(screen, _ranged_hit(source="archer", target="goblin"), now=1000)
+        _feed(screen, self._animationless_charge_events(charged=True),
+              now=1000, start_idx=2)
+        assert "wolf" in screen._lunge_animations
+        assert screen._lunge_animations["wolf"][4] == 1000
+
 
 class TestHealing:
     def test_healing_floater_is_immediate(self, monkeypatch):
