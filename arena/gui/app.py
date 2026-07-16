@@ -172,6 +172,8 @@ class App:
             if event.type == pygame.QUIT:
                 self.running = False
             else:
+                if hasattr(event, "pos"):
+                    self.cursor_manager.note_pos(*event.pos)
                 # Delegate all other events to the current screen
                 self.current_screen.handle_event(event)
         if self.bridge is not None and self.current_screen is not None:
@@ -179,6 +181,8 @@ class App:
             # the same dispatch path as real events (the two-entry-points
             # lesson: never a side door around the GUI's own routing).
             for event in self.bridge.take_events():
+                if hasattr(event, "pos"):
+                    self.cursor_manager.note_pos(*event.pos)
                 self.current_screen.handle_event(event)
 
     def _update(self) -> None:

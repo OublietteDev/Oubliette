@@ -377,6 +377,13 @@ class CustomCursorManager:
         self._particles: _WandParticles | _ArrowFlame | _SwordDrip | None = None
         self._animations_enabled: bool = animations_enabled
         self._last_tick: int = pygame.time.get_ticks()
+        # The cursor's drawn position — fed by mouse events (see note_pos)
+        # rather than read live from the OS, so remote players' synthesized
+        # motion moves the wand even when the pygame window has no focus.
+        try:
+            self._pos: tuple[int, int] = pygame.mouse.get_pos()
+        except pygame.error:
+            self._pos = (0, 0)            # headless — events still position it
 
         self._scan_folder()
 
@@ -468,6 +475,18 @@ class CustomCursorManager:
         """Whether a custom cursor image was loaded successfully."""
         return self._cursor_surface is not None
 
+    def note_pos(self, x: int, y: int) -> None:
+        """Record the cursor position from a mouse event.
+
+        The App feeds every positioned mouse event through here — real ones
+        from the host's mouse and synthesized ones from remote players via
+        the multiplayer bridge alike.  Drawing from this instead of
+        ``pygame.mouse.get_pos()`` keeps the cursor honest as the one shared
+        table pointer: it follows whoever moved last, even when the OS-level
+        cursor warp can't reach an unfocused or covered window.
+        """
+        self._pos = (int(x), int(y))
+
     @property
     def cursor_name(self) -> str:
         """The stem name of the active cursor (e.g. 'sword', 'wand')."""
@@ -487,7 +506,7 @@ class CustomCursorManager:
         if self._particles is None or not self._animations_enabled:
             return
 
-        mx, my = pygame.mouse.get_pos()
+        mx, my = self._pos
         # The tip is at the hotspot (top-left of cursor image)
         tip_x = float(mx - self._hotspot[0])
         tip_y = float(my - self._hotspot[1])
@@ -502,7 +521,7 @@ class CustomCursorManager:
         if self._cursor_surface is None:
             return
 
-        mx, my = pygame.mouse.get_pos()
+        mx, my = self._pos
 
         # Particles render behind the cursor
         if self._particles is not None and self._animations_enabled:

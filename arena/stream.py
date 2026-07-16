@@ -39,7 +39,7 @@ from io import BytesIO
 import pygame
 
 ENV_VAR = "OUBLIETTE_ARENA_BRIDGE"
-FRAME_EVERY = 6      # capture every Nth rendered frame — 60fps loop → ~10fps stream
+FRAME_EVERY = 3      # capture every Nth rendered frame — 60fps loop → ~20fps stream
 JPEG_QUALITY = 70    # plenty for a tactical board; ~60-90KB per 1280×720 frame
 
 # The live bridge, if any — so the sound manager can emit audio cues (S3)
