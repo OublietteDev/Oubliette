@@ -1809,8 +1809,10 @@ function setBusy(b, who) {
   sendBtn.disabled = locked; input.disabled = locked;
   document.querySelector(".composer").classList.toggle("locked", locked);  // visible dim, not just dead keys
   // At a hosted table, a dead send button says WHY: someone has the floor.
+  // (Respect the OOC toggle's own placeholder when handing the box back.)
   input.placeholder = (b && who && who !== tableInfo.you)
-    ? `The Phantom is listening to ${who}…` : IDLE_PLACEHOLDER;
+    ? `The Phantom is listening to ${who}…`
+    : (oocMode ? "Speak to the DM, out of character…" : IDLE_PLACEHOLDER);
   if (!locked) input.focus();
 }
 
