@@ -260,7 +260,15 @@ async def _seat_gate(request: Request, call_next):
     return await call_next(request)
 
 
-def _is_local(client_host: str | None) -> bool:
+def _is_host_browser(client_host: str | None, headers) -> bool:
+    """Is this request from the host's OWN browser — not merely a loopback
+    socket? It matters because the join code is shown only to the host. A
+    tunnel (cloudflared, ngrok, any reverse proxy) runs ON the host machine
+    and delivers every REMOTE visitor's request from 127.0.0.1 — but marks
+    it with a forwarding header. Loopback + no forwarding header = the host;
+    anything else is a guest who must already know the code."""
+    if "x-forwarded-for" in headers or "forwarded" in headers:
+        return False
     return client_host in ("127.0.0.1", "::1", "localhost")
 
 
@@ -302,7 +310,8 @@ async def get_hosting(request: Request) -> JSONResponse:
                  "you": TABLE.name_of(token),
                  "players": [p["name"] for p in TABLE.players.values()],
                  "seats": getattr(GAME.session, "seats", {})}
-    if request.client is not None and _is_local(request.client.host):
+    if request.client is not None and _is_host_browser(request.client.host,
+                                                       request.headers):
         # The host's own browser: show the code and where friends should point
         # theirs. Never sent to a remote client — they had to know it already.
         out["code"] = TABLE.code

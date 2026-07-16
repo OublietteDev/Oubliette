@@ -253,3 +253,17 @@ def test_solo_turns_carry_no_speaker():
                 assert ev["who"] is None
             if ev["t"] in ("end", "error"):
                 break
+
+
+def test_join_code_is_for_the_hosts_own_browser_only():
+    """The code gates the door, so WHO sees it is the whole game: loopback
+    with no forwarding header is the host's own browser; a tunnelled guest
+    (cloudflared/ngrok deliver remote visitors FROM 127.0.0.1, marked with
+    X-Forwarded-For) and a LAN address are guests who must already know it."""
+    from oubliette.app.server import _is_host_browser
+    assert _is_host_browser("127.0.0.1", {}) is True
+    assert _is_host_browser("::1", {}) is True
+    assert _is_host_browser("127.0.0.1", {"x-forwarded-for": "203.0.113.9"}) is False
+    assert _is_host_browser("127.0.0.1", {"forwarded": "for=203.0.113.9"}) is False
+    assert _is_host_browser("192.168.1.7", {}) is False
+    assert _is_host_browser(None, {}) is False
