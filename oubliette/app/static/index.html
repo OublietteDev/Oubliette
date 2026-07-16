@@ -1005,6 +1005,7 @@
       <span class="arena-title">⚔ The Arena</span>
       <span id="arena-status" class="arena-status"></span>
       <div class="spacer"></div>
+      <button class="act" id="arena-mute" title="Arena music and stingers, in this browser only"></button>
       <button class="act" id="arena-esc" title="Press ESC in the Arena — leaves a finished fight, breaks off a live one">⎋ Leave the fight</button>
       <button class="act" id="arena-hide" title="Keep fighting on the host's screen; reopen with ⚔ Watch the fight">Hide</button>
     </div>
@@ -1959,6 +1960,7 @@ function routeEvent(ev) {
     enterArenaBtn.disabled = false;
     enterArenaBtn.textContent = "⚔ Enter the Arena";
   }
+  else if (ev.t === "arena_audio") arenaCue(ev);      // the fight's music and stingers (S3)
   else if (ev.t === "journal") refreshJournalDoc();   // someone wrote in the chronicle
   else if (ev.t === "new_game") {
     // The table started over. The starter's own flow renders the fresh world
@@ -2280,6 +2282,7 @@ function closeArenaView() {
   $("arena-overlay").classList.add("hidden");
   $("arena-status").textContent = "";
   arenaCtx.clearRect(0, 0, 1280, 720);
+  arenaStopMusic();          // the story's soundscape takes the stage back
 }
 
 async function arenaFrame(buf) {
@@ -2311,6 +2314,9 @@ function arenaXY(e) {
 }
 arenaCanvas.addEventListener("mousedown", (e) => {
   e.preventDefault(); arenaCanvas.focus();
+  // A real gesture: if autoplay policy blocked the soundtrack, this unblocks it.
+  if (arenaAudio.music && arenaAudio.music.paused && !arenaMuted())
+    arenaAudio.music.play().catch(() => {});
   arenaSend({ k: "down", ...arenaXY(e), b: e.button + 1 });
 });
 arenaCanvas.addEventListener("mouseup", (e) => {
@@ -2346,6 +2352,50 @@ arenaCanvas.addEventListener("keydown", (e) => {
 });
 $("arena-hide").addEventListener("click", () => $("arena-overlay").classList.add("hidden"));
 $("arena-esc").addEventListener("click", () => arenaSend({ k: "key", key: "escape" }));
+
+// --- Arena audio (S3): cues down the channel, assets fetched from the host ---
+// Each browser plays its own copy — its own volume, its own mute. The HOST's
+// browser defaults muted: the real pygame window on the same desk already
+// plays the sound, and an offset echo helps no one. Joiners default loud.
+const arenaAudio = { music: null, lastMusic: null, muted: null };
+function arenaMuted() {
+  if (arenaAudio.muted === null)     // first cue: the host machine stays quiet
+    arenaAudio.muted = !tableInfo.hosting || !!tableInfo.code;
+  return arenaAudio.muted;
+}
+function renderArenaMute() {
+  $("arena-mute").textContent = arenaMuted() ? "🔇 Muted" : "🔊 Sound";
+}
+function arenaStopMusic() {
+  if (arenaAudio.music) { arenaAudio.music.pause(); arenaAudio.music = null; }
+  arenaAudio.lastMusic = null;
+}
+function arenaPlayMusic(cue) {
+  arenaAudio.lastMusic = cue;
+  if (arenaAudio.music) { arenaAudio.music.pause(); arenaAudio.music = null; }
+  if (arenaMuted()) return;
+  const a = new Audio("/api/arena/audio/" + cue.id);
+  a.loop = cue.loops === -1;
+  a.volume = 0.65;
+  arenaAudio.music = a;
+  a.play().catch(() => {});   // autoplay-blocked: the next click on the board retries
+}
+function arenaCue(ev) {
+  renderArenaMute();
+  if (ev.kind === "music") arenaPlayMusic(ev);
+  else if (ev.kind === "music_stop") arenaStopMusic();
+  else if (ev.kind === "sfx" && !arenaMuted()) {
+    const a = new Audio("/api/arena/audio/" + ev.id);
+    a.volume = 0.65;
+    a.play().catch(() => {});
+  }
+}
+$("arena-mute").addEventListener("click", () => {
+  arenaAudio.muted = !arenaMuted();
+  renderArenaMute();
+  if (arenaAudio.muted) { if (arenaAudio.music) { arenaAudio.music.pause(); arenaAudio.music = null; } }
+  else if (arenaAudio.lastMusic) arenaPlayMusic(arenaAudio.lastMusic);
+});
 
 // Enter the staged tactical fight: launches The Arena (a desktop window) on the
 // server, blocks until you exit it, then renders the DM's post-combat beat.

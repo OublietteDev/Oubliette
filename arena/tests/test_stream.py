@@ -9,6 +9,8 @@ whole feature hangs on: these events must look exactly like the host's own).
 
 from __future__ import annotations
 
+import json
+
 import pygame
 import pytest
 
@@ -114,3 +116,86 @@ def test_nonsense_input_is_dropped_quietly():
     b._inputs.append({"k": "key", "key": "definitely not a key"})
     b._inputs.append({})
     assert b.take_events() == []
+
+
+# --- audio cues (S3) ----------------------------------------------------------
+
+class _FakeWS:
+    def __init__(self):
+        self.sent = []
+
+    def send(self, data):
+        self.sent.append(json.loads(data))
+
+
+def _live_bridge(monkeypatch) -> _FakeWS:
+    from arena import stream
+    b = _bridge()
+    b.alive = True
+    ws = _FakeWS()
+    b._ws = ws
+    monkeypatch.setattr(stream, "_ACTIVE", b)
+    return ws
+
+
+def test_emit_cue_rides_the_live_bridge(monkeypatch):
+    from arena import stream
+    ws = _live_bridge(monkeypatch)
+    stream.emit_cue({"t": "music", "file": "x.ogg", "loops": -1})
+    assert ws.sent == [{"t": "music", "file": "x.ogg", "loops": -1}]
+
+
+def test_emit_cue_without_a_bridge_is_a_noop(monkeypatch):
+    from arena import stream
+    monkeypatch.setattr(stream, "_ACTIVE", None)
+    stream.emit_cue({"t": "sfx", "file": "x.wav"})   # must not raise
+
+
+def test_music_survives_the_connect_race(monkeypatch):
+    """The fight's opening music fires while the websocket is still shaking
+    hands — the cue is remembered and must go out the moment the link is up.
+    A pre-connect stinger, by contrast, is honestly dropped."""
+    from arena import stream
+    b = _bridge()                      # not alive: still connecting
+    monkeypatch.setattr(stream, "_ACTIVE", b)
+    stream.emit_cue({"t": "sfx", "file": "early.wav"})
+    stream.emit_cue({"t": "music", "file": "battle.ogg", "loops": -1})
+    assert b._pending_music == {"t": "music", "file": "battle.ogg", "loops": -1}
+    ws = _FakeWS()                     # ...the handshake completes
+    b._ws = ws
+    b.alive = True
+    cue, b._pending_music = b._pending_music, None
+    if cue is not None:                # what _run does right after alive=True
+        b._ws.send(json.dumps(cue))
+    assert ws.sent == [{"t": "music", "file": "battle.ogg", "loops": -1}]
+
+
+def _tiny_wav(path):
+    import wave
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(22050)
+        w.writeframes(b"\x00\x00" * 200)
+
+
+def test_sound_manager_announces_what_it_plays(monkeypatch, tmp_path):
+    """The three cue seams: a stinger, a soundtrack, and silence — each emits
+    with the RESOLVED path (the app server's cwd is not the Arena's)."""
+    import arena.audio.manager as mgr
+    ws = _live_bridge(monkeypatch)
+    monkeypatch.setattr(mgr, "SOUNDS_DIR", tmp_path)
+    monkeypatch.setattr(mgr, "MUSIC_DIR", tmp_path)
+    _tiny_wav(tmp_path / "blip.wav")
+    sm = mgr.SoundManager()
+    if not sm._initialized:
+        pytest.skip("no audio device, not even a dummy one")
+    sm.play_sfx("blip")
+    sm.play_music("blip.wav", loops=-1)
+    sm.stop_music()
+    kinds = [c["t"] for c in ws.sent]
+    assert kinds == ["sfx", "music", "music_stop"]
+    from pathlib import Path
+    assert Path(ws.sent[0]["file"]).is_absolute() and ws.sent[0]["file"].endswith("blip.wav")
+    assert Path(ws.sent[1]["file"]) == (tmp_path / "blip.wav").resolve()
+    assert ws.sent[1]["loops"] == -1

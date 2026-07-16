@@ -24,6 +24,8 @@ class SoundManager:
         self._initialized: bool = False
         # Cache: sound_id -> Sound object, or None if file missing
         self._cache: dict[str, object] = {}
+        # sound_id -> resolved file path (for the multiplayer audio cues, S3)
+        self._paths: dict[str, Path] = {}
         self._current_track: str | None = None
         self._init_mixer()
 
@@ -55,6 +57,7 @@ class SoundManager:
                 try:
                     sound = pygame.mixer.Sound(str(path))
                     self._cache[sound_id] = sound
+                    self._paths[sound_id] = path.resolve()
                     return sound
                 except Exception:
                     pass
@@ -79,6 +82,12 @@ class SoundManager:
         volume = self._get_sfx_volume()
         sound.set_volume(volume)
         sound.play()
+        # Multiplayer (S3): tell the table's browsers to play their own copy.
+        # The RESOLVED path rides along — the app server's cwd is not ours.
+        path = self._paths.get(sound_id)
+        if path is not None:
+            from arena import stream
+            stream.emit_cue({"t": "sfx", "file": str(path)})
 
     @property
     def current_track(self) -> str | None:
@@ -107,7 +116,12 @@ class SoundManager:
             pygame.mixer.music.play(loops)
             self._current_track = filename
         except Exception:
-            pass
+            return
+        # Multiplayer (S3): the browsers loop their own fetched copy. `path`
+        # already resolves pack music too — an absolute music_track replaces
+        # the assets/music base in the join above.
+        from arena import stream
+        stream.emit_cue({"t": "music", "file": str(path.resolve()), "loops": loops})
 
     def refresh_music_volume(self) -> None:
         """Re-apply the settings-derived volume to the playing track — the
@@ -134,7 +148,9 @@ class SoundManager:
             pygame.mixer.music.stop()
             self._current_track = None
         except Exception:
-            pass
+            return
+        from arena import stream
+        stream.emit_cue({"t": "music_stop"})
 
     def _get_sfx_volume(self) -> float:
         """Calculate effective SFX volume: (master/100) * (sfx/100)."""

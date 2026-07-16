@@ -12,6 +12,7 @@ to the chat window. Uses the real model when ANTHROPIC_API_KEY is set (env or
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import io
 import json
 import os
@@ -437,6 +438,9 @@ async def ws_events(ws: WebSocket) -> None:
             # sends nothing while still) — hand the newcomer the last picture
             # so their canvas isn't black until something moves.
             await ws.send_bytes(_ARENA["last_jpeg"])
+        if _ARENA["music"] is not None:
+            # …and the soundtrack that started before they sat down (S3).
+            await ws.send_text(json.dumps(_ARENA["music"]))
         pump = asyncio.create_task(_pump())   # buffered events ride AFTER hello
         if TABLE.hosting:
             TABLE.sockets[token] = TABLE.sockets.get(token, 0) + 1
@@ -481,8 +485,42 @@ async def ws_events(ws: WebSocket) -> None:
 # token is the whole gate: minted per server run, unguessable, and never shown
 # to a browser — so a LAN visitor without a seat can neither watch nor click.
 _ARENA_TOKEN = secrets.token_urlsafe(16)
-_ARENA: dict = {"sock": None, "last_jpeg": None}
+_ARENA: dict = {"sock": None, "last_jpeg": None, "music": None}
 _ARENA_SEND_LOCK = asyncio.Lock()   # serialize input forwards from many browsers
+
+# Audio the Arena has ANNOUNCED (S3): opaque id -> file path. Browsers fetch
+# their own copy of each cue's asset from /api/arena/audio/{id} — and can fetch
+# ONLY what a cue registered, so the route serves nothing an attacker names.
+# Deterministic ids (path hash) let the browser's HTTP cache do the caching.
+_ARENA_AUDIO: dict[str, Path] = {}
+
+
+def _register_arena_audio(path_str: str) -> str | None:
+    p = Path(path_str)
+    if not p.is_file():
+        return None
+    aid = hashlib.sha1(str(p).encode("utf-8")).hexdigest()[:16]
+    _ARENA_AUDIO[aid] = p
+    return aid
+
+
+def _arena_cue(cue: dict) -> None:
+    """One audio cue from the fight → an event on every browser. Music is
+    remembered (and handed to late joiners with their hello); stingers are
+    fire-and-forget — synced 'effectively perfectly' means now, not replayed."""
+    kind = cue.get("t")
+    if kind in ("music", "sfx"):
+        aid = _register_arena_audio(str(cue.get("file", "")))
+        if aid is None:
+            return
+        event = {"t": "arena_audio", "kind": kind, "id": aid,
+                 "loops": int(cue.get("loops", 0))}
+        if kind == "music":
+            _ARENA["music"] = event
+        HUB.broadcast(event)
+    elif kind == "music_stop":
+        _ARENA["music"] = None
+        HUB.broadcast({"t": "arena_audio", "kind": "music_stop"})
 
 
 @app.websocket("/ws/arena")
@@ -504,13 +542,29 @@ async def ws_arena(ws: WebSocket) -> None:
             if data:
                 _ARENA["last_jpeg"] = data
                 HUB.broadcast_frame(data)
+            elif msg.get("text"):
+                try:
+                    _arena_cue(json.loads(msg["text"]))   # an audio cue (S3)
+                except ValueError:
+                    pass
     except WebSocketDisconnect:
         pass
     finally:
         if _ARENA["sock"] is ws:
-            # The fight's window closed: no stale board for late arrivals.
+            # The fight's window closed: no stale board or music for late arrivals.
             _ARENA["sock"] = None
             _ARENA["last_jpeg"] = None
+            _ARENA["music"] = None
+
+
+@app.get("/api/arena/audio/{aid}")
+async def get_arena_audio(aid: str):
+    """One announced Arena audio asset — the browsers' side of a cue. Only ids
+    a cue registered exist here; there is no path in this URL to traverse."""
+    p = _ARENA_AUDIO.get(aid)
+    if p is None or not p.is_file():
+        return JSONResponse({"error": "no such clip"}, status_code=404)
+    return FileResponse(p, headers={"Cache-Control": "max-age=86400"})
 
 
 # --- serialization ----------------------------------------------------------

@@ -93,6 +93,50 @@ def test_fight_over_clears_the_cached_board():
     assert _ARENA["last_jpeg"] is None and _ARENA["sock"] is None
 
 
+def test_music_cue_broadcasts_serves_and_greets_late_joiners(tmp_path):
+    """S3: a music cue becomes an event on every browser, its asset becomes
+    fetchable by opaque id, and a browser sitting down mid-fight is handed the
+    playing soundtrack with its hello."""
+    track = tmp_path / "battle.ogg"
+    track.write_bytes(b"OggS fake track")
+    with client.websocket_connect("/ws") as ws:
+        ws.receive_json()
+        with _arena_ws() as arena:
+            arena.send_text(json.dumps({"t": "music", "file": str(track), "loops": -1}))
+            ev = ws.receive_json()
+            assert ev["t"] == "arena_audio" and ev["kind"] == "music"
+            assert ev["loops"] == -1
+            r = client.get(f"/api/arena/audio/{ev['id']}")
+            assert r.status_code == 200 and r.content == b"OggS fake track"
+            with client.websocket_connect("/ws") as late:
+                assert late.receive_json()["t"] == "hello"
+                late_ev = late.receive_json()
+                assert late_ev["kind"] == "music" and late_ev["id"] == ev["id"]
+            arena.send_text(json.dumps({"t": "music_stop"}))
+            assert ws.receive_json()["kind"] == "music_stop"
+            assert _ARENA["music"] is None      # silence is remembered too
+
+
+def test_sfx_cue_fires_and_forgets(tmp_path):
+    """A stinger reaches the table but is never replayed to late joiners, and
+    a cue naming a file that doesn't exist is dropped, not broadcast."""
+    blip = tmp_path / "hit.wav"
+    blip.write_bytes(b"RIFF fake")
+    with client.websocket_connect("/ws") as ws:
+        ws.receive_json()
+        with _arena_ws() as arena:
+            arena.send_text(json.dumps({"t": "sfx", "file": str(tmp_path / "ghost.wav")}))
+            arena.send_text(json.dumps({"t": "sfx", "file": str(blip)}))
+            ev = ws.receive_json()              # the ghost was dropped: first event is the real one
+            assert ev["kind"] == "sfx"
+            assert _ARENA["music"] is None      # a stinger is not a soundtrack
+
+
+def test_audio_route_serves_only_announced_ids():
+    r = client.get("/api/arena/audio/no-such-id")
+    assert r.status_code == 404
+
+
 def test_hub_coalesces_frames_for_a_slow_browser():
     """Two frames before the pump wakes → ONE queued marker holding the
     freshest picture. A slow link means a lower frame rate, never a backlog."""

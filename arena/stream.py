@@ -42,6 +42,34 @@ ENV_VAR = "OUBLIETTE_ARENA_BRIDGE"
 FRAME_EVERY = 6      # capture every Nth rendered frame — 60fps loop → ~10fps stream
 JPEG_QUALITY = 70    # plenty for a tactical board; ~60-90KB per 1280×720 frame
 
+# The live bridge, if any — so the sound manager can emit audio cues (S3)
+# without threading a reference through the GUI. Set by start(), cleared by
+# stop(); emit_cue() is a no-op the rest of the time.
+_ACTIVE: "Bridge | None" = None
+
+
+def emit_cue(cue: dict) -> None:
+    """Send a small JSON cue (music started/stopped, a stinger fired) up the
+    live bridge, from any thread — the websockets sync connection serializes
+    concurrent sends internally. Audio is a luxury like frames: any failure
+    is swallowed and the fight plays on.
+
+    The fight's OPENING cues race the websocket handshake (the encounter loads
+    while the bridge is still connecting). A music-state cue is remembered and
+    flushed on connect — the soundtrack must survive the race; a stinger fired
+    before anyone was watching honestly doesn't matter."""
+    b = _ACTIVE
+    if b is None:
+        return
+    if not b.alive or b._ws is None:
+        if cue.get("t") in ("music", "music_stop"):
+            b._pending_music = cue
+        return
+    try:
+        b._ws.send(json.dumps(cue))
+    except Exception:
+        pass
+
 
 def _encode_jpeg(raw: bytes, size: tuple[int, int]) -> bytes:
     """RGB bytes → JPEG. Pillow when present (declared in the arena extra;
@@ -72,6 +100,7 @@ class Bridge:
         self._buttons_down: set[int] = set()     # remote button state (motion events)
         self._last_pos = (0, 0)
         self._size = (1280, 720)                 # last captured size (coordinate clamp)
+        self._pending_music: dict | None = None  # music cue that raced the connect
 
     @classmethod
     def from_env(cls) -> "Bridge | None":
@@ -81,9 +110,14 @@ class Bridge:
     # --- lifecycle ---------------------------------------------------------
 
     def start(self) -> None:
+        global _ACTIVE
+        _ACTIVE = self
         threading.Thread(target=self._run, name="arena-bridge", daemon=True).start()
 
     def stop(self) -> None:
+        global _ACTIVE
+        if _ACTIVE is self:
+            _ACTIVE = None
         with self._cond:
             self._stop = True
             self._cond.notify_all()
@@ -109,6 +143,12 @@ class Bridge:
         else:
             return                        # no stream today; the fight goes on
         self.alive = True
+        cue, self._pending_music = self._pending_music, None
+        if cue is not None:                # the soundtrack that raced the handshake
+            try:
+                self._ws.send(json.dumps(cue))
+            except Exception:
+                pass
         threading.Thread(target=self._send_loop, name="arena-bridge-send",
                          daemon=True).start()
         try:

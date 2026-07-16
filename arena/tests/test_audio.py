@@ -22,6 +22,7 @@ class TestSoundManagerInit:
             mock_init.side_effect = lambda self_arg=None: None
             mgr = SoundManager.__new__(SoundManager)
             mgr._initialized = False
+            mgr._paths = {}
             mgr._cache = {}
             # Should not crash
             assert mgr._initialized is False
@@ -30,6 +31,7 @@ class TestSoundManagerInit:
         """play_sfx should silently do nothing when mixer failed to init."""
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = False
+        mgr._paths = {}
         mgr._cache = {}
         # Should not raise
         mgr.play_sfx("button_click")
@@ -38,6 +40,7 @@ class TestSoundManagerInit:
         """play_music should silently do nothing when mixer failed to init."""
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = False
+        mgr._paths = {}
         mgr._cache = {}
         mgr.play_music("nonexistent.ogg")
 
@@ -45,6 +48,7 @@ class TestSoundManagerInit:
         """stop_music should silently do nothing when mixer failed to init."""
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = False
+        mgr._paths = {}
         mgr._cache = {}
         mgr.stop_music()
 
@@ -56,6 +60,7 @@ class TestSoundManagerCache:
         """A sound not on disk should be cached as None."""
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = True
+        mgr._paths = {}
         mgr._cache = {}
 
         with patch("pygame.mixer.Sound", side_effect=FileNotFoundError):
@@ -68,6 +73,7 @@ class TestSoundManagerCache:
         """Once cached as None, the file system should not be hit again."""
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = True
+        mgr._paths = {}
         mgr._cache = {"missing": None}
 
         result = mgr._load_sound("missing")
@@ -78,6 +84,7 @@ class TestSoundManagerCache:
         fake_sound = MagicMock()
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = True
+        mgr._paths = {}
         mgr._cache = {"hit": fake_sound}
 
         result = mgr._load_sound("hit")
@@ -87,6 +94,7 @@ class TestSoundManagerCache:
         """When not initialized, _load_sound should cache None immediately."""
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = False
+        mgr._paths = {}
         mgr._cache = {}
 
         result = mgr._load_sound("anything")
@@ -102,6 +110,7 @@ class TestSoundManagerPlayback:
         fake_sound = MagicMock()
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = True
+        mgr._paths = {}
         mgr._cache = {"test_sfx": fake_sound}
 
         with patch.object(mgr, "_get_sfx_volume", return_value=0.64):
@@ -114,6 +123,7 @@ class TestSoundManagerPlayback:
         """play_sfx with missing sound should not crash."""
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = True
+        mgr._paths = {}
         mgr._cache = {"missing": None}
 
         # Should not raise
@@ -131,6 +141,7 @@ class TestVolumeCalculation:
         """Default settings (80 master, 80 sfx) should yield 0.64."""
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = True
+        mgr._paths = {}
         mgr._cache = {}
 
         # Default settings have master=80, sfx=80
@@ -141,6 +152,7 @@ class TestVolumeCalculation:
         """80 master * 80 sfx = 0.64."""
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = True
+        mgr._paths = {}
         mgr._cache = {}
 
         with patch("arena.audio.manager.get_settings") as mock_gs:
@@ -156,6 +168,7 @@ class TestVolumeCalculation:
         """Master at 0 should mute everything."""
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = True
+        mgr._paths = {}
         mgr._cache = {}
 
         with patch("arena.audio.manager.get_settings") as mock_gs:
@@ -171,6 +184,7 @@ class TestVolumeCalculation:
         """50 master * 60 music = 0.30."""
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = True
+        mgr._paths = {}
         mgr._cache = {}
 
         with patch("arena.audio.manager.get_settings") as mock_gs:
@@ -299,6 +313,7 @@ class TestMp3Support:
         """_load_sound should try .mp3 after .wav and .ogg."""
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = True
+        mgr._paths = {}
         mgr._cache = {}
 
         fake_sound = MagicMock()
@@ -319,6 +334,7 @@ class TestMp3Support:
         """_load_sound should prefer .wav over .mp3 when both exist."""
         mgr = SoundManager.__new__(SoundManager)
         mgr._initialized = True
+        mgr._paths = {}
         mgr._cache = {}
 
         fake_sound = MagicMock()
