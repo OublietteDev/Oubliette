@@ -7,7 +7,7 @@ player-agency rule: never voice a hero; companions are the DM's to voice.
 
 from __future__ import annotations
 
-from oubliette.dm.brain import RESOLVE_SYSTEM
+from oubliette.dm.brain import ASSESS_SYSTEM, RESOLVE_SYSTEM
 
 
 def test_meta_verb_is_documented():
@@ -30,3 +30,23 @@ def test_player_agency_heroes_are_not_the_dms_to_voice():
     assert "PLAYER AGENCY" in RESOLVE_SYSTEM
     assert "never invent a hero's dialogue" in RESOLVE_SYSTEM
     assert "COMPANIONS are the exception" in RESOLVE_SYSTEM
+
+
+def test_failed_checks_cannot_be_ground_into_success():
+    """Brett's playtest note: he spammed perception on the boat until a roll
+    landed. Assess refuses the re-roll; resolve moves the story off the wall."""
+    assert "NO RETRIES" in ASSESS_SYSTEM
+    assert "FAILED check is spent" in ASSESS_SYSTEM
+    assert "FAIL FORWARD" in RESOLVE_SYSTEM
+
+
+def test_goods_and_services_get_charged():
+    """Brett's playtest note: the party dined and dashed, unbilled."""
+    assert "CHARGE FOR GOODS AND SERVICES" in RESOLVE_SYSTEM
+    assert "SETTLE THE BILL" in RESOLVE_SYSTEM
+
+
+def test_fantasy_worlds_stay_pre_industrial():
+    """Brett's playtest note: a fishing boat grew an engine mid-story."""
+    assert "TECHNOLOGY" in RESOLVE_SYSTEM
+    assert "pre-industrial" in RESOLVE_SYSTEM

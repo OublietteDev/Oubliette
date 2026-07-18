@@ -2781,6 +2781,9 @@ async function beginNewGame(builds) {
   hideWrapBar();                // ...and any pending wrap proposal
   hideRestBar();                // ...and any pending rest proposal
   log.innerHTML = "";
+  // The world's authored opening scene sets the table before the first word is
+  // typed — a bare "describe what you do" made a new game feel like a blank page.
+  if (data.scene) addMessage("The Phantom", data.scene, "dm");
   addMessage("System", `A new tale begins in ${ngPack.name}. Describe what you do.`, "system");
   renderState(data.state);
   setSoundscape(data.soundscape);
@@ -3468,6 +3471,15 @@ async function saveSettings() {
     method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify(difficulty),
   });
+  // Hidden rolls flipped on mid-game: the server redacts every roll from the
+  // next turn on, but the chips already on screen would keep their DCs — scrub
+  // them too, so the setting visibly takes hold the moment it's saved.
+  if (difficulty.hidden_rolls) {
+    document.querySelectorAll(".chip.roll").forEach(c => {
+      c.classList.remove("success", "failure");
+      c.innerHTML = c.innerHTML.replace(/<\/b>[\s\S]*$/, "</b>");
+    });
+  }
   await saveNarrationForm($("settings-narration"));
   closeSettings();
   addMessage("System", "The table is updated — it takes effect on your next turn.", "system");
@@ -5879,6 +5891,8 @@ async function boot() {
     });
     addMessage("System", "— resumed where you left off —", "system");
   } else {
+    // A campaign nobody has spoken in yet: open on the world's authored scene.
+    if (tx.scene) addMessage("The Phantom", tx.scene, "dm");
     addMessage("System", "The Phantom waits at the head of the table. Describe what you do to begin.", "system");
   }
   renderState(data.state);        // after the replay, so a force-ended note lands last

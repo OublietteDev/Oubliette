@@ -1176,7 +1176,12 @@ async def get_transcript() -> JSONResponse:
     events = GAME.session.store.read_all()
     chronicle = [{"index": n["index"], "player_facing": n["player_facing"]}
                  for n in session_notes(events) if n["player_facing"]]
-    return JSONResponse({"turns": transcript_turns(events), "chronicle": chronicle})
+    payload: dict = {"turns": transcript_turns(events), "chronicle": chronicle}
+    if not payload["turns"] and not chronicle:
+        # A campaign nobody has spoken in yet: hand back the world's authored
+        # opening scene, so the table opens on scenery instead of a bare prompt.
+        payload["scene"] = GAME.session.scene
+    return JSONResponse(payload)
 
 
 @app.post("/api/wrap")
@@ -2942,6 +2947,7 @@ async def post_new(body: NewGameIn | None = None) -> JSONResponse:
         HUB.broadcast({"t": "new_game"})
         return JSONResponse({"ok": True, "state": _snapshot(), "model": GAME.client_name,
                              "pack_id": GAME.pack_id, "has_progress": _has_progress(),
+                             "scene": GAME.session.scene,
                              "soundscape": _soundscape()})
 
 
