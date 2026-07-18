@@ -39,7 +39,8 @@ from ..world import events as timed_events
 from ..world import factions as faction_standing
 from ..world import keyed as keyed_triggers
 from .session import Session
-from .transcript import notebook_notes, recent_beats, session_notes, transcript_turns
+from .transcript import (current_session_events, notebook_notes, recent_beats,
+                         session_notes, transcript_turns)
 
 MAX_TOOL_RETRIES = 2    # D6: after this, force a narration-only turn.
 MIN_TURN_PROSE = 60     # under this many chars with tools applied → the story starved;
@@ -154,7 +155,25 @@ class TurnLoop:
             world_event=world_event,
             mechanics=getattr(self.session, "mechanics_catalog", None),
             seats=(getattr(self.session, "seats", None) or None),
-            speaker=self._turn_speaker)
+            speaker=self._turn_speaker,
+            seat_activity=self._seat_activity(events))
+
+    def _seat_activity(self, events) -> dict | None:
+        """Per-seat spotlight meter (multiplayer): how many player messages ago each
+        seated player last spoke THIS session (0 = the most recent message; None =
+        hasn't spoken yet). The DM asked for exactly this in interview — it was
+        inferring imbalance 'by feel' from the short RECENT window. Counted before
+        the current message is recorded, so the SPEAKING NOW line stays the source
+        of truth for the live turn."""
+        seats = getattr(self.session, "seats", None)
+        if not seats or len(seats) < 2:
+            return None    # solo table (or one seat): no spotlight to balance
+        spoken = [ev.payload.get("speaker")
+                  for ev in current_session_events(events)
+                  if ev.kind == EventKind.PLAYER_MESSAGE.value]
+        spoken.reverse()
+        return {name: (spoken.index(name) if name in spoken else None)
+                for name in seats}
 
     def _story_so_far(self) -> str:
         """The DM's cumulative past-session notes (W5) as the SESSION-STABLE context

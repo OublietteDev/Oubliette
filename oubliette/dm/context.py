@@ -245,7 +245,8 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                   world_event: dict | None = None,
                   mechanics: dict | None = None,
                   seats: dict | None = None,
-                  speaker: str | None = None) -> str:
+                  speaker: str | None = None,
+                  seat_activity: dict | None = None) -> str:
     # Show the item id (tool calls need it, gap G2b) + an advisory value anchor for
     # the soft economy (the DM asked for a pricing reference; it's not enforced).
     def _item_label(item_id: str, qty: int) -> str:
@@ -349,6 +350,17 @@ def build_context(repo: Repository, scene: str = "", recent: list[str] | None = 
                      + (f" (their hero: {', '.join(pcs)})" if pcs
                         else " (no claimed hero — a voice at the table)")
                      + " — answer them by name when it fits, as a DM does.")
+    if seat_activity:
+        # The spotlight meter: who has been quiet, counted in player messages
+        # BEFORE this one (the SPEAKING NOW line covers the live turn).
+        def _ago(n) -> str:
+            if n is None:
+                return "hasn't spoken yet this session"
+            return "spoke last message" if n == 0 else f"last spoke {n + 1} messages ago"
+        told = "; ".join(f"{nm} {_ago(n)}" for nm, n in seat_activity.items())
+        lines.append(f"TABLE ACTIVITY (spotlight): {told}. When a player has been "
+                     "quiet a while, draw their hero back in — a beat only that hero "
+                     "can answer beats a lump address to the party.")
     if companions:
         lines.append("COMPANIONS (they TRAVEL with the party and fight at its side, "
                      "player-controlled — but they are still your characters to voice: "

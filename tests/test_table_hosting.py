@@ -188,6 +188,51 @@ def test_attribution_reaches_context_transcript_and_beats(hosting):
     assert GAME.loop.history[-1].startswith('Dana: "I look around the market.')
 
 
+def test_spotlight_meter_counts_the_quiet_seat(hosting):
+    """The DM asked for this in interview (2026-07-18): a per-seat 'who has been
+    quiet' tally, so spotlight balancing is deliberate instead of by feel."""
+    dana = _join(hosting, "Dana")
+    brett = _join(hosting, "Brett")
+    client.post("/api/new", headers=_seat(dana))
+    pc = [c.id for c in GAME.session.repo.party()
+          if not getattr(c, "companion", False)][0]
+    # Session-level seat memory, straight onto the fresh session: the meter
+    # needs two seated NAMES (the endpoint's one-hero steal rule is its own test).
+    GAME.session.emit_seat("Dana", [pc])
+    GAME.session.emit_seat("Brett", [pc])
+    with client.websocket_connect("/ws", headers=_seat(dana)) as ws:
+        assert ws.receive_json()["t"] == "hello"
+        assert client.post("/api/turn/submit", headers=_seat(dana),
+                           json={"text": "I check the notice board."}).status_code == 200
+        while ws.receive_json()["t"] not in ("end", "error"):
+            pass
+    ctx = GAME.loop._build_context()
+    assert "TABLE ACTIVITY" in ctx
+    assert "Dana spoke last message" in ctx
+    assert "Brett hasn't spoken yet this session" in ctx
+    # Brett answers — the meter flips.
+    with client.websocket_connect("/ws", headers=_seat(brett)) as ws:
+        assert ws.receive_json()["t"] == "hello"
+        assert client.post("/api/turn/submit", headers=_seat(brett),
+                           json={"text": "I trail after her."}).status_code == 200
+        while ws.receive_json()["t"] not in ("end", "error"):
+            pass
+    ctx = GAME.loop._build_context()
+    assert "Brett spoke last message" in ctx
+    assert "Dana last spoke 2 messages ago" in ctx
+
+
+def test_spotlight_meter_absent_at_a_solo_table(hosting):
+    """One seated name = no spotlight to balance — the meter stays out of the
+    context entirely (solo play pays no tokens for it)."""
+    dana = _join(hosting, "Dana")
+    client.post("/api/new", headers=_seat(dana))
+    pc = [c.id for c in GAME.session.repo.party()
+          if not getattr(c, "companion", False)][0]
+    client.post("/api/seat", json={"char_ids": [pc]}, headers=_seat(dana))
+    assert "TABLE ACTIVITY" not in GAME.loop._build_context()
+
+
 def test_courtesy_cooldown_only_bites_the_repeat_actor(hosting):
     dana = _join(hosting, "Dana")
     brett = _join(hosting, "Brett")
