@@ -90,6 +90,11 @@ class _Game:
                                  # race-free) — the table takes one turn at a time
         self.client_name = "scripted"
         self.pack_id = DEFAULT_PACK            # world for a new game (saves pin their own)
+        # Has a game been deliberately begun THIS run (New Game completed)? A
+        # virgin save is indistinguishable from a just-begun quick-start in the
+        # event log (new_game deletes and reopens the same way), so this lives
+        # in memory. "Started" for guests = this, or any recorded progress.
+        self.begun = False
         self._open()
 
     def _open(self) -> None:
@@ -1163,8 +1168,14 @@ async def tokens_css() -> FileResponse:
 
 @app.get("/api/state")
 async def get_state() -> JSONResponse:
+    # `started`: a game is genuinely underway — turns taken, or the host
+    # completed New Game this run. Guests at a hosted table join a started
+    # game directly; anything else gets the waiting notice, never the front
+    # door (the menu is the host's — guests were "joining" via New Game+cancel).
     return JSONResponse({"state": _snapshot(), "model": GAME.client_name,
-                         "has_progress": _has_progress(), "soundscape": _soundscape()})
+                         "has_progress": _has_progress(),
+                         "started": _has_progress() or GAME.begun,
+                         "soundscape": _soundscape()})
 
 
 @app.get("/api/transcript")
@@ -1251,11 +1262,26 @@ async def get_usage() -> JSONResponse:
                          "custom_pricing": bool(custom)})
 
 
+def _dm_screen_guard(request: Request) -> JSONResponse | None:
+    """The debug windows show what lives behind the DM's screen — every roll's
+    DC, the encounter arithmetic, the exact context. Solo they're the
+    developer's own console; at a hosted table only the host's browser may
+    peek, or Hidden Rolls is a screen with a hole in it."""
+    if TABLE.hosting and not (request.client is not None and _is_host_browser(
+            request.client.host, request.headers)):
+        return JSONResponse({"error": "the DM's screen is the host's alone"},
+                            status_code=403)
+    return None
+
+
 @app.get("/api/debug/log")
-async def get_debug_log(tail: int = 200) -> JSONResponse:
+async def get_debug_log(request: Request, tail: int = 200) -> JSONResponse:
     """A dev window into the loop's in-memory debug log — assessments, rolls,
     combat staging with its CR-vs-budget arithmetic (`combat_budget` entries),
     bounces, and anomalies. In-memory only: a server restart clears it."""
+    guard = _dm_screen_guard(request)
+    if guard is not None:
+        return guard
     import json as _json
     entries = GAME.loop.debug.entries[-max(1, min(tail, 1000)):]
     safe = _json.loads(_json.dumps(
@@ -1264,11 +1290,14 @@ async def get_debug_log(tail: int = 200) -> JSONResponse:
 
 
 @app.get("/api/debug/context")
-async def get_debug_context() -> JSONResponse:
+async def get_debug_context(request: Request) -> JSONResponse:
     """A dev window into the EXACT context string the DM is handed this turn —
     the party card, encounter budget, rest rules, and the quests it can see.
     Use it to confirm a level-gated quest is genuinely invisible until the party
     qualifies (it won't appear anywhere in this text). Read-only."""
+    guard = _dm_screen_guard(request)
+    if guard is not None:
+        return guard
     return JSONResponse({"context": GAME.loop._build_context("")})
 
 
@@ -1289,7 +1318,12 @@ async def put_difficulty(body: DifficultySettings) -> JSONResponse:
     Changeable mid-campaign by design (including out of hardcore)."""
     async with GAME.lock:
         stored = GAME.session.emit_difficulty(body, reason="settings edit")
-        return JSONResponse({"ok": True, "difficulty": stored.model_dump()})
+    # Difficulty is campaign state, shared by the whole table — tell EVERY
+    # browser, not just the saver's. Hidden Rolls made the gap visible: the
+    # saver's screen scrubbed its DCs while everyone else's kept them (Brett's
+    # playtest). The stapled state also keeps every sidebar's rest gating honest.
+    _announce({"t": "difficulty", "difficulty": stored.model_dump()})
+    return JSONResponse({"ok": True, "difficulty": stored.model_dump()})
 
 
 @app.get("/api/world-image/{place_id}")
@@ -2942,6 +2976,7 @@ async def post_new(body: NewGameIn | None = None) -> JSONResponse:
                 GAME.session.emit_state(
                     EventKind.PORTRAIT_SET, [StateOp.portrait(member.id, fname)],
                     reason=f"imported portrait for {member.name}")
+        GAME.begun = True          # guests may now be seated straight at the table
         # The table started over: every OTHER browser reloads into the fresh
         # world (the starter's own flow renders it in place and skips this).
         HUB.broadcast({"t": "new_game"})

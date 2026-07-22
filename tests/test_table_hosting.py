@@ -286,6 +286,57 @@ def test_journal_locks_guard_anothers_ink(hosting):
     assert client.put("/api/journal", json=hers, headers=_seat(dana)).status_code == 200
 
 
+def test_difficulty_change_reaches_every_screen(hosting):
+    """Brett's playtest, second look (2026-07-22): the host flipped Hidden Rolls
+    but Brett's chips kept their DCs — the scrub ran only in the saving browser.
+    The PUT now broadcasts, so every connected client hears the change (and gets
+    a fresh state for its sidebar)."""
+    dana = _join(hosting, "Dana")
+    brett = _join(hosting, "Brett")
+    client.post("/api/new", headers=_seat(dana))
+    with client.websocket_connect("/ws", headers=_seat(brett)) as ws:
+        assert ws.receive_json()["t"] == "hello"
+        r = client.put("/api/difficulty", headers=_seat(dana),
+                       json={"preset": "adventure", "hidden_rolls": True})
+        assert r.status_code == 200
+        while True:                     # skip the presence (seats) chatter
+            ev = ws.receive_json()
+            if ev["t"] == "difficulty":
+                break
+        assert ev["difficulty"]["hidden_rolls"] is True
+        assert "state" in ev
+
+
+def test_started_flag_gates_the_guests_door(hosting):
+    """`started` tells a guest's browser whether to seat them directly or show
+    the waiting notice: progress on record, OR the host completed New Game this
+    server run. A virgin save is indistinguishable from a just-begun quick-start
+    in the event log, so the New-Game half lives in memory (GAME.begun)."""
+    dana = _join(hosting, "Dana")
+    client.post("/api/new", headers=_seat(dana))   # wipe: nothing on record...
+    GAME.begun = False                             # ...and pretend a fresh server run
+    d = client.get("/api/state", headers=_seat(dana)).json()
+    assert d["started"] is False and d["has_progress"] is False
+    # The host begins tonight's game: guests may be seated at once.
+    client.post("/api/new", headers=_seat(dana))
+    assert client.get("/api/state", headers=_seat(dana)).json()["started"] is True
+    # Progress alone also counts — a server restarted mid-campaign.
+    client.post("/api/turn", headers=_seat(dana), json={"text": "I look around."})
+    GAME.begun = False
+    d = client.get("/api/state", headers=_seat(dana)).json()
+    assert d["started"] is True and d["has_progress"] is True
+
+
+def test_debug_windows_are_the_hosts_alone(hosting):
+    """Hidden Rolls must not have a hole in it: at a hosted table the debug
+    endpoints (every roll's DC, the DM's exact context) answer only the host's
+    own browser. TestClient's host is 'testclient' — a guest — so a seat alone
+    doesn't open them. Solo dev use stays open (test_difficulty covers it)."""
+    tok = _join(hosting, "Dana")
+    assert client.get("/api/debug/log", headers=_seat(tok)).status_code == 403
+    assert client.get("/api/debug/context", headers=_seat(tok)).status_code == 403
+
+
 def test_solo_turns_carry_no_speaker():
     client.post("/api/new")
     with client.websocket_connect("/ws") as ws:

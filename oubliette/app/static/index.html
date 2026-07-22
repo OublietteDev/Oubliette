@@ -989,6 +989,14 @@
   </div>
 </div>
 
+<div id="waiting-overlay" class="overlay hidden">
+  <div class="start-modal">
+    <h2>Oubliette Table</h2>
+    <div class="sub">You're seated — the host is setting up the game</div>
+    <div class="newgame-note" style="margin-top:12px">The table opens the moment the host begins a game. Sit tight.</div>
+  </div>
+</div>
+
 <div id="seats-overlay" class="overlay hidden">
   <div class="start-modal">
     <h2>Seats</h2>
@@ -1963,6 +1971,14 @@ function routeEvent(ev) {
   }
   else if (ev.t === "arena_audio") arenaCue(ev);      // the fight's music and stingers (S3)
   else if (ev.t === "journal") refreshJournalDoc();   // someone wrote in the chronicle
+  else if (ev.t === "difficulty") {
+    // Someone saved Settings — difficulty is campaign state, shared by the whole
+    // table. If Hidden Rolls just came on, the DCs already on THIS screen go
+    // behind the DM's screen too (Brett's playtest: the saver's chips scrubbed,
+    // every other player's kept their DCs until a reload).
+    if (ev.difficulty && ev.difficulty.hidden_rolls) scrubRollChips();
+    if (ev.state) renderState(ev.state);
+  }
   else if (ev.t === "new_game") {
     // The table started over. The starter's own flow renders the fresh world
     // in place; everyone else reloads into it.
@@ -2703,6 +2719,8 @@ function readDifficultyForm(root) {
 
 // --- New Game: choose a world, then set the table -------------------------
 let ngPack = null;               // { id, name } chosen in step 1
+let ngFromFrontDoor = false;     // opened from the start menu (vs the in-game
+                                 // button)? Cancel must return where it came from
 async function openNewGame() {
   cgImports = [];                // a fresh wizard starts with no carried-over heroes
   const { packs, current } = await (await fetch("/api/packs")).json();
@@ -3408,7 +3426,7 @@ function renderPreview(data) {
   root.appendChild(note);
 }
 
-$("new-btn").addEventListener("click", () => { if (!busy) openNewGame(); });
+$("new-btn").addEventListener("click", () => { if (!busy) { ngFromFrontDoor = false; openNewGame(); } });
 $("ng-back").addEventListener("click", () => ngShowStep("world"));
 $("ng-to-char").addEventListener("click", ngToCharacter);
 $("cg-back").addEventListener("click", () => ngShowStep("contract"));
@@ -3460,6 +3478,15 @@ async function openSettings() {
   $("settings-overlay").classList.remove("hidden");
 }
 function closeSettings() { $("settings-overlay").classList.add("hidden"); }
+function scrubRollChips() {
+  // Strip DC and success/failure from every roll chip already rendered — the
+  // dice and their total stay, the outcome goes behind the DM's screen. One-way
+  // by design: turning Hidden Rolls back off can't resurrect what was cut.
+  document.querySelectorAll(".chip.roll").forEach(c => {
+    c.classList.remove("success", "failure");
+    c.innerHTML = c.innerHTML.replace(/<\/b>[\s\S]*$/, "</b>");
+  });
+}
 async function saveSettings() {
   const table = readContractForm($("settings-contract"));
   await fetch("/api/table", {
@@ -3473,13 +3500,11 @@ async function saveSettings() {
   });
   // Hidden rolls flipped on mid-game: the server redacts every roll from the
   // next turn on, but the chips already on screen would keep their DCs — scrub
-  // them too, so the setting visibly takes hold the moment it's saved.
-  if (difficulty.hidden_rolls) {
-    document.querySelectorAll(".chip.roll").forEach(c => {
-      c.classList.remove("success", "failure");
-      c.innerHTML = c.innerHTML.replace(/<\/b>[\s\S]*$/, "</b>");
-    });
-  }
+  // them too, so the setting visibly takes hold the moment it's saved. The
+  // PUT's broadcast scrubs everyone else's screens (and re-scrubs this one,
+  // harmlessly); calling it here too keeps the saver honest even if their
+  // websocket is mid-reconnect.
+  if (difficulty.hidden_rolls) scrubRollChips();
   await saveNarrationForm($("settings-narration"));
   closeSettings();
   addMessage("System", "The table is updated — it takes effect on your next turn.", "system");
@@ -3492,7 +3517,7 @@ $("settings-save").addEventListener("click", saveSettings);
 function hideStart() { $("start-overlay").classList.add("hidden"); }
 function showStart() { $("start-overlay").classList.remove("hidden"); }
 $("start-continue").addEventListener("click", () => { if (!$("start-continue").disabled) hideStart(); });
-$("start-new").addEventListener("click", () => { hideStart(); openNewGame(); });
+$("start-new").addEventListener("click", () => { hideStart(); ngFromFrontDoor = true; openNewGame(); });
 $("start-settings").addEventListener("click", openSettings);
 
 // --- AI provider connection (front-door "connect your AI") -----------------
@@ -3647,7 +3672,13 @@ $("reload-btn").addEventListener("click", async () => {
   } catch (e) { addMessage("System", "Reload failed: " + e, "system"); }
   finally { btn.disabled = false; }
 });
-$("newgame-cancel").addEventListener("click", closeNewGame);
+$("newgame-cancel").addEventListener("click", () => {
+  // Cancel returns you where you came from. From the front door that means the
+  // start menu comes BACK — leaving both overlays hidden exposed the live game
+  // underneath, which guests had adopted as their (accidental) way in.
+  closeNewGame();
+  if (ngFromFrontDoor) { ngFromFrontDoor = false; showStart(); }
+});
 // new-game/chargen holds the player's typed character — closes via Cancel only (no click-off)
 
 // --- portrait lightbox (click any view-only portrait to enlarge) -----------
@@ -5900,6 +5931,17 @@ async function boot() {
   const cont = $("start-continue");
   cont.disabled = !data.has_progress;
   cont.title = data.has_progress ? "Resume your game" : "No game in progress yet — start a New Game";
+  // A guest at a hosted table (no join code = not the host's browser) never
+  // gets the front door — that menu is the host's. A game already underway
+  // (turns taken, or the host completed New Game this run) seats them straight
+  // at the table; an untouched save shows a waiting note instead, and the
+  // host's New Game broadcast reloads every guest into the fresh world the
+  // moment it begins. Before this, guests joined by clicking New Game and
+  // cancelling — the accidental door this replaces.
+  if (tableInfo.hosting && !tableInfo.code) {
+    hideStart();
+    if (!data.started) $("waiting-overlay").classList.remove("hidden");
+  }
   bootDone = true;
   if (pendingCatchup) { applyCatchup(pendingCatchup); pendingCatchup = null; }
 }
