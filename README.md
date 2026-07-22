@@ -9,10 +9,11 @@ It ships as three programs that share one engine:
 | | | |
 |---|---|---|
 | 🎭 **Oubliette** | The game — an AI DM you play in your browser. | `play.bat` |
+| 🪑 **Host a table** | The same game, multiplayer — friends join with a code. | `host.bat` |
 | 🔨 **The Forge** | Build your own worlds — no coding, ever. | `forge.bat` |
 | ⚔️ **The Arena** | A full D&D 5e tactical combat engine. | launches from the game |
 
-> **Status: v1.0.** The full game — with voiced narration, persistent companions, and a living world of factions, clocks, and scheduled events. A handful of honest rough edges remain (see [Known issues](#known-issues)).
+> **Status: v1.1.** The table seats a whole party now — **multiplayer** is here: one player hosts, friends join from their own browsers, on the couch wifi or across the internet. All of v1.0 rides along: voiced narration, persistent companions, and a living world of factions, clocks, and scheduled events. A handful of honest rough edges remain (see [Known issues](#known-issues)).
 
 ---
 
@@ -26,6 +27,9 @@ The model never writes your state. It narrates, and it *requests* changes throug
 ### ⚔️ Combat is *fought*, not narrated
 When a fight breaks out, Oubliette doesn't ask the AI to describe who wins. It hands the encounter to **The Arena** — a genuine hex-grid D&D 5e combat simulator with initiative, the full action economy, all 15 conditions, concentration, cover, opportunity attacks, spells with real area-of-effect shapes, legendary and lair actions, and a tactical AI that flanks, kites, focus-fires, and aims its fireballs. You play the fight; the outcome — HP, spent spell slots, conditions, the dead — flows back into the story.
 
+### 🪑 One table, many chairs
+One player runs `host.bat`; everyone else joins from a plain browser with a five-letter code — nothing to install, phones welcome. Same wifi works out of the box, and for remote friends the host gets a secure internet address opened automatically (a Cloudflare quick tunnel — no router surgery, no port forwarding). The whole table plays **one story with one DM**: it knows who's speaking and answers by name, keeps an eye on who hasn't had a scene lately, and phrases its offers to the group. Seats remember whose hero is whose, any player can act or confirm, fights stream to every browser so each player clicks their own moves, and the voiced narrator reads to every ear that asks. One click on the **Invite** button puts the address and code on your clipboard, ready for the group chat.
+
 ### 🌍 Worlds that are authored *and* alive
 Your world isn't just an AI hallucination each session. In **The Forge** you author real places, NPCs, branching quests, monsters, magic items, and maps — and the game plays them faithfully. But the AI DM also *invents* as it goes, and its inventions become **canon**: an NPC it names, a rumor it plants, a promise it makes are all recorded, promoted to permanent world-truth when they matter, and fed back to keep the story consistent for months. Authored backbone, living memory — not one or the other.
 
@@ -37,6 +41,8 @@ Your world isn't just an AI hallucination each session. In **The Forge** you aut
 1. Double-click `setup.bat` once — it builds the environment and, if your PC has no suitable Python, downloads a private one into the game folder (nothing to install).
 2. Double-click `play.bat`. Your browser opens to the start menu.
 3. Click **Connect your AI**, pick a provider, paste a key, and go. (Claude Sonnet 5 is the recommended model and most heavily tested)
+
+**Play with friends:** double-click `host.bat` instead of `play.bat`. It starts the same game with the table open: a join code on the door, and — when the internet door opens a few seconds later — a public address on the **Invite** button. Friends need nothing installed; they open the link, type a name and the code, and they're seated. A tip from our playtests: the table runs best like a real one — talk it over out loud (a group call works great), let one player commit the party's action, and speak in your own hero's voice for personal beats. The DM tracks who says what and answers accordingly.
 
 **Play it (Currently only tested on Windows):**
 ```bash
@@ -59,8 +65,12 @@ A structured turn loop runs under every message: the DM *assesses* what you're a
 
 New in v1.0, the world got a pulse: a **voiced narrator** reads the DM aloud entirely on your machine (two local voice tiers, no cloud, no keys), **companions** you recruit or buy stay on the party card, grow, and fight at your side with their real monster kits, and the **living world** keeps its own time — authored encounters fire where the author bound them, factions track your standing (and can sour on you in the dark), a campaign clock counts nights slept and roads travelled, and scheduled world events happen whether you attend or not, reaching you as rumor if you're elsewhere.
 
+New in v1.1, the table got chairs — **multiplayer** (see [One table, many chairs](#-one-table-many-chairs)) — and the rules got deeper: **attunement** is enforced for real (three bonds per hero, made at rests, broken when the item leaves your hands), a world's author can set **house rules** the engine itself enforces (side initiative, flanking, crits on 19–20, brutal crits, potions as a bonus action), **ambushes genuinely surprise** (the caught side loses its opening turn — and the Alert feat finally earns its keep), and **walls can be broken through**. Table-wide settings behave like table rules now, too: flip **Hidden Rolls** and the DCs and pass/fail vanish from every player's screen at once.
+
 ### 🔨 The Forge — build your own worlds
 A visual studio — no code, ever. Author places and a drag-arrange world map (with visit-gated redaction), NPCs and shops, branching quests with player hooks and DM-only briefings, and full monster stat blocks (clone any of the 334 SRD creatures and tweak). The module kit adds **magic items**, **custom backgrounds**, and a **spell builder**, all of which merge straight into character creation and the Arena. You can even paint a battlefield — terrain, hazards, cover — for fights that start in a given location. Its promise: the Forge validates your world with *the game's own loader*, so a green "✓ Ready to play" badge means it really will. Share a world as a single `.zip`.
+
+New in v1.1, the Forge grew a **proving ground**: preview any spell or attack on training dummies to see exactly what it looks like and does, drop your custom monsters against a benchmark party that never flinches, and let the war room run an encounter a hundred times headless — round caps, honest defeat scoring, the lot — so you know whether your boss fight is a bloodbath or a pushover before a player ever meets it. Authors also got a **manifest editor** (a world's name, author, and description — no files to hand-edit) and **per-world character-creation limits**: a world can say "no warlocks, no dragonborn" and the creation wizard honors it.
 
 ### ⚔️ The Arena — real tactical combat
 A standalone hex-grid 5e combat engine (also playable on its own). Creatures from Tiny to Gargantuan, footprints and difficult terrain and line-of-sight, typed damage through resistances and immunities, on-hit riders, upcasting, 158 spells, walls and zones and telegraphed area effects, legendary/lair/recharge/regeneration mechanics — and an opponent AI with editable personalities (berserker, archer, coward, bodyguard…). A presentation layer sequences every hit so damage numbers, HP drops, and sounds land on impact, with charge lunges and danger telegraphs.
@@ -78,7 +88,7 @@ Every world stands on a content-complete **SRD 5.1** layer: all 12 classes and t
 - **Event-sourced core** — every protected change is an atomic, replayable operation; state is `seed(authored world) + replay(event log)`, byte-identical on reload.
 - **Provider-agnostic** — a thin `LLMClient` seam with native Anthropic and OpenAI-compatible (OpenAI/Gemini/local) adapters.
 - **No build step** — the game and Forge are FastAPI servers each serving one self-contained HTML page.
-- **~65k lines of source, ~56k lines of tests.**
+- **~67k lines of source, ~52k lines of tests.**
 
 ```bash
 pip install -e ".[dev]"
@@ -87,12 +97,14 @@ pytest                          # the full acceptance + engine suite
 
 ## Roadmap & known issues
 
-- 🗺️ **[ROADMAP.md](ROADMAP.md)** — what's planned beyond v1.0.
+- 🗺️ **[ROADMAP.md](ROADMAP.md)** — what's planned beyond v1.1.
 - 🐞 **[Known issues](#known-issues)** — see below.
 
 ## Known issues
 
-*v1.0 is stable and fun, but honest about its rough edges. Full list to be tracked in GitHub Issues.*
+*v1.1 is stable and fun, but honest about its rough edges. Full list to be tracked in GitHub Issues.*
+
+- **Multiplayer is young.** It has survived its first real group tables, but expect seams: if a screen ever looks out of step, a page reload lands you right back in the story with nothing lost (the save replays — that's the point of the event log). Remote play borrows a free Cloudflare quick tunnel, so the internet address changes each evening — the Invite button always has the current one.
 
 - **Bestiary art is ~20% complete.** Every creature works fully in the Arena — all abilities, actions, spells, and legendary actions — they just show a generic token until art is added. This grows slowly over time. Art added via a pack is unaffected and displays fine in the bestiary.
 - **API calls occasionally drop.** A dropped connection mid-call surfaces an error promptly (no effect on gameplay or the DM's memory) — just send your turn again.
